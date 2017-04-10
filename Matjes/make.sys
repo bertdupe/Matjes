@@ -1,0 +1,8 @@
+FC=gfortran
+CC=gcc
+
+#FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
+FFLAGS= -g -fbacktrace -fcheck=all -ffpe-trap=invalid,overflow,zero -finit-real=snan -O0 -ffree-form -fimplicit-none -ffree-line-length-none
+LDFLAGS=  
+
+# pre-processors FLAGS
