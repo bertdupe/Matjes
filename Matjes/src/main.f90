@@ -1,4 +1,4 @@
       program Matjes
-          implicit none
+      implicit none
 
       end program Matjes
