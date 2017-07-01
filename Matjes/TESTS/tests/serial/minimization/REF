@@ -1,0 +1,2473 @@
+
+Bonjour!! you are now using the Kieler code
+All the developpers hope that you will enjoy this moment.
+If you have a problem, if you are happy with the code or if you wish to chat a bit
+send an email to bertrand.dupe@gmail.com
+
+reading the setup routine
+reading lattice.in file
+reading the inp file
+
+allocating the spin, table of neighbors and the index...
+Calculating the table of distances
+Calculating the number of neighbors for each shells
+initializing the spin structure
+
+Read spin lattice from SpinSTMi.dat
+Calculating the table of neighbors (this can take time)
+done
+Calculating the DM vectors for each shells
+Re-aranging the position of the DM vectors
+dealing with the z-direction
+
+the setup of the simulation is over
+
+ 10000 unit cells
+you are using only the minimization routine of one spin structure
+you will not use MC or spin dynamics or GNEB
+This algorithms works only serial
+-----------------------------------------------
+
+-----------------------------------------------
+entering into the minimization routine
+starting energy    -0.067544   eV
+
+iteration           1
+Energy of the system (eV/unit cell)  -0.06754494635
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00164211867
+
+
+iteration           2
+Energy of the system (eV/unit cell)  -0.06754510339
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00161343107
+
+
+iteration           3
+Energy of the system (eV/unit cell)  -0.06754525761
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00158634899
+
+
+iteration           4
+Energy of the system (eV/unit cell)  -0.06754540903
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00156105417
+
+
+iteration           5
+Energy of the system (eV/unit cell)  -0.06754555770
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00153703278
+
+
+iteration           6
+Energy of the system (eV/unit cell)  -0.06754570363
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00151385197
+
+
+iteration           7
+Energy of the system (eV/unit cell)  -0.06754584686
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00149122803
+
+
+iteration           8
+Energy of the system (eV/unit cell)  -0.06754598741
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00146898818
+
+
+iteration           9
+Energy of the system (eV/unit cell)  -0.06754612531
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00144751065
+
+
+iteration          10
+Energy of the system (eV/unit cell)  -0.06754626059
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00142683471
+
+
+iteration          11
+Energy of the system (eV/unit cell)  -0.06754639327
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00140646136
+
+
+iteration          12
+Energy of the system (eV/unit cell)  -0.06754652338
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00138682493
+
+
+iteration          13
+Energy of the system (eV/unit cell)  -0.06754665095
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00136726748
+
+
+iteration          14
+Energy of the system (eV/unit cell)  -0.06754677602
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00134779244
+
+
+iteration          15
+Energy of the system (eV/unit cell)  -0.06754689860
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00132840675
+
+
+iteration          16
+Energy of the system (eV/unit cell)  -0.06754701874
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00130911919
+
+
+iteration          17
+Energy of the system (eV/unit cell)  -0.06754713647
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00128993922
+
+
+iteration          18
+Energy of the system (eV/unit cell)  -0.06754725180
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00127087643
+
+
+iteration          19
+Energy of the system (eV/unit cell)  -0.06754736479
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00125194014
+
+
+iteration          20
+Energy of the system (eV/unit cell)  -0.06754747545
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00123319153
+
+
+iteration          21
+Energy of the system (eV/unit cell)  -0.06754758383
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00121460434
+
+
+iteration          22
+Energy of the system (eV/unit cell)  -0.06754768995
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00119616581
+
+
+iteration          23
+Energy of the system (eV/unit cell)  -0.06754779385
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00117796830
+
+
+iteration          24
+Energy of the system (eV/unit cell)  -0.06754789556
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00116011651
+
+
+iteration          25
+Energy of the system (eV/unit cell)  -0.06754799511
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00114242288
+
+
+iteration          26
+Energy of the system (eV/unit cell)  -0.06754809254
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00112489290
+
+
+iteration          27
+Energy of the system (eV/unit cell)  -0.06754818789
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00110753587
+
+
+iteration          28
+Energy of the system (eV/unit cell)  -0.06754828118
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00109040278
+
+
+iteration          29
+Energy of the system (eV/unit cell)  -0.06754837244
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00107344526
+
+
+iteration          30
+Energy of the system (eV/unit cell)  -0.06754846173
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00105666718
+
+
+iteration          31
+Energy of the system (eV/unit cell)  -0.06754854906
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00104007208
+
+
+iteration          32
+Energy of the system (eV/unit cell)  -0.06754863447
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00102366312
+
+
+iteration          33
+Energy of the system (eV/unit cell)  -0.06754871799
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00100744319
+
+
+iteration          34
+Energy of the system (eV/unit cell)  -0.06754879967
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00099141483
+
+
+iteration          35
+Energy of the system (eV/unit cell)  -0.06754887952
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00097558032
+
+
+iteration          36
+Energy of the system (eV/unit cell)  -0.06754895759
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00095994165
+
+
+iteration          37
+Energy of the system (eV/unit cell)  -0.06754903392
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00094450055
+
+
+iteration          38
+Energy of the system (eV/unit cell)  -0.06754910852
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00092925847
+
+
+iteration          39
+Energy of the system (eV/unit cell)  -0.06754918144
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00091421665
+
+
+iteration          40
+Energy of the system (eV/unit cell)  -0.06754925270
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00089937608
+
+
+iteration          41
+Energy of the system (eV/unit cell)  -0.06754932235
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00088473751
+
+
+iteration          42
+Energy of the system (eV/unit cell)  -0.06754939041
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00087030151
+
+
+iteration          43
+Energy of the system (eV/unit cell)  -0.06754945691
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00085606841
+
+
+iteration          44
+Energy of the system (eV/unit cell)  -0.06754952189
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00084203838
+
+
+iteration          45
+Energy of the system (eV/unit cell)  -0.06754958537
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00082821137
+
+
+iteration          46
+Energy of the system (eV/unit cell)  -0.06754964740
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00081458718
+
+
+iteration          47
+Energy of the system (eV/unit cell)  -0.06754970799
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00080116541
+
+
+iteration          48
+Energy of the system (eV/unit cell)  -0.06754976717
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00078794554
+
+
+iteration          49
+Energy of the system (eV/unit cell)  -0.06754982499
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00077492686
+
+
+iteration          50
+Energy of the system (eV/unit cell)  -0.06754988146
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00076210853
+
+
+iteration          51
+Energy of the system (eV/unit cell)  -0.06754993662
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00074948957
+
+
+iteration          52
+Energy of the system (eV/unit cell)  -0.06754999049
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00073706889
+
+
+iteration          53
+Energy of the system (eV/unit cell)  -0.06755004311
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00072554327
+
+
+iteration          54
+Energy of the system (eV/unit cell)  -0.06755009449
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00071493813
+
+
+iteration          55
+Energy of the system (eV/unit cell)  -0.06755014468
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00070446617
+
+
+iteration          56
+Energy of the system (eV/unit cell)  -0.06755019368
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00069412770
+
+
+iteration          57
+Energy of the system (eV/unit cell)  -0.06755024154
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00068392287
+
+
+iteration          58
+Energy of the system (eV/unit cell)  -0.06755028827
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00067385174
+
+
+iteration          59
+Energy of the system (eV/unit cell)  -0.06755033390
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00066391423
+
+
+iteration          60
+Energy of the system (eV/unit cell)  -0.06755037846
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00065411016
+
+
+iteration          61
+Energy of the system (eV/unit cell)  -0.06755042197
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00064443925
+
+
+iteration          62
+Energy of the system (eV/unit cell)  -0.06755046445
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00063490112
+
+
+iteration          63
+Energy of the system (eV/unit cell)  -0.06755050594
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00062549530
+
+
+iteration          64
+Energy of the system (eV/unit cell)  -0.06755054644
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00061622124
+
+
+iteration          65
+Energy of the system (eV/unit cell)  -0.06755058599
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00060707829
+
+
+iteration          66
+Energy of the system (eV/unit cell)  -0.06755062460
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00059806573
+
+
+iteration          67
+Energy of the system (eV/unit cell)  -0.06755066230
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00058918278
+
+
+iteration          68
+Energy of the system (eV/unit cell)  -0.06755069911
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00058042859
+
+
+iteration          69
+Energy of the system (eV/unit cell)  -0.06755073505
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00057180224
+
+
+iteration          70
+Energy of the system (eV/unit cell)  -0.06755077014
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00056330275
+
+
+iteration          71
+Energy of the system (eV/unit cell)  -0.06755080440
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00055492909
+
+
+iteration          72
+Energy of the system (eV/unit cell)  -0.06755083785
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00054668018
+
+
+iteration          73
+Energy of the system (eV/unit cell)  -0.06755087051
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00053855491
+
+
+iteration          74
+Energy of the system (eV/unit cell)  -0.06755090240
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00053055210
+
+
+iteration          75
+Energy of the system (eV/unit cell)  -0.06755093353
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00052267054
+
+
+iteration          76
+Energy of the system (eV/unit cell)  -0.06755096393
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00051490901
+
+
+iteration          77
+Energy of the system (eV/unit cell)  -0.06755099361
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00050726622
+
+
+iteration          78
+Energy of the system (eV/unit cell)  -0.06755102259
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00049974088
+
+
+iteration          79
+Energy of the system (eV/unit cell)  -0.06755105089
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00049233166
+
+
+iteration          80
+Energy of the system (eV/unit cell)  -0.06755107851
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00048503722
+
+
+iteration          81
+Energy of the system (eV/unit cell)  -0.06755110549
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00047785618
+
+
+iteration          82
+Energy of the system (eV/unit cell)  -0.06755113183
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00047078716
+
+
+iteration          83
+Energy of the system (eV/unit cell)  -0.06755115754
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00046382876
+
+
+iteration          84
+Energy of the system (eV/unit cell)  -0.06755118265
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00045697958
+
+
+iteration          85
+Energy of the system (eV/unit cell)  -0.06755120717
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00045023817
+
+
+iteration          86
+Energy of the system (eV/unit cell)  -0.06755123111
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00044360313
+
+
+iteration          87
+Energy of the system (eV/unit cell)  -0.06755125449
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00043708410
+
+
+iteration          88
+Energy of the system (eV/unit cell)  -0.06755127732
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00043067603
+
+
+iteration          89
+Energy of the system (eV/unit cell)  -0.06755129961
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00042436922
+
+
+iteration          90
+Energy of the system (eV/unit cell)  -0.06755132138
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00041816222
+
+
+iteration          91
+Energy of the system (eV/unit cell)  -0.06755134263
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00041207636
+
+
+iteration          92
+Energy of the system (eV/unit cell)  -0.06755136339
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00040610871
+
+
+iteration          93
+Energy of the system (eV/unit cell)  -0.06755138366
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00040023478
+
+
+iteration          94
+Energy of the system (eV/unit cell)  -0.06755140346
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00039445322
+
+
+iteration          95
+Energy of the system (eV/unit cell)  -0.06755142279
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00038876270
+
+
+iteration          96
+Energy of the system (eV/unit cell)  -0.06755144167
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00038316186
+
+
+iteration          97
+Energy of the system (eV/unit cell)  -0.06755146011
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00037764939
+
+
+iteration          98
+Energy of the system (eV/unit cell)  -0.06755147811
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00037222394
+
+
+iteration          99
+Energy of the system (eV/unit cell)  -0.06755149570
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00036688421
+
+
+iteration         100
+Energy of the system (eV/unit cell)  -0.06755151288
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00036162888
+
+
+iteration         101
+Energy of the system (eV/unit cell)  -0.06755152965
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00035645664
+
+
+iteration         102
+Energy of the system (eV/unit cell)  -0.06755154604
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00035136622
+
+
+iteration         103
+Energy of the system (eV/unit cell)  -0.06755156204
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00034635632
+
+
+iteration         104
+Energy of the system (eV/unit cell)  -0.06755157767
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00034142568
+
+
+iteration         105
+Energy of the system (eV/unit cell)  -0.06755159294
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00033657567
+
+
+iteration         106
+Energy of the system (eV/unit cell)  -0.06755160785
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00033180269
+
+
+iteration         107
+Energy of the system (eV/unit cell)  -0.06755162242
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00032710511
+
+
+iteration         108
+Energy of the system (eV/unit cell)  -0.06755163665
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00032248172
+
+
+iteration         109
+Energy of the system (eV/unit cell)  -0.06755165054
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00031793132
+
+
+iteration         110
+Energy of the system (eV/unit cell)  -0.06755166412
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00031345273
+
+
+iteration         111
+Energy of the system (eV/unit cell)  -0.06755167738
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00030904476
+
+
+iteration         112
+Energy of the system (eV/unit cell)  -0.06755169034
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00030470627
+
+
+iteration         113
+Energy of the system (eV/unit cell)  -0.06755170300
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00030043610
+
+
+iteration         114
+Energy of the system (eV/unit cell)  -0.06755171536
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00029623313
+
+
+iteration         115
+Energy of the system (eV/unit cell)  -0.06755172744
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00029209624
+
+
+iteration         116
+Energy of the system (eV/unit cell)  -0.06755173924
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00028802433
+
+
+iteration         117
+Energy of the system (eV/unit cell)  -0.06755175077
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00028401632
+
+
+iteration         118
+Energy of the system (eV/unit cell)  -0.06755176204
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00028007113
+
+
+iteration         119
+Energy of the system (eV/unit cell)  -0.06755177304
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00027624824
+
+
+iteration         120
+Energy of the system (eV/unit cell)  -0.06755178380
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00027254694
+
+
+iteration         121
+Energy of the system (eV/unit cell)  -0.06755179430
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00026890044
+
+
+iteration         122
+Energy of the system (eV/unit cell)  -0.06755180457
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00026530790
+
+
+iteration         123
+Energy of the system (eV/unit cell)  -0.06755181460
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00026176849
+
+
+iteration         124
+Energy of the system (eV/unit cell)  -0.06755182440
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00025828137
+
+
+iteration         125
+Energy of the system (eV/unit cell)  -0.06755183398
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00025484574
+
+
+iteration         126
+Energy of the system (eV/unit cell)  -0.06755184333
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00025146079
+
+
+iteration         127
+Energy of the system (eV/unit cell)  -0.06755185248
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00024812571
+
+
+iteration         128
+Energy of the system (eV/unit cell)  -0.06755186141
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00024483974
+
+
+iteration         129
+Energy of the system (eV/unit cell)  -0.06755187014
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00024160210
+
+
+iteration         130
+Energy of the system (eV/unit cell)  -0.06755187868
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00023841202
+
+
+iteration         131
+Energy of the system (eV/unit cell)  -0.06755188702
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00023526875
+
+
+iteration         132
+Energy of the system (eV/unit cell)  -0.06755189516
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00023217156
+
+
+iteration         133
+Energy of the system (eV/unit cell)  -0.06755190313
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00022911972
+
+
+iteration         134
+Energy of the system (eV/unit cell)  -0.06755191091
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00022611250
+
+
+iteration         135
+Energy of the system (eV/unit cell)  -0.06755191852
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00022314921
+
+
+iteration         136
+Energy of the system (eV/unit cell)  -0.06755192595
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00022023223
+
+
+iteration         137
+Energy of the system (eV/unit cell)  -0.06755193322
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00021735798
+
+
+iteration         138
+Energy of the system (eV/unit cell)  -0.06755194032
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00021452547
+
+
+iteration         139
+Energy of the system (eV/unit cell)  -0.06755194726
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00021173402
+
+
+iteration         140
+Energy of the system (eV/unit cell)  -0.06755195404
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00020898298
+
+
+iteration         141
+Energy of the system (eV/unit cell)  -0.06755196067
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00020627172
+
+
+iteration         142
+Energy of the system (eV/unit cell)  -0.06755196715
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00020359961
+
+
+iteration         143
+Energy of the system (eV/unit cell)  -0.06755197349
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00020097012
+
+
+iteration         144
+Energy of the system (eV/unit cell)  -0.06755197968
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00019838603
+
+
+iteration         145
+Energy of the system (eV/unit cell)  -0.06755198573
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00019583879
+
+
+iteration         146
+Energy of the system (eV/unit cell)  -0.06755199165
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00019332784
+
+
+iteration         147
+Energy of the system (eV/unit cell)  -0.06755199743
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00019085259
+
+
+iteration         148
+Energy of the system (eV/unit cell)  -0.06755200308
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00018841250
+
+
+iteration         149
+Energy of the system (eV/unit cell)  -0.06755200861
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00018600701
+
+
+iteration         150
+Energy of the system (eV/unit cell)  -0.06755201401
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00018363557
+
+
+iteration         151
+Energy of the system (eV/unit cell)  -0.06755201930
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00018129766
+
+
+iteration         152
+Energy of the system (eV/unit cell)  -0.06755202446
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00017899275
+
+
+iteration         153
+Energy of the system (eV/unit cell)  -0.06755202951
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00017672032
+
+
+iteration         154
+Energy of the system (eV/unit cell)  -0.06755203444
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00017448058
+
+
+iteration         155
+Energy of the system (eV/unit cell)  -0.06755203926
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00017227366
+
+
+iteration         156
+Energy of the system (eV/unit cell)  -0.06755204398
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00017009766
+
+
+iteration         157
+Energy of the system (eV/unit cell)  -0.06755204859
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00016795207
+
+
+iteration         158
+Energy of the system (eV/unit cell)  -0.06755205310
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00016583644
+
+
+iteration         159
+Energy of the system (eV/unit cell)  -0.06755205751
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00016375030
+
+
+iteration         160
+Energy of the system (eV/unit cell)  -0.06755206182
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00016169319
+
+
+iteration         161
+Energy of the system (eV/unit cell)  -0.06755206603
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00015966466
+
+
+iteration         162
+Energy of the system (eV/unit cell)  -0.06755207015
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00015766426
+
+
+iteration         163
+Energy of the system (eV/unit cell)  -0.06755207418
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00015569156
+
+
+iteration         164
+Energy of the system (eV/unit cell)  -0.06755207812
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00015374614
+
+
+iteration         165
+Energy of the system (eV/unit cell)  -0.06755208197
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00015182757
+
+
+iteration         166
+Energy of the system (eV/unit cell)  -0.06755208574
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00014993544
+
+
+iteration         167
+Energy of the system (eV/unit cell)  -0.06755208942
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00014806933
+
+
+iteration         168
+Energy of the system (eV/unit cell)  -0.06755209302
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00014622886
+
+
+iteration         169
+Energy of the system (eV/unit cell)  -0.06755209654
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00014441362
+
+
+iteration         170
+Energy of the system (eV/unit cell)  -0.06755209998
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00014262324
+
+
+iteration         171
+Energy of the system (eV/unit cell)  -0.06755210335
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00014085732
+
+
+iteration         172
+Energy of the system (eV/unit cell)  -0.06755210664
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00013911549
+
+
+iteration         173
+Energy of the system (eV/unit cell)  -0.06755210986
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00013739739
+
+
+iteration         174
+Energy of the system (eV/unit cell)  -0.06755211301
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00013570265
+
+
+iteration         175
+Energy of the system (eV/unit cell)  -0.06755211609
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00013403092
+
+
+iteration         176
+Energy of the system (eV/unit cell)  -0.06755211910
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00013238185
+
+
+iteration         177
+Energy of the system (eV/unit cell)  -0.06755212205
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00013075509
+
+
+iteration         178
+Energy of the system (eV/unit cell)  -0.06755212493
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00012915030
+
+
+iteration         179
+Energy of the system (eV/unit cell)  -0.06755212775
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00012756715
+
+
+iteration         180
+Energy of the system (eV/unit cell)  -0.06755213050
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00012600532
+
+
+iteration         181
+Energy of the system (eV/unit cell)  -0.06755213319
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00012446448
+
+
+iteration         182
+Energy of the system (eV/unit cell)  -0.06755213583
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00012294432
+
+
+iteration         183
+Energy of the system (eV/unit cell)  -0.06755213841
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00012144452
+
+
+iteration         184
+Energy of the system (eV/unit cell)  -0.06755214093
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011996478
+
+
+iteration         185
+Energy of the system (eV/unit cell)  -0.06755214339
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011850480
+
+
+iteration         186
+Energy of the system (eV/unit cell)  -0.06755214580
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011706428
+
+
+iteration         187
+Energy of the system (eV/unit cell)  -0.06755214816
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011564294
+
+
+iteration         188
+Energy of the system (eV/unit cell)  -0.06755215047
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011424047
+
+
+iteration         189
+Energy of the system (eV/unit cell)  -0.06755215272
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011288356
+
+
+iteration         190
+Energy of the system (eV/unit cell)  -0.06755215493
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011154561
+
+
+iteration         191
+Energy of the system (eV/unit cell)  -0.06755215709
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00011022470
+
+
+iteration         192
+Energy of the system (eV/unit cell)  -0.06755215920
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010892060
+
+
+iteration         193
+Energy of the system (eV/unit cell)  -0.06755216126
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010763308
+
+
+iteration         194
+Energy of the system (eV/unit cell)  -0.06755216328
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010636190
+
+
+iteration         195
+Energy of the system (eV/unit cell)  -0.06755216526
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010510684
+
+
+iteration         196
+Energy of the system (eV/unit cell)  -0.06755216719
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010386767
+
+
+iteration         197
+Energy of the system (eV/unit cell)  -0.06755216908
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010264417
+
+
+iteration         198
+Energy of the system (eV/unit cell)  -0.06755217093
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010143613
+
+
+iteration         199
+Energy of the system (eV/unit cell)  -0.06755217274
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00010024334
+
+
+iteration         200
+Energy of the system (eV/unit cell)  -0.06755217451
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009906558
+
+
+iteration         201
+Energy of the system (eV/unit cell)  -0.06755217624
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009790264
+
+
+iteration         202
+Energy of the system (eV/unit cell)  -0.06755217794
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009675433
+
+
+iteration         203
+Energy of the system (eV/unit cell)  -0.06755217959
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009562044
+
+
+iteration         204
+Energy of the system (eV/unit cell)  -0.06755218121
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009450077
+
+
+iteration         205
+Energy of the system (eV/unit cell)  -0.06755218280
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009339513
+
+
+iteration         206
+Energy of the system (eV/unit cell)  -0.06755218435
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009230332
+
+
+iteration         207
+Energy of the system (eV/unit cell)  -0.06755218587
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009122516
+
+
+iteration         208
+Energy of the system (eV/unit cell)  -0.06755218735
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00009016046
+
+
+iteration         209
+Energy of the system (eV/unit cell)  -0.06755218880
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008910904
+
+
+iteration         210
+Energy of the system (eV/unit cell)  -0.06755219023
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008807072
+
+
+iteration         211
+Energy of the system (eV/unit cell)  -0.06755219162
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008704531
+
+
+iteration         212
+Energy of the system (eV/unit cell)  -0.06755219298
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008603264
+
+
+iteration         213
+Energy of the system (eV/unit cell)  -0.06755219431
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008503255
+
+
+iteration         214
+Energy of the system (eV/unit cell)  -0.06755219561
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008404485
+
+
+iteration         215
+Energy of the system (eV/unit cell)  -0.06755219688
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008306939
+
+
+iteration         216
+Energy of the system (eV/unit cell)  -0.06755219813
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008210599
+
+
+iteration         217
+Energy of the system (eV/unit cell)  -0.06755219935
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008115449
+
+
+iteration         218
+Energy of the system (eV/unit cell)  -0.06755220054
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00008021474
+
+
+iteration         219
+Energy of the system (eV/unit cell)  -0.06755220170
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007928657
+
+
+iteration         220
+Energy of the system (eV/unit cell)  -0.06755220285
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007836983
+
+
+iteration         221
+Energy of the system (eV/unit cell)  -0.06755220396
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007746436
+
+
+iteration         222
+Energy of the system (eV/unit cell)  -0.06755220506
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007657002
+
+
+iteration         223
+Energy of the system (eV/unit cell)  -0.06755220613
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007568666
+
+
+iteration         224
+Energy of the system (eV/unit cell)  -0.06755220717
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007481412
+
+
+iteration         225
+Energy of the system (eV/unit cell)  -0.06755220820
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007395227
+
+
+iteration         226
+Energy of the system (eV/unit cell)  -0.06755220920
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007310096
+
+
+iteration         227
+Energy of the system (eV/unit cell)  -0.06755221018
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007226005
+
+
+iteration         228
+Energy of the system (eV/unit cell)  -0.06755221114
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007142941
+
+
+iteration         229
+Energy of the system (eV/unit cell)  -0.06755221208
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00007060889
+
+
+iteration         230
+Energy of the system (eV/unit cell)  -0.06755221299
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006979836
+
+
+iteration         231
+Energy of the system (eV/unit cell)  -0.06755221389
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006899770
+
+
+iteration         232
+Energy of the system (eV/unit cell)  -0.06755221477
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006820677
+
+
+iteration         233
+Energy of the system (eV/unit cell)  -0.06755221563
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006742544
+
+
+iteration         234
+Energy of the system (eV/unit cell)  -0.06755221647
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006665358
+
+
+iteration         235
+Energy of the system (eV/unit cell)  -0.06755221730
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006589107
+
+
+iteration         236
+Energy of the system (eV/unit cell)  -0.06755221810
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006513780
+
+
+iteration         237
+Energy of the system (eV/unit cell)  -0.06755221889
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006439362
+
+
+iteration         238
+Energy of the system (eV/unit cell)  -0.06755221966
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006365844
+
+
+iteration         239
+Energy of the system (eV/unit cell)  -0.06755222042
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006293213
+
+
+iteration         240
+Energy of the system (eV/unit cell)  -0.06755222116
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006221457
+
+
+iteration         241
+Energy of the system (eV/unit cell)  -0.06755222188
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006150564
+
+
+iteration         242
+Energy of the system (eV/unit cell)  -0.06755222259
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006080525
+
+
+iteration         243
+Energy of the system (eV/unit cell)  -0.06755222328
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00006011327
+
+
+iteration         244
+Energy of the system (eV/unit cell)  -0.06755222396
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005942960
+
+
+iteration         245
+Energy of the system (eV/unit cell)  -0.06755222462
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005875413
+
+
+iteration         246
+Energy of the system (eV/unit cell)  -0.06755222527
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005808674
+
+
+iteration         247
+Energy of the system (eV/unit cell)  -0.06755222591
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005742735
+
+
+iteration         248
+Energy of the system (eV/unit cell)  -0.06755222653
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005677584
+
+
+iteration         249
+Energy of the system (eV/unit cell)  -0.06755222714
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005613211
+
+
+iteration         250
+Energy of the system (eV/unit cell)  -0.06755222773
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005549607
+
+
+iteration         251
+Energy of the system (eV/unit cell)  -0.06755222831
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005486761
+
+
+iteration         252
+Energy of the system (eV/unit cell)  -0.06755222888
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005424663
+
+
+iteration         253
+Energy of the system (eV/unit cell)  -0.06755222944
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005363305
+
+
+iteration         254
+Energy of the system (eV/unit cell)  -0.06755222999
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005302676
+
+
+iteration         255
+Energy of the system (eV/unit cell)  -0.06755223052
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005242767
+
+
+iteration         256
+Energy of the system (eV/unit cell)  -0.06755223104
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005183568
+
+
+iteration         257
+Energy of the system (eV/unit cell)  -0.06755223156
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005125072
+
+
+iteration         258
+Energy of the system (eV/unit cell)  -0.06755223206
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005067269
+
+
+iteration         259
+Energy of the system (eV/unit cell)  -0.06755223255
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00005010150
+
+
+iteration         260
+Energy of the system (eV/unit cell)  -0.06755223303
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004953706
+
+
+iteration         261
+Energy of the system (eV/unit cell)  -0.06755223350
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004897929
+
+
+iteration         262
+Energy of the system (eV/unit cell)  -0.06755223396
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004842810
+
+
+iteration         263
+Energy of the system (eV/unit cell)  -0.06755223441
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004788341
+
+
+iteration         264
+Energy of the system (eV/unit cell)  -0.06755223485
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004734514
+
+
+iteration         265
+Energy of the system (eV/unit cell)  -0.06755223528
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004681321
+
+
+iteration         266
+Energy of the system (eV/unit cell)  -0.06755223570
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004628753
+
+
+iteration         267
+Energy of the system (eV/unit cell)  -0.06755223611
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004576803
+
+
+iteration         268
+Energy of the system (eV/unit cell)  -0.06755223652
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004525463
+
+
+iteration         269
+Energy of the system (eV/unit cell)  -0.06755223691
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004474725
+
+
+iteration         270
+Energy of the system (eV/unit cell)  -0.06755223730
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004424582
+
+
+iteration         271
+Energy of the system (eV/unit cell)  -0.06755223768
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004375026
+
+
+iteration         272
+Energy of the system (eV/unit cell)  -0.06755223805
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004326050
+
+
+iteration         273
+Energy of the system (eV/unit cell)  -0.06755223841
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004277647
+
+
+iteration         274
+Energy of the system (eV/unit cell)  -0.06755223877
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004229810
+
+
+iteration         275
+Energy of the system (eV/unit cell)  -0.06755223911
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004182530
+
+
+iteration         276
+Energy of the system (eV/unit cell)  -0.06755223945
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004135803
+
+
+iteration         277
+Energy of the system (eV/unit cell)  -0.06755223979
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004089619
+
+
+iteration         278
+Energy of the system (eV/unit cell)  -0.06755224011
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00004043974
+
+
+iteration         279
+Energy of the system (eV/unit cell)  -0.06755224043
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003998860
+
+
+iteration         280
+Energy of the system (eV/unit cell)  -0.06755224074
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003954270
+
+
+iteration         281
+Energy of the system (eV/unit cell)  -0.06755224105
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003910199
+
+
+iteration         282
+Energy of the system (eV/unit cell)  -0.06755224135
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003866639
+
+
+iteration         283
+Energy of the system (eV/unit cell)  -0.06755224164
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003823584
+
+
+iteration         284
+Energy of the system (eV/unit cell)  -0.06755224193
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003781029
+
+
+iteration         285
+Energy of the system (eV/unit cell)  -0.06755224221
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003738966
+
+
+iteration         286
+Energy of the system (eV/unit cell)  -0.06755224248
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003697390
+
+
+iteration         287
+Energy of the system (eV/unit cell)  -0.06755224275
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003656295
+
+
+iteration         288
+Energy of the system (eV/unit cell)  -0.06755224301
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003615675
+
+
+iteration         289
+Energy of the system (eV/unit cell)  -0.06755224327
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003575524
+
+
+iteration         290
+Energy of the system (eV/unit cell)  -0.06755224352
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003535837
+
+
+iteration         291
+Energy of the system (eV/unit cell)  -0.06755224377
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003496607
+
+
+iteration         292
+Energy of the system (eV/unit cell)  -0.06755224401
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003457829
+
+
+iteration         293
+Energy of the system (eV/unit cell)  -0.06755224425
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003419498
+
+
+iteration         294
+Energy of the system (eV/unit cell)  -0.06755224448
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003381608
+
+
+iteration         295
+Energy of the system (eV/unit cell)  -0.06755224470
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003344153
+
+
+iteration         296
+Energy of the system (eV/unit cell)  -0.06755224493
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003307129
+
+
+iteration         297
+Energy of the system (eV/unit cell)  -0.06755224514
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003270530
+
+
+iteration         298
+Energy of the system (eV/unit cell)  -0.06755224536
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003234351
+
+
+iteration         299
+Energy of the system (eV/unit cell)  -0.06755224556
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003198587
+
+
+iteration         300
+Energy of the system (eV/unit cell)  -0.06755224577
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003163233
+
+
+iteration         301
+Energy of the system (eV/unit cell)  -0.06755224597
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003128284
+
+
+iteration         302
+Energy of the system (eV/unit cell)  -0.06755224616
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003093734
+
+
+iteration         303
+Energy of the system (eV/unit cell)  -0.06755224635
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003059580
+
+
+iteration         304
+Energy of the system (eV/unit cell)  -0.06755224654
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00003025816
+
+
+iteration         305
+Energy of the system (eV/unit cell)  -0.06755224672
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002992438
+
+
+iteration         306
+Energy of the system (eV/unit cell)  -0.06755224690
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002959441
+
+
+iteration         307
+Energy of the system (eV/unit cell)  -0.06755224708
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002926820
+
+
+iteration         308
+Energy of the system (eV/unit cell)  -0.06755224725
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002894572
+
+
+iteration         309
+Energy of the system (eV/unit cell)  -0.06755224742
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002862690
+
+
+iteration         310
+Energy of the system (eV/unit cell)  -0.06755224758
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002831172
+
+
+iteration         311
+Energy of the system (eV/unit cell)  -0.06755224774
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002800012
+
+
+iteration         312
+Energy of the system (eV/unit cell)  -0.06755224790
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002769206
+
+
+iteration         313
+Energy of the system (eV/unit cell)  -0.06755224805
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002738751
+
+
+iteration         314
+Energy of the system (eV/unit cell)  -0.06755224820
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002708642
+
+
+iteration         315
+Energy of the system (eV/unit cell)  -0.06755224835
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002678874
+
+
+iteration         316
+Energy of the system (eV/unit cell)  -0.06755224850
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002649444
+
+
+iteration         317
+Energy of the system (eV/unit cell)  -0.06755224864
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002620348
+
+
+iteration         318
+Energy of the system (eV/unit cell)  -0.06755224878
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002591581
+
+
+iteration         319
+Energy of the system (eV/unit cell)  -0.06755224891
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002563140
+
+
+iteration         320
+Energy of the system (eV/unit cell)  -0.06755224905
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002535021
+
+
+iteration         321
+Energy of the system (eV/unit cell)  -0.06755224918
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002507220
+
+
+iteration         322
+Energy of the system (eV/unit cell)  -0.06755224930
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002479734
+
+
+iteration         323
+Energy of the system (eV/unit cell)  -0.06755224943
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002452558
+
+
+iteration         324
+Energy of the system (eV/unit cell)  -0.06755224955
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002425688
+
+
+iteration         325
+Energy of the system (eV/unit cell)  -0.06755224967
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002399123
+
+
+iteration         326
+Energy of the system (eV/unit cell)  -0.06755224979
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002372856
+
+
+iteration         327
+Energy of the system (eV/unit cell)  -0.06755224990
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002346886
+
+
+iteration         328
+Energy of the system (eV/unit cell)  -0.06755225001
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002321209
+
+
+iteration         329
+Energy of the system (eV/unit cell)  -0.06755225012
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002295820
+
+
+iteration         330
+Energy of the system (eV/unit cell)  -0.06755225023
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002270717
+
+
+iteration         331
+Energy of the system (eV/unit cell)  -0.06755225034
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002245897
+
+
+iteration         332
+Energy of the system (eV/unit cell)  -0.06755225044
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002221356
+
+
+iteration         333
+Energy of the system (eV/unit cell)  -0.06755225054
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002197091
+
+
+iteration         334
+Energy of the system (eV/unit cell)  -0.06755225064
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002173098
+
+
+iteration         335
+Energy of the system (eV/unit cell)  -0.06755225073
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002149374
+
+
+iteration         336
+Energy of the system (eV/unit cell)  -0.06755225083
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002125917
+
+
+iteration         337
+Energy of the system (eV/unit cell)  -0.06755225092
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002102722
+
+
+iteration         338
+Energy of the system (eV/unit cell)  -0.06755225101
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002079788
+
+
+iteration         339
+Energy of the system (eV/unit cell)  -0.06755225110
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002057111
+
+
+iteration         340
+Energy of the system (eV/unit cell)  -0.06755225119
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002034687
+
+
+iteration         341
+Energy of the system (eV/unit cell)  -0.06755225127
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00002012515
+
+
+iteration         342
+Energy of the system (eV/unit cell)  -0.06755225136
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001990590
+
+
+iteration         343
+Energy of the system (eV/unit cell)  -0.06755225144
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001968911
+
+
+iteration         344
+Energy of the system (eV/unit cell)  -0.06755225152
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001947474
+
+
+iteration         345
+Energy of the system (eV/unit cell)  -0.06755225160
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001926276
+
+
+iteration         346
+Energy of the system (eV/unit cell)  -0.06755225167
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001905315
+
+
+iteration         347
+Energy of the system (eV/unit cell)  -0.06755225175
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001884588
+
+
+iteration         348
+Energy of the system (eV/unit cell)  -0.06755225182
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001864093
+
+
+iteration         349
+Energy of the system (eV/unit cell)  -0.06755225189
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001843825
+
+
+iteration         350
+Energy of the system (eV/unit cell)  -0.06755225196
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001823784
+
+
+iteration         351
+Energy of the system (eV/unit cell)  -0.06755225203
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001803967
+
+
+iteration         352
+Energy of the system (eV/unit cell)  -0.06755225210
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001784374
+
+
+iteration         353
+Energy of the system (eV/unit cell)  -0.06755225216
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001764998
+
+
+iteration         354
+Energy of the system (eV/unit cell)  -0.06755225223
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001745838
+
+
+iteration         355
+Energy of the system (eV/unit cell)  -0.06755225229
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001726891
+
+
+iteration         356
+Energy of the system (eV/unit cell)  -0.06755225235
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001708155
+
+
+iteration         357
+Energy of the system (eV/unit cell)  -0.06755225242
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001689627
+
+
+iteration         358
+Energy of the system (eV/unit cell)  -0.06755225247
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001671304
+
+
+iteration         359
+Energy of the system (eV/unit cell)  -0.06755225253
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001653185
+
+
+iteration         360
+Energy of the system (eV/unit cell)  -0.06755225259
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001635266
+
+
+iteration         361
+Energy of the system (eV/unit cell)  -0.06755225265
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001617546
+
+
+iteration         362
+Energy of the system (eV/unit cell)  -0.06755225270
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001600023
+
+
+iteration         363
+Energy of the system (eV/unit cell)  -0.06755225275
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001582694
+
+
+iteration         364
+Energy of the system (eV/unit cell)  -0.06755225281
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001565556
+
+
+iteration         365
+Energy of the system (eV/unit cell)  -0.06755225286
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001548609
+
+
+iteration         366
+Energy of the system (eV/unit cell)  -0.06755225291
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001531849
+
+
+iteration         367
+Energy of the system (eV/unit cell)  -0.06755225296
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001515274
+
+
+iteration         368
+Energy of the system (eV/unit cell)  -0.06755225300
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001498882
+
+
+iteration         369
+Energy of the system (eV/unit cell)  -0.06755225305
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001482672
+
+
+iteration         370
+Energy of the system (eV/unit cell)  -0.06755225310
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001466641
+
+
+iteration         371
+Energy of the system (eV/unit cell)  -0.06755225314
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001450786
+
+
+iteration         372
+Energy of the system (eV/unit cell)  -0.06755225319
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001435107
+
+
+iteration         373
+Energy of the system (eV/unit cell)  -0.06755225323
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001419601
+
+
+iteration         374
+Energy of the system (eV/unit cell)  -0.06755225327
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001404266
+
+
+iteration         375
+Energy of the system (eV/unit cell)  -0.06755225331
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001389100
+
+
+iteration         376
+Energy of the system (eV/unit cell)  -0.06755225335
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001374101
+
+
+iteration         377
+Energy of the system (eV/unit cell)  -0.06755225339
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001359267
+
+
+iteration         378
+Energy of the system (eV/unit cell)  -0.06755225343
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001344597
+
+
+iteration         379
+Energy of the system (eV/unit cell)  -0.06755225347
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001330088
+
+
+iteration         380
+Energy of the system (eV/unit cell)  -0.06755225351
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001315739
+
+
+iteration         381
+Energy of the system (eV/unit cell)  -0.06755225354
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001301547
+
+
+iteration         382
+Energy of the system (eV/unit cell)  -0.06755225358
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001287512
+
+
+iteration         383
+Energy of the system (eV/unit cell)  -0.06755225361
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001273631
+
+
+iteration         384
+Energy of the system (eV/unit cell)  -0.06755225365
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001259903
+
+
+iteration         385
+Energy of the system (eV/unit cell)  -0.06755225368
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001246325
+
+
+iteration         386
+Energy of the system (eV/unit cell)  -0.06755225372
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001232897
+
+
+iteration         387
+Energy of the system (eV/unit cell)  -0.06755225375
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001219616
+
+
+iteration         388
+Energy of the system (eV/unit cell)  -0.06755225378
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001206481
+
+
+iteration         389
+Energy of the system (eV/unit cell)  -0.06755225381
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001193490
+
+
+iteration         390
+Energy of the system (eV/unit cell)  -0.06755225384
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001180641
+
+
+iteration         391
+Energy of the system (eV/unit cell)  -0.06755225387
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001167933
+
+
+iteration         392
+Energy of the system (eV/unit cell)  -0.06755225390
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001155365
+
+
+iteration         393
+Energy of the system (eV/unit cell)  -0.06755225393
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001142934
+
+
+iteration         394
+Energy of the system (eV/unit cell)  -0.06755225395
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001130639
+
+
+iteration         395
+Energy of the system (eV/unit cell)  -0.06755225398
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001118479
+
+
+iteration         396
+Energy of the system (eV/unit cell)  -0.06755225401
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001106453
+
+
+iteration         397
+Energy of the system (eV/unit cell)  -0.06755225403
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001094557
+
+
+iteration         398
+Energy of the system (eV/unit cell)  -0.06755225406
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001082792
+
+
+iteration         399
+Energy of the system (eV/unit cell)  -0.06755225408
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001071156
+
+
+iteration         400
+Energy of the system (eV/unit cell)  -0.06755225411
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001059647
+
+
+iteration         401
+Energy of the system (eV/unit cell)  -0.06755225413
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001048263
+
+
+iteration         402
+Energy of the system (eV/unit cell)  -0.06755225416
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001037004
+
+
+iteration         403
+Energy of the system (eV/unit cell)  -0.06755225418
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001025868
+
+
+iteration         404
+Energy of the system (eV/unit cell)  -0.06755225420
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001014853
+
+
+iteration         405
+Energy of the system (eV/unit cell)  -0.06755225422
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00001003959
+
+
+iteration         406
+Energy of the system (eV/unit cell)  -0.06755225425
+convergence criteria:   0.00001000000
+,Measured Torque:   0.00000993184
+
+minimization converged
+wrote Spin configuration and povray file
+ computation time:   100.10400000000000      seconds
+ The program has reached the end.

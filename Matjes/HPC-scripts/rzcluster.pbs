@@ -1,0 +1,22 @@
+#!/bin/bash
+#PBS -o job.out        # Name of the out file
+#PBS -j oe             # Don't remember
+#PBS -l walltime=12:00:00     # time allowed for the calculation
+#PBS -N dev            # name that will appear in the queue 
+#PBS -l select=1:ncpus=8:spin=true:mpiprocs=1:mem=30gb    # select: Nb of nodes; ncpus: nb of CPUS booked; spin queue; nb of mpi jobs on this node; memory booked
+#PBS -l place=scatter    # do not change
+#PBS -q spin             # spin queue
+#
+cd $PBS_O_WORKDIR        # ask pbs to go in the working directory (where the job is submitted)
+
+#set OMP_NUM_THREADS=6      # change the number of OMP threads per MPI processes (default is 8)
+
+# charge the different libraries
+
+. /cluster/Software/intel14/composer_xe_2013_sp1/bin/compilervars.sh intel64
+. /cluster/Software/intel14/impi/4.1.1.036/intel64/bin/mpivars.sh
+
+time mpirun -np (nb of procs) /PATH TO EXE
+
+qstat -f $PBS_JOBID
+exit

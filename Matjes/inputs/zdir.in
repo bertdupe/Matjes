@@ -1,0 +1,4 @@
+#input for third direction properties
+type superlattice
+J_1z 0.0d0
+J_1sl 0.0d0

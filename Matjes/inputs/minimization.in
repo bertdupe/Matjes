@@ -1,0 +1,5 @@
+# input for the minimization procedure
+steps 10000
+masse 1.0
+timestep 1.0
+convergence_criteria 0.00001
