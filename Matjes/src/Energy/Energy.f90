@@ -1,17 +1,19 @@
       module m_energy
       contains
 
-      real(kind=8) function Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      use m_efield, only : me,Efield_Jij
-      use m_parameters, only : J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il
+      real(kind=8) function Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN, &
+                 me,Efield_Jij, &
+                 J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il)
 #ifdef CPP_MPI
       use m_mpi_prop, only : start
 #endif
       implicit none
 ! input
       integer, intent(in) :: shape_spin(:)
+      integer, intent(in) :: param_N_Nneigh,param_N_Nneigh_il
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:)
+      real(kind=8), intent(in) :: me(:),J_ij(:,:),J_il(:),c_ji,J_z(:)
 ! external variable
       real (kind=8) :: E_int
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -108,76 +110,13 @@
       Exchange=E_int*c_Ji
       end function Exchange
 
-      real(kind=8) function ExchN(i_x,i_y,i_z,i_m,indexNeighbour)
-      use m_lattice
-      use m_rw_lattice
-      use m_efield
-      use m_parameters
-      implicit none
-! external variable
-      real(kind=8) :: E_int2
-      integer , intent(in) :: i_x,i_y,i_z,i_m,indexNeighbour
-! internal variable
-      integer ::i,j,avant
-! position of the neighbors along x,y,z and motif
-      integer :: v_x,v_y,v_z,v_m,lay
-  
-      E_int2=0.0d0
-      avant=0
-      ExchN=0.0d0
-
-      if (size(J_ij,2).ne.1) then
-       lay=i_m
-      else
-       lay=1
-      endif
-
-      do i=1,IndexNeighbour
-
-         do j=1,indexNN(i,1)
-        v_x=tableNN(1,avant+j,i_x,i_y,i_z,i_m)
-        v_y=tableNN(2,avant+j,i_x,i_y,i_z,i_m)
-        v_z=tableNN(3,avant+j,i_x,i_y,i_z,i_m)
-        v_m=tableNN(4,avant+j,i_x,i_y,i_z,i_m)
-
-            E_int2=E_int2+c_Ji*dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Spin(4:6,v_x,v_y,v_z,v_m))*&
-        dble(masque(avant+j+1,i_x,i_y,i_z))*(J_ij(i,lay)+me(i)*Efield_Jij(i_x,i_y,i_z))
-         enddo
-      
-         avant=avant+indexNN(i,1)
-         
-      enddo
-
-      if ((size(spin,5).ne.1).or.(dabs(J_il(1)).gt.1.0d-8)) then
-       avant=sum(indexNN(:,1))
-       do i=1,IndexNeighbour
-        do j=1,indexNN(i,2)
-        v_x=tableNN(1,avant+j,i_x,i_y,i_z,i_m)
-        v_y=tableNN(2,avant+j,i_x,i_y,i_z,i_m)
-        v_z=tableNN(3,avant+j,i_x,i_y,i_z,i_m)
-        v_m=tableNN(4,avant+j,i_x,i_y,i_z,i_m)
-
-        E_int2=E_int2+(Spin(4,i_x,i_y,i_z,i_m)*Spin(4,v_x,v_y,v_z,v_m)+ &
-         Spin(5,i_x,i_y,i_z,i_m)*Spin(5,v_x,v_y,v_z,v_m)+ &
-         Spin(6,i_x,i_y,i_z,i_m)*Spin(6,v_x,v_y,v_z,v_m))* &
-         dble(masque(avant+j+1,i_x,i_y,i_z))*J_il(i)
-
-        enddo
-        avant=avant+indexNN(i,2)
-       enddo
-       endif
-      ExchN=E_int2
-      
-      end function ExchN
-
 !Zeeman energy
-      real(kind=8) function Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,H_ext)
-      use m_constants, only : mu_B
+      real(kind=8) function Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,H_ext,mu_B)
       implicit none
 ! input
       integer, intent(in) :: shape_spin(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      real(kind=8), intent(in) ::H_ext(:)
+      real(kind=8), intent(in) ::H_ext(:),mu_B
       integer, intent(in) :: masque(:,:,:,:)
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m

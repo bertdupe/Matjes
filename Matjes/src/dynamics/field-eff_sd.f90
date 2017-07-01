@@ -8,8 +8,8 @@
 ! May the force be with you
 !
 !!!! exchange field
-      function Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      use m_parameters, only : J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il
+      function Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN, &
+                     J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il)
       implicit none
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -17,7 +17,9 @@
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
+      integer, intent(in) :: param_N_Nneigh,param_N_Nneigh_il
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      real(kind=8), intent(in) :: J_ij(:,:),J_z(:),c_ji,J_il(:)
 ! value of the function variable
       real(kind=8), dimension(3) :: Bexch
 ! internal variable

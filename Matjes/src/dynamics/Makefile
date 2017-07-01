@@ -1,32 +1,11 @@
-include ../make.sys
-
-#export LD=$(LD)
-#export $FC
-#export $(CC) $(FFLAGS) $(CPPS)
-
 
 .SUFFIXES: .F .f .f90 .F90
 
-SUBDIRS = \
-	Energy \
-	dynamics \
-	MonteCarlo \
-	parallelization \
-	io-inputs \
-	io-ouputs \
-	random-numbers \
-	setup \
-	utilities \
-	GNEB
+OBJS = Beff_sd.o field-eff_sd.o error_correction_SD.o Efield_sd.o spindynamics.o av_sd.o topocharge_sd.o
+
+toto: $(OBJS)
+	$(LD) -o $@ $(LDFLAGS) $(OBJS) $(LIBRARIES)
 	
-BIN_DIR= ../bin	
-
-toto:
-	@(cd $(SUBDIRS) && make $*)
-
-Matjes : $(OBJS) $(MPI) $(DIP)
-	$(LD) -o $@ $(LDFLAGS) $(FIRST) $(OBJS) $(DIP) $(MPI) $(LIBRARIES)
-
 .f.o:
 	$(FC) -cpp $(CPPS) -c $< $(FFLAGS) -o $@
 
@@ -58,7 +37,7 @@ Matjes : $(OBJS) $(MPI) $(DIP)
 	$(RM) $*.o
 
 clean:
-	$(RM) $(FIRST) $(OBJS) $(MPI) $(DIP) *.mod core *.o
+	$(RM) $(OBJS) *.mod core *.o
 
-tests:
-	cd ../TESTS && $(make)
+field-eff_sd.o:
+Beff_sd.o: field-eff_sd.o

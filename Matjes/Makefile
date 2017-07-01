@@ -1,5 +1,9 @@
-.PHONY: serial clean cleanall 
+.PHONY: serial clean cleanall toto
 
+
+toto:
+	@(cd src && make $*)
+	
 serial: 
 	+@(cd src && make $*)
 
