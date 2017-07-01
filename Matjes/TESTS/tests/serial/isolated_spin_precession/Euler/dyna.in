@@ -1,0 +1,18 @@
+#input for the dynamic
+integration 1  (1: Euler; 2: SIA; 3: Heun; 4: SIB; 5: SIB with error correction, 6: SIB without temperature)
+timestep 1 (fs)
+duration 50  (in units of dt)
+damping 0.0
+resolution 500 500
+torque 0.0
+Ipol 0.0 0.0 1.0
+adia 0.0
+nonadia 0.0
+stmtorque .F. 1.0 1.0 0.0
+step .F. 1000 1000
+rampe .F. -10.0 10 1000
+Hsweep .F. 0.0 0.0 -10.0 1000 1500 0.0 0.0 0.0
+Ffield .F.
+Efield .F.
+STMtemp .F.
+Efreq 1

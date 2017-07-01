@@ -1,0 +1,26 @@
+#!/bin/sh
+#PBS -q cllong    
+#PBS -l cpunum_job=8 
+#PBS -b 1                    # number of nodes
+#PBS -l cputim_job=160:00:00
+#PBS -l elapstim_req=20:00:00
+#PBS -l memsz_job=20gb
+#PBS -T mpich
+#PBS -j o
+#PBS  -o job.out
+
+cd $PBS_O_WORKDIR
+
+. /opt/intel/composer_xe_2013_sp1/bin/compilervars.sh intel64
+. /opt/intel/impi/4.1.1.036/intel64/bin/mpivars.sh
+
+##for HDF
+#export PATH=/gfs/sw/hdf5-1.8.9_intel_par/bin:$PATH
+#export LD_LIBRARY_PATH=/gfs/sw/hdf5-1.8.9_intel_par/lib:$LD_LIBRARY_PATH
+
+# old way of submiting the jobs
+##HOSTS1=`/sfs/fs4/sw_old/sbin/nqs_mpi_hosts.pl $NQSII_MPINODES`
+##time mpirun -r ssh -host $HOSTS1 -n 8 exec
+
+# new way
+time mpirun $NQSII_MPIOPTS -n 8 /sfs/fs5/home-sh/supas267/MC/spin

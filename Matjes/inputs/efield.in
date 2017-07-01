@@ -1,0 +1,20 @@
+# input for the electric field
+# "plane" is a full plane of charge
+# "tip" is for the effect of EF created by the tip (center,height,radius,angle)
+# "circle" is for the effect of EF created by the tip (center,height,radius,angle)
+shape plane
+# value of the field in V/A
+field 1.978768d0
+# the coefficient are included as a*x+b in V/A
+me_1 1.1 
+me_2 0.9 
+me_3 0.0 
+me_4 0.0 
+me_5 0.0 
+me_6 0.0 
+me_7 0.0 
+me_8 0.0 
+me_9 0.0 
+me_10 0.0 
+me_11 0.0 
+me_12 0.0 

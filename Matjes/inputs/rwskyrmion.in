@@ -1,0 +1,25 @@
+#fichier pour la creation et destruction de skyrmion et pinning
+NSkyAdd 0
+NSkyAnnihilation 0
+N_Pinning 0
+PXYRTSky
+.F. 45.0d0 45.0d0 4.0d0 10.0d0
+NantiSkyAdd 0
+NantiSkyAnnihilation 0
+Nanti_Pinning 0
+PXYRTantiSky
+.F. 45.0d0 45.0d0 4.0d0 10.0d0
+NstarSkyAdd 0
+NstarSkyAnnihilation 0
+Nstar_Pinning 0
+PXYRTstarSky
+.F. 45.0d0 45.0d0 4.0d0 10.0d0
+NuserSkyAdd 1
+PXYRTuserSky
+ 1.0d0 1.0d0 1.0d0 1.0d0
+ 45.0d0 45.0d0 4.0d0 10.0d0
+NusertargetSkyAdd 1
+PXYRTusertargetSky
+.F. 45.0d0 45.0d0 4.0d0 10.0d0
+lattice .T.
+qlattice 0.08
