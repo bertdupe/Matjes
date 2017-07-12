@@ -30,4 +30,15 @@
 #endif
       if (i_stone) E(8)=total_stoner(spin,shape_spin,masque,shape_masque,tableNN,shape_tableNN,indexNN,shape_index)
 
+      write(6,'(a)') 'Reinitialization of the total Energies'
+      write(6,'(a,/)') 'Energy of the spin configuration (in eV)'
+      write(6,'(a,4x,f16.8)') 'Exchange energy', E(1)
+      write(6,'(a,4x,f16.8)') 'Zeeman energy', E(2)
+      write(6,'(a,4x,f16.8)') 'Anisotropy energy', E(3)
+      if (i_four) write(6,'(a,4x,f16.8)') '4-spin energy', E(4)
+      if (i_dm) write(6,'(a,4x,f16.8)') 'DMI energy', E(5)
+      if (i_biq) write(6,'(a,4x,f16.8)') 'Biquadratic energy', E(6)
+      if (i_dip) write(6,'(a,4x,f16.8)') 'Dipole-dipole energy', E(7)
+      write(6,'(a,4x,f16.8)') 'Total energy', sum(E)
+
       end subroutine DeriveValue

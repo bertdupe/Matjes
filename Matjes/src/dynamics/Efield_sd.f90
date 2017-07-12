@@ -18,7 +18,7 @@
 ! internals
       integer :: iomp,i_x,i_y,i_z,i_m,k,i
       character(len=30) :: fname,toto
-      real(kind=8) :: E_int,E_DM,E_xch,E_ani,E_z,E_4,E_biq,E_dip
+      real(kind=8) :: E_int,E_DM,E_xch,E_ani,E_z,E_4,E_biq,E_dip,mu_B
 
       E_DM=0.0d0
       E_xch=0.0d0
@@ -42,8 +42,10 @@
         do i_y=1,shape_spin(3)
          do i_x=1,shape_spin(2)
 
+         mu_B=spin(7,i_x,i_y,i_z,i_m)
+
           E_xch=Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-          E_z=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext)
+          E_z=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
           E_ani=anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque)
           if (i_DM) E_DM=DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
           if (i_four) E_4=fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
@@ -83,7 +85,7 @@
 ! internals
       integer :: iomp,i_x,i_y,i_z,i_m,k,i,i_gx,i_gy,i_gz
       character(len=30) :: fname,toto
-      real(kind=8) :: E_density(11,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      real(kind=8) :: E_density(11,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),mu_B
 ! mpi variable
 
       E_density=0.0d0
@@ -93,6 +95,8 @@
         do i_gy=1,shape_tableNN(4)
          do i_gx=1,shape_tableNN(3)
 
+          mu_B=spin(7,i_x,i_y,i_z,i_m)
+
           i_x=i_gx+start(1)
           i_y=i_gy+start(2)
           i_z=i_gz+start(3)
@@ -100,7 +104,7 @@
           E_density(1:3,i_x,i_y,i_z,i_m)=spin(1:3,i_x,i_y,i_z,i_m)
 
           E_density(5,i_x,i_y,i_z,i_m)=Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-          E_density(8,i_x,i_y,i_z,i_m)=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext)
+          E_density(8,i_x,i_y,i_z,i_m)=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
           E_density(7,i_x,i_y,i_z,i_m)=anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque)
           if (i_DM) E_density(6,i_x,i_y,i_z,i_m)=DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
           if (i_four) E_density(9,i_x,i_y,i_z,i_m)=fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque)

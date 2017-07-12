@@ -1,32 +1,12 @@
-include ../make.sys
-
-#export LD=$(LD)
-#export $FC
-#export $(CC) $(FFLAGS) $(CPPS)
-
+include ../../make.sys
 
 .SUFFIXES: .F .f .f90 .F90
 
-SUBDIRS = \
-	Energy \
-	dynamics \
-	MonteCarlo \
-	parallelization \
-	io-inputs \
-	io-ouputs \
-	random-numbers \
-	setup \
-	utilities \
-	GNEB
+OBJS = cal_local_energy.o CalculateAverages.o demag-matrix.o demag-tensor.o DeriveValue.o Energy_density.o Energy.o
+
+toto: $(OBJS)
+	$(LD) -o $@ $(LDFLAGS) $(OBJS) $(LIBRARIES)
 	
-BIN_DIR= ../bin	
-
-toto:
-	@(cd $(SUBDIRS) && make $*)
-
-Matjes : $(OBJS) $(MPI) $(DIP)
-	$(LD) -o $@ $(LDFLAGS) $(FIRST) $(OBJS) $(DIP) $(MPI) $(LIBRARIES)
-
 .f.o:
 	$(FC) -cpp $(CPPS) -c $< $(FFLAGS) -o $@
 
@@ -58,7 +38,7 @@ Matjes : $(OBJS) $(MPI) $(DIP)
 	$(RM) $*.o
 
 clean:
-	$(RM) $(FIRST) $(OBJS) $(MPI) $(DIP) *.mod core *.o
+	$(RM) $(OBJS) *.mod core *.o
 
-tests:
-	cd ../TESTS && $(make)
+Energy.o:
+cal_local_energy.o: Energy.o

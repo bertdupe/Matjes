@@ -53,10 +53,10 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="Communications|effective-fields|integrator|geometry|src|Libraries|bin|Tightbinding|Dynamics|Energy|inputsIO" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Libraries"/>
+						<entry excluding="OBJECT-FILES|sources|External-lib|Libraries|src|bin" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="External-lib"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="bin"/>
-						<entry excluding="Communications|effective-fields|integrator|geometry|Dynamics|Energy|inputsIO|Tightbinding" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="utilities/OBJECT-FILES" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="src"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -66,9 +66,15 @@
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="Matjes.null.2086382052" name="Matjes"/>
 	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="photran.managedbuild.toolchain.gnu.fortran.exe.debug.1284029740;photran.managedbuild.toolchain.gnu.fortran.exe.debug.1284029740.665712229;photran.managedbuild.tool.gnu.c.compiler.exe.debug.1656697785;cdt.managedbuild.tool.gnu.c.compiler.input.547292602">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="photran.managedbuild.toolchain.gnu.fortran.exe.debug.1284029740;photran.managedbuild.toolchain.gnu.fortran.exe.debug.1284029740.665712229">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfile"/>
+		</scannerConfigBuildInfo>
+	</storageModule>
 </cproject>

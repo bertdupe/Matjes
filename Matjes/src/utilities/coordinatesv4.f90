@@ -8,19 +8,20 @@
 ! Preparing integration into MC_code
 !===================================================================
 
-      SUBROUTINE SphericalCoordinates(Spins,shape_spin,angle_sum)
+      SUBROUTINE SphericalCoordinates(Spins,shape_spin,angle_sum,VectPolarRef)
 
 ! The file FSpinInp will be referred to with the Unit number 86 in
 ! Read/Write Statements
 ! The file FSpinOut has unit number 89
 ! The format in which those file should be read or write is 5f14.8. This
 ! format is referred to by the number 99999
-      use m_gauge
       use m_constants, only : pi
       Implicit None
       integer, intent(in) :: shape_spin(5)
 ! Table containing the sum of the angles and spin components
       real(kind=8), intent(in) ::Spins(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+! axis of references
+     real(kind=8), intent(in) :: VectPolarRef(:)
 ! Average of the polar angles
       real(kind=8), intent(inout) ::angle_sum(2,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
 ! Basis of orthononormal vectors with VectPolarRef as the polar vector
@@ -37,9 +38,6 @@
       real(kind=8):: varx, vary
 
       testnull= 1.0d-4
-
-!99999 format(5f14.8)
-      call rw_gauge() 
 
       Alpha   = VectPolarRef(1)
       Beta    = VectPolarRef(2)

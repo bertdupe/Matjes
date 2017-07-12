@@ -306,11 +306,11 @@
        close(io)
        
        if (SkX) then
-        if (NSkyAdd.ne.0) call find_XYsky(XSky,YSky,NSkyAdd,qSkX)
-        if (NantiSkyAdd.ne.0) call find_XYsky(XantiSky,YantiSky,NantiSkyAdd,qSkX)
-        if (NstarSkyAdd.ne.0) call find_XYsky(XstarSky,YstarSky,NstarSkyAdd,qSkX)
-        if (NuserSkyAdd.ne.0) call find_XYsky(XuserSky,YuserSky,NuserSkyAdd,qSkX)
-        if (NstarSkyAdd.ne.0) call find_XYsky(XtargetSky,YtargetSky,NtargetSkyAdd,qSkX)
+        if (NSkyAdd.ne.0) call find_XYsky(XSky,YSky,NSkyAdd,qSkX,dim_lat,net)
+        if (NantiSkyAdd.ne.0) call find_XYsky(XantiSky,YantiSky,NantiSkyAdd,qSkX,dim_lat,net)
+        if (NstarSkyAdd.ne.0) call find_XYsky(XstarSky,YstarSky,NstarSkyAdd,qSkX,dim_lat,net)
+        if (NuserSkyAdd.ne.0) call find_XYsky(XuserSky,YuserSky,NuserSkyAdd,qSkX,dim_lat,net)
+        if (NstarSkyAdd.ne.0) call find_XYsky(XtargetSky,YtargetSky,NtargetSkyAdd,qSkX,dim_lat,net)
         if ((NSkyAdd.eq.0).and.(NantiSkyAdd.eq.0).and.(NstarSkyAdd.eq.0).and.&
      & (NuserSkyAdd.eq.0)) then
          write(6,'(a)') 'In case of SkX, NSkyAdd or NantiSkyAdd or NstarSkyAdd or NtargetSkyAdd should be different from 0'

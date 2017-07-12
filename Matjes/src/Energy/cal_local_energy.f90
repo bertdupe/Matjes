@@ -20,7 +20,7 @@
 ! ouput
       real(kind=8) :: local_energy_MC(8)
 ! internal
-      real(kind=8) :: E_int(8)
+      real(kind=8) :: E_int(8),mu_B
       integer :: i_x,i_y,i_z,i_m
 
       E_int=0.0d0
@@ -31,8 +31,10 @@
       i_z=Ilat(3)
       i_m=Ilat(4)
 
+      mu_B=spin(7,i_x,i_y,i_z,i_m)
+
       E_int(1)=2.0d0*Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      E_int(2)=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext)
+      E_int(2)=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
       E_int(3)=anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque)
       if (i_DM) E_int(5)=2.0d0*DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
       if (i_four) E_int(4)=4.0d0*fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
@@ -63,12 +65,13 @@
 ! ouput
       real(kind=8) :: local_energy_decompose(8)
 ! internal
-      real(kind=8) :: E_int(8)
+      real(kind=8) :: E_int(8),mu_B
 
       E_int=0.0d0
+      mu_B=spin(7,i_x,i_y,i_z,i_m)
 
       E_int(1)=Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      E_int(2)=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext)
+      E_int(2)=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
       E_int(3)=anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque)
       if (i_DM) E_int(5)=DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
       if (i_four) E_int(4)=fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
@@ -96,12 +99,13 @@
       logical, intent(in) :: i_DM,i_four,i_biq,i_dip
       real(kind=8), intent(in) :: E_dim
 ! internal
-      real(kind=8) :: E_int
+      real(kind=8) :: E_int,mu_B
 
       E_int=0.0d0
+      mu_B=spin(7,i_x,i_y,i_z,i_m)
 
       E_int=Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      E_int=E_int+Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext)
+      E_int=E_int+Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
       E_int=E_int+anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque)
       if (i_DM) E_int=E_int+DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
       if (i_four) E_int=E_int+fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
