@@ -1,17 +1,19 @@
-.PHONY: serial clean cleanall toto
+SHELL = /bin/bash
 
+.PHONY: serial clean cleanall
 
-toto:
-	@(cd src && make $*)
-	
-serial: 
-	+@(cd src && make $*)
+serial: copy
+	cd build && make Matjes
+
+copy:
+	cp src/*.f90 src/*/*.f* src/*/*.F* build/.
 
 install:  serial
-	+@(cd src && mv Matjes ../bin/.)
+	+@(cd build && mv Matjes ../bin/.)
+	
 clean: 
-	+@(cd src && make clean)
+	+@(cd build && make clean)
 
 cleanall: clean
-	+@(cd src && make clean)
+	+@(cd build && make clean)
 	+@(cd bin && rm *)

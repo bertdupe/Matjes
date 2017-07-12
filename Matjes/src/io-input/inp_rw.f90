@@ -68,7 +68,7 @@
       logical :: ising
 ! print a lots of warnings if necessary
       logical :: i_print_W
-      logical :: i_separate,i_average,i_ghost,i_paratemp,i_optTset,print_relax
+      logical :: i_separate,i_average,i_ghost,i_optTset,print_relax
       logical :: T_sweep
       integer :: N_temp,T_relax_temp
       integer :: n_ghost,nRepProc
@@ -133,9 +133,7 @@
       i_average=.False.
       i_ghost=.False.
       T_sweep=.False.
-      i_paratemp=.False.
-      i_metropolis=.True.
-      i_entropic=.False.
+
       i_optTset=.False.
       i_DM=.False.
       ising=.False.
@@ -154,7 +152,6 @@
       i_qorien=.False.
       i_topohall=.False.
       i_print_W=.False.
-      i_minimization=.False.
       CalTheta=.False.
       Gra_log=.False.
       DM_loc=0.0d0
@@ -209,6 +206,15 @@
             case ("Montecarlo")
               my_simu%i_metropolis=.True.
             case ("spindynami")
+              my_simu%i_dynamic=.True.
+            case ("entropic")
+              my_simu%i_entropic=.True.
+            case ("GNEB")
+              my_simu%i_gneb=.True.
+            case ("parallelte")
+              my_simu%i_paratemp=.True.
+            case ("minimizati")
+              my_simu%i_minimization=.True.
             case default
                STOP 'select a simulation type'
            end select
@@ -230,12 +236,10 @@
            elseif (tag == "aver") then
             i_average=.True.
            elseif (tag == "para") then
-            i_paratemp=.True.
             i_separate=.True.
             backspace(io)
             read(io,*) dummy, dummy, N_temp, i_optTset, T_relax_temp
            elseif (tag == "none") then
-            i_paratemp=.False.
             i_separate=.False.
             i_average=.False.
            else
@@ -251,7 +255,7 @@
 #endif
            endif
          endif
-        if (i_paratemp.and.(str(1:11) == 'print_relax')) then
+        if (my_simu%i_paratemp.or.(str(1:11) == 'print_relax')) then
          backspace(io)
          read(io,*) dummy, print_relax
         endif
@@ -716,10 +720,10 @@
         'param.dat',len_trim('asis'),'asis')
 #endif
 
-!#ifdef CPP_DEBUG
+#ifdef CPP_DEBUG
       write(6,*) "J_ij", J_ij
       write(6,*) "J_z", Jz
-!#endif
+#endif
 
 ! put local variables into the types for transfer
 

@@ -92,7 +92,7 @@
 ! SIB integration scheme. the 3x3 is inverted by hand
        function integrate_SIB(timestep,spin1,B,kt,damping,stmtemp,state, &
       & i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
-       use m_constants, only : hbar
+      use m_constants, only : hbar
        use m_randist
        use m_dynamic, only : htor
        use m_lattice, only : masque,tableNN

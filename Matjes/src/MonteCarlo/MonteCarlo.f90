@@ -146,8 +146,6 @@
 
       Call CalculateAverages(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system)
 
-      write(*,*) 'toto'
-      pause
 ! Measured data
       E_av=0.0d0
       C_av=0.0d0

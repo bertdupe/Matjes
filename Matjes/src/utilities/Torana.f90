@@ -1,8 +1,4 @@
        module m_Torana
-       use m_eval_Beff
-       use m_vector
-       use m_constants, only : pi
-       use m_solver
        implicit none
 
        contains
@@ -12,6 +8,11 @@
                   torque_AFL,torque_FL,damping,Ipol,EA,h_int, &
                   i_DM,i_four,i_biq,i_dip,i_torque,stmtorque, &
                   timestep,adia,nonadia,storque,maxh)
+       use m_eval_Beff
+       use m_vector
+       use m_constants, only : pi
+       use m_solver
+       implicit none
        integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
        real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
        integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))

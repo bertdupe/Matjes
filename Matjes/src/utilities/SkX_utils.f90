@@ -4,12 +4,11 @@
 
 !!! find the positions of all the skyrmions in the lattice
 
-       subroutine find_XYsky(XSky,YSky,Nadd,qskx)
-       use m_rw_lattice, only : dim_lat,net
+       subroutine find_XYsky(XSky,YSky,Nadd,qskx,dim_lat,net)
        use m_vector, only : norm
        implicit none
-       integer, intent(in) :: Nadd
-       real(kind=8), intent(in) :: qskx
+       integer, intent(in) :: Nadd,dim_lat(:)
+       real(kind=8), intent(in) :: qskx,net(:,:)
        real(kind=8), intent(inout) :: XSky(Nadd),YSky(Nadd)
 ! internal
        integer :: i_x,i_y,N_x,N_y

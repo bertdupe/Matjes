@@ -6,6 +6,8 @@
         integer, allocatable :: type(:)
        end type cell
 
+
+
 ! parameters for printing in and out
        type io_parameter
         logical :: io_dispersion,io_qorien
@@ -27,10 +29,18 @@
         integer :: io_writing
        end type io_parameter
 
+
+
+
+
+
 ! parameters for the type of simulations that you are running
        type type_simu
         logical :: i_dynamic,i_metropolis,i_gneb,i_paratemp,i_minimization,i_entropic,i_r_texture
        end type type_simu
+
+
+
 
 !Operators of the simulations
        type Operator
@@ -38,6 +48,10 @@
         integer :: il,ic
         integer :: nline,ncolumn
        end type Operator
+
+
+
+
 
 !Hamiltonian of the simulations
        type Hamiltonian
@@ -55,7 +69,6 @@
         complex(kind=16), allocatable, dimension(:,:) :: coeff
        end type im_local_Hamil
 
-! coefficients of the Hamiltonian
 
 ! Order parameter of the simulations
        type XVec

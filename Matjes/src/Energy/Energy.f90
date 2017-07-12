@@ -1,19 +1,17 @@
       module m_energy
       contains
 
-      real(kind=8) function Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN, &
-                 me,Efield_Jij, &
-                 J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il)
+      real(kind=8) function Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+      use m_efield, only : me,Efield_Jij
+      use m_parameters, only : J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il
 #ifdef CPP_MPI
       use m_mpi_prop, only : start
 #endif
       implicit none
 ! input
       integer, intent(in) :: shape_spin(:)
-      integer, intent(in) :: param_N_Nneigh,param_N_Nneigh_il
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:)
-      real(kind=8), intent(in) :: me(:),J_ij(:,:),J_il(:),c_ji,J_z(:)
 ! external variable
       real (kind=8) :: E_int
       integer , intent(in) :: i_x,i_y,i_z,i_m

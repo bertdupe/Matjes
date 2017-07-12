@@ -26,7 +26,7 @@
       Integer::ind,j,nb_col,NColEnergy,NStartDensity,col,i_x,i_y,i_z,i_m
       real (kind=8), allocatable :: tabledist(:,:)
       logical::dexists
-      real(kind=8) :: SNeigh, Sprevious
+      real(kind=8) :: SNeigh, Sprevious, mu_B
       integer :: N_Nneigh,Nei_z,N_nei_exch,N_nei_dm,Nei_DM,Nei_il
       integer :: alloc_check,nmag
 ! Table containing all energy terms. The different columns contain the
@@ -83,7 +83,6 @@
       Sprevious= 1.0d0
 
       Open(unit = 666,file=EnOutput,form='formatted',action ='write')
-      Open(unit = 667,file=EnDensityOutput,form='formatted',action='write')
 
       Allocate(EnDenTab(nb_col),stat=alloc_check)
       if (alloc_check.ne.0) stop 'can not allocate energy density matrix'
@@ -103,6 +102,7 @@
         EnDenTab(2)=Spin(2,i_x,i_y,i_z,1)
 
         do i_m=1,shape_spin(5)
+        mu_B=spin(7,i_x,i_y,i_z,i_m)
 !           do i_m=1,1
 
       EnDenTab(3)=EnDenTab(3)+Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
@@ -112,7 +112,7 @@
 #else
       if (i_dip) EnDenTab(4)=EnDenTab(4)+fftdip(i_x,i_y,i_z,i_m)
 #endif
-      EnDenTab(5)=EnDenTab(5)+Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext)
+      EnDenTab(5)=EnDenTab(5)+Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
       if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
 
 !      if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m)/dble(count(masque(2:N_nei_dm+1,i_x,i_y,i_z).ne.0))
@@ -123,50 +123,9 @@
 
       EnDenTab(10)= sum(EnDenTab(3:9))
 
-       Do j=1, N_Nneigh
-
-            SNeigh=pi(1.0d0)*tabledist(j,1)**2
-
-! Filling the Zeeman energy density, the DM energy density, The
-! anisotropy energy density, the biquadratic energy density, the
-! fourspin energy density and the total energy density
-            EnDenTab(10+2*N_Nneigh+1) = EnDenTab(5)/SNeigh
-            EnDenTab(10+2*N_Nneigh+2) = EnDenTab(6)/SNeigh
-            EnDenTab(10+2*N_Nneigh+3) = EnDenTab(7)/SNeigh
-            EnDenTab(10+2*N_Nneigh+4) = EnDenTab(8)/SNeigh
-!The density of four spin energy has not been implemented yet.
-            EnDenTab(10+2*N_Nneigh+5) = EnDenTab(4)/SNeigh
-            EnDenTab(10+2*N_Nneigh+6) = EnDenTab(9)/SNeigh
-            EnDenTab(10+2*N_Nneigh+7) = EnDenTab(10)/SNeigh
-
-            if (j.eq.1) then
-            
-            EnDenTab(10+j) = ExchN(i_x,i_y,i_z,1, j)
-            EnDenTab(10+N_Nneigh+j) = EnDenTab(10+j)/SNeigh
-            Sprevious = SNeigh
-!      WRITE(*,*) 'Energy_density l.71 OK boucle numero ', ind, ' , ', j
-!       STOP
-
-            else
-
-            EnDenTab(10+j) = ExchN(i_x,i_y,i_z,1, j)-ExchN(i_x,i_y,i_z,1, j-1)
-            EnDenTab(10+N_Nneigh+j) = EnDenTab(10+j)&
-                                  /(SNeigh-Sprevious)
-            Sprevious = SNeigh
-!      WRITE(*,*) 'Energy_density l.71 OK boucle numero ', ind, ' , ', j
-!      STOP
-
-            end if
-
-         EndDo
-
          
-      NColEnergy   = 10+N_Nneigh
       NStartDensity = 10+N_Nneigh+1
-      Write(666,99998) (EnDenTab(col), col=1,NColEnergy)
-      Write(667,99997) (EnDenTab(col), col=1,2), (EnDenTab(col), col=  &
-                         NStartDensity, nb_col)
-!      Write(666,99999) (EnDenTab(col), col=1,40)
+      Write(666,99998) (EnDenTab(col), col=1,10)
 
         enddo
        enddo
@@ -175,7 +134,6 @@
       Deallocate(EnDenTab,tabledist)
 
       Close(666)
-      Close(667)
 
       END SUBROUTINE EnergyDensity
 
