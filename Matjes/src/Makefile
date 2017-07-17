@@ -11,7 +11,7 @@ CPP_OBJS=
 
 MPI  =
 
-OBJS = choosespin.o Torana.o entropic.o topohall.o topocharge_local.o topocharge_all.o calculate_Beff.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o 	 field-eff.o MC_fft.o sampling.o Energy.o SignatureFile.o relaxationtype.o topocharge.o rw_skyrmion.o create_lattice.o 	 fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o qorienplot.o 	 CalculateAverages.o WriteSpinAndCorrFile.o CreationDestructionSkyrmion.o topocharge_sd.o SkX_utils.o 	 CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o av_dynamics.o randist.o spindynamics.o setup_DM.o mtprng.o 	 MCstep.o InitSpin.o Table_dist.o total_Energy.o DeriveValue.o Relaxation.o topoplot.o dispBZ.o setup-simu.o field_sd.o 	 arrange_neihg.o mapping.o indexation.o order_lattice.o user_def_struct.o qorien.o solver.o stdtypes.o 	 error_correction_SD.o Efield_sd.o error.o setup_zdir.o structure.o rw_efield.o rw_zdir.o gneb.o minimize.o 	 MonteCarlo.o check_restart.o store_relaxation.o gneb_utils.o initialize_temperature.o cal_local_energy.o welcome.o parallel_tempering.o paratemp.o
+OBJS = pimc.o choosespin.o Torana.o entropic.o topohall.o topocharge_local.o topocharge_all.o calculate_Beff.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o 	 field-eff.o MC_fft.o sampling.o Energy.o SignatureFile.o relaxationtype.o topocharge.o rw_skyrmion.o create_lattice.o 	 fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o qorienplot.o 	 CalculateAverages.o WriteSpinAndCorrFile.o CreationDestructionSkyrmion.o topocharge_sd.o SkX_utils.o 	 CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o av_dynamics.o randist.o spindynamics.o setup_DM.o mtprng.o 	 MCstep.o InitSpin.o Table_dist.o total_Energy.o DeriveValue.o Relaxation.o topoplot.o dispBZ.o setup-simu.o field_sd.o 	 arrange_neihg.o mapping.o indexation.o order_lattice.o user_def_struct.o qorien.o solver.o stdtypes.o 	 error_correction_SD.o Efield_sd.o error.o setup_zdir.o structure.o rw_efield.o rw_zdir.o gneb.o minimize.o 	 MonteCarlo.o check_restart.o store_relaxation.o gneb_utils.o initialize_temperature.o cal_local_energy.o welcome.o parallel_tempering.o paratemp.o
 
 DIP =
 
@@ -57,6 +57,7 @@ touchsrcs:
 tests:
 	cd tests && $(make)
 
+pimc.o: mtprng.o
 welcome.o:
 CreateSpinFile.o: constant.o rw_lattice.o inp_rw.o
 topocharge_local.o: vector.o create_lattice.o inp_rw.o rw_lattice.o
@@ -135,7 +136,7 @@ qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
 CalculateAverages.o: vector.o rw_lattice.o create_lattice.o topocharge_all.o
-main.o: welcome.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: pimc.o welcome.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 error_correction_SD.o: create_lattice.o solver.o vector.o constant.o inp_rw.o

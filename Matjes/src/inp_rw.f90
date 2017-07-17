@@ -123,6 +123,7 @@
       my_simu%i_minimization=.False.
       my_simu%i_entropic=.False.
       my_simu%i_r_texture=.False.
+      my_simu%i_pimc=.False.
 
 ! io_of the simulation
 
@@ -209,6 +210,9 @@
             case ("Montecarlo")
               my_simu%i_metropolis=.True.
             case ("spindynami")
+              my_simu%i_dynamic=.True.
+            case ("pimc")
+              my_simu%i_pimc=.True.
             case default
                STOP 'select a simulation type'
            end select
@@ -716,10 +720,10 @@
         'param.dat',len_trim('asis'),'asis')
 #endif
 
-!#ifdef CPP_DEBUG
+#ifdef CPP_DEBUG
       write(6,*) "J_ij", J_ij
       write(6,*) "J_z", Jz
-!#endif
+#endif
 
 ! put local variables into the types for transfer
 

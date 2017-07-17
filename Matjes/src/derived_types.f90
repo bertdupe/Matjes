@@ -29,7 +29,7 @@
 
 ! parameters for the type of simulations that you are running
        type type_simu
-        logical :: i_dynamic,i_metropolis,i_gneb,i_paratemp,i_minimization,i_entropic,i_r_texture
+        logical :: i_dynamic,i_metropolis,i_gneb,i_paratemp,i_minimization,i_entropic,i_r_texture,i_pimc
        end type type_simu
 
 !Operators of the simulations

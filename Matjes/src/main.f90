@@ -252,6 +252,22 @@
               & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext)
         endif ! montec, dynamic or i_gneb
 
+
+!---------------------------------
+!  Part which does the GNEB
+!---------------------------------
+
+        if (my_simu%i_pimc) then
+            write(6,'(a)') 'entering into the path integral monte carlo routine'
+!            call init_gneb()
+            call pimc(state,i_biq,i_dm,i_four,i_dip,EA,h_ext, &
+                    & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell)
+            !call set_gneb_defaults()
+        endif
+!---------------------------------
+!  Part which does the PIMC
+!---------------------------------
+
 #ifndef CPP_MPI
 ! write the last spin structure
         call WriteSpinAndCorrFile('SpinSTM_end.dat',spin,shape_spin)
