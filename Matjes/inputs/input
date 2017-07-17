@@ -1,60 +1,206 @@
-#uudd FeIr(001)
-H_ext = ( 0.0000000 ,  0.0000000 ,  0.0)
-n_Tsteps= 1
-Tini= 1.0d0
-Tfin= 201.0d0
-J_1= -10.04d-3
-J_2= -4.03d-3
-J_3= -3.430d-3
-J_4= -0.35d-3
-J_5= 0.24d-3
-J_6= 0.3d-3
-J_7= 0.0d-3
-J_8= 0.0d-3
-J_9= 0.0d-3
-J_10= 0.0d-3
-J_11= 0.0d-3
-J_12= 0.0d-3
-#  Biquadratic Spin exchange constant
-J_B= 3.84d-3
-#  long range dipolar interaction
-EA= (0.0d0, 0.0d0, 1.0d0)
-D_ani= (-2.500d-4, 0.0d0, 0.0d0)
-#     four spin interaction
-K_1= -1.6d-3
-DM=  (-2.54d-3,  -1.0300d-3,  -0.26d-3)
-# steps on which you make the average
-Total_MC_Steps= 10
-# T_relax is multiplied by 1000
-T_relax= 1000
-T_auto= 1
-Cor_log= .F.
-dipdip= .F.
-gra_topo= .F.
-qorien= .F.
-Periodic_log= .T. .T. .T.
-gra_fft= .F. 100 100
-Gra_log= .T. 1
-cone= 1.0
-#sampling
-sampling= sphere
-relaxation= normal
-dispersion= .F. 50
-#writting deleting
-CalTheta= .F.
-CalEnergy= .F.
-#algo_mpi= separate  10
-#algo_mpi= paratemp 1 .F. 1
-#T_sweep= .F.
-#do not change unless for good reasons
-c_Ji= -1.0d0
-c_DM= -1.0d0
-c_JB= -1.0d0
-c_Ki= -1.0d0
-c_ani= 1.0d0
-ghost= .F. 4     # decompose the lattice into for sublattice to pick up the spins in parallel
-n_relaxation= 1000
-n_sizerelax= 1000
-print_Relax= .T.
-ising
-warnings= .T.    #optional, print warnings during the run
+	#  Matjes input file
+	#  Name of system: 
+#######################################	
+	#  *** general ***
+	#  type_simulation: please choose one of the following types for your simulation (default: metropolis):
+	#  metropolis, paratemp, spindynamic, gneb
+	#  i_warnings: optional, print warnings during the run
+	#  H_ext: external magnetic field in x y z
+	#  number of temperature steps 
+	#  T_ini: initial temperature
+	#  T_fin: final temperature
+	#  i_ising: Ising model (default: Heisenberg-model)
+&general type_simulation= 'metropolis' /
+&general i_warnings= .F. /
+&general H_ext= 0.0  0.0  0.0 /
+&general n_Tsteps= 1 /
+&general T_ini= 1.0d0 /
+&general T_fin= 201.0d0 /
+&general i_ising= .F. /
+#######################################
+	# *** Spinstructure *** 
+	#  type_lattice: lattice type. choose of: square, hexagonal, userDefined (here you need an additional input file, the inputs here are ignored)
+	#  type_system: monolayer, multilayer, superlattice
+	#  n_unitCells: number of unit cells along the lattice vectors
+	#  periodic boundary conditions in x,y,z direction
+	#  n_atomsUnitCell: Atoms in unit cell, magnetic and nonmagnetic for DMI
+	#  pos_atom1: position in unitcell and magnetic moment of atom 1. Respectively for further atoms in same unit cell.
+&LAT type_lattice= 'hexagonal' /
+&LAT type_system= 'monolayer' /
+&LAT n_unitCells= 10 10 10 /
+&LAT i_periodic_boundary= .T. .T. .T. /
+&LAT n_atomsUnitCell= 2 /
+&LAT pos_atom1= 0.0 0.0 0.0 3.0 /
+&LAT pos_atom2= 0.5 0.5 -0.7 0.0 /
+#######################################
+	#  *** setup of the starting config ***
+	#  qvector: propagation vector of the spin spiral
+	#  Orientation of magnetization m at position r will be created as:
+	#  m(r) -- Rq*cos(qvector*r)+Iq*sin(qvector*r)
+	#  heavyside: create a domainwall
+&LAT qvector= 0.0 0.0 0.0 /
+&LAT Rq= 0.0 0.0 1.0 /
+&LAT Iq= 1.0 0.0 0.0 /
+&LAT heavyside= .F. /
+#######################################
+	#  *** Coefficients for the Hamiltonian ***
+	#  J_i: Exchange interaction of i-th nearest neighbour
+	#  J_biq: Biquadratic Spin exchange constant
+	#  Anisotropy (EA: easy axis, D_ani: (???))
+	#  K_4spin: four spin interaction
+	#  Dzyaloshinskii-Moriya interaction 
+	#  dipdip: dipole-dipole interaction
+	#  Ist: stoner parameter
+	#  J_ml1: interaction in multilayer (intra-bilayer exchange interaction)
+	#  J_sl: interaction between multilayers (inter-bilayer exchange interaction)
+&HAM J_1= -10.04d-3 /
+&HAM J_2= -4.03d-3 /
+&HAM J_3= -3.430d-3 /
+&HAM J_4= -0.35d-3 /
+&HAM J_5= 0.24d-3 /
+&HAM J_6= 0.3d-3 /
+&HAM J_7= 0.0d-3 /
+&HAM J_8= 0.0d-3 /
+&HAM J_9= 0.0d-3 /
+&HAM J_10= 0.0d-3 /
+&HAM J_11= 0.0d-3 /
+&HAM J_12= 0.0d-3 /
+&HAM J_biq= 3.84d-3 /
+&HAM EA= 0.0d0 0.0d0 1.0d0 /
+&HAM D_ani= -2.500d-4 0.0d0 0.0d0 /
+&HAM K_4spin= -1.6d-3 /
+&HAM DM=  -2.54d-3 -1.0300d-3 -0.26d-3 /
+&HAM i_dipdip= .F. /
+&HAM Ist = 0.0 /
+&HAM J_ml1= 0.0d0 /
+&HAM J_ml2= 0.0d0 /
+&HAM J_ml3= 0.0d0 /
+&HAM J_ml4 = 0.0d0 /
+&HAM J_sl= 0.0d0 /
+	# Normalization of the interactions
+	# *! do not change unless for good reasons!*
+&HAM c_Ji= -1.0d0 /
+&HAM c_DM= -1.0d0 /
+&HAM c_JB= -1.0d0 /
+&HAM c_Ki= -1.0d0 /
+&HAM c_ani= 1.0d0 /
+########################
+	###  Monte Carlo ###
+	#  n_measurement: measurement steps on which you make the average
+	#  t_autocorrelation: defines the autocorrelation steps between the measurement steps
+	#  t_equilibration is multiplied by the number of spins
+	#  i_writeEquilibration: whether equilibrationfile is written: default: .F.
+	#  n_writeEquilibration: how often, should be .lessEqual. t_equilibration
+	#  type_equilibration: type of equilibration (normal, ??? )
+	#  type_sampling: type of sampling (sphere,???)
+	#  i_optimizationTset: optimization of the temperature set
+	#  n_optimizationSteps: number of optimization steps
+	#  coneAngle: starting angle in which the new spin is choosen
+&MC n_measurement= 10 /
+&MC t_autocorrelation= 1 /
+&MC t_equilibration= 1000 /
+&MC i_writeEquilibration= .F. /
+&MC n_writeEquilibration= 100 /
+&MC type_equilibration= normal /
+&MC type_sampling= sphere /
+&MC i_optimizationTset= .F. /
+&MC n_optimizationSteps= 5 /
+&MC coneAngle= 1.0  /
+########################
+	### spin dynamic ###
+	# integration: which type of solver? (1: Euler; 2: SIA; 3: Heun; 4: SIB; 5: SIB with error correction, 6: SIB without temperature)
+	# timestep in fs
+	# duration in units of dt
+	# damping
+	# resolution in pixel for 
+	# torque in eV
+	# damping torque in eV
+	# Ipol unit vector of polarisation in x y z
+	# adia (adiabatic of STT)
+	# nonadia (nonadiabatic of STT)
+	# stmtorque 
+	# step
+	# rampe
+	# Hsweep 
+	# Ffield
+	# Efield
+	# STMtemp
+	# Efreq
+&SD integration= 1 /
+&SD timestep= 1 /
+&SD duration= 50 /
+&SD damping= 0.0 /
+&SD resolution= 500 500 /
+&SD torque= 1.0 /
+&SD damping_torque= 0.0 /
+&SD Ipol= 0.0 0.0 1.0 /
+&SD adia= 0.0 /
+&SD nonadia= 0.0 /
+&SD i_stmtorque = .F. /
+&SD stmtorque= 1.0, 1.0, 0.0 /
+&SD i_step= .F. /
+&SD step=  1000 1000 /
+&SD i_rampe= .F. /
+&SD rampe= -10.0 10 1000 /
+&SD i_Hsweep= .F. /
+&SD Hsweep= 0.0 0.0 -10.0 1000 1500 0.0 0.0 0.0 /
+&SD Ffield= .F. /
+&SD Efield= .F. /
+&SD STMtemp= .F. /
+&SD Efreq= 1 /
+################
+	### GNEB ###
+&GNEB g_momfile_i= momfile_i /
+&GNEB g_momfile_f= momfile_f /
+&GNEB g_meptraj_step= 1000 /
+&GNEB g_mep_ftol= 0.00001 /
+&GNEB g_mep_ftol_ci= 0.00000001 /
+&GNEB g_vpo_dt= 0.01 /
+&GNEB g_nim= 15 /
+&GNEB g_mep_itrmax= 100000 /
+&GNEB g_en_zero= I /
+&GNEB g_amp_rnd_path= 0.00 /
+&GNEB g_initpath= 1 /
+&GNEB g_restartfile_path= image-GNEB /
+&GNEB g_amp_rnd= 0.0 /
+&GNEB g_mintraj_step= 100 /
+&GNEB g_convergence_criteria= 0.000000001 /
+&GNEB g_timestep= 1.0 /
+&GNEB g_steps= 100000 /
+&GNEB do_gneb_ci= Y /
+&GNEB do_gneb= Y /
+#######################################
+	#  *** MPI parameters ***
+	#  i_ghost: logical decompose the lattice into for sublattice to pick up the spins in parallel
+	#  n_ghost: number of sublattices for ghost. Please choose carefully.
+	#  mpi_algo_separate: the temperatures were simulated simultaneously
+	#  n_TProc: How many temperatures should be simulated on one Proc?
+	#  *! Make sure: n_Tsteps/n_recProc= number of processors !*
+&MPI i_ghost= .F. /
+&MPI n_ghost= 4 /
+&MPI mpi_algo_separate= .T. /
+&MPI n_TProc=20 /
+#######################################
+	#  *** What do you want to print additionally after a metropolis simulation? ****
+	#  i_CalTheta: prints the angles of the spins
+	#  i_CalEnergy: prints the different energy contributions spin resolved
+	#  i_printSpinse: print the Spinstructure for povray
+	#  n_printSpinse: frequency of sprinted spinstructures (important for spin dynamics)
+	#  i_topoCharDensity: print the topological charge density
+	#  Cor_log: ???
+	#  qorien: ???
+	#  gra_fft: fourier transform of what ???
+	#  dispersion: how is it plotted
+	#  i_Tsweep: Is is still needed? ???
+&OPT i_CalTheta= .F. /
+&OPT i_CalEnergy= .F. /
+&OPT i_printSpinse= .T. /
+&OPT n_printSpinse= 1 /
+&OPT i_topoCharDensity= .F. /
+&OPT Cor_log= .F. /
+&OPT qorien= .F. /
+&OPT i_gra_fft= .F. /
+&OPT n_gra_fft= 100 100 /
+&OPT i_dispersion= .F. /
+&OPT n_dispersion= 50 /
+&OPT i_Tsweep= .F. /

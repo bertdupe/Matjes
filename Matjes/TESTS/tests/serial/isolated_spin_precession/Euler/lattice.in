@@ -1,0 +1,9 @@
+# parameters of the lattice
+Nsize 4 4 1
+alat 1.0 1.0 1.0
+lattice
+ 1.0 0.0 0.0
+ 0.0 1.0 0.0
+ 0.0 0.0 1.0
+motif 1 atoms
+0.0 0.0 0.0 1.0

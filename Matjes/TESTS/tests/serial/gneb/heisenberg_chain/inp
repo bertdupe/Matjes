@@ -1,0 +1,37 @@
+#uudd FeIr(001)
+H_ext   0.0000000   0.0000000   0.0
+n_Tsteps 1
+Tini 0.0d0
+Tfin 0.0d0
+J_1 1.0d-3
+#     Biquadratic Spin exchange constant
+J_B 0.0d-3
+#     long range dipolar interaction
+EA 0.0d0 0.0d0 1.0d0
+D_ani    -0.3d-3 0.0d0 0.0d0
+#     four spin interaction
+K_1 -0.0d-3
+DM   0.0d-3  0.0000d-3  00.00d-3
+# steps on which you make the average
+Total_MC_Steps 10
+# T_relax is multiplied by 1000
+T_relax 1000
+T_auto 1
+Cor_log .F.
+dipdip .F.
+gra_topo .F.
+qorien .F.
+Periodic_log .F. .F. .F.
+gra_fft .F. 100 100
+Gra_log .T. 1
+cone 1.0
+#sampling
+sampling sphere
+relaxation normal
+dispersion .F. 50
+#writting deleting
+CalTheta .F.
+CalEnergy .F.
+#algo_mpi separate  10
+#algo_mpi paratemp 1 .F. 1
+#T_sweep .F.

@@ -1,0 +1,39 @@
+#PBS -N name                # name of the jobs
+#PBS -A shp000...           # name of the project
+#PBS -o job.out             # name of the output
+#PBS -j oe
+#PBS -l walltime=03:30:00   # walltime
+#PBS -l nodes=41            # number of nodes. each nodes have 2 dices of 12 CPUs each
+#PBS -m abe -M your email   # your email if you want to have starting and stoping information
+
+################### Please change these Environtment variables #######################
+
+NPROC=968                   # number of proc (nb of nodes*nb of proc per node)
+export OMP_NUM_THREADS=1    # number of threads
+EXEDIR=$HOME/bin/           # directory of the executable
+##module load cray-hdf5-parallel   # HDF if you need it
+##module load fftw                 # in case of use of fftw
+
+######################################################################################
+
+(( PPN = 24/$OMP_NUM_THREADS ))
+(( PPC = $PPN/2 ))
+
+set -x
+
+E8="=8"                                    # Workaround for msub bug
+export MPICH_MPIIO_HINTS=*.hdf:striping_factor$E8
+export MPICH_MPIIO_HINTS_DISPLAY=1
+export MPICH_MPIIO_STATS=1
+
+export ATP_ENABLED=1
+
+
+cd $PBS_O_WORKDIR             # go into the submission directory
+
+if [[ $OMP_NUM_THREADS = "1" ]]
+then
+  time aprun -n $NPROC $EXEDIR/fleur.x         # lauching command when no OMP 
+else
+  time aprun -n $NPROC -N $PPN -S $PPC -d $OMP_NUM_THREADS $EXEDIR/fleur.x        # lauching command when OMP is needed 
+fi

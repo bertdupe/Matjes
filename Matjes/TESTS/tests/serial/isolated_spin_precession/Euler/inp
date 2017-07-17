@@ -1,0 +1,8 @@
+#uudd FeIr(001)
+H_ext   0.0000000   0.0000000  10.0
+n_Tsteps 1
+Tini 0.0d0
+Tfin 0.0d0
+J_1 1.00d-6
+Periodic_log .T. .T. .T.
+Gra_log .T. 1
