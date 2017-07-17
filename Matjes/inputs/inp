@@ -1,5 +1,4 @@
 #uudd FeIr(001)
-simulation pimc
 H_ext   0.0000000   0.0000000   0.0
 n_Tsteps 1
 Tini 1.0d0

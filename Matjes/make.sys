@@ -1,7 +1,8 @@
 
 LD=gfortran
 FC=gfortran
-CC=cc
+
+CC=gcc
 
 #FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
 

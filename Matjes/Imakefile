@@ -1,0 +1,260 @@
+/* ----------------------------------------
+      Generate Makefile for MC code
+
+define the hardware platform: choose one of
+ rzcluster (good luck)
+ P4 (intel P4)
+ HLRN (SGI)
+ nec
+ laptop (ubuntu)
+ fermion
+ mac
+ Cray
+ juelich
+---------------------------------------- */
+#define P4
+/* ----------------------------------------
+define one or more of
+mrg         Mersenne Twister algorithm for random number (cite Matsumoto et al ACM Trans Model Comput Simul 8, 3 (1998))
+serial      to use with one proc
+parallel    to use on several proc
+debug       for debugging the mess
+OMP         openmp parallelisation (should work also with MPI)
+brutdip     include dipole dipole with 2 double some (very slow)
+debug       do not use unless you want to have a lots of data printed
+allcorrel   calculate correlation time
+gfortran    important for the writting of some file
+---------------------------------------- */
+#define mrg
+/*#define parallel*/
+#define serial
+#define brutdip
+/*--------------------------------------------------------------------*/
+/* these flags appear in:
+
+*/
+/*----------------------------------------------------------------------------*/
+
+/* machine dependent quantities */
+/*###############################################################################
+Options for juelich with ifort compiler
+###############################################################################*/
+#ifdef juelich 
+CPP1=-mkl 
+LIBRARIES= -I/usr/local/intel/mkl/include/fftw
+#ifdef debug
+FFLAGS= -debug all -O0  -fno-omit-frame-pointer -ftrapuv -traceback -check pointers,bounds
+#else
+FFLAGS= -O3 -r8
+#endif
+#ifdef parallel
+LD=mpiifort
+FC=mpiifort
+#else
+FC=ifort
+LD=ifort
+#endif
+#endif
+/*###############################################################################
+Options for HLRNIII (Cray) with Cray compiler
+###############################################################################*/
+#ifdef HLRN
+CPP1= 
+LIBRARIES= 
+FFLAGS= -O2 -s real64 -e0zZ -rm -hnoomp
+LD=ftn
+FC=ftn
+#endif
+/*###############################################################################
+Options for parallel fermion with gfortran openmpi compiler
+###############################################################################*/
+#ifdef fermion
+CPP1= -cpp
+LIBRARIES= -L/cluster/modules/packages/atlas/atlas_3.10.1/lib/libblas.a
+#ifdef debug
+FFLAGS= -g -fbacktrace -fcheck=mem
+#else
+FFLAGS= -O2 -fdefault-real-8 -fopenmp
+#endif
+#ifdef serial
+LD=gfortran44
+FC=gfortran44
+CC=cc
+#else
+LD=mpif90
+FC=mpif90
+CC=mpicc
+#endif
+#endif
+
+/*###############################################################################
+  Options for parallel mac mlion with gfortran compiler
+###############################################################################*/
+#ifdef mac
+CPP1= -cpp
+#LIBRARIES=/usr/lib/libblas.dylib
+#ifdef debug
+FFLAGS= -g -fbacktrace
+#endif
+#ifdef serial
+LD=gfortran
+FC=gfortran
+CC=cc
+FFLAGS= -O0
+#else
+LD=mpif90
+FC=mpif90
+CC=mpicc
+FFLAGS= -O0
+#endif
+#endif
+
+/*###############################################################################
+  Options for parallel laptop with gfortran compiler and ubuntu
+###############################################################################*/
+#ifdef laptop
+CPP1= -cpp
+LIBRARIES= -L/usr/lib/ -lblas 
+#ifdef debug
+FFLAGS= -g -fbacktrace -fcheck=mem
+#endif
+#ifdef serial
+LD=gfortran
+FC=gfortran
+CC=cc
+FFLAGS= -O0
+#else
+LD=mpif90 
+FC=mpif90
+CC=mpicc
+FFLAGS= -O0 -fopenmp
+#endif
+#endif
+
+/*###############################################################################
+Options for parallel bicegate with ifort openmpi compiler
+###############################################################################*/
+/* > module load intel.compiler/11.1.073 mpt */
+#ifdef hlrn
+CPP1= -cpp
+LIBRARIES= -lmpi
+FFLAGS= -O2 -xSSE4.1 -Wl,-rpath,/lib64 -r8 -lowercase -assume byterecl -heap-arrays 64
+LD=ifort
+FC=ifort
+#endif
+
+/*###############################################################################
+Options for parallel rzcluster with ifort openmpi compiler
+###############################################################################*/
+/*module load intel12.1 mvapich2-intel*/
+#ifdef rzcluster
+CPP1= -cpp
+LIBRARIES=-mkl=cluster
+INCLUDES=-I/cluster/Software/intel14/mkl/include/fftw/
+#ifdef debug
+FFLAGS= -debug -debug-parameters all -O0  -fno-omit-frame-pointer -ftrapuv -traceback -check assume,stack,pointers,bounds,uninit,output_conversion,format
+#else
+FFLAGS= -O2 -r8
+#endif
+#ifdef serial
+LD=ifort 
+FC=ifort
+CC=icc
+#else
+LD=mpiifort
+FC=mpiifort
+CC=mpiicc
+#endif
+#endif
+
+/*###############################################################################
+Options for parallel nec with ifort compiler
+###############################################################################*/
+#ifdef nec
+CPP1= -cpp
+#ifdef debug
+FFLAGS= -g -fbacktrace -fcheck=mem
+#else
+FFLAGS= -O2 -implicitnone -W0 -r8 -assume byterecl
+#endif
+#ifdef serial
+LD=gfortran
+FC=gfortran
+CC=cc
+#else
+LD=mpiifort
+FC=mpiifort
+CC=mpiicc
+#endif
+#endif
+  
+/*###############################################################################
+  Options for parallel P4 with gfortran compiler
+###############################################################################*/
+#ifdef P4
+CPP1= -cpp
+LIBRARIES=-L/usr/lib64/ -lfftw3 -lm
+INCLUDES=-I/usr/include/
+#ifdef serial
+LD=gfortran
+FC=gfortran
+CC=cc
+#ifdef debug
+FFLAGS= -g -fbacktrace -fcheck=all -ffpe-trap=invalid,overflow,zero -finit-real=snan -O0 -fimplicit-none -ffree-line-length-none -ffree-form
+#else
+FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
+#endif
+#endif
+#ifdef parallel
+LD=mpif90 
+FC=mpif90 
+CC=mpicc
+FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
+#endif
+#endif
+
+/*--------------------------------------------------------------------*/
+/* c-preprocessor flags */
+#ifdef parallel
+CPP2 = $(CPP1) -DCPP_MPI
+#else
+CPP2= $(CPP1)
+#endif
+
+#ifdef mrg
+CPP3 = $(CPP2) -DCPP_MRG
+#else
+CPP3 = $(CPP2)
+#endif
+
+#ifdef OMP
+CPP4 = $(CPP3) -DCPP_OPENMP
+#else
+CPP4 = $(CPP3)
+#endif
+
+#ifdef brutdip
+CPP5 = $(CPP4) -DCPP_BRUTDIP
+#else
+CPP5 = $(CPP4)
+#endif
+
+#ifdef allcorrel
+CPP6 = $(CPP5) -DCPP_ALLCORREL
+#else
+CPP6 = $(CPP5)
+#endif
+
+#ifdef dipole
+CPP7 = $(CPP6) 
+#else
+CPP7 = $(CPP6)
+#endif
+
+#ifdef debug
+CPP8 = $(CPP7) -DCPP_DEBUG
+#else
+CPP8 = $(CPP7)
+#endif
+
+CPPS = $(CPP8)

@@ -17,11 +17,11 @@
       use mtprng
       use m_welcome
       use m_check_restart
-      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,Periodic_log,i_metropolis,dynamic,cone,gra_topo &
+      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,Periodic_log,cone,gra_topo &
      & ,Total_MC_Steps,kt,n_thousand,T_auto,EA,i_gneb,gra_fft,CalEnergy,Gra_log,T_relax,kTfin,kTini,spstmL &
-     & ,i_separate,i_average,i_ghost,i_paratemp,i_optTset,T_sweep,i_topohall,print_relax,i_minimization,gra_freq &
+     & ,i_separate,i_average,i_ghost,i_optTset,T_sweep,i_topohall,print_relax,i_minimization,gra_freq &
      & ,i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,h_ext,N_temp,T_relax_temp,n_ghost &
-     & ,nRepProc,i_entropic
+     & ,nRepProc
 #ifdef CPP_MPI
       use m_randperm
       use m_make_box
@@ -252,7 +252,6 @@
               & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext)
         endif ! montec, dynamic or i_gneb
 
-
 !---------------------------------
 !  Part which does the GNEB
 !---------------------------------
@@ -267,6 +266,7 @@
 !---------------------------------
 !  Part which does the PIMC
 !---------------------------------
+
 
 #ifndef CPP_MPI
 ! write the last spin structure
