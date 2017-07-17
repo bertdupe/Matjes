@@ -123,6 +123,7 @@
       my_simu%i_minimization=.False.
       my_simu%i_entropic=.False.
       my_simu%i_r_texture=.False.
+      my_simu%i_pimc=.False.
 
 ! io_of the simulation
 
@@ -215,6 +216,8 @@
               my_simu%i_paratemp=.True.
             case ("minimizati")
               my_simu%i_minimization=.True.
+            case ("pimc")
+              my_simu%i_pimc=.True.
             case default
                STOP 'select a simulation type'
            end select

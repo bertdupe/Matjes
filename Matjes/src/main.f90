@@ -17,11 +17,11 @@
       use mtprng
       use m_welcome
       use m_check_restart
-      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,Periodic_log,cone,gra_topo &
+      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,Periodic_log,dynamic,cone,gra_topo &
      & ,Total_MC_Steps,kt,n_thousand,T_auto,EA,i_gneb,gra_fft,CalEnergy,Gra_log,T_relax,kTfin,kTini,spstmL &
-     & ,i_separate,i_average,i_ghost,i_optTset,T_sweep,i_topohall,print_relax,i_minimization,gra_freq &
+     & ,i_separate,i_average,i_ghost,i_optTset,T_sweep,i_topohall,print_relax,gra_freq &
      & ,i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,h_ext,N_temp,T_relax_temp,n_ghost &
-     & ,nRepProc
+     & ,nRepProc,i_entropic
 #ifdef CPP_MPI
       use m_randperm
       use m_make_box
@@ -212,7 +212,7 @@
             &    i_separate,i_average,i_topohall,print_relax,Cor_log, &
             &    n_Tsteps,cone,Total_MC_Steps,T_auto,EA,T_relax,kTfin,kTini,h_ext, &
             &    n_ghost,nRepProc)
-        
+
 !---------------------------------
 !  Part which does the Spin dynamics
 !    Loop for Spin dynamics
@@ -252,6 +252,7 @@
               & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext)
         endif ! montec, dynamic or i_gneb
 
+
 !---------------------------------
 !  Part which does the GNEB
 !---------------------------------
@@ -266,7 +267,6 @@
 !---------------------------------
 !  Part which does the PIMC
 !---------------------------------
-
 
 #ifndef CPP_MPI
 ! write the last spin structure
