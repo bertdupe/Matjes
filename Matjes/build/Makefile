@@ -2,7 +2,7 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = Beff_sd.o choosespin.o Torana.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
+OBJS = pimc.o Beff_sd.o choosespin.o Torana.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
  MC_fft.o sampling.o Energy.o SignatureFile.o relaxationtype.o topocharge.o rw_skyrmion.o \
  create_lattice.o   fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o \
@@ -39,6 +39,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+pimc.o: mtprng.o
 structure.o:
 gauge_util.o:
 entropic.o: cal_local_energy.o relaxationtype.o sampling.o

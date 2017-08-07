@@ -1,6 +1,7 @@
 
 LD=gfortran
 FC=gfortran
+
 CC=gcc
 
 #FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
@@ -8,6 +9,4 @@ CC=gcc
 FFLAGS= -O0 -g -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
 
 CPPS= -DCPP_MRG -DCPP_BRUTDIP
-
-INCS=-I/usr/include
 
