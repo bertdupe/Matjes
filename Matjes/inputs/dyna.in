@@ -5,7 +5,7 @@ duration 50  (in units of dt)
 damping 0.0
 resolution 500 500
 torque 1.0
-damping_torque 0.0
+damptorque 0.0
 Ipol 0.0 0.0 1.0
 adia 0.0
 nonadia 0.0
