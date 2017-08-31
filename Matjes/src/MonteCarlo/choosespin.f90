@@ -34,7 +34,7 @@
 #else
        CALL RANDOM_NUMBER(Choice)
 #endif
-       if (shape_spin(i+1).ne.1) Ilat(i) = 1 + NINT(Choice*Dble(shape_spin(i+1)-1))
+       if (shape_spin(i+1).ne.1) Ilat(i) = 1 + NINT(Choice*Dble(shape_spin(i+1))-0.5d0)
 !       if (Ilat(i).gt.shape_spin(i)) Ilat(i)=1
       enddo
 
@@ -44,7 +44,7 @@
 #else
        CALL RANDOM_NUMBER(Choice)
 #endif
-       Ilat(4) = 1 + NINT(Choice*Dble(shape_spin(5)-1))
+       Ilat(4) = 1 + NINT(Choice*Dble(shape_spin(5))-0.5d0)
 !       if (Ilat(4).gt.count(motif%i_m)) Ilat(4)=1
       endif
 
@@ -89,7 +89,7 @@
 #else
           CALL RANDOM_NUMBER(Choice)
 #endif
-          Ilat(i) = 1 + NINT(Choice*Dble(N(i)-1))+start(i)
+          Ilat(i) = 1 + NINT(Choice*Dble(N(i))-0.5d0)+start(i)
 
          enddo
 
@@ -99,7 +99,7 @@
 #else
           CALL RANDOM_NUMBER(Choice)
 #endif
-          Ilat(4) = 1 + NINT(Choice*Dble(shape_spin(5)-1))
+          Ilat(4) = 1 + NINT(Choice*Dble(shape_spin(5))-0.5d0)
 
          endif
 
@@ -128,7 +128,7 @@
 #else
           CALL RANDOM_NUMBER(Choice)
 #endif
-          Ilat(i) = 1 + NINT(Choice*Dble(N(i)-1))+start(i)
+          Ilat(i) = 1 + NINT(Choice*Dble(N(i))-0.5d0)+start(i)
 
          enddo
 
@@ -138,7 +138,7 @@
 #else
           CALL RANDOM_NUMBER(Choice)
 #endif
-          Ilat(4) = 1 + NINT(Choice*Dble(shape_spin(5)-1))
+          Ilat(4) = 1 + NINT(Choice*Dble(shape_spin(5))-0.5d0)
          endif
 
          if (i_stone) then
