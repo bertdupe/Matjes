@@ -70,9 +70,9 @@
 
        if (.not.tag) then
 
-         do i=1,dim_lat(1)
+         do k=1,dim_lat(3)
           do j=1,dim_lat(2)
-           do k=1,dim_lat(3)
+           do i=1,dim_lat(1)
          read(io,*) ((Spin(j_lat,i,j,k,l),j_lat=1,6),l=1,count(motif%i_m))
            enddo
           enddo
@@ -193,9 +193,9 @@
 ! the q vector, it then rotates in the sense of -q. I take the convention Si=cos()Rq+sin()Iq
 
       if ( heavy ) then
-       do i=1,dim_lat(1)
+       do k=1,dim_lat(3)
         do j=1,dim_lat(2)
-         do k=1,dim_lat(3)
+         do i=1,dim_lat(1)
           do l=1,size(motif%i_m)
           if (.not.(motif%i_m(l))) cycle
 
