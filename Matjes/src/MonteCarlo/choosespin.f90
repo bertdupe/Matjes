@@ -61,24 +61,28 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine choose_spin_parallel(Ilat,state,i_separate,i_average,i_ghost,i_stone,n_world, &
-    &   mu_s,irank_working,shape_spin,MPI_COMM,spin,start,N)
+    &   mu_s,irank_working,shape_spin,MPI_COMM,spin,start)
       use mtprng
       implicit none
       integer, intent(inout) :: Ilat(:)
       type(mtprng_state), intent(inout) :: state
       logical, intent(in) :: i_separate,i_average,i_ghost,i_stone
-      integer, intent(in) :: irank_working,shape_spin(:),MPI_COMM,n_world,start(:),N(:)
+      integer, intent(in) :: irank_working,shape_spin(:),MPI_COMM,n_world,start(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       real(kind=8), intent(out) :: mu_s
 ! internal variables
       real(kind=8) :: Choice
-      integer :: ierr
+      integer :: ierr,N(3)
       integer :: i
 
 #ifdef CPP_MPI
       include 'mpif.h'
 #endif
       Choice=0.0d0
+      N=0
+      N(1)=start(1)+shape_spin(2)
+      N(2)=start(2)+shape_spin(3)
+      N(3)=start(3)+shape_spin(4)
 
       if ((.not.i_separate).and.(.not.i_average).and.(.not.i_ghost)) then
 
