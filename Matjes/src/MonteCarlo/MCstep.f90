@@ -88,7 +88,8 @@
       E_dec_old=0.0d0
 
 #ifdef CPP_MPI
-      call choose_spin(Ilat,state,i_separate,i_average,i_ghost,n_world,mu_s)
+      call choose_spin(Ilat,state,i_separate,i_average,i_ghost,i_stone,n_world, &
+    &   mu_s,irank_working,shape_spin,MPI_COMM,spin,start)
 #else
       call choose_spin(Ilat,state,i_stone,n_world,mu_s,shape_spin,spin)
 #endif
