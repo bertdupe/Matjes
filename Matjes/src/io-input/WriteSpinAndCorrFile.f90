@@ -33,9 +33,9 @@
 
       OPEN(15,FILE=toto,status='unknown')
 
-      do i_x=1,shape_spin(2)
+      do i_z=1,shape_spin(4)
        do i_y=1,shape_spin(3)
-        do i_z=1,shape_spin(4)
+        do i_x=1,shape_spin(2)
 
         Write(15,'(7f14.8)') ((Spin(j_lat,i_x,i_y,i_z,i_m), j_lat=1,shape_spin(1)),i_m=1,size_z)
 
@@ -65,9 +65,9 @@
 
       OPEN(15,FILE='SpinSTM_end.dat')
 
-      do i_x=1,shape_spin(2)
+      do i_z=1,shape_spin(4)
        do i_y=1,shape_spin(3)
-        do i_z=1,shape_spin(4)
+        do i_x=1,shape_spin(2)
 
         Write(15,'(7f14.8)') ((Spin(j_lat,i_x,i_y,i_z,i_m), j_lat=1,shape_spin(1)),i_m=1,size_z)
 
@@ -115,9 +115,9 @@
       write(fname,'(10a,a,10a,a)')(toto(i:i),i=1,len_trim(toto)),'_',(fcount(i:i),i=1,len_trim(fcount)),'.dat'
       OPEN(15,FILE=fname)
 
-      do i_x=1,shape_spin(2)
+      do i_z=1,shape_spin(4)
        do i_y=1,shape_spin(3)
-        do i_z=1,shape_spin(4)
+        do i_x=1,shape_spin(2)
 
         Write(15,'(7f14.8)') (Spin(j_lat,i_x,i_y,i_z), j_lat=1,shape_spin(1))
 
@@ -169,9 +169,9 @@
       write(fname,'(10a,a,10a,a)')(toto(i:i),i=1,len_trim(toto)),'_',(fcount(i:i),i=1,len_trim(fcount)),'.dat'
       OPEN(15,FILE=fname)
 
-      do i_x=1,shape_spin(2)
+      do i_z=1,shape_spin(4)
        do i_y=1,shape_spin(3)
-        do i_z=1,shape_spin(4)
+        do i_x=1,shape_spin(2)
 
         Write(15,'(7f14.8)') ((Spin(j_lat,i_x,i_y,i_z,i_m), j_lat=1,shape_spin(1)), &
      & i_m=1,size_z)
@@ -220,9 +220,9 @@
      & len_trim(toto)),'.dat'
       OPEN(15,FILE=fname)
 
-      do i_x=1,shape_spin(2)
+      do i_z=1,shape_spin(4)
        do i_y=1,shape_spin(3)
-        do i_z=1,shape_spin(4)
+        do i_x=1,shape_spin(2)
 
          Write(15,'(7f14.8)') ((Spin(j_lat,i_x,i_y,i_z,i_m), j_lat=1,shape_spin(1)), &
      & i_m=1,size_z)
@@ -273,9 +273,9 @@
      & len_trim(toto)),'.dat'
       OPEN(15,FILE=fname)
 
-      do i_x=1,shape_spin(2)
+      do i_z=1,shape_spin(4)
        do i_y=1,shape_spin(3)
-        do i_z=1,shape_spin(4)
+        do i_x=1,shape_spin(2)
 
          Write(15,'(7f14.8)') ((Spin(j_lat,i_x,i_y,i_z,i_m), j_lat=1,shape_spin(1)), &
      & i_m=1,size_z)
