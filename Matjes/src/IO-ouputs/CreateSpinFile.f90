@@ -20,15 +20,13 @@
       integer, intent(in) :: shape_spin(:),signature
       character(len=*), intent(in) :: fname
 !     Slope Indexes for three dim spins
-      INTEGER :: i_x,i_y,i_z,i_m
+      INTEGER :: i_x,i_y,i_z,i_m,i
 ! coordinate of the spins
       integer :: X,Y,Z
 ! position of the spins
       integer :: Rx,Ry,Rz
 !     calculating the angles
       real(kind=8) :: theta, phi
-!     Is the row even (1) or not (0)
-      Integer :: i,phase
 !     colors
       real(kind=8) :: phi_color, Delta, widthc
       real(kind=8) :: Rc,Gc,Bc
@@ -113,8 +111,6 @@
       integer :: Rx,Ry,Rz
 !     calculating the angles
       real(kind=8) :: theta, phi
-!     Is the row even (1) or not (0)
-      Integer :: i,phase
 !     colors
       real(kind=8) :: phi_color, Delta, widthc
       real(kind=8) :: Rc,Gc,Bc
@@ -195,13 +191,9 @@
       integer :: Rx,Ry,Rz
 !     calculating the angles
       real(kind=8) :: theta, phi
-!     Is the row even (1) or not (0)
-      Integer :: i,phase
 !     colors
       real(kind=8) :: phi_color, Delta, widthc
       real(kind=8) :: Rc,Gc,Bc
-!   name of files
-      character(len=30) :: fname,toto
 
       X=shape_spin(1)-3
       Y=shape_spin(1)-2
@@ -340,7 +332,6 @@
 ! ===============================================================
       subroutine CreateSpinFile_I_simple_5d(signature,spin,shape_spin)
       use m_constants, only : pi
-      use m_parameters, only : J_il
       Implicit none
       integer, intent(in) :: signature
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
@@ -425,7 +416,6 @@
 ! ===============================================================
       subroutine CreateSpinFile_R_simple_5d(signature,spin,shape_spin)
       use m_constants, only : pi
-      use m_parameters, only : J_il
       Implicit none
       real(kind=8), intent(in) :: signature
       real(kind=8), intent(in) :: spin(:,:,:,:,:)

@@ -1,8 +1,7 @@
 ! ===============================================================
-      SUBROUTINE InitSpin(r,motif,world,state)
+      SUBROUTINE InitSpin(my_lattice,motif,state)
       USE m_lattice, only : spin
       use m_vector, only : cross,norm
-      use m_rw_lattice, only : dim_lat
       use m_constants
       use m_derived_types
       use mtprng
@@ -12,19 +11,19 @@
 #endif
       Implicit none
 ! variables that come in
-      real (kind=8), intent(in) :: r(3,3)
-      integer, intent(in) :: world(:)
       type (cell), intent(in) :: motif
+      type(lattice), intent(in) :: my_lattice
       type(mtprng_state), intent(inout) :: state
 !     Slope Indexes for three dim spins
-      INTEGER :: i_spin,i_coord,i_lat,j_lat,fin,i,j,k,l,ierr
+      INTEGER :: i_spin,j_lat,fin,i,j,k,l
       LOGICAL :: i_exi,tag,heavy,reorder,i_alat,domainwall
 !     Absolute value of a spin
-      real (kind=8) :: SpinAbs,ss,dumy(3),choice,mu_S,alat(3),coefftheta,coeffphi, alpha
-      real (kind=8), dimension(3) :: qvec,Rq,Iq,rpol,kx,ky,kz
+      real (kind=8) :: ss,dumy(3),choice,mu_S,alat(3), alpha
+      real (kind=8), dimension(3) :: qvec,Rq,Iq,kx,ky,kz
       character(len=10) :: str,dummy
       integer, parameter  :: io=9
-      integer :: dw_position,  o
+      integer :: dw_position,o,dim_lat(3),nmag,size_mag
+      real(kind=8) :: r(3,3)
 
 #ifdef CPP_MPI
       include 'mpif.h'
@@ -32,6 +31,10 @@
 #endif
       mu_S=motif%mom(1)
       Spin(7,:,:,:,:)=mu_S
+      dim_lat=my_lattice%dim_lat
+      nmag=count(motif%i_mom)
+      size_mag=size(motif%i_mom)
+      r=my_lattice%areal
 
       tag=.False.
       i_exi=.False.
@@ -45,7 +48,7 @@
        write(6,'(a)') 'Read spin lattice from SpinSTMi.dat'
        open(io,file='SpinSTMi.dat',form='formatted',status='old')
 !cc check for old format
-       open (1,file='inp',form='formatted',status='old',action='read')
+       open (1,file='input',form='formatted',status='old',action='read')
        rewind(1)
        do
         read (1,'(a)',iostat=fin) str
@@ -72,14 +75,19 @@
 
          do k=1,dim_lat(3)
           do j=1,dim_lat(2)
+<<<<<<< HEAD
            do i=1,dim_lat(1)
          read(io,*) ((Spin(j_lat,i,j,k,l),j_lat=1,6),l=1,count(motif%i_m))
+=======
+           do k=1,dim_lat(3)
+         read(io,*) ((Spin(j_lat,i,j,k,l),j_lat=1,6),l=1,nmag)
+>>>>>>> origin/Bertrand
            enddo
           enddo
          enddo
 
         if (i_alat) then
-         do l=1,count(motif%i_m)
+         do l=1,nmag
           do k=1,dim_lat(3)
            do j=1,dim_lat(2)
             do i=1,dim_lat(1)
@@ -115,8 +123,8 @@
        do k=1,dim_lat(3)
         do j=1,dim_lat(2)
          do i=1,dim_lat(1)
-          do l=1,size(motif%i_m)
-           if (.not.(motif%i_m(l))) cycle
+          do l=1,size_mag
+           if (.not.(motif%i_mom(l))) cycle
 
 ! fix the spin direction as random
           Do i_spin=4,6
@@ -195,9 +203,15 @@
       if ( heavy ) then
        do k=1,dim_lat(3)
         do j=1,dim_lat(2)
+<<<<<<< HEAD
          do i=1,dim_lat(1)
           do l=1,size(motif%i_m)
           if (.not.(motif%i_m(l))) cycle
+=======
+         do k=1,dim_lat(3)
+          do l=1,size_mag
+          if (.not.(motif%i_mom(l))) cycle
+>>>>>>> origin/Bertrand
 
         Spin(4:5,i,j,k,l)=0.0d0
         Spin(6,i,j,k,l)=1-2*(2*i/dim_lat(1))
@@ -207,8 +221,8 @@
        enddo
 
       else
-      do l=1,size(motif%i_m)
-      if (.not.(motif%i_m(l))) cycle
+      do l=1,size_mag
+      if (.not.(motif%i_mom(l))) cycle
        do k=1,dim_lat(3)
         do j=1,dim_lat(2)
          do i=1,dim_lat(1)
@@ -244,12 +258,11 @@
        do i=1,dim_lat(1)
         do o=-4,4
         alpha=real(5+o)/10.0d0*acos(-1.0d0)
-        write(*,*) o, alpha
          if ( i+o == dw_position ) then
          do j=1,dim_lat(2)
           do k=1,dim_lat(3)
-           do l=1,size(motif%i_m)
-           if (.not.(motif%i_m(l))) cycle
+           do l=1,size_mag
+           if (.not.(motif%i_mom(l))) cycle
 
         Spin(4,i,j,k,l)=sin(alpha)
         Spin(6,i,j,k,l)=-1.0d0*cos(alpha)
@@ -268,7 +281,7 @@
 
 ! make sure that the spins have a norm 1
 
-      do l=1,count(motif%i_m)
+      do l=1,nmag
        do k=1,dim_lat(3)
         do j=1,dim_lat(2)
          do i=1,dim_lat(1)
@@ -290,7 +303,7 @@
 #endif
 
 #ifdef CPP_DEBUG
-      do l=1,count(motif%i_m)
+      do l=1,nmag
        do k=1,dim_lat(3)
         do j=1,dim_lat(2)
          do i=1,dim_lat(1)

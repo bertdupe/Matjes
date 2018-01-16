@@ -6,15 +6,12 @@
       end interface
       contains
 
-      subroutine topoplot_1D(signature,map_eul,map_vort,i_separate)
-#ifdef CPP_MPI
-      use m_mpi_prop, only : irank
-#endif
+      subroutine topoplot_1D(signature,map_eul,map_vort)
+
       implicit none
       real(kind=8), intent(in) :: map_eul(:)
       real(kind=8),intent(in) :: map_vort(:,:)
       real(kind=8), intent(in) :: signature
-      logical, intent(in) :: i_separate
 ! inteernal variables
       integer :: i_x,j,i
       integer :: shape_map(1)
@@ -22,9 +19,7 @@
 
       shape_map=shape(map_eul)
 
-#ifdef CPP_MPI
-      if ((irank.eq.0).or.(i_separate)) then
-#endif
+
 
       write(6,'(a)') 'plot the topological charge'
 
@@ -41,30 +36,20 @@
 
       enddo
       close(70)
-#ifdef CPP_MPI
-      endif
-#endif
+
       end subroutine topoplot_1D
 
-      subroutine topoplot_2D(signature,map_eul,map_vort,i_separate)
-#ifdef CPP_MPI
-      use m_mpi_prop, only : irank
-#endif
+      subroutine topoplot_2D(signature,map_eul,map_vort)
       implicit none
       real(kind=8), intent(in) :: map_eul(:,:)
       real(kind=8),intent(in) :: map_vort(:,:,:)
       real(kind=8), intent(in) :: signature
-      logical, intent(in) :: i_separate
 ! inteernal variables
-      integer :: i_x,i_y,i_z,j,i
+      integer :: i_x,i_y,j,i
       integer :: shape_map(2)
       character(len=30) :: fname,toto
 
       shape_map=shape(map_eul)
-
-#ifdef CPP_MPI
-      if ((irank.eq.0).or.(i_separate)) then
-#endif
 
       write(6,'(a)') 'plot the topological charge'
 
@@ -83,30 +68,21 @@
        enddo
       enddo
       close(70)
-#ifdef CPP_MPI
-      endif
-#endif
+
       end subroutine topoplot_2D
 
-      subroutine topoplot_3D(signature,map_vort,map_eul,i_separate)
-#ifdef CPP_MPI
-      use m_mpi_prop, only : irank
-#endif
+      subroutine topoplot_3D(signature,map_vort,map_eul)
+
       implicit none
       real(kind=8), intent(in) :: map_eul(:,:,:)
       real(kind=8),intent(in) :: map_vort(:,:,:,:)
       real(kind=8), intent(in) :: signature
-      logical, intent(in) :: i_separate
 ! inteernal variables
       integer :: i_x,i_y,i_z,j,i
       integer :: shape_map(3)
       character(len=30) :: fname,toto
 
       shape_map=shape(map_eul)
-
-#ifdef CPP_MPI
-      if ((irank.eq.0).or.(i_separate)) then
-#endif
 
       write(6,'(a)') 'plot the topological charge'
 
@@ -127,9 +103,7 @@
        enddo
       enddo
       close(70)
-#ifdef CPP_MPI
-      endif
-#endif
+
       end subroutine topoplot_3D
 
       end module m_topoplot

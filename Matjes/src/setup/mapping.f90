@@ -15,34 +15,35 @@
 ! first entry i_s: key of the cell
 ! second n is the neighbor index written on a line
 ! third column gives: 1-x;2-y;3-z position
-       subroutine mapping_1D(r,n,d,nei,Nei_il,phase,motif,indexNN,tableNN)
-       use m_rw_lattice, only : dim_lat
+       subroutine mapping_1D(d,nei,motif,indexNN,tableNN,my_lattice)
        use m_vector , only : norm
-       use m_lattice, only : spin
-       use m_derived_types
+       use m_derived_types, only : cell,lattice
 #ifdef CPP_MPI
        use m_make_box, only : Xstart
 #endif
        implicit none
 ! variable that come in
-       integer, intent(in) :: n,nei,Nei_il,phase
-       type (cell), intent(in) :: motif
-       real(kind=8), intent(in) :: d(:),r(3,3)
+       integer, intent(in) :: nei
+       type(cell), intent(in) :: motif
+       type(lattice), intent(in) :: my_lattice
+       real(kind=8), intent(in) :: d(:)
        integer, intent(in) :: indexNN(:)
 ! value of the function
        integer, intent(inout) :: tableNN(:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
-       integer :: i_x,i_y,i_z,i_m,Xstop
+       integer :: i_x,Xstop
 ! dummy variable
-       integer :: i_s,i,j,k,l,i_Nei,avant,i_p,i_phase
-       real (kind=8) :: u,v,w,vec(3),dist
+       integer :: i,l,i_Nei,avant,i_p,dim_lat(3)
+       real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
        integer, parameter ::  Xstart=1
 #endif
 
        avant=0
        Xstop=size(tableNN,3)
+       r=my_lattice%areal
+       dim_lat=my_lattice%dim_lat
 
       do i_nei=1,nei
 #ifdef CPP_OPENMP
@@ -52,8 +53,8 @@
 
          l=1
          do i=-i_nei,i_nei,1
-         do i_p=1,size(motif%i_m)
-         if (.not.motif%i_m(i_p)) cycle
+         do i_p=1,size(motif%i_mom)
+         if (.not.motif%i_mom(i_p)) cycle
           vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*motif%pos(i_p,2)+ &
           r(3,:)*motif%pos(i_p,3)
           dist=norm(vec)
@@ -87,11 +88,9 @@
 
 !subroutine to treat the neighbour with one atom in the 2D unit cell
 !
-       subroutine mapping_2D(r,n,d,nei,Nei_il,phase,motif,indexNN,tableNN)
-       use m_rw_lattice, only : dim_lat
+       subroutine mapping_2D(d,nei,motif,indexNN,tableNN,my_lattice)
        use m_vector , only : norm
-       use m_lattice, only : spin
-       use m_derived_types
+       use m_derived_types, only : cell,lattice
 #ifdef CPP_MPI
        use m_make_box, only : Xstart,Ystart
 #endif
@@ -99,20 +98,21 @@
        use omp_lib
 #endif
        implicit none
-       integer, intent(in) :: n,nei,Nei_il,phase
-       type (cell), intent(in) :: motif
-       real(kind=8), intent(in) :: d(:),r(3,3)
+       integer, intent(in) :: nei
+       type(cell), intent(in) :: motif
+       type(lattice), intent(in) :: my_lattice
+       real(kind=8), intent(in) :: d(:)
        integer, intent(in) :: indexNN(:)
 ! value of the function
        integer, intent(inout) :: tableNN(:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
-       integer :: i_x,i_y,i_z,i_m,Xstop,Ystop,Mstop
+       integer :: i_x,i_y,Xstop,Ystop,Mstop
 ! size of the tableNN
        integer :: shape_tableNN(4)
 ! dummy variable
-       integer :: i_s,i,j,k,l,i_Nei,avant,i_p,i_phase,transfer_nei
-       real (kind=8) :: u,v,w,vec(3),dist
+       integer :: i,j,l,i_Nei,avant,i_p,dim_lat(3)
+       real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
        integer, parameter ::  Xstart=1
        integer, parameter ::  Ystart=1
@@ -128,7 +128,9 @@ call omp_set_num_threads(nthreads)
        shape_tableNN=shape(tableNN)
        Xstop=shape_tableNN(3)
        Ystop=shape_tableNN(4)
-       Mstop=size(motif%i_m)
+       Mstop=size(motif%i_mom)
+       dim_lat=my_lattice%dim_lat
+       r=my_lattice%areal
 
 #ifdef CPP_OPENMP
 !!$OMP parallel default(shared) private(ithread)
@@ -144,7 +146,7 @@ call omp_set_num_threads(nthreads)
            do i=-i_nei,i_nei,1
            do j=-i_nei,i_nei,1
             do i_p=1,Mstop
-           if (.not.motif%i_m(i_p)) cycle
+           if (.not.motif%i_mom(i_p)) cycle
            vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
             r(3,:)*motif%pos(i_p,3)
            dist=norm(vec)
@@ -184,27 +186,26 @@ call omp_set_num_threads(nthreads)
 
 !subroutine to treat the SL case
 !
-       subroutine mapping_2D_SL(r,n,d,nei,Nei_il,phase,motif,indexNN,tableNN)
-       use m_rw_lattice, only : dim_lat
+       subroutine mapping_2D_SL(d,nei,Nei_il,motif,indexNN,tableNN,my_lattice)
        use m_vector , only : norm
-       use m_lattice, only : spin
-       use m_derived_types
+       use m_derived_types, only : cell,lattice
 #ifdef CPP_MPI
        use m_make_box, only : Xstart,Ystart
 #endif
        implicit none
-       integer, intent(in) :: n,nei,Nei_il,phase
-       type (cell), intent(in) :: motif
-       real(kind=8), intent(in) :: d(:,:),r(3,3)
+       integer, intent(in) :: nei,Nei_il
+       type(cell), intent(in) :: motif
+       type(lattice), intent(in) :: my_lattice
+       real(kind=8), intent(in) :: d(:,:)
        integer, intent(in) :: indexNN(:,:)
 ! value of the function
        integer, intent(inout) :: tableNN(:,:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
-       integer :: i_x,i_y,i_z,i_m,Xstop,Ystop
+       integer :: i_x,i_y,i_m,Xstop,Ystop
 ! dummy variable
-       integer :: i_s,i,j,k,l,i_Nei,avant,i_p,i_phase
-       real (kind=8) :: u,v,w,vec(3),dist
+       integer :: i,j,l,i_Nei,avant,i_p,i_phase,dim_lat(3)
+       real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
        integer, parameter ::  Xstart=1
        integer, parameter ::  Ystart=1
@@ -213,6 +214,8 @@ call omp_set_num_threads(nthreads)
        avant=0
        Ystop=size(tableNN,4)
        Xstop=size(tableNN,3)
+       r=my_lattice%areal
+       dim_lat=my_lattice%dim_lat
 
         i_phase=1
 
@@ -222,14 +225,14 @@ call omp_set_num_threads(nthreads)
 #endif
         do i_y=0,Ystop-1
          do i_x=0,Xstop-1
-          do i_m=1,size(motif%i_m)
-          if (.not.motif%i_m(i_m)) cycle
+          do i_m=1,size(motif%i_mom)
+          if (.not.motif%i_mom(i_m)) cycle
 
            l=1
            do i=-i_nei,i_nei,1
            do j=-i_nei,i_nei,1
-           do i_p=1,size(motif%i_m)
-           if (.not.motif%i_m(i_p)) cycle
+           do i_p=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i_p)) cycle
            vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
             r(3,:)*motif%pos(i_p,3)-(r(1,:)*motif%pos(i_m,1)+r(2,:)*motif%pos(i_m,2)+r(3,:)*motif%pos(i_m,3))
            dist=norm(vec)
@@ -262,14 +265,14 @@ call omp_set_num_threads(nthreads)
 #endif
         do i_y=0,Ystop-1
          do i_x=0,Xstop-1
-          do i_m=1,size(motif%i_m)
-          if (.not.motif%i_m(i_m)) cycle
+          do i_m=1,size(motif%i_mom)
+          if (.not.motif%i_mom(i_m)) cycle
 
            l=1
            do i=-i_nei,i_nei,1
            do j=-i_nei,i_nei,1
-           do i_p=1,size(motif%i_m)
-           if (.not.motif%i_m(i_p)) cycle
+           do i_p=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i_p)) cycle
            vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
             r(3,:)*motif%pos(i_p,3)-(r(1,:)*motif%pos(i_m,1)+r(2,:)*motif%pos(i_m,2)+r(3,:)*motif%pos(i_m,3))
            dist=norm(vec)
@@ -297,8 +300,8 @@ call omp_set_num_threads(nthreads)
 #ifdef CPP_DEBUG
        do i_x=1,Ystop
         do i_y=1,Xstop
-         do i_m=1,size(motif%i_m)
-         if (.not.motif%i_m(i_m)) cycle
+         do i_m=1,size(motif%i_mom)
+         if (.not.motif%i_mom(i_m)) cycle
          do l=1,size(tableNN,2)
           write(6,*) i_x,i_y,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_m), &
            "i_m=",tableNN(4,l,i_x,i_y,i_m)
@@ -312,27 +315,26 @@ call omp_set_num_threads(nthreads)
 
 !subroutine to treat more than one atom in the unit cell
 !
-       subroutine mapping_2D_motif(r,n,d,nei,Nei_il,phase,motif,indexNN,tableNN)
-       use m_rw_lattice, only : dim_lat
+       subroutine mapping_2D_motif(d,nei,motif,indexNN,tableNN,my_lattice)
        use m_vector , only : norm
-       use m_lattice, only : spin
-       use m_derived_types
+       use m_derived_types, only : cell,lattice
 #ifdef CPP_MPI
        use m_make_box, only : Xstart,Ystart
 #endif
        implicit none
-       integer, intent(in) :: n,nei,Nei_il,phase
+       integer, intent(in) :: nei
        type (cell), intent(in) :: motif
-       real(kind=8), intent(in) :: d(:),r(3,3)
+       type(lattice), intent(in) :: my_lattice
+       real(kind=8), intent(in) :: d(:)
        integer, intent(in) :: indexNN(:)
 ! value of the function
        integer, intent(inout) :: tableNN(:,:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
-       integer :: i_x,i_y,i_z,i_m,Xstop,Ystop
+       integer :: i_x,i_y,i_m,Xstop,Ystop
 ! dummy variable
-       integer :: i_s,i,j,k,l,i_Nei,avant,i_p,i_phase
-       real (kind=8) :: u,v,w,vec(3),dist
+       integer :: i,j,l,i_Nei,avant,i_p,dim_lat(3)
+       real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
        integer, parameter ::  Xstart=1
        integer, parameter ::  Ystart=1
@@ -341,6 +343,8 @@ call omp_set_num_threads(nthreads)
        avant=0
        Xstop=size(tableNN,3)
        Ystop=size(tableNN,4)
+       dim_lat=my_lattice%dim_lat
+       r=my_lattice%areal
 
         do i_nei=1,nei
 #ifdef CPP_OPENMP
@@ -348,13 +352,13 @@ call omp_set_num_threads(nthreads)
 #endif
         do i_y=0,Ystop-1
          do i_x=0,Xstop-1
-          do i_m=1,count(motif%i_m)
+          do i_m=1,count(motif%i_mom)
 
            l=1
            do i=-i_nei,i_nei,1
            do j=-i_nei,i_nei,1
-           do i_p=1,size(motif%i_m)
-           if (.not.motif%i_m(i_p)) cycle
+           do i_p=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i_p)) cycle
            vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
             r(3,:)*motif%pos(i_p,3)
            dist=norm(vec)
@@ -382,8 +386,8 @@ call omp_set_num_threads(nthreads)
 #ifdef CPP_DEBUG
        do i_x=1,dim_lat(1)
         do i_y=1,dim_lat(2)
-         do i_m=1,size(motif%i_m)
-         if (.not.motif%i_m(i_m)) cycle
+         do i_m=1,size(motif%i_mom)
+         if (.not.motif%i_mom(i_m)) cycle
          do l=1,size(tableNN,2)
           write(6,*) i_x,i_y,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_m), &
            "i_m=",tableNN(4,l,i_x,i_y,i_m)
@@ -395,19 +399,18 @@ call omp_set_num_threads(nthreads)
 
        end subroutine mapping_2D_motif
 
-       subroutine mapping_3D(r,n,d,nei,Nei_il,phase,motif,indexNN,tableNN)
-       use m_rw_lattice, only : dim_lat
+       subroutine mapping_3D(d,nei,motif,indexNN,tableNN,my_lattice)
        use m_vector , only : norm
-       use m_lattice, only : spin
-       use m_derived_types
+       use m_derived_types, only : cell,lattice
 #ifdef CPP_MPI
        use m_make_box, only : Xstart,Ystart,Zstart
 #endif
        implicit none
 ! variable that come in
-       integer, intent(in) :: n,nei,Nei_il,phase
-       type (cell), intent(in) :: motif
-       real(kind=8), intent(in) :: d(:),r(3,3)
+       integer, intent(in) :: nei
+       type(cell), intent(in) :: motif
+       type(lattice), intent(in) :: my_lattice
+       real(kind=8), intent(in) :: d(:)
        integer, intent(in) :: indexNN(:)
 ! value of the function
        integer :: tableNN(:,:,:,:,:,:)
@@ -415,8 +418,8 @@ call omp_set_num_threads(nthreads)
 ! 3D coordinate ix,iy,iz of 1d coordinate k
        integer :: i_x,i_y,i_z,i_m,Xstop,Ystop,Zstop
 ! dummy variable
-       integer :: i_s,i,j,k,l,i_Nei,avant,i_p,i_phase
-       real (kind=8) :: u,v,w,vec(3),dist
+       integer :: i,j,k,l,i_Nei,avant,i_p,dim_lat(3)
+       real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
        integer, parameter ::  Xstart=1
        integer, parameter ::  Ystart=1
@@ -427,6 +430,8 @@ call omp_set_num_threads(nthreads)
        Xstop=size(tableNN,3)
        Ystop=size(tableNN,4)
        Zstop=size(tableNN,5)
+       dim_lat=my_lattice%dim_lat
+       r=my_lattice%areal
 
        do i_nei=1,nei
 #ifdef CPP_OPENMP
@@ -435,7 +440,7 @@ call omp_set_num_threads(nthreads)
         do i_z=0,Zstop-1
          do i_y=0,Ystop-1
           do i_x=0,Xstop-1
-           do i_m=1,count(motif%i_m)
+           do i_m=1,count(motif%i_mom)
 
 ! I selected a cell (i_x,i_y,i_z) and inside one of the atom i_m
 ! now we have to go along x,y and z direction and check all the distances
@@ -443,8 +448,8 @@ call omp_set_num_threads(nthreads)
            do i=-i_nei,i_nei,1
            do j=-i_nei,i_nei,1
            do k=-i_nei,i_nei,1
-           do i_p=1,size(motif%i_m)
-           if (.not.motif%i_m(i_p)) cycle
+           do i_p=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i_p)) cycle
 
            vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
             r(3,:)*(dble(k)+motif%pos(i_p,3))
@@ -477,8 +482,8 @@ call omp_set_num_threads(nthreads)
        do i_x=1,dim_lat(1)
         do i_y=1,dim_lat(2)
          do i_z=1,dim_lat(3)
-          do i_m=1,size(motif%i_m)
-         if (.not.motif%i_m(i_m)) cycle
+          do i_m=1,size(motif%i_mom)
+         if (.not.motif%i_mom(i_m)) cycle
          do l=1,size(tableNN,2)
           write(6,*) i_x,i_y,i_z,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_z,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_z,i_m), &
            "i_z=",tableNN(3,l,i_x,i_y,i_z,i_m),"i_m=",tableNN(4,l,i_x,i_y,i_z,i_m)
@@ -495,19 +500,18 @@ call omp_set_num_threads(nthreads)
 !input variables are
 !net,tot_N_Nneigh,tabledist(:,:),N_Nneigh,Nei_il,Nei_z,phase,motif,indexNN(:,:),tableNN(:,:,:,:,:,:)
 
-       subroutine mapping_3D_motif_SL(r,n,d,nei,Nei_il,Nei_z,phase,motif,indexNN,tableNN)
-       use m_rw_lattice, only : dim_lat
+       subroutine mapping_3D_motif_SL(d,nei,Nei_il,Nei_z,motif,indexNN,tableNN,my_lattice)
        use m_vector , only : norm
-       use m_lattice, only : spin
-       use m_derived_types
+       use m_derived_types, only : cell,lattice
 #ifdef CPP_MPI
        use m_make_box, only : Xstart,Ystart,Zstart
 #endif
        implicit none
 ! variable that come in
-       integer, intent(in) :: n,nei,Nei_il,phase,Nei_z
-       type (cell), intent(in) :: motif
-       real(kind=8), intent(in) :: d(:,:),r(3,3)
+       integer, intent(in) :: nei,Nei_il,Nei_z
+       type(cell), intent(in) :: motif
+       type(lattice), intent(in) :: my_lattice
+       real(kind=8), intent(in) :: d(:,:)
        integer, intent(in) :: indexNN(:,:)
 ! value of the function
        integer :: tableNN(:,:,:,:,:,:)
@@ -515,8 +519,8 @@ call omp_set_num_threads(nthreads)
 ! 3D coordinate ix,iy,iz of 1d coordinate k
        integer :: i_x,i_y,i_z,i_m,Xstop,Ystop,Zstop
 ! dummy variable
-       integer :: i_s,i,j,k,l,i_Nei,avant,i_p,i_phase
-       real (kind=8) :: u,v,w,vec(3),dist
+       integer :: i,j,k,l,i_Nei,avant,i_p,i_phase,dim_lat(3)
+       real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
        integer, parameter ::  Xstart=1
        integer, parameter ::  Ystart=1
@@ -527,6 +531,8 @@ call omp_set_num_threads(nthreads)
        Xstop=size(tableNN,3)
        Ystop=size(tableNN,4)
        Zstop=size(tableNN,5)
+       r=my_lattice%areal
+       dim_lat=my_lattice%dim_lat
 
         i_phase=1
 
@@ -537,14 +543,14 @@ call omp_set_num_threads(nthreads)
         do i_y=0,Ystop-1
          do i_x=0,Xstop-1
           do i_z=0,Zstop-1
-           do i_m=1,size(motif%i_m)
-           if (.not.motif%i_m(i_m)) cycle
+           do i_m=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i_m)) cycle
 
             l=1
             do i=-i_nei,i_nei,1
             do j=-i_nei,i_nei,1
-            do i_p=1,size(motif%i_m)
-            if (.not.motif%i_m(i_p)) cycle
+            do i_p=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i_p)) cycle
             vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
              r(3,:)*motif%pos(i_p,3)-(r(1,:)*motif%pos(i_m,1)+r(2,:)*motif%pos(i_m,2)+r(3,:)*motif%pos(i_m,3))
             dist=norm(vec)
@@ -579,14 +585,14 @@ call omp_set_num_threads(nthreads)
         do i_y=0,Ystop-1
          do i_x=0,Xstop-1
           do i_z=0,Zstop-1
-           do i_m=1,size(motif%i_m)
-           if (.not.motif%i_m(i_m)) cycle
+           do i_m=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i_m)) cycle
 
             l=1
             do i=-i_nei,i_nei,1
             do j=-i_nei,i_nei,1
-            do i_p=1,size(motif%i_m)
-            if (.not.motif%i_m(i_p)) cycle
+            do i_p=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i_p)) cycle
             vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
              r(3,:)*motif%pos(i_p,3)-(r(1,:)*motif%pos(i_m,1)+r(2,:)*motif%pos(i_m,2)+r(3,:)*motif%pos(i_m,3))
             dist=norm(vec)
@@ -621,15 +627,15 @@ call omp_set_num_threads(nthreads)
         do i_y=0,Ystop-1
          do i_x=0,Xstop-1
           do i_z=0,Zstop-1
-           do i_m=1,size(motif%i_m)
-           if (.not.motif%i_m(i_m)) cycle
+           do i_m=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i_m)) cycle
 
             l=1
             do i=-i_nei,i_nei,1
             do j=-i_nei,i_nei,1
             do k=-i_nei,i_nei,1
-            do i_p=1,size(motif%i_m)
-            if (.not.motif%i_m(i_p)) cycle
+            do i_p=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i_p)) cycle
             vec=r(1,:)*(dble(i)+motif%pos(i_p,1))+r(2,:)*(dble(j)+motif%pos(i_p,2))+ &
              r(3,:)*(dble(k)+motif%pos(i_p,3))-(r(1,:)*motif%pos(i_m,1)+r(2,:)*motif%pos(i_m,2)+r(3,:)*motif%pos(i_m,3))
             dist=norm(vec)
@@ -661,8 +667,8 @@ call omp_set_num_threads(nthreads)
        do i_x=1,dim_lat(1)
         do i_y=1,dim_lat(2)
          do i_z=1,dim_lat(3)
-          do i_m=1,size(motif%i_m)
-         if (.not.motif%i_m(i_m)) cycle
+          do i_m=1,size(motif%i_mom)
+         if (.not.motif%i_mom(i_m)) cycle
          do l=1,size(tableNN,2)
           write(6,*) i_x,i_y,i_z,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_z,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_z,i_m), &
            "i_z=",tableNN(3,l,i_x,i_y,i_z,i_m),"i_m=",tableNN(4,l,i_x,i_y,i_z,i_m),l

@@ -1,12 +1,14 @@
-      integer function fullBZ(d,N_ip,N_op,phase)
+      integer function fullBZ(d,N_ip,N_op,phase,my_lattice,motif)
       use m_vector, only : cross,norm
-      use m_rw_lattice, only : dim_lat,net,motif
       use m_sym_utils, only : mesh_bz,order_zaxis
       use m_constants, only : pi
       use m_parameters, only :c_Ji,c_jB,DM,c_dm,J_ij,J_B,i_DM,i_biq,J_il,i_sliptun
       use m_lattice, only : indexNN
+      use m_derived_types
       implicit none
 ! internal variable
+      type(lattice), intent(in) :: my_lattice
+      type(cell), intent(in) :: motif
       integer, intent(in) :: N_ip,N_op,phase
       real(kind=8), intent(in) :: d(max(N_ip,N_op),phase)
 ! mesh for the BZ
@@ -14,12 +16,15 @@
       integer :: nkpt,fin,N_sampling
       real(kind=8) :: E_q0
 ! dummy
-      integer :: i1,i2,i3,k,i,l,n_sym,i_n_sym,worked
+      integer :: i1,k,i,l,n_sym,i_n_sym,worked,dim_lat(3)
       real(kind=8) :: kv0(3,3),E_int,Rq(3),Iq(3),qvec(3),rotation(3,3)
-      real(kind=8) :: ktrans(3,3),rotangle,ss
+      real(kind=8) :: rotangle,ss,net(3,3)
       real(kind=8), allocatable :: location(:,:)
       logical :: exists
       character(len=5) :: str
+
+      net=my_lattice%areal
+      dim_lat=my_lattice%dim_lat
 
       fullBZ=0
       Rq=(/0.0d0,0.0d0,1.0d0/)
@@ -195,8 +200,8 @@
 
       i_Nb_nei=1
 
-      do i_m=1,size(motif%i_m)
-      if ((.not.motif%i_m(i_m)).or.(dabs(sum(motif%pos(i_m,:))).lt.1.0d-8)) cycle
+      do i_m=1,size(motif%i_mom)
+      if ((.not.motif%i_mom(i_m)).or.(dabs(sum(motif%pos(i_m,:))).lt.1.0d-8)) cycle
        i=-i_nei
        do while (i.lt.(i_nei+1))
         j=-i_nei

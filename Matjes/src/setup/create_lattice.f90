@@ -8,15 +8,21 @@
        Integer, allocatable :: masque(:,:,:,:)
        end module m_lattice
 
-       subroutine create_lattice(dim_lat,motif)
+       subroutine create_lattice(mag_lattice,motif)
        use m_lattice, only : spin
        use m_derived_types
        implicit none
-       integer, intent(in) :: dim_lat(3)
        type (cell), intent(in) :: motif
-       integer :: i
+       type (lattice), intent(inout) :: mag_lattice
+       integer :: dim_lat(3), nmag, Ntot
 
-       allocate(spin(7,dim_lat(1),dim_lat(2),dim_lat(3),count(motif%i_m)))
+       dim_lat=mag_lattice%dim_lat
+       nmag=count(motif%i_mom)
+
+       Ntot=product(dim_lat)*nmag
+
+
+       allocate(spin(7,dim_lat(1),dim_lat(2),dim_lat(3),nmag))
        spin=0.0d0
 
        end subroutine create_lattice

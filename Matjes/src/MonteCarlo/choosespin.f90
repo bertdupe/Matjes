@@ -4,19 +4,23 @@
       module m_choose_spin
 
       interface choose_spin
+
        module procedure choose_spin_serial
+#ifdef CPP_MPI
        module procedure choose_spin_parallel
+#endif
+
       end interface
 
       contains
 
-      subroutine choose_spin_serial(Ilat,state,i_stone,n_world,mu_s,shape_spin,spin)
+      subroutine choose_spin_serial(Ilat,state,i_stone,mu_s,shape_spin,spin)
       use mtprng
       implicit none
       integer, intent(inout) :: Ilat(:)
       type(mtprng_state), intent(inout) :: state
       logical, intent(in) :: i_stone
-      integer, intent(in) :: n_world,shape_spin(:)
+      integer, intent(in) :: shape_spin(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       real(kind=8), intent(out) :: mu_s
 ! internal variables
@@ -60,24 +64,32 @@
       end subroutine choose_spin_serial
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#ifdef CPP_MPI
       subroutine choose_spin_parallel(Ilat,state,i_separate,i_average,i_ghost,i_stone,n_world, &
     &   mu_s,irank_working,shape_spin,MPI_COMM,spin,start)
       use mtprng
       implicit none
       integer, intent(inout) :: Ilat(:)
       type(mtprng_state), intent(inout) :: state
+      integer, intent(in) :: n_world,start(:),N(:)
       logical, intent(in) :: i_separate,i_average,i_ghost,i_stone
+<<<<<<< HEAD
       integer, intent(in) :: irank_working,shape_spin(:),MPI_COMM,n_world,start(:)
+=======
+>>>>>>> origin/Bertrand
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       real(kind=8), intent(out) :: mu_s
 ! internal variables
       real(kind=8) :: Choice
+<<<<<<< HEAD
       integer :: ierr,N(3)
+=======
+      integer, intent(in) :: irank_working,shape_spin(:),MPI_COMM
+      integer :: ierr
+>>>>>>> origin/Bertrand
       integer :: i
 
-#ifdef CPP_MPI
       include 'mpif.h'
-#endif
       Choice=0.0d0
       N=0
       N(1)=start(1)+shape_spin(2)
@@ -119,10 +131,8 @@
         endif
        endif
 
-#ifdef CPP_MPI
        call MPI_BCAST(Ilat,4,MPI_INTEGER,0,MPI_COMM,ierr)
        if (i_stone) call MPI_BCAST(mu_s,1,MPI_REAL,0,MPI_COMM,ierr)
-#endif
 
       else
 
@@ -158,5 +168,6 @@
       endif
 
       end subroutine choose_spin_parallel
+#endif
 
       end module m_choose_spin

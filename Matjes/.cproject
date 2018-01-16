@@ -53,10 +53,17 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
+<<<<<<< HEAD
 						<entry excluding="PIMC|OBJECT-FILES|sources|External-lib|Libraries|src|bin" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="External-lib"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="bin"/>
 						<entry excluding="PIMC|utilities/OBJECT-FILES" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="src"/>
+=======
+						<entry excluding="JuTibi|bin|sources|OBJECT-FILES|src|Libraries|External-lib" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="External-lib"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="bin"/>
+						<entry excluding="JuTibi|utilities/OBJECT-FILES" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="src"/>
+>>>>>>> origin/Bertrand
 					</sourceEntries>
 				</configuration>
 			</storageModule>

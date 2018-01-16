@@ -19,14 +19,13 @@
       implicit none
       real(kind=8), intent(in) :: r(3,3)
 ! dummy
-      integer :: angle
       real(kind=8) :: ss
 
       ss=dot_product(r(1,:),r(2,:))/norm(r(1,:))/norm(r(2,:))
 
       order_zaxis=360/nint(180.0d0/pi(1.0d0)*dacos(ss))
 
-      order_zaxis=order_zaxis*dsign(1.0d0,datan(r(2,2)/r(1,1)))
+      order_zaxis=order_zaxis*int(dsign(1.0d0,datan(r(2,2)/r(1,1))))
 
       end function order_zaxis
 
@@ -59,7 +58,7 @@
       real(kind=8), intent(in) :: r(3,3)
 !value of the function
       real(kind=8) :: b1(3),b2(3),v1(3),v2(3)
-      real(kind=8) :: rot_ang,rotation(3,3),short2,s
+      real(kind=8) :: rot_ang,rotation(3,3),s
       integer :: i,j
       real(kind=8) :: len_v1
 
@@ -126,15 +125,14 @@
 ! between 2 magnetic atoms
 !
 
-      function pos_between2at_2D(pos_ref,pos,pos2,r,dim_lat)
+      function pos_between2at_2D(pos_ref,pos,pos2,r)
       use m_vector, only : norm
       implicit none
       real(kind=8) :: pos_between2at_2D(3)
-      integer, intent(in) :: dim_lat(:)
       real(kind=8), intent(in) :: pos_ref(:),pos(:),pos2(:)
       real(kind=8), intent(in) :: r(:,:)
       !dummy
-      integer :: i,j,k,l,min_dist
+      integer :: i,j,k
       real(kind=8) :: table_dist(10,2),table_pos(10,3),vec_1(3),vec_2(3)
 
       pos_between2at_2D=0.0d0
@@ -187,7 +185,7 @@
       integer, intent(in) :: dim_lat(3),pos(3),ix,iy
       real(kind=8), intent(in) :: r(3,3)
       !dummy
-      integer :: i,j,k,l,min_dist
+      integer :: i,j,k,min_dist
       real(kind=8) :: table_dist(10),table_pos(10,3),ref(3)
 
       ref=dble(ix-1)*r(1,:)+dble(iy-1)*r(2,:)+0.0d0*r(3,:)
@@ -221,7 +219,7 @@
       integer, intent(in) :: dim_lat(3)
       real(kind=8), intent(in) :: r(3,3),tip(2),site(2)
       !dummy
-      integer :: i,j,k,l,min_dist
+      integer :: i,j,k,min_dist
       real(kind=8) :: table_dist(10),table_pos(10,2),vec(2)
 
       vec=0.0d0
@@ -254,7 +252,7 @@
       real(kind=8) :: pos_nei_2D_user(2)
       real(kind=8), intent(in) :: tip(2),site(2),xmax,ymax
       !dummy
-      integer :: i,j,k,l,min_dist
+      integer :: i,j,k,min_dist
       real(kind=8) :: table_dist(10),table_pos(10,2),vec(2)
 
       vec=0.0d0
@@ -289,7 +287,7 @@
       integer, intent(in) :: dim_lat(3),pos(3),ix,iy,iz
       real(kind=8), intent(in) :: r(3,3)
       !dummy
-      integer :: i,j,k,l,min_dist
+      integer :: i,j,k,min_dist
       real(kind=8) :: table_dist(10),table_pos(10,3),ref(3)
 
       ref=dble(ix-1)*r(1,:)+dble(iy-1)*r(2,:)+dble(iz-1)*r(3,:)
@@ -376,7 +374,7 @@
       real(kind=8), intent(in) :: r(3,3)
 ! dumy
       real(kind=8) :: rot_r(3,3),rotation(3,3),rot_ang,a(3),r_un(3,3),r_de(3,3)
-      integer :: i,totcorn,ipu,ipv,ipuv,au,av,k,avant
+      integer :: i,totcorn,au,av,k,avant
 
       do i=1,3
        a(i)=norm(r(i,:))

@@ -2,15 +2,12 @@
        interface arrange_neigh
         module procedure arrange_2D
         module procedure arrange_2D_SL
-        module procedure arrange_1D
-        module procedure arrange_3D
         module procedure arrange_3D_SL
        end interface arrange_neigh
 
        contains
 
-       subroutine arrange_2D(DM_vector,tableNN,indexNN,dim_lat,net,phase,tot_N_Nneigh,world,d,masque)
-       use m_lattice, only : spin
+       subroutine arrange_2D(DM_vector,tableNN,indexNN,dim_lat,net,masque)
        use m_parameters, only : DM
        use m_sym_utils, only : pos_nei,rot_mat,order_zaxis
 #ifdef CPP_MPI
@@ -21,13 +18,13 @@
        ! the rotation starts with the u vector. The rotation goes then from u to v.
        implicit none
        ! inout variables
-       real (kind=8), intent(in) :: net(3,3),d(:),DM_vector(:,:)
-       integer, intent(in) :: dim_lat(3),phase,tot_N_Nneigh,world(:),indexNN(:)
+       real (kind=8), intent(in) :: net(3,3),DM_vector(:,:)
+       integer, intent(in) :: dim_lat(3),indexNN(:)
        integer, intent(inout) :: tableNN(:,:,:,:,:),masque(:,:,:)
        ! internal variable
-       integer :: ix,iy,iz,save_N(size(DM_vector,1),size(tableNN,1),size(tableNN,5)),ig_x,ig_y
+       integer :: ix,iy,save_N(size(DM_vector,1),size(tableNN,1),size(tableNN,5)),ig_x,ig_y
        integer :: save_masque(size(DM_vector,1))
-       integer :: i,j,i_nei,k,avant,direct,Xstop,Ystop,test
+       integer :: i,i_nei,k,avant,direct,Xstop,Ystop,test
        real(kind=8) :: test_vec(3),position(3),test1,test2
 #ifndef CPP_MPI
        integer, dimension(3) :: start=0
@@ -101,8 +98,7 @@
 !
 !-----------------------------------------------------------
 !
-       subroutine arrange_2D_SL(DM_vector,tableNN,indexNN,dim_lat,net,phase,tot_N_Nneigh,world,d,masque)
-       use m_lattice, only : spin
+       subroutine arrange_2D_SL(DM_vector,tableNN,indexNN,dim_lat,net,masque)
        use m_parameters, only : DM
        use m_vector, only : norm
        use m_sym_utils, only : pos_nei,rot_mat
@@ -114,13 +110,13 @@
        ! the rotation starts with the u vector. The rotation goes then from u to v.
        implicit none
        ! inout variables
-       real (kind=8), intent(in) :: net(3,3),d(:,:),DM_vector(:,:,:)
-       integer, intent(in) :: dim_lat(3),phase,tot_N_Nneigh,world(:),indexNN(:,:)
+       real (kind=8), intent(in) :: net(3,3),DM_vector(:,:,:)
+       integer, intent(in) :: dim_lat(3),indexNN(:,:)
        integer, intent(inout) :: tableNN(:,:,:,:,:),masque(:,:,:,:)
        ! internal variable
-       integer :: ix,iy,iz,save_N(size(DM_vector,1),size(tableNN,1)),ig_x,ig_y,ig_z
+       integer :: ix,iy,save_N(size(DM_vector,1),size(tableNN,1)),ig_x,ig_y
        integer :: save_masque(size(DM_vector,1))
-       integer :: i,j,i_nei,k,avant,Xstop,Ystop,i_m
+       integer :: i,i_nei,k,avant,Xstop,Ystop,i_m
        real(kind=8) :: test_vec(3),position(3),test1,test2
 #ifndef CPP_MPI
        integer, dimension(3) :: start=0
@@ -200,8 +196,7 @@
 ! variable comming in
 ! DM_vector,tableNN(:,:,:,:,:,:),indexNN(:,:),dim_lat,net,phase,tot_N_Nneigh,world,tabledist(:,:),masque
 
-       subroutine arrange_3D_SL(DM_vector,tableNN,indexNN,dim_lat,net,phase,tot_N_Nneigh,world,d,masque)
-       use m_lattice, only : spin
+       subroutine arrange_3D_SL(DM_vector,tableNN,indexNN,dim_lat,net,masque)
        use m_parameters, only : DM
        use m_sym_utils, only : pos_nei,rot_mat
 #ifdef CPP_MPI
@@ -212,13 +207,13 @@
        ! the rotation starts with the u vector. The rotation goes then from u to v.
        implicit none
        ! inout variables
-       real (kind=8), intent(in) :: net(3,3),d(:,:),DM_vector(:,:)
-       integer, intent(in) :: dim_lat(3),phase,tot_N_Nneigh,world(:),indexNN(:,:)
+       real (kind=8), intent(in) :: net(3,3),DM_vector(:,:)
+       integer, intent(in) :: dim_lat(3),indexNN(:,:)
        integer, intent(inout) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:)
        ! internal variable
        integer :: ix,iy,iz,save_N(size(DM_vector,1),size(tableNN,1),size(tableNN,6)),ig_x,ig_y,ig_z
        integer :: save_masque(size(DM_vector,1))
-       integer :: i,j,i_nei,k,avant,Xstop,Ystop,Zstop
+       integer :: i,i_nei,k,avant,Xstop,Ystop,Zstop
        real(kind=8) :: test_vec(3),position(3),test1,test2
 #ifndef CPP_MPI
        integer, dimension(3) :: start=0
@@ -286,45 +281,9 @@
 !
 !-------------------------------
 !
-       subroutine arrange_3D(DM_vector,tableNN,indexNN,dim_lat,net,phase,tot_N_Nneigh,world,d,masque)
-       use m_lattice, only : spin
-       ! The goal is to organize the neighbours in the same direction as the
-       ! DM vectors
-       ! the rotation starts with the u vector. The rotation goes then from u to v.
-       implicit none
-       ! inout variables
-       real (kind=8), intent(in) :: net(3,3),d(:),DM_vector(:,:)
-       integer, intent(in) :: dim_lat(3),phase,tot_N_Nneigh,world(:),indexNN(:)
-       integer, intent(inout) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:)
-       ! internal variable
-       integer :: ix,iy,iz
-       integer :: i,j
-       real(kind=8) :: test(3)
 
-       write(*,*) "arrange neigh not coded"
-       stop
-       end subroutine arrange_3D
 
 !
 !-------------------------------
 !
-       subroutine arrange_1D(DM_vector,tableNN,indexNN,dim_lat,net,phase,tot_N_Nneigh,world,d,masque)
-       use m_lattice, only : spin
-       ! The goal is to organize the neighbours in the same direction as the
-       ! DM vectors
-       ! the rotation starts with the u vector. The rotation goes then from u to v.
-       implicit none
-       ! inout variables
-       real (kind=8), intent(in) :: net(3,3),d(:),DM_vector(:,:)
-       integer, intent(in) :: dim_lat(3),phase,tot_N_Nneigh,world(:),indexNN(:)
-       integer, intent(inout) :: tableNN(:,:,:,:),masque(:,:,:,:)
-       ! internal variable
-       integer :: ix,iy,iz
-       integer :: i,j
-       real(kind=8) :: test(3)
-
-       write(*,*) "arrange neigh not coded"
-       stop
-       end subroutine arrange_1D
-
        end module m_arrange_neigh

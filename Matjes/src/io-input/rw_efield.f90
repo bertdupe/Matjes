@@ -17,7 +17,6 @@
       character(len=3) :: tag,dummy
       real(kind=8) :: EF,radius,height,xmed,ymed
       integer :: k,i,fin,j
-      real(kind=8) :: rx,ry,rz,rev
       logical :: exists
 
       allocate (Efield_Jij(N(1),N(2),N(3)))

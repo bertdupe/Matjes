@@ -1,12 +1,34 @@
        module m_derived_types
 
+! type vector
+       type vec
+          real(kind=8) :: w(3)
+       end type vec
+
+       type vec_point
+          real(kind=8), pointer :: w(:)
+       end type vec_point
+
+
+! Order parameter of the simulations
+       type Xvec
+        type(vec), allocatable, dimension(:) :: X
+       end type Xvec
+
+! unit cells
+! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
        type cell
         real(kind=8), allocatable :: mom(:), pos(:,:)
-        logical, allocatable :: i_m(:)
-        integer, allocatable :: type(:)
+        logical, allocatable :: i_mom(:)
        end type cell
 
-
+       type lattice
+        real(kind=8) :: areal(3,3),astar(3,3),alat(3)
+        integer :: dim_lat(3),n_system
+        integer, allocatable :: world(:)
+        logical :: boundary(3)
+        real(kind=8), pointer :: l_modes(:,:,:,:)
+       end type lattice
 
 ! parameters for printing in and out
        type io_parameter
@@ -36,7 +58,11 @@
 
 ! parameters for the type of simulations that you are running
        type type_simu
+<<<<<<< HEAD
         logical :: i_dynamic,i_metropolis,i_gneb,i_paratemp,i_minimization,i_entropic,i_r_texture,i_pimc
+=======
+        logical :: i_dynamic,i_metropolis,i_gneb,i_paratemp,i_minimization,i_entropic,i_r_texture,i_TB
+>>>>>>> origin/Bertrand
        end type type_simu
 
 
@@ -50,10 +76,14 @@
        end type Operator
 
 
-
-
-
+!!!!
 !Hamiltonian of the simulations
+!!!!
+
+       type H_loc
+        real(kind=8), pointer :: H_loc(:,:)
+       end type H_loc
+
        type Hamiltonian
         class (*), pointer, dimension(:) :: Ham
         integer, dimension(:), allocatable :: Op_order
@@ -69,12 +99,5 @@
         complex(kind=16), allocatable, dimension(:,:) :: coeff
        end type im_local_Hamil
 
-
-! Order parameter of the simulations
-       type XVec
-        real(kind=16), allocatable, dimension(:) :: X
-        integer :: il
-        integer :: nline
-       end type XVec
 
        end module m_derived_types

@@ -1,14 +1,13 @@
-      subroutine rw_zdir(phase,jz,Nei_z,jil,Nei_il,dim_lat)
+      subroutine rw_zdir(phase,jz,Nei_z,jil,Nei_il)
       implicit none
 ! variable shared in order to gain piece
       real (kind=8), intent(inout) :: jz(12),jil(12)
       integer, intent(inout) :: phase,Nei_z,Nei_il
-      integer, intent(in) :: dim_lat(3)
 ! variable for the file reading
       integer, parameter :: io=24
 ! dumy variable
       character(len=100) :: str
-      integer :: j,fin
+      integer :: fin
       character(len=5) :: typ,dummy
 
 
@@ -108,12 +107,12 @@
            backspace(io)
            read(io,*) dummy, typ
            if (typ=='super') then
-            if (dim_lat(3).eq.1) then
-             phase=2
-            else
+!            if (dim_lat(3).eq.1) then
+!             phase=2
+!            else
 ! the most horrible case: one more atom per unit cell and superlattice in the z direction
-             phase=3
-            endif
+!             phase=3
+!            endif
            elseif (typ=='bulk') then
             phase=1
            endif

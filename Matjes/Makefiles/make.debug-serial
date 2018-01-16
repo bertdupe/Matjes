@@ -1,7 +1,6 @@
 
 LD=gfortran
 FC=gfortran
-
 CC=gcc
 
 #FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
@@ -10,7 +9,4 @@ FFLAGS= -O0 -g -fcheck=all -Wall -Werror -fbacktrace -ffpe-trap=invalid,overflow
 
 CPPS= -DCPP_MRG -DCPP_BRUTDIP
 
-<<<<<<< HEAD
-=======
 INCS=-I/usr/include
->>>>>>> origin/Bertrand

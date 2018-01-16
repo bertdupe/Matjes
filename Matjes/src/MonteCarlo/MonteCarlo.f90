@@ -1,13 +1,13 @@
 !
 ! Routine that does the Monte Carlo (and not the parallel tempering)
 !
-      subroutine montecarlo(N_cell,n_system,state,world,n_relaxation,n_sizerelax, &
+      subroutine montecarlo(N_cell,state,n_relaxation,n_sizerelax, &
             &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
             &    i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost, &
-            &    Periodic_log,gra_topo,CalEnergy,CalTheta,Gra_log,spstmL,gra_fft,&
-            &    i_separate,i_average,i_topohall,print_relax,Cor_log, &
+            &    gra_topo,CalEnergy,CalTheta,Gra_log,spstmL,&
+            &    print_relax,Cor_log, &
             &    n_Tsteps,coni,Total_MC_Steps,T_auto,EA,T_relax,kTfin,kTini,h_ext, &
-            &    n_ghost,nRepProc)     ! MPI variable
+            &    my_lattice)
       use m_constants, only : k_b,pi
       use m_vector, only : norm
       use m_Corre
@@ -20,66 +20,32 @@
       use m_write_spin
       use m_set_temp
       use m_topocharge_all
-      use m_mpi_prop, only : isize,irank_working
       use m_createspinfile
+      use m_derived_types
 #ifdef CPP_MPI
       use m_mpi_prop, only : MPI_COMM
       use m_gather_reduce
 #endif
       implicit none
-! interface for the relaxation and the MCsteps routine
-      interface
-        subroutine Relaxation(N_cell,n_system,kT,state,E_total,E_decompose,Magnetization,qeulerp,qeulerm,vortex, &
-      &    n_relaxation,n_sizerelax,T_relax,acc,rate,tries,cone,print_relax,h_ext,EA, &
-      &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
-      &    i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,n_world,i_ghost)
-          use mtprng
-          integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
-          real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-          type(mtprng_state), intent(inout) :: state
-          real(kind=8), intent(inout) :: qeulerp,qeulerm,vortex(3),cone,acc,rate,tries
-          real(kind=8), intent(inout) :: E_total,magnetization(3),E_decompose(8)
-          real(kind=8), intent(in) :: kT,h_ext(3),EA(3)
-          integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
-          integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
-          integer, intent(in) :: indexNN(shape_index(1),shape_index(2)),n_world
-          integer, intent(in) :: n_relaxation,T_relax,N_cell,n_sizerelax,n_system
-          logical, intent(in) :: print_relax,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost
-        end subroutine
 
-        subroutine MCsteps(state,E_total,E_decompose,Magnetization,kt,acc,rate,tries,cone,n_system, &
-            & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
-            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,n_world)
-          use mtprng
-          integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4),n_system
-          integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
-          integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
-          integer, intent(in) :: indexNN(shape_index(1),shape_index(2)),n_world
-          logical, intent(in) :: i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel
-          real(kind=8), intent(in) :: kt,h_ext(3),EA(3)
-          real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-          type(mtprng_state), intent(inout) :: state
-          real(kind=8), intent(inout) :: E_total,Magnetization(3),E_decompose(8),acc,rate,cone,tries
-        end subroutine
-      end interface
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !variable part
-      integer, intent(in) :: N_cell,n_system,n_relaxation,n_sizerelax,n_Tsteps,Total_MC_Steps,T_auto,T_relax,n_ghost,nRepProc
-      integer, intent(in) :: shape_spin(5),shape_tableNN(6),shape_masque(4),shape_index(2),world
+      type(lattice), intent(in) :: my_lattice
+      integer, intent(in) :: N_cell,n_relaxation,n_sizerelax,n_Tsteps,Total_MC_Steps,T_auto,T_relax
+      integer, intent(in) :: shape_spin(5),shape_tableNN(6),shape_masque(4),shape_index(2)
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
-      logical, intent(in) :: i_qorien,Periodic_log(3),gra_topo,CalEnergy,CalTheta,Gra_log,spstmL,gra_fft,i_separate,i_average, &
-    &   i_topohall,print_relax,Cor_log,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost
+      logical, intent(in) :: i_qorien,gra_topo,CalEnergy,CalTheta,Gra_log,spstmL, &
+    &   print_relax,Cor_log,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost
       real(kind=8), intent(in) :: kTfin,kTini,coni,EA(3),h_ext(3)
       real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       type(mtprng_state), intent(inout) :: state
 ! internal variables
 ! slope of the MC
-      integer :: i_relax,n_kT,n_MC
+      integer :: i_relax,n_kT,n_MC,world,n_system
 !restart variables
       integer :: restart_MC_steps
-      logical :: i_restart
+      logical :: i_restart,Periodic_log(3)
 ! size of the table for the mpi averaging
       integer :: size_table
 ! variable for the temperature
@@ -104,9 +70,6 @@
       real(kind=8) :: acc,rate,tries,cone
       character(len=30) :: fname,toto,fname2
       integer :: i,i_x,i_y,i_z,i_m,k
-
-! dummys
-      integer :: ierr
 #ifdef CPP_MPI
 
       if (i_separate) size_table=isize*nRepProc
@@ -138,13 +101,16 @@
       E_total=0.0d0
       E_decompose=0.0d0
       kt_all=0.0d0
+      world=size(my_lattice%world)
+      n_system=my_lattice%n_system
+      Periodic_log=my_lattice%boundary
 
 ! initializing the variables above
       call DeriveValue(N_cell,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,E_decompose, &
            &   i_four,i_dm,i_biq,i_dip,i_stone,EA,h_ext)
       E_total=sum(E_decompose)
 
-      Call CalculateAverages(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system)
+      Call CalculateAverages(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system,my_lattice)
 
 ! Measured data
       E_av=0.0d0
@@ -203,8 +169,8 @@
 
        kt=kt_all(n_kT)
 
-        call Relaxation(N_cell,n_system,kT,state,E_total,E_decompose,Magnetization,qeulerp,qeulerm,vortex, &
-      &    n_relaxation,n_sizerelax,T_relax,acc,rate,tries,cone,print_relax,h_ext,EA, &
+        call Relaxation(N_cell,kT,state,E_total,E_decompose,Magnetization,qeulerp,qeulerm,vortex, &
+      &    n_relaxation,n_sizerelax,T_relax,acc,rate,tries,cone,print_relax,h_ext,my_lattice,EA, &
       &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
       &    i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world,i_ghost)
 
@@ -218,21 +184,21 @@
 
                     Call MCstep(state,E_total,E_decompose,Magnetization,kt,acc,rate,tries,cone,n_system, &
             & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
-            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world)
+            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world,my_lattice)
 
                 End do
 
                 Call MCstep(state,E_total,E_decompose,Magnetization,kt,acc,rate,tries,cone,n_system, &
             & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
-            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world)
+            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world,my_lattice)
 
 ! Calculate the topological charge and the vorticity
-                call topo(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm)
+                call topo(spin,shape_spin,masque,qeulerp,qeulerm,my_lattice)
 
 ! CalculateAverages makes the averages from the sums
                 Call CalculateAverages(qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
                 &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),E_total,Magnetization,spin_sum,spin,shape_spin, &
-                    masque,shape_masque)
+                    masque,my_lattice)
 
                if (Cor_log) chi_l(:,n_kT)=chi_l(:,n_kT)+Correlation(spin_sum,spin(4:6,:,:,:,:),shape_spin,n_MC,dble(N_cell))
 
@@ -302,9 +268,9 @@
         if (gra_topo) then
            if (world.eq.2) then
                if (shape_spin(5).eq.1) then
-                  call topo_map(spin(4:6,:,:,1,1),shape_spin,kt/k_B,gra_topo,Periodic_log,i_separate)
+                  call topo_map(spin(4:6,:,:,1,1),shape_spin,kt/k_B,gra_topo,Periodic_log)
                else
-                  call topo_map(spin(4:6,:,:,1,:),shape_spin,kt/k_B,gra_topo,Periodic_log,i_separate)
+                  call topo_map(spin(4:6,:,:,1,:),shape_spin,kt/k_B,gra_topo,Periodic_log)
                endif
            elseif (world.eq.1) then
               write(6,'(a)') 'topological graphs not coded for 1D'
@@ -319,9 +285,9 @@
         if (i_qorien) then
            if (world.eq.2) then
                if (shape_spin(5).eq.1) then
-                  call qorien(spin(4:6,:,:,1,1),shape_spin)
+                  call qorien(spin(4:6,:,:,1,1),shape_spin,my_lattice)
                else
-                  call qorien(spin(4:6,:,:,1,:),shape_spin)
+                  call qorien(spin(4:6,:,:,1,:),shape_spin,my_lattice)
                endif
            elseif (world.eq.1) then
              write(6,'(a)') 'spacial resolution of the gauge not coded for 1D'

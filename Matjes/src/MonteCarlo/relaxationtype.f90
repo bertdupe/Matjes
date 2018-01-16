@@ -1,10 +1,11 @@
       module m_relaxtyp
+      use m_derived_types
       contains
 ! functions that relaxes the spins with respect of the dE/dM
 ! in one case, the spins are choosen in the direction of -dE/DM so energy diminishes
 ! in the second case, the spins are choosen in the direction of +dE/DM so energy increases
 !
-      function underrelax(spin_in,i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+      function underrelax(spin_in,i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
       use m_parameters, only : EA,i_biq,i_four,i_DM
       use m_vector, only : cross
       use m_fieldeff
@@ -17,6 +18,7 @@
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      type(lattice), intent(in) :: my_lattice
 ! value of the function
       real(kind=8), dimension(3) :: underrelax
 !internal variable
@@ -27,10 +29,10 @@
       S_int=S_int+Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
       S_int=S_int+BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)
       if (i_DM) S_int=S_int+Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque,shape_masque)
+      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
       S_int=S_int+efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
       if (i_biq) S_int=S_int+Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque)
+      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
 
       norm=sqrt(S_int(1)**2+S_int(2)**2+S_int(3)**2)
 ! Calculation of the new spin
@@ -48,7 +50,7 @@
 
       end function underrelax
 
-      function overrelax(spin_in,i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+      function overrelax(spin_in,i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
       use m_parameters, only : EA,i_biq,i_four,i_DM
       use m_vector, only : cross
       use m_fieldeff
@@ -61,6 +63,7 @@
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      type(lattice), intent(in) :: my_lattice
 ! value of the function
       real(kind=8), dimension(3) :: overrelax
 !internal variable
@@ -72,10 +75,10 @@
       S_int=S_int+Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
       S_int=S_int+BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)
       if (i_DM) S_int=S_int+Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque,shape_masque)
+      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
       S_int=S_int+efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
       if (i_biq) S_int=S_int+Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque)
+      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
 
       norm=sqrt(S_int(1)**2+S_int(2)**2+S_int(3)**2)
 ! Calculation of the new spin

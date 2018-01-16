@@ -1,10 +1,10 @@
 0.0		# Tip_x
 0.0		# Tip_y
 1.0		# Tip_z
-1.133		# Kappa in 1/Angström
-8.0		# height in Angström
-8		# x-auflösung, 2er Potenz / resolution along x
-8		# y-auflösung, 2er Potenz / resolution along y
+1.133		# Kappa in 1/Angstroem
+8.0		# height 
+8		# x-aufloesung, 2er Potenz / resolution along x
+8		# y-aufloesung, 2er Potenz / resolution along y
 60		# xstart
 120		# xende
 60		# ystart
@@ -19,11 +19,11 @@
 800		# maximale Höhe/Breite der *.png Bilder
 1.8		# spins.png Pfeillänge Skalierfaktor
 1		# Tip-Orbital: |1:s|2:p_x|3:p_y|4:p_z|5:d_x²|6:d_y²|7:d_z²|8:d_xy|9:d_xz|10:d_yz|
-0		# x-Koordinate des Startpunktes der Scan-Linie in Angstrom
+0		# x-Koordinate des Startpunktes der Scan-Linie 
 0		# y-Koordinate """"""""""
 60		# x-Koordinate des Endpunktes """""""""
 60		# y-Koordinate """"""""""""""
 1		# Povray-Ausgabe der Spins: 0=aus, 1=an, http://www.povray.org/
-40		# Radius in Angström of the upper limit cutoff
-1		# Radius in Angström of the lower limit cutoff
+40		# Radius of the upper limit cutoff
+1		# Radius of the lower limit cutoff
 #############################################################################################

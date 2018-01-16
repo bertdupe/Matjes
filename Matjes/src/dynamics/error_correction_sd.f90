@@ -5,10 +5,11 @@
       contains
 
       subroutine error_correction_SD_SIB(timestep,max_error,real_time,h_ext, &
-     & damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,N_site_comm,check3,j, &
+     & damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,check3,j, &
      & spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN, &
-     & i_biq,i_dm,i_four,i_dip,EA)
+     & i_biq,i_dm,i_four,i_dip,EA,mag_lattice)
       use m_solver
+      use m_derived_types, only : lattice
       use m_vector, only : cross,norm,norm_cross
       use m_constants, only : pi,k_b,hbar
       use m_eval_Beff
@@ -20,16 +21,15 @@
      use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
      use m_mpi_prop, only : MPI_COMM,irank,isize
      use m_reconstruct_mat
-#else
-      use m_parameters, only : kt,ktini,ktfin,gra_topo,gra_log,gra_freq
 #endif
       implicit none
 ! inout part of the variables
+      type(lattice), intent(in) :: mag_lattice
       logical, intent(in) :: i_biq,i_dm,i_four,i_dip
       real(kind=8), intent(in) :: max_error,h_ext(3),EA(3)
-      real(kind=8), intent(in) :: damping,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol(:)
+      real(kind=8), intent(in) :: damping,torque_FL,torque_AFL,adia,nonadia,storque,Ipol(:)
       logical, intent(in) :: i_torque,stmtorque
-      integer, intent(in) :: N_site_comm,j
+      integer, intent(in) :: j
       integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
@@ -42,7 +42,7 @@
       real(kind=8) :: spinafter(4,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       real(kind=8) :: spintest(4,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       real(kind=8) :: tfin,dt,Beff(3),error,max_timestep,test,test_torque
-      integer :: i_x,i_y,i_z,i_m,ierr
+      integer :: i_x,i_y,i_z,i_m
 #ifndef CPP_MPI
        integer, parameter :: Xstart=1
        integer, parameter :: Ystart=1
@@ -84,10 +84,11 @@
         do i_y=Ystart,Ystop
          do i_x=Xstart,Xstop
 
-       call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+       call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spin,shape_spin,indexNN,shape_index &
+            & ,masque,shape_masque,tableNN,shape_tableNN,h_ext,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=(integrate(2.0d0*dt,spin(4:6,i_x,i_y,i_z,i_m),Beff,damping &
-     &  ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)+ &
+     &  ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)+ &
      &  spinini(1:3,i_x,i_y,i_z,i_m))/2.0d0
 
           spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
@@ -111,10 +112,11 @@
         do i_y=Ystart,Ystop
          do i_x=Xstart,Xstop
 
-        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spinini,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spinini,shape_spin,indexNN,shape_index &
+             &  ,masque,shape_masque,tableNN,shape_tableNN,h_ext,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(2.0d0*dt,spinini(1:3,i_x,i_y,i_z,i_m),Beff, &
-     &   damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spinini)
+     &   damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spinini)
 
           spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
 
@@ -168,10 +170,11 @@
         do i_y=Ystart,Ystop
          do i_x=Xstart,Xstop
 
-       call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spinini,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+       call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spinini,shape_spin,indexNN,shape_index &
+             &    ,masque,shape_masque,tableNN,shape_tableNN,h_ext,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=(integrate(dt,spinini(1:3,i_x,i_y,i_z,i_m),Beff,damping &
-     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)+ &
+     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)+ &
      &  spinini(1:3,i_x,i_y,i_z,i_m))/2.0d0
 
           spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
@@ -196,10 +199,11 @@
         do i_y=Ystart,Ystop
          do i_x=Xstart,Xstop
 
-        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff,spin,shape_spin,indexNN,shape_index &
+             &    ,masque,shape_masque,tableNN,shape_tableNN,h_ext,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(dt,spinini(1:3,i_x,i_y,i_z,i_m),Beff, &
-     &   damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)
+     &   damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)
 
           spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
 
@@ -305,7 +309,7 @@
 ! update the torque
       check3=test_torque
       write(6,*) 'The time step is now',timestep
-      pause
+!      pause
       end subroutine error_correction_SD_SIB
 
       end module m_error_correction_SD

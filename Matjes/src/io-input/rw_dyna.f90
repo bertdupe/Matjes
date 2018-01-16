@@ -8,18 +8,21 @@
       integer :: integtype
       end module m_dynamic
 
-      subroutine rw_dyna(N)
+      subroutine rw_dyna(N,my_lattice)
       use m_dynamic
       use m_constants
+      use m_derived_types
       use m_lattice, only : spin
-      use m_rw_lattice, only : net
       implicit none
+      type(lattice), intent(in) :: my_lattice
       integer, parameter :: io=23
       logical :: exists
       integer :: fin,i_x,i_y,i_z,i
       character(len=30) :: str,dummy
       integer, intent(in) :: N(3)
-      real(kind=8) :: rx,ry,rz,rev,xmed,ymed,ri,h,trans(3)
+      real(kind=8) :: ry,xmed,ymed,ri,h,trans(3),net(3,3)
+
+      net=my_lattice%areal
 
       allocate(htor(N(1),N(2),N(3)))
 

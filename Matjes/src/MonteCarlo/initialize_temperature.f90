@@ -1,8 +1,10 @@
       module m_set_temp
       interface ini_temp
        module procedure ini_temp_normal
+#ifdef CPP_MPI
        module procedure ini_temp_mpi_ghost
        module procedure ini_temp_mpi
+#endif
       end interface ini_temp
       contains
 !
@@ -11,7 +13,7 @@
 ! kt is an out
 ! the rest is purely in
 !
-
+#ifdef CPP_MPI
       subroutine ini_temp_mpi(kt,kTfin,kTini,isize,irank,nRepProc,i_print_W)
       implicit none
       real(kind=8), intent(out) :: kt(:)
@@ -45,7 +47,7 @@
      endif
 
      end subroutine ini_temp_mpi
-
+#endif
 
       subroutine ini_temp_normal(kt,kTfin,kTini,isize,i_print_W)
       implicit none
@@ -81,10 +83,11 @@
 
      end subroutine ini_temp_normal
 
-     subroutine ini_temp_mpi_ghost(kt,kTfin,kTini,irank,isize,n_ghost,n_Tsteps,i_print_W)
+#ifdef CPP_MPI
+     subroutine ini_temp_mpi_ghost(kt,kTfin,kTini,irank,isize,n_ghost,i_print_W)
      implicit none
      real(kind=8), intent(out) :: kt(:),kTfin,kTini
-     integer, intent(in) :: irank,n_ghost,isize,n_Tsteps
+     integer, intent(in) :: irank,n_ghost,isize
      logical, intent(in) :: i_print_W
 ! internal variables
      integer :: i
@@ -113,5 +116,6 @@
      endif
 
      end subroutine ini_temp_mpi_ghost
+#endif
 
      end module m_set_temp

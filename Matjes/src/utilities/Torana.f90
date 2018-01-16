@@ -1,4 +1,5 @@
        module m_Torana
+       use m_derived_types
        implicit none
 
        contains
@@ -7,7 +8,7 @@
        subroutine Torana(spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN, &
                   torque_AFL,torque_FL,damping,Ipol,EA,h_int, &
                   i_DM,i_four,i_biq,i_dip,i_torque,stmtorque, &
-                  timestep,adia,nonadia,storque,maxh)
+                  timestep,adia,nonadia,storque,maxh,my_lattice)
        use m_eval_Beff
        use m_vector
        use m_constants, only : pi
@@ -19,6 +20,7 @@
        integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4)),indexNN(shape_index(1),shape_index(2))
        real(kind=8), intent(in) :: torque_AFL,torque_FL,Ipol(3),EA(3),h_int(3),damping,timestep,adia,nonadia,maxh,storque
        logical, intent(in) :: i_DM,i_four,i_biq,i_dip,i_torque,stmtorque
+       type(lattice), intent(in) :: my_lattice
 ! internal variable
        integer :: i_m,i_z,i_y,i_x
        real(kind=8) :: Bini(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
@@ -58,7 +60,7 @@
           do i_x=1,shape_spin(2)
 
        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Bini(:,i_x,i_y,i_z,i_m), &
-  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,my_lattice)
 
           dummy=(spin(4,i_x,i_y,i_z,i_m)*Bini(1,i_x,i_y,i_z,i_m)+spin(5,i_x,i_y,i_z,i_m)*Bini(2,i_x,i_y,i_z,i_m)+spin(6,i_x,i_y,i_z,i_m)*Bini(3,i_x,i_y,i_z,i_m))/norm(Bini(:,i_x,i_y,i_z,i_m))
           test_ang=acos(dummy)*180/pi(1.0d0)

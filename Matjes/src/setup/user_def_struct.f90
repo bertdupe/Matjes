@@ -27,11 +27,9 @@
       integer :: ncell,nspin
 ! stuff
       integer :: i,j,i_x,i_y,i_z,i_m,i_pos,vecori(3)
-      integer :: v_x,v_y,v_z,v_m
-      real(kind=8) :: ref(3),origine(3),lattice(3,3),r(3,3)
-      real(kind=8) :: vec_p(3)
+      integer :: v_x,v_y,v_z
+      real(kind=8) :: origine(3),lattice(3,3),r(3,3)
       integer :: upper(3),lower(3)
-      logical :: test
 
 ! put all the onsite masque value to 0
 #ifdef CPP_MPI

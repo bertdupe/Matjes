@@ -4,9 +4,9 @@
        end interface periodic
        contains
 
-       subroutine period(ind,nvoi,d,NN,boundary,mask,spin,tableNN)
+       subroutine period(ind,nvoi,d,NN,mask,spin,tableNN,my_lattice,my_motif)
        use m_vector , only : norm
-       use m_rw_lattice, only : dim_lat,motif,net
+       use m_derived_types, only : lattice,cell
 #ifdef CPP_MPI
        use m_make_box, only : Xstart,Ystart,Zstart,Zstop,Ystop,Xstop
        use m_mpi_prop, only : MPI_COMM,irank,start
@@ -17,15 +17,16 @@
        real(kind=8), intent(in) :: spin(:,:,:,:,:)
        integer, intent(in) :: nvoi,NN,tableNN(:,:,:,:,:,:)
        integer, intent(in) :: ind(:)
-       logical, intent(in) :: boundary(:)
        real(kind=8), intent(in) :: d(:)
+       type(lattice), intent(in) :: my_lattice
+       type(cell), intent(in) :: my_motif
 ! value of the function
        integer, intent(inout) :: mask(:,:,:,:)
 !dummy variable
-       integer :: i_x,i_y,i_z,i_m,j,k,l,avant,i
-       integer :: masque(nvoi,dim_lat(1),dim_lat(2),dim_lat(3))
-       real (kind=8) :: dist,vec(3),test
-       logical :: exists
+       integer :: i_x,i_y,i_z,i_m,k,l,avant,i,dim_lat(3),nmag
+       integer, allocatable :: masque(:,:,:,:)
+       real (kind=8) :: dist,vec(3),net(3,3)
+       logical :: exists,boundary(3)
 ! position of the neighbors
        integer :: v_x,v_y,v_z,v_m,ig_x,ig_y,ig_z
 #ifndef CPP_MPI
@@ -40,6 +41,15 @@
 
 #ifdef CPP_MPI
        include 'mpif.h'
+#endif
+
+       dim_lat=my_lattice%dim_lat
+       net=my_lattice%areal
+       nmag=size(my_motif%i_mom)
+       boundary=my_lattice%boundary
+       allocate(masque(nvoi,dim_lat(1),dim_lat(2),dim_lat(3)))
+
+#ifdef CPP_MPI
        n_comm=product(dim_lat)*nvoi
 #else
        Xstop=dim_lat(1)
@@ -60,8 +70,8 @@
 !$OMP parallel private(i_x,i_y,i_z,i_m,l,v_x,v_y,v_z,v_m,vec,dist) default(shared)
 #endif
        do l=1,ind(k)
-        do i_m=1,size(motif%i_m)
-        if (.not.motif%i_m(i_m)) cycle
+        do i_m=1,nmag
+        if (.not.my_motif%i_mom(i_m)) cycle
          do i_z=Zstart,Zstop
           do i_y=Ystart,Ystop
            do i_x=Xstart,Xstop
@@ -105,8 +115,8 @@
 #endif
 
        do l=1,ind(k)
-        do i_m=1,size(motif%i_m)
-        if (.not.motif%i_m(i_m)) cycle
+        do i_m=1,nmag
+        if (.not.my_motif%i_mom(i_m)) cycle
          do i_z=Zstart,Zstop
           do i_y=Ystart,Ystop
            do i_x=Xstart,Xstop

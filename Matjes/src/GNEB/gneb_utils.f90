@@ -3,6 +3,7 @@ module m_gneb_utils
    use m_eval_Beff
    use m_local_energy
    use m_createspinfile
+   use m_derived_types
 
    character(len=35) :: momfile_i                             !< File name for initial magn. configuration
    character(len=35) :: momfile_f                             !< File name for final magn. configuration
@@ -33,10 +34,11 @@ module m_gneb_utils
 contains
 
 subroutine find_path(i_DM,i_four,i_biq,i_dip,EA,nim,dt,mass,kappa,path, &
-   & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,ftol,itrmax,every,h_ext, &
+   & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,ftol,itrmax,every,h_ext,my_lattice, &
    & rx,ene,dene)
 
 implicit none
+   type(lattice), intent(in) :: my_lattice
    logical, intent(in) :: i_DM,i_four,i_biq,i_dip
    real(kind=8), intent(in) :: EA(3)    ! easy axis
    integer, intent(in) :: nim,shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
@@ -57,11 +59,11 @@ implicit none
    real(kind=8) :: vel(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    real(kind=8) :: fxyz1(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    real(kind=8) :: fxyz2(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-   real(kind=8) :: fchk,ftmp(3),veltmp(3),u0,u(nim),fpp(nim),ftau(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),tau_i(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+   real(kind=8) :: fchk,ftmp(3),veltmp(3),u0,u(nim),fpp(nim),tau_i(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
    real(kind=8) :: tau(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
    real(kind=8) :: pathlen(nim),ax(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim),ang(shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    real(kind=8) :: coo(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-   real(kind=8) :: fv,fd,fp
+   real(kind=8) :: fv,fd,fp,E_int
    integer :: i,imax
    
    fchk=1d0+ftol
@@ -82,12 +84,14 @@ implicit none
                      coo(i,i_x,i_y,i_z,i_m,i_nim) = path(3+i,i_x,i_y,i_z,i_m,i_nim)
                   end do
                   call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,ftmp, &
-                    &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+                    &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
           
                   call project_force(ftmp,path(4:6,i_x,i_y,i_z,i_m,i_nim),fxyz1(:,i_x,i_y,i_z,i_m,i_nim))
 
-                  u(i_nim) = u(i_nim) + local_energy(u(i_nim),i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
-                       & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+                  call local_energy(E_int,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
+                       & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+
+                  u(i_nim) = u(i_nim) + E_int
                end do
             end do
          end do
@@ -257,12 +261,14 @@ implicit none
                      do i_x=1,shape_spin(2)
                         
                         call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,ftmp, &
-                              &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+                              &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
 
                         call project_force(ftmp,path(4:6,i_x,i_y,i_z,i_m,i_nim),fxyz2(:,i_x,i_y,i_z,i_m,i_nim))
 
-                        u(i_nim) = u(i_nim) + local_energy(u(i_nim),i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
-                             &shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+                        call local_energy(E_int,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
+                             &shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+
+                        u(i_nim) = u(i_nim) + E_int
 
                         !print *,'ene:',u(i_nim)
                      end do
@@ -488,10 +494,11 @@ end subroutine find_path
 
 
 subroutine find_path_ci(i_DM,i_four,i_biq,i_dip,EA,nim,dt,mass,kappa,path, &
-   & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,ftol,itrmax,every,h_ext, &
+   & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,ftol,itrmax,every,h_ext,my_lattice, &
    & rx,ene,dene,ci)
 
 implicit none
+   type(lattice), intent(in) :: my_lattice
    logical, intent(in) :: i_DM,i_four,i_biq,i_dip
    real(kind=8), intent(in) :: EA(3)    ! easy axis
    integer, intent(in) :: nim,shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
@@ -513,11 +520,11 @@ implicit none
    real(kind=8) :: vel(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    real(kind=8) :: fxyz1(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    real(kind=8) :: fxyz2(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-   real(kind=8) :: fchk,ftmp(3),veltmp(3),u0,u(nim),fpp(nim),ftau(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),tau_i(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+   real(kind=8) :: fchk,ftmp(3),veltmp(3),u0,u(nim),fpp(nim),tau_i(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
    real(kind=8) :: tau(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
    real(kind=8) :: pathlen(nim),ax(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim),ang(shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    real(kind=8) :: coo(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-   real(kind=8) :: fv,fd,fp
+   real(kind=8) :: fv,fd,fp,E_int
    integer :: i,imax
    
    fchk=1d0+ftol
@@ -544,12 +551,14 @@ implicit none
                   
           
                   call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,ftmp, &
-                    &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+                    &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
                   
                   call project_force(ftmp,path(4:6,i_x,i_y,i_z,i_m,i_nim),fxyz1(:,i_x,i_y,i_z,i_m,i_nim))
 
-                  u(i_nim) = u(i_nim) + local_energy(u(i_nim),i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
-                       & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+                  call local_energy(E_int,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
+                       & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+
+                  u(i_nim) = u(i_nim) + E_int
                end do
             end do
          end do
@@ -744,12 +753,14 @@ implicit none
                      do i_x=1,shape_spin(2)
                         
                         call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,ftmp, &
-                              &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+                              &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
 
                         call project_force(ftmp,path(4:6,i_x,i_y,i_z,i_m,i_nim),fxyz2(:,i_x,i_y,i_z,i_m,i_nim))
 
-                        u(i_nim) = u(i_nim) + local_energy(u(i_nim),i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
-                             &shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+                        call local_energy(E_int,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
+                             &shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+
+                        u(i_nim) = u(i_nim) + E_int
 
                         !print *,'ene:',u(i_nim)
                      end do
@@ -1019,7 +1030,7 @@ end subroutine prn_gneb_progress
    real(kind=8), intent(in) :: coo(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim), u(nim)
    real(kind=8), intent(out) :: tau(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
    real(kind=8) :: u1, u2, u3,taup(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),taum(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),dumin,dumax,tmp,tau_tmp(3)
-   integer :: i,j,i1,i_m,i_x,i_y,i_z
+   integer :: i_m,i_x,i_y,i_z,i
    u1=u(im-1)
    u2=u(im)
    u3=u(im+1)
@@ -1171,7 +1182,7 @@ subroutine the_path(nim,shape_spin,path,pathlen)
    real(kind=8), intent(in) :: path(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    real(kind=8), intent(out) :: pathlen(nim)
    real(kind=8) :: tmp,l1
-   integer :: i,j,i1,i_m,i_x,i_y,i_z,i_nim
+   integer :: i_m,i_x,i_y,i_z,i_nim
 
       pathlen(1) = 0d0
       
@@ -1234,11 +1245,10 @@ subroutine read_gneb_parameters()
     
     integer, parameter :: io=357
     character(len=50) :: keyword,cache
-    integer :: key_len,i_err,i,i_stat,i_errb,ii
+    integer :: key_len,i_err,i_errb
     logical :: comment,exi
-    real(kind=8) :: tmp
 
-    character(len=1) :: OPT_flag_str, adapt_flag_str, ip_adapt_flag_str, OPT_printcores_flag_str
+!    character(len=1) :: OPT_flag_str, ip_adapt_flag_str, OPT_printcores_flag_str
     
     inquire (file='GNEB.in',exist=exi)
     if (.not. exi) then
@@ -1436,8 +1446,8 @@ implicit none
       real(kind=8), intent(inout) :: path(3,nim)
       type(mtprng_state), intent(inout) :: state
       real(kind=8), parameter :: pi = 3.14159265358979323d0
-      real(kind=8) :: dtheta,theta,angle,x(3),tmp,vec(3),eps=epsilon(angle)
-      integer :: i,j,pr
+      real(kind=8) :: dtheta,theta,angle,tmp,vec(3),eps=epsilon(angle),pr
+      integer :: i,j
       
       angle = calc_ang(ni,nf)
       if (angle<eps) then
@@ -1514,8 +1524,8 @@ end subroutine geodesic_path_one
    integer, intent(in) :: nim,shape_spin(5)
    real(kind=8), intent(in) :: spini(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),spinf(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),amp_rnd
    real(kind=8), intent(inout) :: path(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-   integer :: i,j,i_x,i_y,i_z,i_m,i_nim
-   real(kind=8) :: u(3), v(3), mmom_tmp,path_one(3,nim),ax(3)
+   integer :: i,i_x,i_y,i_z,i_m,i_nim
+   real(kind=8) :: u(3),path_one(3,nim),ax(3)
       
       ax = 0d0
       
@@ -1656,7 +1666,6 @@ end subroutine rotate_vec
    real(kind=8), intent(in) :: m_in(3),f_in(3)
    real(kind=8), dimension(3) :: calc_axis
    real(kind=8) :: x(3),tmp,y(3),a,b,c,eps=epsilon(a)
-   integer :: i
    
      
       
@@ -1779,8 +1788,8 @@ use mtprng
       real(kind=8), intent(inout) :: ax(3)
       real(kind=8), intent(out) :: nsp(3)
       real(kind=8), parameter :: pi = 3.14159265358979323d0
-      real(kind=8) :: dl,dtheta,theta,angle,x(3),tmp,vec(3),eps=epsilon(angle)
-      integer :: i,j,iiseed,pr
+      real(kind=8) :: dl,theta,angle,tmp,vec(3),eps=epsilon(angle),pr
+      integer :: i,j
       
       
       
@@ -1800,7 +1809,7 @@ use mtprng
       elseif (dabs(angle-pi)<eps) then
          !write(*,*) 'i am here!'
          
-         pr = 0d0
+         pr = 0.0d0
          do j=1,3
             pr = pr + ax(j)*ni(j)
          end do
@@ -1928,8 +1937,8 @@ use mtprng
    real(kind=8), intent(in) :: amp_rnd
    real(kind=8), intent(inout) :: path(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
    logical, intent(out) :: exists
-   integer :: i,j,i_x,i_y,i_z,i_m,i_nim
-   real(kind=8) :: u(3), v(3), mmom_tmp,path_one(3,nim),ax(3)
+   integer :: i_x,i_y,i_z,i_m,i_nim
+   real(kind=8) :: u(3)
    character(len=8) :: num
    character(len=50) :: fname
    
@@ -1981,7 +1990,7 @@ subroutine write_en(n,x,y,dy,x0,filn,do_norm_rx)
       real(kind=8), intent(in) :: x0        !< Normalization for the reaction coordinate
       character(*), intent(in) :: filn             !< filename 
       character(len=1), intent(in) :: do_norm_rx   !< normalize reaction coordinate (Y/N)
-      integer :: i, j
+      integer :: i
       real(kind=8) :: norm
       
          if (do_norm_rx=='Y') then
@@ -2068,7 +2077,7 @@ subroutine rvec_bracket ( n, x, xval, left)
   implicit none
 !
   integer, intent(in) :: n
-	real(kind=8), intent(in) :: x(n),xval
+   real(kind=8), intent(in) :: x(n),xval
 	
   integer i
   integer, intent(out) :: left

@@ -294,7 +294,7 @@
       IMPLICIT NONE
       real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
       real(kind=8), DIMENSION(3,3) :: JACNN
-      real(kind=8)  :: pr,EUCNOR!,M33DET
+      real(kind=8)  :: pr
        JACNN(1:3,1)=u0(1:3)
        JACNN(1:3,2)=v0(1:3)
        JACNN(1:3,3)=w0(1:3)
@@ -311,7 +311,7 @@
       IMPLICIT NONE
       real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
       real(kind=8), DIMENSION(3,3) :: JACNN
-      real(kind=8)  :: pr,EUCNOR!,M33DET
+      real(kind=8)  :: pr
        JACNN(1,1:3)=u0(1:3)
        JACNN(2,1:3)=v0(1:3)
        JACNN(3,1:3)=w0(1:3)
@@ -328,7 +328,7 @@
       real(kind=8) :: sorien(3)
       real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
       real(kind=8), DIMENSION(3,3) :: JACNN
-      real(kind=8) :: pr,EUCNOR!,M33DET
+      real(kind=8) :: pr
       real(kind=8) :: dumy(3)
        dumy=u0+v0+w0
        JACNN(1,1:3)=u0(1:3)

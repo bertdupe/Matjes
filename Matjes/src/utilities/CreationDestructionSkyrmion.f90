@@ -10,16 +10,17 @@
 ! Version : 3.0
 ! =====================================================================
 
-      SUBROUTINE Creation(x0,y0,R0,ToPinOrNotToPin,coeff,star)
+      SUBROUTINE Creation(x0,y0,R0,ToPinOrNotToPin,coeff,star,my_lattice)
 
+      use m_derived_types
       use m_skyrmion
       use m_constants, only : pi
       use m_parameters, only : H_ext,EA
       use m_lattice, only : spin,masque
-      use m_rw_lattice, only : dim_lat,net
       use m_vector, only : norm,distance,phi
       use m_parameters, only : c_DM,DM
       Implicit None
+      type(lattice), intent(in) :: my_lattice
 ! (x0, y0) are the coordinates of the center of the skyrmion that we
 ! want to create0
       real(kind=8), intent(in) :: x0, y0
@@ -35,8 +36,8 @@
 ! Intermediate variables
       real(kind=8) :: Theta
       real(kind=8) :: Psi
-      Integer::i_x,i_y,i_z,j,i_m
-      real(kind=8) :: dist, xpoint, ypoint, xpboc1, xpboc2, ypboc1, ypboc2
+      Integer::i_x,i_y,i_z,i_m,dim_lat(3)
+      real(kind=8) :: dist,net(3,3)
       real(kind=8) ::epsnull
       real(kind=8) :: diml1,diml2
 ! Parameter to create a skyrmion woth theta profile according the paper
@@ -53,6 +54,9 @@
 ! define the right or left hand chirality
       real(kind=8) :: chirality
 
+
+      dim_lat=my_lattice%dim_lat
+      net=my_lattice%areal
       if (abs(DM(1,1)).lt.1.0d-8) then
        chirality=1.0d0
       else
@@ -168,28 +172,27 @@
 ! Version : 3.0
 ! =====================================================================
 
-      SUBROUTINE usercreation(x0,y0,R0,ToPinOrNotToPin)
+      SUBROUTINE usercreation(x0,y0,R0,my_lattice)
 
+      use m_derived_types
       use m_skyrmion, only : coeffx,coeffy,starx,stary
       use m_constants, only : pi
       use m_parameters, only : H_ext,EA
-      use m_lattice, only : spin,masque
-      use m_rw_lattice, only : dim_lat,net
+      use m_lattice, only : spin
       use m_vector, only : norm,distance,phi
       use m_parameters, only : c_DM,DM
       Implicit None
+      type(lattice), intent(in) :: my_lattice
 ! (x0, y0) are the coordinates of the center of the skyrmion that we
 ! want to create0
       real(kind=8), intent(in) :: x0, y0
 ! R0 is the Skyrmion radius
       real(kind=8),intent(in) :: R0
-! To know if we pin (i.e. put the mask to zero) a spin
-      Logical, intent(in) ::ToPinOrNotToPin
 ! Intermediate variables
       real(kind=8) :: Theta
       real(kind=8) :: Psi
-      Integer::i_x,i_y,i_z,j,i_m
-      real(kind=8) :: dist, xpoint, ypoint, xpboc1, xpboc2, ypboc1, ypboc2
+      Integer::i_x,i_y,i_z,i_m,dim_lat(3)
+      real(kind=8) :: dist, net(3,3)
       real(kind=8) ::epsnull
       real(kind=8) :: diml1,diml2
 ! Parameter to create a skyrmion woth theta profile according the paper
@@ -207,6 +210,9 @@
       real(kind=8) :: chirality
 
       write(6,'(a)') "User defined skyrmion selected"
+
+      dim_lat=my_lattice%dim_lat
+      net=my_lattice%areal
 
       if (abs(DM(1,1)).lt.1.0d-8) then
        chirality=1.0d0
@@ -312,16 +318,17 @@
 ! Version : 3.0
 ! =====================================================================
 
-      SUBROUTINE targetcreation(x0,y0,R0,ToPinOrNotToPin,coeff,star)
+      SUBROUTINE targetcreation(x0,y0,R0,ToPinOrNotToPin,coeff,star,my_lattice)
 
+      use m_derived_types
       use m_skyrmion
       use m_constants, only : pi
       use m_parameters, only : H_ext,EA
       use m_lattice, only : spin,masque
-      use m_rw_lattice, only : dim_lat,net
       use m_vector, only : norm,distance,phi
       use m_parameters, only : c_DM,DM
       Implicit None
+      type(lattice), intent(in) :: my_lattice
 ! (x0, y0) are the coordinates of the center of the skyrmion that we
 ! want to create0
       real(kind=8), intent(in) :: x0, y0
@@ -337,8 +344,8 @@
 ! Intermediate variables
       real(kind=8) :: Theta
       real(kind=8) :: Psi
-      Integer::i_x,i_y,i_z,j,i_m
-      real(kind=8) :: dist, xpoint, ypoint, xpboc1, xpboc2, ypboc1, ypboc2
+      Integer::i_x,i_y,i_z,i_m,dim_lat(3)
+      real(kind=8) :: dist, net(3,3)
       real(kind=8) ::epsnull
       real(kind=8) :: diml1,diml2
 ! Parameter to create a skyrmion woth theta profile according the paper
@@ -354,6 +361,9 @@
       Integer :: MinIndex(2)
 ! define the right or left hand chirality
       real(kind=8) :: chirality
+
+      dim_lat=my_lattice%dim_lat
+      net=my_lattice%areal
 
       if (abs(DM(1,1)).lt.1.0d-8) then
        chirality=1.0d0
@@ -477,20 +487,22 @@
 !Version: 2.1
 !======================================================================
 
-      SUBROUTINE  Annihilation(x_SkyCenter,y_SkyCenter, R_S)
+      SUBROUTINE  Annihilation(x_SkyCenter,y_SkyCenter, R_S,my_lattice)
 
-      use m_lattice, only : spin,masque
+      use m_derived_types
+      use m_lattice, only : spin
       use m_skyrmion
-      use m_rw_lattice, only : dim_lat
       Implicit None
+      type(lattice), intent(in) :: my_lattice
       real(kind=8), intent(in) :: R_S, x_SkyCenter,y_SkyCenter
       real(kind=8) :: R_SSquare
-      Integer::i_x,i_y,i_z,i_m,j
+      Integer::i_x,i_y,i_z,i_m,dim_lat(3)
       real(kind=8) :: dist, xpoint, ypoint, xpboc1, xpboc2, ypboc1, ypboc2
       real(kind=8) :: DBottom,DTop,DLeft,DRight,DC1,DC2,DC3,DC4
       real(kind=8) :: diml1, diml2
       
       dist  = 0.0d0
+      dim_lat=my_lattice%dim_lat
       R_SSquare = R_S**2
       diml1 = DBLE(Dim_lat(1))
       diml2 = DBLE(Dim_lat(2))
@@ -543,14 +555,16 @@
 ! SUBROUTINE to Pin a spin in the lattice
 ! =====================================================================
       
-      SUBROUTINE Pinned(X0,Y0,R0,PinOrNot)
+      SUBROUTINE Pinned(X0,Y0,R0,PinOrNot,my_lattice)
 
+      use m_derived_types
       use m_lattice, only : spin,masque
       use m_skyrmion
-      use m_rw_lattice, only : dim_lat
+      implicit none
+      type(lattice), intent(in) :: my_lattice
       real(kind=8), intent(in) ::X0,Y0,R0
       Logical, intent(in) ::PinOrNot
-      Integer::i_x,i_y,i_z,i_m,j
+      Integer::i_x,i_y,i_z,i_m
       real(kind=8) :: dist, xpoint, ypoint, xpboc1, xpboc2, ypboc1, ypboc2
       real(kind=8) :: DBottom,DTop,DLeft,DRight,DC1,DC2,DC3,DC4
       real(kind=8) :: diml1, diml2
@@ -558,9 +572,9 @@
 ! Cemter, in order to apply the mask and force its magnetization to be
 ! down.
       real(kind=8) :: distprevious, MinDist
-      Integer :: MinIndex(2)
+      Integer :: MinIndex(2), dim_lat(3)
 
-
+       dim_lat=my_lattice%dim_lat
        diml1 = DBLE(Dim_lat(1))
        diml2 = DBLE(Dim_lat(2))
        

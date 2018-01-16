@@ -1,22 +1,23 @@
       module m_topocharge_all
+      use m_derived_types
       interface topo
        module procedure initialize_topo
       end interface topo
 
       contains
 
-      subroutine initialize_topo(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm)
-      use m_rw_lattice, only : n_system
+      subroutine initialize_topo(spin,shape_spin,masque,qeulerp,qeulerm,my_lattice)
       use m_topocharge_local, only : local_topo
 #ifdef CPP_MPI
       use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
 #endif
       implicit none
-      integer, intent(in) :: shape_spin(:),shape_masque(:),masque(:,:,:,:)
+      integer, intent(in) :: shape_spin(:),masque(:,:,:,:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
+      type(lattice), intent(in) :: my_lattice
       real(kind=8), intent(out) :: qeulerp,qeulerm
 ! dumy
-      integer :: i_x,i_y,i_z,i_m
+      integer :: i_x,i_y,i_z,i_m,n_system
       real(kind=8) :: qp,qm
 
 #ifndef CPP_MPI
@@ -30,6 +31,7 @@
       Zstop=shape_spin(4)
 #endif
 
+      n_system=my_lattice%n_system
       qp=0.0d0
       qm=0.0d0
       qeulerp=0.0d0
@@ -46,15 +48,16 @@
         do i_y=Ystart,Ystop
          do i_x=Xstart,Xstop
 
+         if (masque(1,i_x,i_y,i_z).eq.0) cycle
+
          select case(n_system)
           case(2)
-           call local_topo(i_x,i_y,qm,qp,spin,shape_spin,masque,shape_masque)
-          case(22)
-           call local_topo(i_x,i_y,i_m,qm,qp,spin,shape_spin,masque,shape_masque)
-          case(32)
-           call local_topo(i_x,i_y,i_z,i_m,qm,qp,spin,shape_spin,masque,shape_masque)
+           call local_topo(i_x,i_y,qm,qp,spin,shape_spin,my_lattice)
+          case(3)
+           call local_topo(i_x,i_y,i_z,qm,qp,spin,shape_spin,my_lattice)
           case default
-           call local_topo(i_x,i_y,qm,qp,spin,shape_spin,masque,shape_masque)
+           write(6,'(a)') 'case not taken into account into topocharge_all.f90'
+           stop
           end select
          qeulerp=qeulerp+qp
          qeulerm=qeulerm+qm

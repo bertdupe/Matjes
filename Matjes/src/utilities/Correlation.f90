@@ -19,8 +19,8 @@
       real(kind=8) :: Correlations(3)
 ! internal variable
       real(kind=8) :: a_cor(3),b_cor(3)
-      real(kind=8) :: disti,temp_vec(3),E_int
-      integer :: i_cor,k,j1,j2,j3,j4,i1,i2,i3,i4
+      real(kind=8) :: disti,E_int
+      integer :: k,j1,j2,j3,j4,i1,i2,i3,i4
 
 !!! use spin(1:6,N_site)
 ! Spin(1:3,N_site) are the positions on the lattice

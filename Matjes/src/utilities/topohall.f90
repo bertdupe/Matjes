@@ -5,24 +5,26 @@
        contains
 
 ! case of the calculation of the deviation angle depending of the position of the electron in the skyrmion
-       subroutine topohall_2D(map_qorien,n)
+       subroutine topohall_2D(map_qorien,n,mag_motif)
        use m_vector, only : cross
        use m_constants, only : qel,pi
        use m_lattice, only : spin
-       use m_rw_lattice, only : net
+       use m_derived_types, only : lattice
        implicit none
        real(kind=8), intent(in) :: map_qorien(:,:,:)
+       type(lattice), intent(in) :: mag_motif
        integer, intent(in) :: n(:)
 
 !internal
        real(kind=8) :: v(3),F(3),translation(3)
-       real(kind=8) :: devia_F(2,n(1),n(1))
+       real(kind=8) :: devia_F(2,n(1),n(1)),net(3,3)
        integer :: i_x,i_y,j
 
        v=0.0d0
        v(1)=1.0d0
        F=0.0d0
        translation=(net(1,:)+net(2,:)+net(3,:))/2.0d0
+       net=mag_motif%areal
 
        devia_F=0.0d0
 

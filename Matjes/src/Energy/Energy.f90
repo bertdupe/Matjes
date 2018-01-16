@@ -22,7 +22,7 @@
 ! corrdinate of the spin
       integer :: X,Y,Z
 ! internal variable
-      integer :: i,j,avant,NN,k,lay
+      integer :: i,j,avant,k,lay
 #ifndef CPP_MPI
       integer, dimension(3) :: start=0
 #endif
@@ -133,7 +133,6 @@
 
 !DM energy
       real(kind=8) function DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      use m_rw_lattice, only : motif
       use m_vector, only: TripleProduct,cross
       use m_parameters, only : DM,DM_vector,c_DM
 #ifdef CPP_MPI
@@ -151,7 +150,7 @@
 ! coordinates of the components of the spins
       integer :: X,Y,Z,M
 !internal variable
-      integer :: avant,i,j,k,buffer
+      integer :: avant,i,j
 #ifndef CPP_MPI
       integer, dimension(3) :: start=0
 #endif
@@ -192,13 +191,13 @@
 
       end function DMenergy
 !!! Anisotropy
-      real(kind=8) function anisotropy(i_x,i_y,i_z,i_m,axis,spin,shape_spin,masque)
+      real(kind=8) function anisotropy(i_x,i_y,i_z,i_m,axis,spin,shape_spin)
       use m_vector, only : norm
       use m_parameters, only : D_ani,c_ani,EA
       implicit none
 ! input
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: masque(:,:,:,:),shape_spin(:)
+      integer, intent(in) :: shape_spin(:)
 ! external variable
       real(kind=8) :: E_int
       real(kind=8) , intent(in) :: axis(3)
@@ -228,20 +227,20 @@
 
 ! biquadratic energy
       real(kind=8) function biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      use m_rw_lattice, only : dim_lat,motif
       use m_parameters, only : c_JB,J_B
 #ifdef CPP_MPI
       use m_mpi_prop, only : start
 #endif
       implicit none
 ! input
+      integer, intent(in) :: shape_spin(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:),shape_spin(:)
+      integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:)
 ! external variable
       real(kind=8) :: E_int
       integer , intent(in) :: i_x,i_y,i_z,i_m
 ! internal variable
-      integer :: j,k,buffer,avant
+      integer :: j
 ! position of the neighbors along x,y,z and motif
       integer :: v_x,v_y,v_z,v_m,ig_x,ig_y,ig_z
 ! components of the magnetic moments
@@ -274,13 +273,14 @@
       biquadratic=c_JB*J_B*E_int*dble(masque(1,i_x,i_y,i_z))
       end function biquadratic
 !4 spin term
-      real(kind=8) function fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
+      real(kind=8) function fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
       use m_sym_utils, only : corners
-      use m_parameters, only :c_Ki,K_1,Periodic_log
+      use m_parameters, only :c_Ki,K_1
       implicit none
 ! input
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: masque(:,:,:,:),shape_spin(:)
+      logical, intent(in) :: Periodic_log(:)
 ! external variable
       real(kind=8) :: E_int,E_local
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -377,22 +377,21 @@
 #ifdef CPP_BRUTDIP
 
 ! Dipole Dipole interaction
-      real(kind=8) function dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
+      real(kind=8) function dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
       use m_constants, only : pi
       use m_vector, only : norm
-      use m_parameters, only : periodic_log
       implicit none
 ! input
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: masque(:,:,:,:),shape_spin(:)
+      logical, intent(in) :: Periodic_log(:)
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
 ! coordinate of the magnetic moments
       integer :: Rx,Ry,Rz
       integer :: X,Y,Z,M
 ! internal variable
-      integer :: j_x,j_y,j_z,j_m,i,j,nmag
-      integer :: N_start,N_stop
+      integer :: j_x,j_y,j_z,j_m,nmag
       real(kind=8) :: rc(3),step,ss
       real(kind=8), parameter :: alpha=6.74582d-7
 ! alpha=mu0*muB/a**3; a in nm. The result is an energy in eV
@@ -416,7 +415,13 @@
          do j_y=1,shape_spin(3)
           do j_x=1,shape_spin(2)
 
-          rc=spin(Rx:Rz,j_x,j_y,j_z,j_m)-spin(Rx:Rz,i_x,i_y,i_z,i_m)
+          if (masque(1,j_x,j_y,j_z).eq.0) cycle
+
+          if (all(Periodic_log)) then
+            rc=spin(Rx:Rz,j_x,j_y,j_z,j_m)-spin(Rx:Rz,i_x,i_y,i_z,i_m)
+          else
+            stop "not implemented"
+          endif
 
           ss=norm(rc)
           if (ss.lt.1.0d-3) cycle

@@ -1,5 +1,4 @@
-       subroutine MC_fft(spins,pos,Im,Qim,dim_lat,N_cell)
-       use m_rw_lattice, only : net,motif
+       subroutine MC_fft(spins,pos,Im,Qim,dim_lat,N_cell,net)
        use m_lattice, only : masque
        use m_constants, only : pi
        use m_vector, only : cross,norm
@@ -10,21 +9,23 @@
        implicit none
        integer, intent(in) :: dim_lat(3),N_cell
        real(kind=8), intent(in) :: spins(3,dim_lat(1),dim_lat(2),dim_lat(3)),pos(3,dim_lat(1),dim_lat(2),dim_lat(3))
+       real(kind=8), intent(in) :: net(3,3)
        real(kind=8), intent(inout) :: Im(dim_lat(3)),Qim(dim_lat(3))
 !!! fft part
-      integer :: i1,i2,i3,j1,j2,j3,qnx,qny,indmax(dim_lat(3),2)
+      integer :: i1,i2,i3,j1,j2,qnx,qny,indmax(dim_lat(3),2)
       integer :: qnxmax(dim_lat(3)),qnymax(dim_lat(3)),qnzmax
-      integer :: q1(dim_lat(3)),q2(dim_lat(3)),ierr(3)
+      integer :: q1(dim_lat(3)),q2(dim_lat(3))
       real(kind=8) :: dum, kv(3,3), kv0(3,3),fftr_S,ffti_S,dum_norm
       real(kind=8), allocatable :: fftcoef(:,:,:)
       logical :: exists,exi_fft
 !! FFT of the norm of the spins
       real(kind=8) :: norm_S(dim_lat(1),dim_lat(2),dim_lat(3))
 ! dummy
-      integer :: i,k,ix,iy,iz,io
+      integer :: ix,iy,iz,io
 #ifdef CPP_MPI
       character(len=50) :: fname
       character(len=26) :: toto
+      integer :: ierr(3)
 
       include 'mpif.h'
 #endif

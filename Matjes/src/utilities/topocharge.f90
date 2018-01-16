@@ -6,7 +6,7 @@
       end interface topo_map
       contains
 
-      subroutine topo_2D(spins,shape_spin,signature,i_plot,Periodic_log,i_separate)
+      subroutine topo_2D(spins,shape_spin,signature,i_plot,Periodic_log)
       use m_vector, only : cross, area
       use m_topoplot
 #ifdef CPP_MPI
@@ -18,7 +18,7 @@
       implicit none
       real(kind=8), intent(in) :: spins(:,:,:),signature
       integer, intent(in) :: shape_spin(:)
-      logical, intent(in) :: i_plot,Periodic_log(:),i_separate
+      logical, intent(in) :: i_plot,Periodic_log(:)
 !internal
       integer :: i,j,ipu,ipv
       real(kind=8) :: map_eul_int(shape_spin(2),shape_spin(3)),map_vort_int(3,shape_spin(2),shape_spin(3))
@@ -81,12 +81,12 @@
       map_vort=map_vort_int
 #endif
 
-      if (i_plot) call topoplot(signature,map_eul,map_vort,i_separate)
+      if (i_plot) call topoplot(signature,map_eul,map_vort)
 
       end subroutine topo_2D
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine topo_2D_SL(spins,shape_spin,signature,i_plot,Periodic_log,i_separate)
+      subroutine topo_2D_SL(spins,shape_spin,signature,i_plot,Periodic_log)
       use m_vector, only : cross, area
       use m_topoplot
 #ifdef CPP_MPI
@@ -98,9 +98,9 @@
       implicit none
       real(kind=8), intent(in) :: spins(:,:,:,:),signature
       integer, intent(in) :: shape_spin(:)
-      logical, intent(in) :: i_plot,Periodic_log(:),i_separate
+      logical, intent(in) :: i_plot,Periodic_log(:)
 !internal
-      integer :: i_x,i_y,ipu,ipv,i_m,ipm,i,j
+      integer :: i_x,i_y,ipu,ipv,i_m,ipm
       real(kind=8) :: map_eul_int(shape_spin(2),shape_spin(3)),map_vort_int(3,shape_spin(2),shape_spin(3))
       real(kind=8) :: map_eul(shape_spin(2),shape_spin(3)),map_vort(3,shape_spin(2),shape_spin(3))
 #ifndef CPP_MPI
@@ -228,12 +228,12 @@
       map_vort=map_vort_int
 #endif
 
-      if (i_plot) call topoplot(signature,map_eul,map_vort,i_separate)
+      if (i_plot) call topoplot(signature,map_eul,map_vort)
 
       end subroutine topo_2D_SL
 
 !!!!!!!!!!!!!!!!!!!!!!!!! 1D case
-      subroutine topo_1D(spins,shape_spin,signature,i_plot,Periodic_log,i_separate)
+      subroutine topo_1D(spins,shape_spin,signature,i_plot,Periodic_log)
       use m_topoplot
       use m_vector, only : cross,norm
 #ifdef CPP_MPI
@@ -245,14 +245,14 @@
       implicit none
       real(kind=8), intent(in) :: spins(:,:),signature
       integer, intent(in) :: shape_spin(:)
-      logical, intent(in) :: i_plot,Periodic_log(:),i_separate
+      logical, intent(in) :: i_plot,Periodic_log(:)
 !internal
       integer :: i,ipu
       real(kind=8) :: map_eul_int(shape_spin(2)),map_vort_int(3,shape_spin(2))
       real(kind=8) :: map_eul(shape_spin(2)),map_vort(3,shape_spin(2))
       real(kind=8) :: dumy
 #ifndef CPP_MPI
-      integer :: Xstart,Xstop,Ystart,Ystop
+      integer :: Xstart,Xstop
 
       Xstart=1
       Xstop=shape_spin(2)
@@ -297,7 +297,7 @@
       map_vort=map_vort_int
 #endif
 
-      if (i_plot) call topoplot(signature,map_eul,map_vort,i_separate)
+      if (i_plot) call topoplot(signature,map_eul,map_vort)
 
       end subroutine topo_1D
 

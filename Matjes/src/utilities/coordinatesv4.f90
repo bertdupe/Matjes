@@ -27,15 +27,13 @@
 ! Basis of orthononormal vectors with VectPolarRef as the polar vector
 ! reference (i.e. defining the polar angle theta in spherical
 ! coordinates) 
-      real(kind=8), dimension(3,3)::ortho_matrix
+      real(kind=8), dimension(3,3) ::ortho_matrix
       ! Other variables
-      Logical::iexists
-      Integer::counter, column, i,j,k,i_m
-      real(kind=8), dimension(3)::Vectx, Vecty, colx, coly
-      real(kind=8), dimension(:,:),allocatable:: ThetaTab
-      real(kind=8)::testnull, modulus, Alpha, Beta, Gamm, mod2, &
+      Integer :: i,j,k,i_m
+      real(kind=8), dimension(3) ::Vectx, Vecty, colx, coly
+      real(kind=8) ::testnull, modulus, Alpha, Beta, Gamm, mod2, &
           mod3, var, testtheta
-      real(kind=8):: varx, vary
+      real(kind=8) :: varx, vary
 
       testnull= 1.0d-4
 

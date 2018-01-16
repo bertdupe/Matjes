@@ -122,7 +122,6 @@ contains
         
         ! working storage
         integer :: i
-        integer(INT64) :: s, b
 
         ! save seed        
         state%mt(0) = seed
@@ -262,9 +261,9 @@ contains
         x = mtprng_rand64(state)
         
         if (x > 2147483647_INT64) then
-            r = x - 4294967296_INT64
+            r = INT(x - 4294967296_INT64)
         else
-            r = x
+            r = INT(x)
         end if
         
     end function mtprng_rand

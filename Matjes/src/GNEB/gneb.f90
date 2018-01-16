@@ -1,4 +1,4 @@
-subroutine GNEB(state,i_biq,i_dm,i_four,i_dip,EA,h_ext, &
+subroutine GNEB(state,i_biq,i_dm,i_four,i_dip,EA,h_ext,my_lattice, &
     & indexNN,shape_index,shape_spin,tableNN,shape_tableNN,masque,shape_masque,N_cell)!,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,state)
       use m_fieldeff
       use m_energy
@@ -6,15 +6,16 @@ subroutine GNEB(state,i_biq,i_dm,i_four,i_dip,EA,h_ext, &
       use m_gneb_utils
       use m_write_spin
       use m_createspinfile
+      use m_derived_types
       implicit none
+      type(lattice), intent(in) :: my_lattice
       logical, intent(in) :: i_biq,i_dm,i_four,i_dip
       real(kind=8), intent(in) :: EA(3),h_ext(3)
       integer, intent(in) :: shape_spin(5),shape_index(2),shape_tableNN(6),shape_masque(4),N_cell
       type(mtprng_state), intent(inout) :: state
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4)),indexNN(shape_index(1),shape_index(2))
-      integer :: iseed,clock_int,i
-      character(9) :: clock
+      integer :: i
       real(kind=8) :: spini(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       real(kind=8) :: spinf(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       real(kind=8) :: spinsp(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
@@ -131,7 +132,7 @@ subroutine GNEB(state,i_biq,i_dm,i_four,i_dip,EA,h_ext, &
       if (do_gneb=='Y') then
          write (*,'(a)') "GNEB calculation in progress..."
          call find_path(i_DM,i_four,i_biq,i_dip,EA,nim,vpodt,vpomass,spring,path, &
-                  & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,mepftol,mepitrmax,meptraj_step,h_ext, &
+                  & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,mepftol,mepitrmax,meptraj_step,h_ext,my_lattice, &
                   & rx,ene,dene)
          
          write (*,'(a)') "Done!"
@@ -140,7 +141,7 @@ subroutine GNEB(state,i_biq,i_dm,i_four,i_dip,EA,h_ext, &
       if (do_gneb_ci=='Y') then
          write (*,'(a)') "CI-GNEB calculation in progress..."
          call find_path_ci(i_DM,i_four,i_biq,i_dip,EA,nim,vpodt,vpomass,spring,path, &
-                  & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,mepftol_ci,mepitrmax,meptraj_step,h_ext, &
+                  & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,mepftol_ci,mepitrmax,meptraj_step,h_ext,my_lattice, &
                   & rx,ene,dene,ci)
          print *,'ci:',ci
          write (*,'(a)') "Done!"

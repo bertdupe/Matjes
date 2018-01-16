@@ -1,9 +1,10 @@
 !
 ! ===============================================================
 !
-      SUBROUTINE MCstep(state,E_total,E,Magnetization,kt,acc,rate,nb,cone,n_system, &
+      SUBROUTINE MCstep(state,E_total,E,Magnetization,kt,acc,rate,nb,cone, &
     &  spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
-    & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,n_world)
+    & i_biq,i_dip,i_DM,i_four,i_stone,ising,equi,overrel,sphere,underrel,my_lattice)
+      use m_derived_types
       use m_sampling
       use m_choose_spin
       use m_relaxtyp
@@ -23,11 +24,12 @@
 #endif
       Implicit none
 ! input
-      integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4),n_system
+      type(lattice), intent(in) :: my_lattice
+      integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
-      integer, intent(in) :: indexNN(shape_index(1),shape_index(2)),n_world
-      logical, intent(in) :: i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel
+      integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
+      logical, intent(in) :: i_biq,i_dip,i_DM,i_four,i_stone,ising,equi,overrel,sphere,underrel
       real(kind=8), intent(in) :: kt,h_ext(3),EA(3)
       real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       type(mtprng_state), intent(inout) :: state
@@ -36,29 +38,16 @@
       Integer :: Ilat(4)
 ! magnetic moments
       real(kind=8) :: mu_s,mu_old
-!     To flip the spin
-      Integer :: i_flip
 !     Energy difference Delta E and -DE/kT, Dmag and Dq
-      real(kind=8) :: DE,E_new,E_old,DEb,Dmag(3)
+      real(kind=8) :: DE,E_new,E_old,Dmag(3)
       real(kind=8) :: tmp
-!     probability of a spin flip
-      real(kind=8) :: P_acc
-!     slope variable
-      Integer :: i_store,i
-!     right neigbour for the change of Theta
-      Integer :: k_n
 !     memory value for Theta
-      real(kind=8) :: Theta_s,dumy,choice
-!     Value, which is 1, if the spin is in a seccond row, else 0
-      Integer :: n_row,seed(1),ierr
+      real(kind=8) :: choice
 !     flipped Spin
       real(kind=8) :: S_new(3),S_old(3)
       logical :: accept
 ! decomposition of the energy
       real(kind=8) :: E_dec_new(8),E_dec_old(8)
-! test
-      Integer :: j,ipu,ipv,i_x,i_y
-      character(len=30) :: fname
 
 
 #ifdef CPP_MPI
@@ -91,7 +80,7 @@
       call choose_spin(Ilat,state,i_separate,i_average,i_ghost,i_stone,n_world, &
     &   mu_s,irank_working,shape_spin,MPI_COMM,spin,start)
 #else
-      call choose_spin(Ilat,state,i_stone,n_world,mu_s,shape_spin,spin)
+      call choose_spin(Ilat,state,i_stone,mu_s,shape_spin,spin)
 #endif
 
 ! check if the spin exists
@@ -129,9 +118,11 @@
 ! different relaxation process
 !---------------------------------
       if (underrel) then
-        S_new=underrelax(Spin(4:6,Ilat(1),Ilat(2),Ilat(3),Ilat(4)),Ilat(1),Ilat(2),Ilat(3),Ilat(4),spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+        S_new=underrelax(Spin(4:6,Ilat(1),Ilat(2),Ilat(3),Ilat(4)),Ilat(1),Ilat(2),Ilat(3),Ilat(4),spin,shape_spin,indexNN, &
+              &    shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
       elseif (overrel) then
-        S_new=overrelax(Spin(4:6,Ilat(1),Ilat(2),Ilat(3),Ilat(4)),Ilat(1),Ilat(2),Ilat(3),Ilat(4),spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+        S_new=overrelax(Spin(4:6,Ilat(1),Ilat(2),Ilat(3),Ilat(4)),Ilat(1),Ilat(2),Ilat(3),Ilat(4),spin,shape_spin,indexNN, &
+              &    shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
       endif
 
       if (ising) S_new=-Spin(4:6,Ilat(1),Ilat(2),Ilat(3),Ilat(4))
@@ -140,8 +131,8 @@
 !       and decider, if the Spin flip will be performed
 !----------------------------------
 !Energy of old configuration
-        E_dec_old=local_energy(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+        E_dec_old=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
 
         E_old=sum(E_dec_old)
 
@@ -159,8 +150,8 @@
         Spin(4:6,Ilat(1),Ilat(2),Ilat(3),Ilat(4))=S_new
         if (i_stone) Spin(7,Ilat(1),Ilat(2),Ilat(3),Ilat(4))=mu_s
 
-        E_dec_new=local_energy(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+        E_dec_new=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
 
         E_new=sum(E_dec_new)
 

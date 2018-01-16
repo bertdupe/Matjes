@@ -95,12 +95,14 @@
 
 ! ===============================================================
       subroutine update_ave(sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum_vortex,vortex, &
-     & E_sum,E_sq_sum,M_sum,M_sq_sum,E,Magnetization,spin_sum,spin,shape_spin,masque,shape_masque)
+     & E_sum,E_sq_sum,M_sum,M_sq_sum,E,Magnetization,spin_sum,spin,shape_spin,masque,my_lattice)
       use m_topocharge_all
+      use m_derived_types
       Implicit none
-      integer, intent(in) :: shape_spin(:),masque(:,:,:,:),shape_masque(:)
+      integer, intent(in) :: shape_spin(:),masque(:,:,:,:)
       real(kind=8), intent(in) :: E,Magnetization(:),vortex(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
+      type(lattice),intent(in) :: my_lattice
       real(kind=8), intent(inout) ::sum_qm,sum_qp,sum_vortex(:),Q_sq_sum,Qp_sq_sum,Qm_sq_sum
       real(kind=8), intent(inout) :: E_sum,E_sq_sum,M_sum(:),M_sq_sum(:)
       real(kind=8), intent(inout) :: spin_sum(:,:,:,:,:)
@@ -123,7 +125,7 @@
       E_sq_sum=E_sq_sum+E**2
 
 ! calculate the topocharge
-      call topo(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm)
+      call topo(spin,shape_spin,masque,qeulerp,qeulerm,my_lattice)
 
       sum_qp=sum_qp+qeulerp
       sum_qm=sum_qm+qeulerm
@@ -140,13 +142,15 @@
       END subroutine update_ave
 
 ! ===============================================================
-      subroutine initialize_ave(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,Magnetization,n_system)
+      subroutine initialize_ave(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,Magnetization,n_system,my_lattice)
       use m_topocharge_local, only : local_topo,local_vortex
+      use m_derived_types
 #ifdef CPP_MPI
       use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
 #endif
       Implicit none
       integer, intent(in) :: shape_spin(5),shape_masque(4),n_system
+      type(lattice), intent(in) :: my_lattice
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       real(kind=8), intent(out) :: vortex(3),qeulerp,qeulerm,Magnetization(3)
@@ -201,16 +205,17 @@
         do i_y=Ystart,Ystop
          do i_x=Xstart,Xstop
 
+         if (masque(1,i_x,i_y,i_z).eq.0) cycle
+
          select case(n_system)
           case(2)
-           call local_topo(i_x,i_y,qm,qp,spin,shape_spin,masque,shape_masque)
-           call local_vortex(i_x,i_y,v,spin,shape_spin,masque,shape_masque)
-          case(22)
-           call local_topo(i_x,i_y,i_m,qm,qp,spin,shape_spin,masque,shape_masque)
-          case(32)
-           call local_topo(i_x,i_y,i_z,i_m,qm,qp,spin,shape_spin,masque,shape_masque)
+           call local_topo(i_x,i_y,qm,qp,spin,shape_spin,my_lattice)
+           call local_vortex(i_x,i_y,v,spin,shape_spin,masque,shape_masque,my_lattice)
+          case(3)
+           call local_topo(i_x,i_y,i_z,qm,qp,spin,shape_spin,my_lattice)
           case default
-           call local_topo(i_x,i_y,qm,qp,spin,shape_spin,masque,shape_masque)
+           write(6,'(a)') 'case not taken into account into CalculateAverages.f90'
+           stop
           end select
          qeulerp=qeulerp+qp
          qeulerm=qeulerm+qm

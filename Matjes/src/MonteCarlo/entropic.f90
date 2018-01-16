@@ -1,8 +1,8 @@
-      subroutine entropic(N_cell,n_system,state,n_world, &
+      subroutine entropic(N_cell,state, &
             &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
-            &    i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,sphere,overrel,underrel,i_ghost, &
-            &    Periodic_log,Gra_log,spstmL,gra_fft,coni,EA,T_relax,h_ext,n_ghost, &
-            &    kTfin,kTini,n_Tsteps)
+            &    i_biq,i_dip,i_DM,i_four,i_stone,ising,equi,sphere,overrel,underrel, &
+            &    EA,h_ext, &
+            &    kTfin,kTini,n_Tsteps,my_lattice)
       use mtprng
       use m_choose_spin
       use m_local_energy
@@ -10,16 +10,20 @@
       use m_relaxtyp
       use m_sampling
       use m_average_MC
+      use m_derived_types
       implicit none
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! variable part
-      integer, intent(in) :: N_cell,n_system,T_relax,n_ghost,n_world,n_Tsteps
+      integer, intent(in) :: N_cell,n_Tsteps
       integer, intent(in) :: shape_spin(5),shape_tableNN(6),shape_masque(4),shape_index(2)
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
-      logical, intent(in) :: gra_fft,Periodic_log(3),Gra_log,spstmL,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,sphere,i_ghost,overrel,underrel
-      real(kind=8), intent(in) :: coni,EA(3),h_ext(3),kTfin,kTini
+      logical, intent(in) :: i_biq,i_dip,i_DM,i_four,i_stone,ising,equi,sphere,overrel,underrel
+      real(kind=8), intent(in) :: EA(3),h_ext(3),kTfin,kTini
+      type(lattice), intent(in) :: my_lattice
+
+! inout
       real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       type(mtprng_state), intent(inout) :: state
 !------------------------------------------
@@ -31,7 +35,7 @@
       integer :: i_x_s,i_y_s,i_z_s,i_m_s
       real(kind=8) :: S_new(3),S_old(3)
 ! energy variable
-      real(kind=8) :: E_min,E_max,E_delta,E_test,ratio_E
+      real(kind=8) :: E_min,E_max,E_delta,E_test
       real(kind=8) :: E_new,E_old,E_total,E_decompose(8)
       integer,allocatable :: count_E(:)
 ! histogram variables
@@ -112,7 +116,7 @@
       do i_loop=1,n_loop
           do i_step=1,n_steps
 ! pic a spin
-             call choose_spin(Ilat,state,i_stone,n_world,mu_s,shape_spin,spin)
+             call choose_spin(Ilat,state,i_stone,mu_s,shape_spin,spin)
 
              i_x_s=Ilat(1)
              i_y_s=Ilat(2)
@@ -136,23 +140,25 @@
 ! different relaxation process
 !---------------------------------
              if (underrel) then
-                S_new=underrelax(Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s),i_x_s,i_y_s,i_z_s,i_m_s,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+                S_new=underrelax(Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s),i_x_s,i_y_s,i_z_s,i_m_s,spin,shape_spin,indexNN, &
+                      &  shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
              elseif (overrel) then
-                S_new=overrelax(Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s),i_x_s,i_y_s,i_z_s,i_m_s,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+                S_new=overrelax(Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s),i_x_s,i_y_s,i_z_s,i_m_s,spin,shape_spin,indexNN, &
+                      &  shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
              endif
 
              if (ising) S_new=-Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s)
 
 ! calculate the energy before and after
 
-             E_decompose=local_energy(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+             E_decompose=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
              E_old=sum(E_decompose)
 
              Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s)=S_new
 
-             E_decompose=local_energy(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+             E_decompose=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
              E_new=sum(E_decompose)
 
              Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s)=S_old
@@ -180,7 +186,11 @@
 #else
                 CALL RANDOM_NUMBER(choice)
 #endif
-                if (choice.lt.exp(delta_lng)) accept=.True.
+                if (choice.lt.1.0d-9) then
+                  accept=.True.
+                else
+                  if (log(choice).lt.delta_lng) accept=.True.
+                endif
 
             endif
 
@@ -199,9 +209,9 @@
 !             vector((N_cell+length)/2+1)=vector((N_cell+length)/2+1)+1
 ! check the flatness of the histogramm
 ! The minimum of energy and the max must be taken out
-             n_sweep=sum(count_E(2:n_histo-1))
+             n_sweep=sum(count_E)
              mean_histo=real(n_sweep)/real(N_cell)
-             min_histo=minval(count_E(2:n_histo-1))
+             min_histo=minval(count_E)
 
 #ifdef CPP_DEBUG
              if (mod(i_step,100).eq.0) then
@@ -275,19 +285,19 @@
           kT=temperatures(i_T)*k_B
           do i_histo=1,n_histo
 
-                DE=(real(i_histo-1)*E_delta+E_min)/real(N_cell)
-                DProb=lng(i_histo)-delta_lng-DE/kT
+                DE = (real(i_histo-1)*E_delta+E_min)
+                DProb=lng(i_histo)-delta_lng-(DE+E_max)/kt
 
                 Z(i_T)=Z(i_T)+exp(DProb)
                 energy(i_T)=energy(i_T)+DE*exp(DProb)
-                energy_sq(i_T)=energy_sq(i_T)+(DE+E_min)**2*exp(DProb)/real(N_cell)**2
+                energy_sq(i_T)=energy_sq(i_T)+(DE)**2*exp(DProb)
 
           enddo
 ! renormalize the energy
           energy(i_T)=energy(i_T)/Z(i_T)
           energy_sq(i_T)=energy_sq(i_T)/Z(i_T)
           free_E(i_T)=-kT*log(Z(i_T))
-          entropy(i_T)=k_B*(log(Z(i_T))+energy(i_T)/kT)
+          entropy(i_T)=k_B*(log(Z(i_T))+(energy(i_T)+E_max)/kT)
           heat_cap(i_T)=(energy_sq(i_T)-energy(i_T)**2)/kT**2*k_B
       enddo
 

@@ -10,7 +10,6 @@
       implicit none
       real(kind=8), intent(in) :: kt
       real(kind=8) :: Choice1, Choice2
-      real(kind=8) :: force
 
       call RANDOM_NUMBER(Choice1)
       call RANDOM_NUMBER(Choice2)
@@ -28,12 +27,11 @@
 !         Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
       end function
 
-      real(kind=8) function wiener(N,state)
+      real(kind=8) function wiener(state)
       use m_dynamic, only : timestep
       use mtprng
       implicit none
       type(mtprng_state), intent(inout) :: state
-      integer, intent(in) :: N
 !dummy
       real(kind=8) :: Choice
 

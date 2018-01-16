@@ -5,25 +5,26 @@
       end interface qorien
       contains
 
-      subroutine qorien_2D(spins,shape_spin)
+      subroutine qorien_2D(spins,shape_spin,my_lattice)
       use m_vector, only : sorien
+      use m_derived_types
 #ifdef CPP_MPI
       use m_parameters, only : i_ghost,Periodic_log,n_ghost
       use m_mpi
       use m_make_box, only : Xstart,Xstop,Ystart,Ystop
       use m_mpi_prop, only : MPI_COMM_BOX
-#else
-      use m_parameters, only : Periodic_log
 #endif
       implicit none
       real(kind=8), intent(in) :: spins(:,:,:)
       integer, intent(in) :: shape_spin(:)
+      type(lattice), intent(in) :: my_lattice
 !internal
       integer :: i,j,ipu,ipv
       real(kind=8) :: map_int(3,shape_spin(2),shape_spin(3))
       real(kind=8) :: map_qorien(3,shape_spin(2),shape_spin(3))
 ! coordinate of the spin
       integer :: X,Y,Z
+      logical :: Periodic_log(3)
 #ifndef CPP_MPI
       integer :: Xstart,Xstop,Ystart,Ystop
 
@@ -37,6 +38,7 @@
       X=shape_spin(1)-3
       Y=shape_spin(1)-2
       Z=shape_spin(1)-1
+      Periodic_log=my_lattice%boundary
 
 #ifdef CPP_OPENMP
 !$OMP parallel DO private(i,j) default(shared)
@@ -85,28 +87,30 @@
       end subroutine qorien_2D
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine qorien_2D_SL(spins,shape_spin)
+      subroutine qorien_2D_SL(spins,shape_spin,my_lattice)
       use m_vector, only : sorien
+      use m_derived_types
 #ifdef CPP_MPI
       use m_parameters, only : i_ghost,Periodic_log,n_ghost
       use m_mpi
       use m_make_box, only : Xstart,Xstop,Ystart,Ystop
       use m_mpi_prop, only : MPI_COMM_BOX
-#else
-      use m_parameters, only : Periodic_log
 #endif
       implicit none
       real(kind=8), intent(in) :: spins(:,:,:,:)
       integer, intent(in) :: shape_spin(:)
+      type(lattice), intent(in) :: my_lattice
 !internal
-      integer :: i_x,i_y,ipu,ipv,i_m,ipm,i,j
+      integer :: i_x,i_y,ipu,ipv,i_m,ipm
       real(kind=8) :: map_int(3,shape_spin(2),shape_spin(3))
       real(kind=8) :: map_qorien(3,shape_spin(2),shape_spin(3))
 ! coordinate of the spin
       integer :: X,Y,Z
 #ifndef CPP_MPI
       integer :: Xstart,Xstop,Ystart,Ystop
+      logical :: Periodic_log(3)
 
+      Periodic_log=my_lattice%boundary
       Xstart=1
       Xstop=shape_spin(2)
       Ystart=1

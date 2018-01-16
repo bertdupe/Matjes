@@ -1,19 +1,20 @@
-      subroutine order_lattice(spins,motif,r,dim_lat)
-      use m_derived_types, only : cell
+      subroutine order_lattice(spins,motif,my_lattice)
+      use m_derived_types
       use m_vector, only : norm
       implicit none
-      integer , intent(in) :: dim_lat(3)
-      real(kind=8), intent(in) :: r(3,3)
+      type(lattice), intent(in) :: my_lattice
       type(cell), intent(in) :: motif
-      real(kind=8), intent(inout) :: spins(7,dim_lat(1),dim_lat(2),dim_lat(3),count(motif%i_m))
+      real(kind=8), intent(inout) :: spins(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%i_mom))
 ! local variables
-      real(kind=8) :: save_spin(7,dim_lat(1),dim_lat(2),dim_lat(3),count(motif%i_m))
-      integer :: i_x,i_y,i_z,i,n_x,n_y,n_z,o_x,o_y,o_z
-      real(kind=8) :: r_old(3,3),pos(3),min_dist(3),origin(3),denominator,r_u,r_v
+      real(kind=8) :: save_spin(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%i_mom))
+      integer :: i_x,i_y,i_z,n_x,n_y,n_z,dim_lat(3)
+      real(kind=8) :: r_old(3,3),pos(3),min_dist(3),origin(3),denominator,r_u,r_v,r(3,3)
 
       r_old=0.0d0
       min_dist=0.0d0
       origin=0.0d0
+      r=my_lattice%areal
+      dim_lat=my_lattice%dim_lat
 ! first save the spin
       save_spin=spins
 

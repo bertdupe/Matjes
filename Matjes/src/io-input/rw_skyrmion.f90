@@ -16,17 +16,20 @@
       integer :: Ntarget_Pinning,NtargetSkyAdd
       end module m_skyrmion
 
-      subroutine rw_skyrmion()
+      subroutine rw_skyrmion(my_lattice)
       use m_skyrmion
       use m_SkX_utils
-      use m_rw_lattice, only : net,dim_lat
+      use m_derived_types
       implicit none
+      type(lattice), intent(in) :: my_lattice
       integer, parameter  :: io=1
-      integer :: fin,i
+      integer :: fin,i,dim_lat(3)
+      real(kind=8) :: net(3,3)
       character(len=100) :: str
       character(len=10) :: dummy
-      character(len=1)  :: pinning
 
+      net=my_lattice%areal
+      dim_lat=my_lattice%dim_lat
 
       open (io,file='rwskyrmion.in',form='formatted',status='old', &
         action='read')
@@ -324,11 +327,9 @@
       use m_skyrmion
       use m_constants, only : k_B
       use m_vector, only : cross
-      use m_rw_lattice, only : net
       implicit none
       real(kind=8), intent(in) :: kt
-      integer :: i,j,k
-      real(kind=8) :: rad(3),qvec(3),kv(3,3)
+      integer :: i
 
       if (NSkyAdd+NSkyAnnihilation+N_Pinning /= 0) then
                     

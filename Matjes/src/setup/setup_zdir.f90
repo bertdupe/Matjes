@@ -1,6 +1,5 @@
-      subroutine setup_zdir(phase,nvois,motif)
-      use m_lattice, only : tableNN,indexNN,spin
-      use m_rw_lattice, only : dim_lat,net
+      subroutine setup_zdir(phase,nvois,my_lattice,motif)
+      use m_lattice, only : tableNN,spin
       use m_vector, only : norm
       use m_derived_types
 #ifdef CPP_MPI
@@ -9,9 +8,10 @@
       implicit none
 !!! inout var
       type (cell), intent(in) :: motif
+      type (lattice), intent(in) :: my_lattice
       integer, intent(in) :: phase,nvois
 !!! dummy
-      integer :: j,i,k,l,i_m
+      integer :: j,i,k,l,i_m,dim_lat(3)
 !!! position of the 2 atoms
       real(kind=8) :: zs,zv
 ! position of the neighbors
@@ -26,10 +26,12 @@
       Zstop=dim_lat(3)
 #endif
 
+      dim_lat=my_lattice%dim_lat
+
 !! super lattice case
       if (phase.eq.2) then
-       do i_m=1,size(motif%i_m)
-       if (.not.motif%i_m(i_m)) cycle
+       do i_m=1,size(motif%i_mom)
+       if (.not.motif%i_mom(i_m)) cycle
         do k=Zstart,Zstop
          do j=Ystart,Ystop
           do i=Xstart,Xstop
@@ -65,8 +67,8 @@
       do i=1,dim_lat(1)
       do j=1,dim_lat(2)
       do k=1,dim_lat(3)
-      do i_m=1,size(motif%i_m)
-      if (motif%i_m(i_m)) cycle
+      do i_m=1,size(motif%i_mom)
+      if (motif%i_mom(i_m)) cycle
        write(6,'('//repeat('x,I4',nvois)//')') (tableNN(5,l,i,j,k,i_m),l=1,nvois)
       enddo
       enddo
@@ -77,8 +79,8 @@
       do i=1,dim_lat(1)
       do j=1,dim_lat(2)
       do k=1,dim_lat(3)
-      do i_m=1,size(motif%i_m)
-      if (motif%i_m(i_m)) cycle
+      do i_m=1,size(motif%i_mom)
+      if (motif%i_mom(i_m)) cycle
        write(6,'('//repeat('x,I4',nvois)//')') (tableNN(6,l,i,j,k,i_m),l=1,nvois)
       enddo
       enddo

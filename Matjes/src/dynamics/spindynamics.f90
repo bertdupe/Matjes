@@ -1,8 +1,9 @@
-      subroutine spindynamics(state,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,world, &
-    &   N_cell, &
+      subroutine spindynamics(state,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
+    &   N_cell,mag_lattice, &
     &   i_biq,i_dm,i_four,i_dip,gra_topo,gra_log,gra_freq, &
     &   ktini,ktfin,EA,h_ext)
       use m_fieldeff
+      use m_derived_types
       use m_solver
       use m_dynamic
       use m_vector, only : cross,norm,norm_cross
@@ -18,7 +19,6 @@
       use m_createspinfile
       use m_energy
       use m_local_energy
-      use m_Torana
 #ifndef CPP_BRUTDIP
       use m_setup_dipole, only : mmatrix
 #endif
@@ -29,7 +29,8 @@
 #endif
       implicit none
 ! input
-      integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4),N_cell,world(:),gra_freq
+      type(lattice), intent(in) :: mag_lattice
+      integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4),N_cell,gra_freq
       real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       type(mtprng_state), intent(inout) :: state
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
@@ -37,25 +38,20 @@
       logical, intent(in) :: i_biq,i_dm,i_four,i_dip,gra_topo,gra_log
       real(kind=8), intent(in) :: ktini,ktfin,EA(3),h_ext(3)
 ! internal
-      integer :: i,j,l,k,h,i_dum
+      integer :: i,j,l,k,h
       real(kind=8) :: spinafter(4,shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       real(kind=8) :: Bini(3,shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       real(kind=8) :: spinini(4,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-      real(kind=8) :: dum_norm,qeuler,vortex(3),Mdy(3),Edy,stmtorquebp,Beff(3),check1,check2,Eold,check3
-      real(kind=8) ::  qx,qy,qz,Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
+      real(kind=8) :: dum_norm,qeuler,vortex(3),Mdy(3),Edy,stmtorquebp,Beff(3),check1,check2,Eold,check3,Et
+      real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
       real(kind=8) :: dumy(4),ds(3),security(2),B(3),step(3),steptor(3),stepadia(3),stepsttor(3),steptemp(3)
       real(kind=8) :: timestep_ini,real_time,h_int(3)
-      character(len=30) :: fname,toto
-      integer :: i_x,i_y,i_z,i_m,iomp(3),N_site,ierr
+      integer :: i_x,i_y,i_z,i_m,iomp(3)
 ! temperature (incase it is needed)
       real(kind=8) :: kT
-! the computation time
-      real(kind=8) :: computation_time
 ! parameter for the Heun integration scheme
-      integer :: total_neigh,n_heun
       real(kind=8) :: maxh
 ! parameter for the rkky integration
-      real(kind=8) :: path
       integer :: N_site_comm
 ! dumy
       logical :: said_it_once,i_anatorque
@@ -101,20 +97,6 @@
 #endif
       call rw_dyna(shape_spin(2:4))
       timestep_ini=timestep
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! Analysis of the Torques
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      inquire (file='analyse-Torque.in',exist=i_anatorque)
-      if (i_anatorque) then
-         write(6,'(/,a,/)') 'Analysis of the STT routine selected'
-         call Torana(spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN, &
-              torque_AFL,torque_FL,damping,Ipol,EA,h_ext, &
-              i_DM,i_four,i_biq,i_dip,i_torque,stmtorque, &
-              timestep,adia,nonadia,storque,1.0d0)
-      endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! End of analysis of the Torques
@@ -208,11 +190,11 @@
 #endif
       B=Bexch(iomp(1),iomp(2),iomp(3),1,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN) &
     &  +BZ(iomp(1),iomp(2),iomp(3),1,spin,shape_spin,h_int) &
-    &  +Bani(iomp(1),iomp(2),iomp(3),1,EA,spin,shape_spin,masque,shape_masque) &
+    &  +Bani(iomp(1),iomp(2),iomp(3),1,EA,spin,shape_spin) &
     &  +Efield(iomp(1),iomp(2),iomp(3),1,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
       if (i_dm) B=B+Bdm(iomp(1),iomp(2),iomp(3),1,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
       if (i_biq) B=B+Bbiqd(iomp(1),iomp(2),iomp(3),1,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      if (i_four) B=B+Bfour(iomp(1),iomp(2),iomp(3),1,spin,shape_spin,masque,shape_masque)
+      if (i_four) B=B+Bfour(iomp(1),iomp(2),iomp(3),1,spin,shape_spin,masque,shape_masque,mag_lattice)
 
       step=cross(B,spin(4:6,iomp(1),iomp(2),iomp(3),1))
       if (i_torque) then
@@ -348,7 +330,7 @@
           do i_x=Xstart,Xstop
 
        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-          &  spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+          &  spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
       spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,Beff,kt,stmtemp,maxh,i_x,i_y,i_z &
      & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin,shape_spin,tableNN)
@@ -405,7 +387,7 @@
           do i_x=Xstart,Xstop
 
        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Bini(:,i_x,i_y,i_z,i_m), &
-  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
        spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,Bini(:,i_x,i_y,i_z,i_m),kt,stmtemp, &
      & maxh,i_x,i_y,i_z,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin,shape_spin,tableNN)
@@ -459,7 +441,7 @@
           do i_x=Xstart,Xstop
 
         call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
         Beff=(Beff+Bini(:,i_x,i_y,i_z,i_m))/2.0d0
 
@@ -521,7 +503,7 @@
           do i_x=Xstart,Xstop
 
        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+  &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=(integrate(timestep,spin(4:6,i_x,i_y,i_z,i_m),Beff,kt,damping &
      & ,stmtemp,state,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)+ &
@@ -560,7 +542,7 @@
           do i_x=Xstart,Xstop
 
         call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-     &    spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+     &    spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
      &   ,stmtemp,state,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
@@ -617,7 +599,7 @@
           do i_x=Xstart,Xstop
 
        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-     &  spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+     &  spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=(integrate(timestep,spin(4:6,i_x,i_y,i_z,i_m),Beff,kt,damping &
      & ,stmtemp,state,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)+ &
@@ -654,7 +636,7 @@
           do i_x=Xstart,Xstop
 
         call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-     &  spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+     &  spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
      & ,stmtemp,state,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
@@ -689,9 +671,9 @@
        spinini=spin(4:7,:,:,:,:)
 
        call error_correction_SD(timestep,max_error,real_time,h_int, &
-     & damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,N_site_comm,check3,j &
+     & damping,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,check3,j &
      & ,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN, &
-     & i_biq,i_dm,i_four,i_dip,EA)
+     & i_biq,i_dm,i_four,i_dip,EA,mag_lattice)
 
        if (timestep.lt.timestep_ini/20.0d0) then
         write(6,'(a)') 'the time step has decreased by a factor of 20'
@@ -731,7 +713,7 @@
           do i_x=Xstart,Xstop
 
        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-     &   spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+     &   spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
 ! check if there is any thing to do
         dum_norm=sqrt(Beff(1)**2+Beff(2)**2+Beff(3)**2)
@@ -741,7 +723,7 @@
         endif
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=(integrate(timestep,spin(4:6,i_x,i_y,i_z,i_m),Beff,damping &
-     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)+ &
+     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)+ &
      &  spinini(1:3,i_x,i_y,i_z,i_m))/2.0d0
 
 !        if ((i_x.eq.1).and.(i_y.eq.1)) then
@@ -785,7 +767,7 @@
           do i_x=Xstart,Xstop
 
         call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,Beff, &
-     &   spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
+     &   spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 
 ! check if there is any thing to do
         dum_norm=sqrt(Beff(1)**2+Beff(2)**2+Beff(3)**2)
@@ -796,7 +778,7 @@
 
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,spinini(1:3,i_x,i_y,i_z,i_m),Beff,damping &
-     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)
+     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)
 
 
           spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
@@ -867,14 +849,16 @@
          do i_x=Xstart,Xstop
 
          if (masque(1,i_x,i_y,i_z).eq.0) cycle
-         Edy=Edy+local_energy(Edy,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m, &
-              & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_int)
 
+         call local_energy(Et,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m, &
+              & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_int,mag_lattice)
+
+         Edy=Edy+Et
          Mx=Mx+Spin(4,i_x,i_y,i_z,i_m)
          My=My+Spin(5,i_x,i_y,i_z,i_m)
          Mz=Mz+Spin(6,i_x,i_y,i_z,i_m)
 
-         dumy=sd_charge(i_x,i_y,i_z,i_m,spin)
+         dumy=sd_charge(i_x,i_y,i_z,i_m,spin,mag_lattice)
 
          qeuler=qeuler+dumy(1)/pi(4.0d0)
          vx=vx+dumy(2)
@@ -905,9 +889,9 @@
       if (j.eq.1) Einitial=Edy/N_cell
 #endif
 #ifdef CPP_MPI
-      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0).and.(irank.eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,shape_tableNN,masque,indexNN,h_int,irank,start,isize,MPI_COMM)
+      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0).and.(irank.eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,shape_tableNN,masque,indexNN,h_int,mag_lattice,irank,start,isize,MPI_COMM)
 #else
-      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,masque,indexNN,h_int)
+      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,masque,indexNN,h_int,mag_lattice)
 #endif
 
 #ifdef CPP_MPI
@@ -930,14 +914,8 @@
       endif
 
       if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) then
-       if (size(world).eq.1) then
-        Call topocharge_sd(j/gra_freq,spin(1:6,:,1,1,1))
-       elseif ((size(world).eq.2).and.(shape_spin(5).eq.1)) then
-        Call topocharge_sd(j/gra_freq,spin(1:6,:,:,1,1))
-       elseif ((size(world).eq.2).and.(shape_spin(5).ne.1)) then
-        Call topocharge_sd(j/gra_freq,spin(1:6,:,:,1,:))
-       else
-        Call topocharge_sd(j/gra_freq,spin(1:6,:,:,:,:))
+       if (size(mag_lattice%world).eq.2) then
+        Call topocharge_sd(j/gra_freq,spin(4:6,:,:,1,:),mag_lattice)
        endif
       endif
 

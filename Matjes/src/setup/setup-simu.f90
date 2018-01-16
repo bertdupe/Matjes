@@ -1,6 +1,5 @@
-      subroutine setup_simu(my_simu,io_simu,state)
+      subroutine setup_simu(my_simu,io_simu,state,my_lattice,my_motif)
       use m_lattice
-      use m_rw_lattice
       use m_voisins
       use m_setup_DM
       use m_parameters
@@ -12,6 +11,7 @@
       use m_arrange_neigh
       use m_topoplot
       use mtprng
+      use m_Hamiltonian
 #ifdef CPP_MPI
       use m_make_box
       use m_split_work
@@ -28,6 +28,8 @@
       type(io_parameter), intent(out) :: io_simu
       type(type_simu), intent(out) :: my_simu
       type(mtprng_state), intent(inout) :: state
+      type(lattice), intent(out) :: my_lattice
+      type(cell), intent(out) :: my_motif
 ! variable of the system
       real (kind=8), allocatable :: tabledist(:,:)
       real (kind=8), allocatable :: map_vort(:,:,:,:),map_toto(:,:,:)
@@ -36,11 +38,10 @@
       integer :: Nei_z
 !nb of neighbors in the superlattice
       integer :: Nei_il
-!     indeNN defined in maindata
 ! dummy variable
-      integer :: i,j,k,l
+      integer :: i,dim_lat(3)
 !checking various files
-      logical :: exists,topoonly,i_exi,i_usestruct
+      logical :: topoonly,i_exi,i_usestruct
 ! check the allocation of memory
       integer :: alloc_check
 
@@ -51,17 +52,25 @@
       alloc_check=0
 
 #ifdef CPP_MPI
-if (irank.eq.0) write(6,'(/,a)') 'reading the setup routine'
+if (irank.eq.0) write(6,'(/,a)') 'entering the setup routine'
 #else
-write(6,'(/,a)') 'reading the setup routine'
+write(6,'(/,a)') 'entering the setup routine'
 #endif
 ! read the important inputs
 #ifdef CPP_MPI
-if (irank.eq.0) write(6,'(a)') 'reading the lattice.in file'
+if (irank.eq.0) write(6,'(a)') 'reading the lattice in the input file'
 #else
-write(6,'(a)') 'reading lattice.in file'
+write(6,'(a)') 'reading the lattice in the input file'
 #endif
-      call rw_lattice()
+      call rw_lattice(my_lattice)
+
+! read the important inputs
+#ifdef CPP_MPI
+if (irank.eq.0) write(6,'(a)') 'reading the motif in the input file'
+#else
+write(6,'(a)') 'reading the motif in the input file'
+#endif
+      call rw_motif(my_motif,my_lattice)
 
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(a)') 'reading the inp file'
@@ -71,13 +80,24 @@ write(6,'(a,/)') 'reading the inp file'
       call inp_rw(my_simu,io_simu,N_Nneigh,phase,Nei_z,Nei_il)
 
 #ifdef CPP_MPI
+if (irank.eq.0) write(6,'(a)') 'checking for the presence of electric field'
+#else
+write(6,'(a,/)') 'checking for the presence of electric field'
+#endif
+
+! check for electric field
+      call rw_efield(my_lattice%dim_lat,my_lattice%areal)
+!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!! create the lattice depending on the simulation that one chooses
+#ifdef CPP_MPI
 if (irank.eq.0) write(6,'(a)') 'allocating the spin, table of neighbors and the index...'
 #else
 write(6,'(a)') 'allocating the spin, table of neighbors and the index...'
 #endif
 
-      call create_lattice(dim_lat,motif)
+      call create_lattice(my_simu,my_lattice,my_motif)
 
+      dim_lat=my_lattice%dim_lat
 ! of ghost is there, then make the box
 #ifdef CPP_MPI
       if (i_ghost) then
@@ -89,13 +109,13 @@ write(6,'(a)') 'allocating the spin, table of neighbors and the index...'
 
        if (size(world).eq.1) then
         call box_1D(dim_lat(1),n_ghost,Periodic_log,N_Nneigh/2)
-        N_site=(Xstop-Xstart+1)*count(motif%i_m)
+        N_site=(Xstop-Xstart+1)*count(my_motif%i_mom)
        elseif (size(world).eq.2) then
         call box_2D(dim_lat(1),dim_lat(2),n_ghost,Periodic_log,N_Nneigh/2)
-        N_site=(Xstop-Xstart+1)*count(motif%i_m)*(Ystop-Ystart+1)
+        N_site=(Xstop-Xstart+1)*count(my_motif%i_mom)*(Ystop-Ystart+1)
        else
         call box_3D(dim_lat(1),dim_lat(2),dim_lat(3),n_ghost,Periodic_log)
-        N_site=(Xstop-Xstart+1)*count(motif%i_m)*(Ystop-Ystart+1)*(Zstop-Zstart+1)
+        N_site=(Xstop-Xstart+1)*count(my_motif%i_mom)*(Ystop-Ystart+1)*(Zstop-Zstart+1)
        endif
 
        if (irank.eq.0) write(6,'(a)') "--------------------------"
@@ -127,10 +147,10 @@ write(6,'(a)') 'allocating the spin, table of neighbors and the index...'
 #else
       write(6,'(a)') 'Calculating the table of distances'
 #endif
-      if ((count(motif%i_m).eq.1).and.(phase.eq.1)) then
-       call Tdist(net,N_Nneigh,world,phase,motif,tabledist(:,1))
+      if ((count(my_motif%i_mom).eq.1).and.(phase.eq.1)) then
+       call Tdist(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,tabledist(:,1))
       else
-       call Tdist(net,N_Nneigh,Nei_z,Nei_il,world,phase,motif,tabledist(:,:))
+       call Tdist(my_lattice%areal,N_Nneigh,Nei_z,Nei_il,my_lattice%world,phase,my_motif,tabledist(:,:))
       endif
 
 #ifdef CPP_MPI
@@ -139,9 +159,9 @@ write(6,'(a)') 'allocating the spin, table of neighbors and the index...'
       write(6,'(a)') 'Calculating the number of neighbors for each shells'
 #endif
       if (phase.eq.1) then
-       call numneigh(N_Nneigh,tabledist(:,1),net,Nei_z,world,motif,phase,indexNN(:,1))
+       call numneigh(N_Nneigh,tabledist(:,1),my_lattice%areal,my_lattice%world,my_motif,indexNN(:,1))
        else
-       call numneigh(N_Nneigh,tabledist(:,:),net,Nei_z,Nei_il,world,motif,phase,indexNN(:,:))
+       call numneigh(N_Nneigh,tabledist(:,:),my_lattice%areal,Nei_z,Nei_il,my_lattice%world,my_motif,phase,indexNN(:,:))
       endif
 
 ! prepare the lattice
@@ -150,7 +170,7 @@ write(6,'(a)') 'allocating the spin, table of neighbors and the index...'
 #else
       write(6,'(a,/)') 'initializing the spin structure'
 #endif
-       call InitSpin(net,motif,world,state)
+       call InitSpin(my_lattice,my_motif,state)
 
 ! allocate table of neighbors and masque
        if (phase.eq.1) then
@@ -159,14 +179,11 @@ write(6,'(a)') 'allocating the spin, table of neighbors and the index...'
         tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1:phase))
        endif
 
-       allocate(masque(tot_N_Nneigh+1,dim_lat(1),dim_lat(2),dim_lat(3)),stat=alloc_check)
-       if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate masque'
-
 #ifdef CPP_MPI
-       allocate(tableNN(4,tot_N_Nneigh,Xstart:Xstop,Ystart:Ystop,Zstart:Zstop,count(motif%i_m)),stat=alloc_check)
+       allocate(tableNN(4,tot_N_Nneigh,Xstart:Xstop,Ystart:Ystop,Zstart:Zstop,count(my_motif%i_mom)),stat=alloc_check)
        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
 #else
-       allocate(tableNN(4,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(motif%i_m)),stat=alloc_check)
+       allocate(tableNN(4,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)),stat=alloc_check)
        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
 #endif
        tableNN=0
@@ -178,29 +195,30 @@ if (irank.eq.0) write(6,'(a)') 'Calculating the table of neighbors (this can tak
 #else
 write(6,'(a)') 'Calculating the table of neighbors (this can take time)'
 #endif
-      if (size(world).eq.1) then
-       call mapping(net,tot_N_Nneigh,tabledist(:,1),N_Nneigh,Nei_il,phase,motif,indexNN(:,1), &
-     & tableNN(:,:,:,1,1,1))
-      elseif (size(world).eq.2) then
-       if ((phase.eq.1).and.(count(motif%i_m).eq.1)) then
-        call mapping(net,tot_N_Nneigh,tabledist(:,1),N_Nneigh,Nei_il,phase,motif,indexNN(:,1), &
-     & tableNN(:,:,:,:,1,1))
+      if (size(my_lattice%world).eq.1) then
+       call mapping(tabledist(:,1),N_Nneigh,my_motif,indexNN(:,1),tableNN(:,:,:,1,1,1),my_lattice)
+
+      elseif (size(my_lattice%world).eq.2) then
+       if ((phase.eq.1).and.(count(my_motif%i_mom).eq.1)) then
+        call mapping(tabledist(:,1),N_Nneigh,my_motif,indexNN(:,1),tableNN(:,:,:,:,1,1),my_lattice)
+
        elseif (phase.eq.1) then
-        call mapping(net,tot_N_Nneigh,tabledist(:,1),N_Nneigh,Nei_il,phase,motif,indexNN(:,1), &
-     & tableNN(:,:,:,:,1,:))
+        call mapping(tabledist(:,1),N_Nneigh,my_motif,indexNN(:,1),tableNN(:,:,:,:,1,:),my_lattice)
+
        endif
-       if (phase.eq.2) call mapping(net,tot_N_Nneigh,tabledist(:,:),N_Nneigh,Nei_il,phase,motif,indexNN(:,:), &
-     & tableNN(:,:,:,:,1,:))
+       if (phase.eq.2) call mapping(tabledist(:,:),N_Nneigh,Nei_il,my_motif,indexNN(:,:),tableNN(:,:,:,:,1,:),my_lattice)
+
       else
        if (phase.eq.1) then
-        call mapping(net,tot_N_Nneigh,tabledist(:,1),N_Nneigh,Nei_il,phase,motif,indexNN(:,1), &
-     & tableNN(:,:,:,:,:,:))
+        call mapping(tabledist(:,1),N_Nneigh,my_motif,indexNN(:,1),tableNN(:,:,:,:,:,:),my_lattice)
+
        else
-        call mapping(net,tot_N_Nneigh,tabledist(:,:),N_Nneigh,Nei_il,Nei_z,phase,motif,indexNN(:,:), &
-     & tableNN(:,:,:,:,:,:))
+        call mapping(tabledist(:,:),N_Nneigh,Nei_il,Nei_z,my_motif,indexNN(:,:),tableNN(:,:,:,:,:,:),my_lattice)
+
        endif
 
       endif
+
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(a)') 'done'
 #else
@@ -209,7 +227,11 @@ write(6,'(a)') 'done'
 
 !-------------------------------------------------
 ! take care of the periodic boundary conditions
-      if (all(Periodic_log)) then
+
+      allocate(masque(tot_N_Nneigh+1,dim_lat(1),dim_lat(2),dim_lat(3)),stat=alloc_check)
+      if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate masque'
+
+      if (all(my_lattice%boundary)) then
        masque=1
       else
 #ifdef CPP_MPI
@@ -217,13 +239,13 @@ if (irank.eq.0) write(6,'(a)') 'seting up the masque for non-periodic systems'
 #else
 write(6,'(a)') 'seting up the masque for non-periodic systems'
 #endif
-       call periodic(indexNN(:,1),sum(indexNN(:,1))+1,tabledist(:,1),N_Nneigh,Periodic_log(:),masque,spin,tableNN)
+       call periodic(indexNN(:,1),sum(indexNN(:,1))+1,tabledist(:,1),N_Nneigh,masque,spin,tableNN,my_lattice,my_motif)
       endif
 
 !check for the structure.xyz file for shape modification
       inquire (file='structure.xyz',exist=i_usestruct)
       if (i_usestruct) call user_def_struct(masque,spin, &
-     & dim_lat,count(motif%i_m),tot_N_Nneigh+1,net)
+     & my_lattice%dim_lat,count(my_motif%i_mom),tot_N_Nneigh+1,my_lattice%areal)
 
 ! setup the different parameters for the interaction DM, 4-spin... 
 ! hard part: setup DM interaction
@@ -237,20 +259,15 @@ write(6,'(a)') 'Calculating the DM vectors for each shells'
 #endif
        i=count(abs(DM(:,1))>1.0d-8)
        allocate(DM_vector(sum(indexNN(1:i,1)),3,phase))
-       if (size(world).eq.1) then
-        DM_vector=setup_DM(sum(indexNN(1:i,1)),i,indexNN(:,1),net,motif,dim_lat,world,phase, &
-         1)
-       elseif (size(world).eq.2) then
-        DM_vector=setup_DM(sum(indexNN(1:i,1)),i,indexNN(:,1),net,motif,dim_lat,world,phase, &
-         1,1)
+       if (size(my_lattice%world).eq.1) then
+        DM_vector=setup_DM(sum(indexNN(1:i,1)),my_lattice%areal,my_motif,phase)
+
+       elseif (size(my_lattice%world).eq.2) then
+        DM_vector=setup_DM(sum(indexNN(1:i,1)),i,indexNN(:,1),my_lattice%areal,my_motif,my_lattice%world,phase)
+
        else
-        if (phase.eq.1) then
-         DM_vector=setup_DM(sum(indexNN(1:i,1)),i,indexNN(:,1),net,motif,dim_lat,world,phase, &
-         1,1,1)
-        else
-         DM_vector=setup_DM(sum(indexNN(1:i,1)),i,indexNN(:,1),net,motif,dim_lat,world,phase, &
-         1,1)
-        endif
+        DM_vector=setup_DM(sum(indexNN(1:i,1)),my_lattice%areal,my_motif,phase)
+
        endif
 
 ! the DM and the neighbors have to turn in the same direction. therefore the matrix of the neighbors
@@ -260,19 +277,20 @@ if (irank.eq.0) write(6,'(a)') 'Re-aranging the position of the DM vectors'
 #else
 write(6,'(a)') 'Re-aranging the position of the DM vectors'
 #endif
-       if (size(world).eq.1) then
-        call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,1,1,:),indexNN(:,1),dim_lat,net,phase,tot_N_Nneigh,world,tabledist(:,1),masque)
-       elseif (size(world).eq.2) then
+       if (size(my_lattice%world).eq.1) then
+
+       elseif (size(my_lattice%world).eq.2) then
         if (phase.eq.1) then
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,1,:),indexNN(:,1),dim_lat,net,phase,tot_N_Nneigh,world,tabledist(:,1),masque(:,:,:,1))
+         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,1,:),indexNN(:,1),my_lattice%dim_lat,my_lattice%areal,masque(:,:,:,1))
+
          else
-         call arrange_neigh(DM_vector,tableNN(:,:,:,:,1,:),indexNN(:,:),dim_lat,net,phase,tot_N_Nneigh,world,tabledist(:,:),masque)
+         call arrange_neigh(DM_vector,tableNN(:,:,:,:,1,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
+
         endif
        else
-        if (phase.eq.1) then
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,:,:),indexNN(:,1),dim_lat,net,phase,tot_N_Nneigh,world,tabledist(:,1),masque)
-        else
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,:,:),indexNN(:,:),dim_lat,net,phase,tot_N_Nneigh,world,tabledist(:,:),masque)
+        if (phase.eq.2) then
+         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,:,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
+
         endif
        endif
       else
@@ -286,7 +304,7 @@ if (irank.eq.0) write(6,'(a)') 'Calculating the position of the corners of the u
 #else
 write(6,'(a)') 'Calculating the position of the corners of the unit cell for the 4-spin'
 #endif
-       call givemecorners(net,abs(order_zaxis(net)))
+       call givemecorners(my_lattice%areal,abs(order_zaxis(my_lattice%areal)))
       else
        allocate(corners(1,1))
       endif
@@ -298,6 +316,10 @@ write(6,'(a)') 'dealing with the z-direction'
 #endif
 !! check the z direction structure
 !      call setup_zdir(phase,tot_N_Nneigh,motif)
+
+
+! setup the Hamiltonian of the system
+      call setup_Hamilton()
 
 !!--------------------------------------------------------------------
 
@@ -314,11 +336,11 @@ write(6,'(a)') 'dealing with the z-direction'
 ! prepare the demag tensor
       if (i_dip) then
        write(6,'(a)') "preparing spatial contribution to dipole convolution "
-       call setup_dipole(dim_lat,Periodic_log,net,count(motif%i_m),size(world))
-       do k=1,dim_lat(3)*count(motif%i_m)
+       call setup_dipole(dim_lat,Periodic_log,net,count(my_motif%i_mom),size(world))
+       do k=1,dim_lat(3)*count(my_motif%i_mom)
         do j=1,dim_lat(2)
          do i=1,dim_lat(1)
-         mmatrix(1:3,i,j,k)=spin(4:6,i,j,k,mod(k-1,count(motif%i_m))+1)*spin(7,i,j,k,1)
+         mmatrix(1:3,i,j,k)=spin(4:6,i,j,k,mod(k-1,count(my_motif%i_mom))+1)*spin(7,i,j,k,1)
          enddo
         enddo
        enddo
@@ -362,7 +384,7 @@ write(6,'(/,a,/)') 'the setup of the simulation is over'
       if (spstmonly) then
       write(6,'(a)') 'The program of spmstm will be used to draw spins with & 
      &  the configuration specified in input.dat'
-      call spstm
+      call spstm(my_lattice,my_motif)
       write(6,'(a)') 'STM images were done'
       stop
       endif
@@ -381,8 +403,8 @@ write(6,'(/,a,/)') 'the setup of the simulation is over'
       map_vort=0.0d0
 ! check for a thrid non periodic dimension inside table hexa
       call InitSpin
-      if (size(world).eq.2) then
-        if (count(motif%i_m).eq.1) then
+      if (size(my_lattice%world).eq.2) then
+        if (count(my_motif%i_mom).eq.1) then
 !         call topo_map(spin(4:6,:,:,1,1),map_vort(:,:,1,:),map_toto(:,:,1))
         else
 !         call topo_map(spin(4:6,:,:,1,:),map_vort(:,:,1,:),map_toto(:,:,1))

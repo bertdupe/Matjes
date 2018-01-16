@@ -16,7 +16,7 @@
 
       real(kind=8) function total_Exchange(spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index)
       use m_parameters, only : c_Ji,J_ij,J_il,J_z
-      use m_efield, only : me,Efield_Jij
+!      use m_efield, only : me,Efield_Jij
 #ifdef CPP_MPI
       use m_make_box, only : Xstart,Ystart,Zstart
       use m_mpi_prop, only : start
@@ -30,9 +30,8 @@
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
 ! external variable
       real (kind=8) :: E_int
-      integer :: i_s
 ! internal variable
-      integer :: i,j,avant,k,i_x,i_y,i_z,i_m,i_sl
+      integer :: i,j,avant,i_x,i_y,i_z,i_m,i_sl
 ! position of the neighbors along x,y,z and motif
       integer :: v_x,v_y,v_z,v_m,ig_x,ig_y,ig_z
       integer :: lay
@@ -80,8 +79,8 @@
        E_int=E_int+(Spin(4,i_x,i_y,i_z,i_m)*Spin(4,v_x,v_y,v_z,v_m)+ &
             Spin(5,i_x,i_y,i_z,i_m)*Spin(5,v_x,v_y,v_z,v_m)+ &
             Spin(6,i_x,i_y,i_z,i_m)*Spin(6,v_x,v_y,v_z,v_m))* &
-            dble(masque(avant+j+1,i_x,i_y,i_z)*masque(1,i_x,i_y,i_z))* &
-           (J_ij(i,lay)+me(i)*Efield_Jij(i_x,i_y,i_z))
+            dble(masque(avant+j+1,i_x,i_y,i_z)*masque(1,i_x,i_y,i_z))
+!           (J_ij(i,lay)+me(i)*Efield_Jij(i_x,i_y,i_z))
 
          enddo
         enddo
@@ -290,7 +289,6 @@
       integer :: i_x,i_y,i_z,i_m
 !internal variable
       integer :: avant,i,j
-      integer :: N_start,N_stop
 ! position of the neighbors along x,y,z and motif
       integer :: v_x,v_y,v_z,v_m,ig_x,ig_y,ig_z
 #ifndef CPP_MPI
@@ -466,8 +464,8 @@
       total_biquadratic=c_JB*E_int
       end function total_biquadratic
 !4 spin term
-      real(kind=8) function total_fourspin(spin,shape_spin,masque,shape_masque)
-      use m_parameters, only :c_Ki,K_1,Periodic_log
+      real(kind=8) function total_fourspin(spin,shape_spin,masque,shape_masque,Periodic_log)
+      use m_parameters, only :c_Ki,K_1
       use m_sym_utils, only : corners
 #ifdef CPP_MPI
       use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
@@ -477,12 +475,11 @@
       integer, intent(in) :: shape_spin(5),shape_masque(4)
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
+      logical, intent(in) :: Periodic_log(3)
 ! external variable
       real(kind=8) :: E_int,E_local
-      integer :: i_s
 ! internal variable
       integer :: k,ipu(3),ipv(3),ipuv(3),i_x,i_y,i_z,i_m
-      integer :: z_order
 #ifndef CPP_MPI
       integer :: Xstop,Xstart,Ystop,Ystart,Zstop,Zstart
 
@@ -593,10 +590,9 @@
       end function total_fourspin
 
 ! Dipole Dipole interaction
-      real(kind=8) function total_dipole(spin,shape_spin)
+      real(kind=8) function total_dipole(spin,shape_spin,Periodic_log)
       use m_constants, only : pi
       use m_vector, only : norm
-      use m_parameters, only : periodic_log
 #ifdef CPP_MPI
       use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
 #endif
@@ -604,8 +600,9 @@
 ! input
       integer, intent(in) :: shape_spin(5)
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      logical, intent(in) :: Periodic_log(3)
 ! external variable
-      integer :: i_x,i_y,i_z,j_x,j_y,j_z,i_m,j_m,i,j,nmag
+      integer :: i_x,i_y,i_z,j_x,j_y,j_z,i_m,j_m,nmag
 ! internal variable
       real(kind=8) :: rc(3),ss
       real(kind=8), parameter :: alpha=6.74582d-7
@@ -642,7 +639,9 @@
          do j_y=1,shape_spin(3)
           do j_x=1,shape_spin(2)
 
-          rc=spin(1:3,j_x,j_y,j_z,j_m)-spin(1:3,i_x,i_y,i_z,i_m)
+          if (all(periodic_log)) then
+            rc=spin(1:3,j_x,j_y,j_z,j_m)-spin(1:3,i_x,i_y,i_z,i_m)
+          endif
 
          ss=norm(rc)
          if (ss.lt.1.0d-3) cycle

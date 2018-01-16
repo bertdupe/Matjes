@@ -59,7 +59,7 @@
 ! which programfiles should be written
       Logical :: Cor_log, Gra_log, gra_fft, gra_topo,dispersion
 ! Periodic boundary conditions and cool down or heat up algorithm
-      Logical :: Periodic_log(3),i_cool,CalTheta,CalEnergy
+      Logical :: i_cool,CalTheta,CalEnergy
 ! calculate the topological Hall effect
       logical ::  i_topohall
 ! epsilon
@@ -82,7 +82,6 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine inp_rw(my_simu,io_simu,N_Nneigh,phase,Nei_z,Nei_il)
       use m_parameters
-      use m_rw_lattice, only : net,dim_lat
       use m_constants
       use m_derived_types
 #ifdef CPP_MPI
@@ -98,20 +97,18 @@
       type(type_simu), intent(out) :: my_simu
 
 ! local variables
-      real(kind=8) :: angle,v(3),vort,qeuler
-      real(kind=8) :: alph30,betha,SQRT1d2
-      real(kind=8) :: DM_loc(3),J_loc(12),J_illoc(12)
+      real(kind=8) :: v(3)
+      real(kind=8) :: DM_loc(12),J_loc(12),J_illoc(12)
 !      real*8 :: n_spins_column1,n_spins_column2,n_spins_rows
 !ccccccccccccccccccccccccccccccccccccccccccc
 !in out variable
       integer, intent(inout) :: N_Nneigh 
 ! dummy variable
       integer, parameter  :: io=1
-      integer :: fin,i,j,ierr,N_Nneigh_il
+      integer :: fin,i,j,N_Nneigh_il
       character(len=100) :: str
       character(len=10) :: dummy
-      logical :: exists,DM_userdef,asym,topoonly,i_exi
-      character(len=1) :: toto
+      logical :: exists,DM_userdef,asym
       character(len=4) :: tag
       real (kind=8) :: jz(12),jil(12)
 
@@ -123,9 +120,24 @@
       my_simu%i_minimization=.False.
       my_simu%i_entropic=.False.
       my_simu%i_r_texture=.False.
+<<<<<<< HEAD:Matjes/src/io-input/inp_rw.f90
       my_simu%i_pimc=.False.
+=======
+      my_simu%i_TB=.False.
+>>>>>>> origin/Bertrand:Matjes/src/IO-input/inp_rw.f90
 
 ! io_of the simulation
+      io_simu%io_dispersion=.False.
+      io_simu%io_qorien=.False.
+      io_simu%io_spstmL=.False.
+      io_simu%io_spstmonly=.False.
+      io_simu%io_Xstruct=.False.
+      io_simu%io_fft_Xstruct=.False.
+      io_simu%io_topo=.False.
+      io_simu%i_topohall=.False.
+      io_simu%io_frequency=1
+      io_simu%io_warning=.True.
+      io_simu%io_writing=1
 
       n_ghost=1
       nRepProc=1
@@ -181,14 +193,7 @@
       c_ani=1.0d0
 !      pi=acos(0.d0)*2.d0
 
-! open the input
-      inquire (file='inp',exist=exists)
-      if (.not. exists) then
-      write(6,*) 'no input file'
-      STOP
-      endif
-
-      open (io,file='inp',form='formatted',status='old',action='read')
+      open (io,file='input',form='formatted',status='old',action='read')
 
       rewind(io)
       do
@@ -216,8 +221,13 @@
               my_simu%i_paratemp=.True.
             case ("minimizati")
               my_simu%i_minimization=.True.
+<<<<<<< HEAD:Matjes/src/io-input/inp_rw.f90
             case ("pimc")
               my_simu%i_pimc=.True.
+=======
+            case ("tight-bind")
+              my_simu%i_TB=.True.
+>>>>>>> origin/Bertrand:Matjes/src/IO-input/inp_rw.f90
             case default
                STOP 'select a simulation type'
            end select
@@ -561,37 +571,91 @@
            read(io,*) dummy, i_print_W
           endif
 
-        if (( str(1:2) == 'DM').and.(.not.i_dm)) then
+! change by SvM: DMI interaction
+        if ( str(1:4) == 'D_1') then
            backspace(io)
-          if ( str(1:4) == 'DM_1') then
-           i_DM=.True.
-           read(io,*) dummy, DM_loc(1), DM_loc(2), DM_loc(3)
-           j=maxloc(abs(DM_loc),1)
-           read(io,*) dummy, DM_loc(1), DM_loc(2), DM_loc(3)
-           i=maxloc(abs(DM_loc),1)
-           j=maxval((/i,j/))
-           allocate(DM(j,2))
-           DM(1:j,2)=DM_loc(1:j)
-           backspace(io)
-           backspace(io)
-           read(io,*) dummy, DM_loc(1), DM_loc(2), DM_loc(3)
-           DM(1:j,1)=DM_loc(1:j)
-          else
-           read(io,*) dummy, DM_loc(1), DM_loc(2), DM_loc(3)
-           if (count(dabs(DM_loc).gt.1.0d-8).ne.0) then
-            i_DM=.True.
-            j=0
-            do i=1,3
-             if (dabs(DM_loc(i)).gt.1.0d-8) j=i
-            enddo
-            allocate(DM(j,1))
-            DM(1:j,1)=DM_loc(1:j)
-            else
-            allocate(DM(1,1))
-            DM=0.0d0
+           read(io,*) dummy, DM_loc(1)
+           if (dabs(DM_loc(1)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,1)
            endif
           endif
+        if ( str(1:4) == 'D_2') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(2)
+           if (dabs(DM_loc(2)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,2)
+           endif
           endif
+        if ( str(1:4) == 'D_3') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(3)
+           if (dabs(DM_loc(3)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,3)
+           endif
+          endif
+        if ( str(1:4) == 'D_4') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(4)
+           if (dabs(DM_loc(4)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,4)
+           endif
+          endif
+        if ( str(1:4) == 'D_5') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(5)
+           if (dabs(DM_loc(5)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,5)
+           endif
+          endif
+        if ( str(1:4) == 'D_6') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(6)
+           if (dabs(DM_loc(6)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,6)
+           endif
+          endif
+        if ( str(1:4) == 'D_7') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(7)
+           if (dabs(DM_loc(7)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,7)
+           endif
+           endif
+        if ( str(1:4) == 'D_8') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(8)
+           if (dabs(DM_loc(8)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,8)
+           endif
+           endif
+        if ( str(1:4) == 'D_9') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(9)
+           if (dabs(DM_loc(9)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,9)
+           endif
+           endif
+        if ( str(1:4) == 'D_10') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(10)
+           if (dabs(DM_loc(10)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,10)
+           endif
+           endif
+        if ( str(1:4) == 'D_11') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(11)
+           if (dabs(DM_loc(11)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,11)
+           endif
+           endif
+        if ( str(1:4) == 'D_12') then
+           backspace(io)
+           read(io,*) dummy, DM_loc(12)
+           if (dabs(DM_loc(12)).gt.eps) then
+           N_Nneigh=max(N_Nneigh,12)
+           endif
+        endif
 
         if ( str(1:9) == 'DM-vector') then
            backspace(io)
@@ -627,10 +691,6 @@
         if ( str(1:7) == 'Gra_log') then
            backspace(io)
            read(io,*) dummy, Gra_log, gra_freq
-          endif
-        if ( str(1:12) == 'Periodic_log') then
-           backspace(io)
-           read(io,*) dummy, Periodic_log(1), Periodic_log(2), Periodic_log(3)
           endif
         if ( str(1:10) == 'dispersion') then
            backspace(io)
@@ -678,9 +738,23 @@
       i_cool=.false.
       if (kTini.gt.kTfin) i_cool=.true.
 
+    ! change by SvM: allocate DMI parameters
+    if (count(dabs(DM_loc).gt.1.0d-8).ne.0) then
+        i_DM=.True.
+        j=0
+        do i=1,12
+            if (dabs(DM_loc(i)).gt.1.0d-8) j=i
+        enddo
+        allocate(DM(j,1))
+        DM(1:j,1)=DM_loc(1:j)
+    else
+        allocate(DM(1,1))
+        DM=0.0d0
+    endif
+
       inquire (file='zdir.in',exist=exists)
       if (exists) then
-       call rw_zdir(phase,jz,Nei_z,jil,Nei_il,dim_lat)
+       call rw_zdir(phase,jz,Nei_z,jil,Nei_il)
        if (Nei_il.ne.0) then
         allocate(j_il(Nei_il))
         j_il=jil(1:Nei_il)
@@ -703,25 +777,9 @@
       endif
 
 
-! check for electric field
-      call rw_efield(dim_lat,net)
-!!!!!!!!!!!!!!!!!!!!!!!!!!
-
       if (n_sizerelax.gt.n_thousand) then
        write(6,'(a)') 'please choose n_sizerelax < n_relaxation'
       endif
-#ifdef CPP_MPI
-      if ((irank.eq.0).AND.(isize.lt.9)) then
-       call SignatureFile(1,len_trim('param-'//char(48+irank)//'.dat'), &
-        'param-'//char(48+irank)//'.dat',len_trim('asis'),'asis')
-        elseif (isize.lt.9) then
-       call SignatureFile(1,len_trim('param-'//char(48+irank)//'.dat'), &
-        'param-'//char(48+irank)//'.dat',len_trim('asis'),'asis')
-      endif
-#else
-       call SignatureFile(1,len_trim('param.dat'), &
-        'param.dat',len_trim('asis'),'asis')
-#endif
 
 #ifdef CPP_DEBUG
       write(6,*) "J_ij", J_ij

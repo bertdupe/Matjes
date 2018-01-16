@@ -17,8 +17,6 @@
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: shape_spin(:)
       character(len=*) :: fname
-!     slope index for corre
-      Integer :: i
 !     Coordinates of the Spins
       Integer :: i_x,i_y,i_z,i_m,j_lat,size_z
       character(len=50) :: toto
@@ -54,8 +52,6 @@
       Implicit none
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: shape_spin(:)
-!     slope index for corre
-      Integer :: i
 !     Coordinates of the Spins
       Integer :: i_x,i_y,i_z,i_m,j_lat,size_z
 
@@ -90,12 +86,8 @@
       real(kind=8), intent(in) :: spin(:,:,:,:)
 ! input counter for the numbering of the files
       integer, intent(in) :: i_count,shape_spin(:)
-!     slope index for corre
-      Integer :: i
-!     Helping Variables for Modulus
-      Integer :: dist_gra, add_cor, add_gra
 !     Coordinates of the Spins
-      Integer :: i_x,i_y,i_z,j_lat,size_z
+      Integer :: i_x,i_y,i_z,j_lat,i
 !     name of the file
       character(len=30) :: fname,toto,fcount
 
@@ -110,6 +102,10 @@
 
 !     write Spinconfiguration in a povray-file
       write(fname,'(I10)') i_count
+
+!     write Spinconfiguration in a file for STM-simulation
+      toto=trim(adjustl(name_in))
+      fcount=trim(adjustl(fname))
 
 !     write Spinconfiguration in a file for STM-simulation
       write(fname,'(10a,a,10a,a)')(toto(i:i),i=1,len_trim(toto)),'_',(fcount(i:i),i=1,len_trim(fcount)),'.dat'
@@ -142,8 +138,6 @@
       integer, intent(in) :: i_count,shape_spin(:)
 !     slope index for corre
       Integer :: i
-!     Helping Variables for Modulus
-      Integer :: dist_gra, add_cor, add_gra
 !     Coordinates of the Spins
       Integer :: i_x,i_y,i_z,i_m,j_lat,size_z
 !     name of the file
@@ -195,8 +189,6 @@
       integer, intent(in) :: shape_spin(:)
 !     slope index for corre
       Integer :: i
-!     Helping Variables for Modulus
-      Integer :: dist_gra, add_cor, add_gra
 !     Coordinates of the Spins
       Integer :: i_x,i_y,i_z,i_m,j_lat,size_z
 !     name of the file
@@ -245,8 +237,6 @@
       integer, intent(in) :: j,shape_spin(:)
 !     slope index for corre
       Integer :: i
-!     Helping Variables for Modulus
-      Integer :: dist_gra, add_cor, add_gra
 !     Coordinates of the Spins
       Integer :: i_x,i_y,i_z,i_m,j_lat,size_z
 !     name of the file

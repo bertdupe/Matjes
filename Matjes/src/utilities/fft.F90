@@ -11,27 +11,30 @@
 !!!!!!!!!!!!!!!!!!!!!!
 ! easy FFT
 !!!!!!!!!!!!!!!!!!!!!!
-      subroutine fft_standard(dim_lat,kt)
-      use m_rw_lattice, only : net
+      subroutine fft_standard(my_lattice,kt)
       use m_lattice, only : spin
       use m_vector, only : cross,norm
       use m_constants
+      use m_derived_types
 !#ifdef CPP_OPENMP
 !      use m_omp
 !#endif
       implicit none
-      integer, intent(in) :: dim_lat(3)
+      type(lattice), intent(in) :: my_lattice
       real(kind=8), intent(in) :: kt
 !internal
-      double precision :: rx,ry
       complex*16 :: cdum1
       complex*16, allocatable :: fftcoef(:,:,:,:)
-      integer :: i,j,i_lat,j_lat,k,i1,i2,j1,j2,qnx,qny,fin,i3,N_site
-      real(kind=8) :: dum, kv(3,3),fft_norm(3,dim_lat(3)+1),kv0(3,3)
+      integer :: i,j,i_lat,j_lat,k,i1,i2,j1,j2,qnx,qny,fin,i3,N_site,dim_lat(3)
+      real(kind=8) :: dum, kv(3,3),kv0(3,3), net(3,3)
+      real(kind=8), allocatable :: fft_norm(:,:)
       character(len=30) :: fname,toto
       logical :: exists
 
+      dim_lat=my_lattice%dim_lat
+      net=my_lattice%areal
       N_site=dim_lat(1)*dim_lat(2)*dim_lat(3)
+      allocate(fft_norm(3,dim_lat(3)+1))
 
       inquire (file='inp',exist=exists)
       if (.not. exists) then

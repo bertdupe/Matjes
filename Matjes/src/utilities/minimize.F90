@@ -1,7 +1,8 @@
 
       subroutine minimize(i_biq,i_dm,i_four,i_dip,gra_log,gra_freq,EA, &
-          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext)
+          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext,my_lattice)
       use m_eval_Beff
+      use m_derived_types
       use m_write_spin
       use m_createspinfile
       use m_solver, only : minimization
@@ -11,6 +12,7 @@
       use omp_lib
 #endif
       implicit none
+      type(lattice), intent(in) :: my_lattice
       logical, intent(in) :: i_biq,i_dm,i_four,i_dip,gra_log
       real(kind=8), intent(in) :: EA(3)
       integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4),N_cell,gra_freq
@@ -22,7 +24,7 @@
       real(kind=8) :: velocity(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       real(kind=8) :: predicator(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       real(kind=8) :: force(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-      real(kind=8) :: dt,masse,F_eff(3),V_eff(3),dumy,force_norm,Energy,max_torque,test_torque,conv_torque,vmax,vtest,F_temp(3)
+      real(kind=8) :: dt,masse,F_eff(3),V_eff(3),dumy,force_norm,Energy,max_torque,test_torque,conv_torque,vmax,vtest,F_temp(3),Eint
 ! the computation time
       integer :: N_minimization,i_min,fin
       integer :: i_x,i_y,i_z,i_m
@@ -123,7 +125,7 @@ write(6,'(a,2x,I3,2x,a)') 'I will calculate on',nthreads,'threads'
          do i_x=1,shape_spin(2)
 
            call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,F_eff, &
-             & spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+             & spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
 
            force(:,i_x,i_y,i_z,i_m)=calculate_damping(spin(4:6,i_x,i_y,i_z,i_m),F_eff)
 
@@ -175,7 +177,7 @@ ithread=omp_get_thread_num()
 !          write(*,*) i_x,i_y,ithread
 
            call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,F_eff, &
-               &   spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+               &   spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
 
            F_temp=calculate_damping(spin(4:6,i_x,i_y,i_z,i_m),F_eff)
 
@@ -259,8 +261,10 @@ ithread=omp_get_thread_num()
          do i_y=1,shape_spin(3)
           do i_x=1,shape_spin(2)
 
-           Energy=Energy+local_energy(Energy,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m, &
-              &   spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
+           call local_energy(Eint,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m, &
+              &   spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+
+           Energy=Energy+Eint
 
           enddo
          enddo

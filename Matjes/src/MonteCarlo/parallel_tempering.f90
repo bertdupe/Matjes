@@ -1,7 +1,7 @@
       subroutine parallel_tempering(i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,cor_log,gra_log, &
             &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,EA,n_system, &
             &    n_sizerelax,T_auto,i_optTset,N_cell,print_relax,N_temp,T_relax_temp,kTfin,kTini,h_ext,coni,state,n_Tsteps, &
-            &    i_ghost,n_ghost,nRepProc,world)
+            &    i_ghost,my_lattice)
       use mtprng
       use m_topocharge_all
       use m_set_temp
@@ -12,29 +12,15 @@
       use m_store_relaxation
       use m_check_restart
       use m_createspinfile
+      use m_derived_types
 #ifdef CPP_MPI
       use m_mpi_prop, only : irank_working,isize,MPI_COMM,all_world,irank_box,MPI_COMM_MASTER,MPI_COMM_BOX
       use m_mpi
 #endif
       implicit none
-      interface
-        subroutine MCsteps(state,E_total,E_decompose,Magnetization,kt,acc,rate,tries,cone,n_system, &
-            & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
-            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,n_world)
-          use mtprng
-          integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4),n_system
-          integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
-          integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
-          integer, intent(in) :: indexNN(shape_index(1),shape_index(2)),n_world
-          logical, intent(in) :: i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel
-          real(kind=8), intent(in) :: kt,h_ext(3),EA(3)
-          real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-          type(mtprng_state), intent(inout) :: state
-          real(kind=8), intent(inout) :: E_total,Magnetization(3),E_decompose(8),acc,rate,cone,tries
-        end subroutine
-      end interface
+      type(lattice), intent(in) :: my_lattice
       logical, intent(in) :: i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,cor_log,i_ghost,gra_log
-      integer, intent(in) :: N_cell,n_sizerelax,N_temp,T_relax_temp,n_Tsteps,n_system,T_auto,n_ghost,nRepProc,world
+      integer, intent(in) :: N_cell,n_sizerelax,N_temp,T_relax_temp,n_Tsteps,n_system,T_auto
       integer, intent(in) :: shape_spin(5),shape_tableNN(6),shape_masque(4),shape_index(2)
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
@@ -54,11 +40,11 @@
       integer,allocatable :: image_temp(:)  ! contains the POSITION of temperatures
 ! slope of temperature sets
       integer :: j_optset
+! size of the world
+      integer :: world
 ! slope of the MC
-      integer :: i_MC,i_thousand,i_relax,i_pos
+      integer :: i_MC,i_relax,i_pos
       real(kind=8) :: pos
-! in case if restart
-      integer :: restart_MC_steps,restart_n_thousand
 ! size of all the tables
       integer :: size_table, size_M_replica
 ! internal variable
@@ -97,8 +83,7 @@
 ! relaxation informations
       real(kind=8), allocatable :: relax(:,:,:)
 ! dummy slopes
-      integer :: i,j,k,istart,istop
-      integer :: ierr
+      integer :: i,istart,istop
 
 
 #ifdef CPP_MPI
@@ -107,6 +92,7 @@
 
 ! initialized the size of the tables
       size_table=n_Tsteps
+      world=size(my_lattice%world)
 
 #ifdef CPP_MPI
       size_M_replica=nRepProc
@@ -356,12 +342,12 @@
       &   i_four,i_dm,i_biq,i_dip,i_stone,EA,h_ext)
             E_total=sum(E_decompose)
 
-            Call CalculateAverages(replicas(:,:,:,:,:,i_image),shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system)
+            Call CalculateAverages(replicas(:,:,:,:,:,i_image),shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system,my_lattice)
 
             Do i_MC=1,autocor_steps*N_cell
                 Call MCStep(state,E_total,E_decompose,Magnetization,kt,Nsuccess,rate,tries,cone,n_system, &
             & replicas(:,:,:,:,:,i_image),shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
-            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world)
+            & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world,my_lattice)
             enddo
 
 ! In case T_relax set to zero at least one MCstep is done
@@ -370,13 +356,13 @@
        & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world)
 
 ! calculate the topocharge
-            call topo(replicas(:,:,:,:,:,i_image),shape_spin,masque,shape_masque,qeulerp,qeulerm)
+            call topo(replicas(:,:,:,:,:,i_image),shape_spin,masque,qeulerp,qeulerm,my_lattice)
 
 ! CalculateAverages makes the averages from the sums
             Call CalculateAverages(qeulerp_av(i_temp),qeulerm_av(i_temp),Q_sq_sum_av(i_temp),Qp_sq_sum_av(i_temp),Qm_sq_sum_av(i_temp) &
        &  ,vortex_av(:,i_temp),vortex &
        &  ,E_sum_av(i_temp),E_sq_sum_av(i_temp),M_sum_av(:,i_temp),M_sq_sum_av(:,i_temp),E_total,Magnetization,spin_sum &
-       &  ,replicas(:,:,:,:,:,i_image),shape_spin,masque,shape_masque)
+       &  ,replicas(:,:,:,:,:,i_image),shape_spin,masque,my_lattice)
 
 !           save the data for thermalization
 
@@ -387,8 +373,8 @@
                pos=dble(i_pos)
                i_rw=mod(i_pos,freq_rw)
 
-               if (i_rw.eq.0) call store_relaxation(Relax,i_temp,n_sizerelax,i_pos/freq_rw,pos, &
-       &  sum(E_decompose)/dble(N_cell),E_decompose,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)
+!               if (i_rw.eq.0) call store_relaxation(Relax,i_temp,n_sizerelax,i_pos/freq_rw,pos, &
+!       &  sum(E_decompose)/dble(N_cell),E_decompose,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)
 
             endif
 
@@ -398,8 +384,8 @@
          enddo     ! enddo of the images
 
 
-#ifdef CPP_MPI
          if (i_ghost) then
+#ifdef CPP_MPI
 !             call paratemp(E_total,kT,state,label &
 !           & ,nup,ndown,i_thousand,Nsuccess,n_thousand, &
 !           & vortex_mpi,qeulerp_mpi,qeulerm_mpi,kt_mpi,qeulerp,qeulerm,E_mpi,E_sq_mpi,M_sq_mpi, &
@@ -411,15 +397,13 @@
           &   qeulerp_av,qeulerm_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av, &
           &   vortex_av,E_sum_av,E_sq_sum_av,M_sum_av,M_sq_sum_av, &
           &   label_world)
-
-         endif
 #endif
+         endif
 
 #ifdef CPP_MPI
          if (irank_working.eq.0) then
 #endif
-         call paratemp(state,label_world,nup,ndown,i_relax,success_PT,relaxation_steps, &
-      &    kt_updated,image_temp,E_temp,N_temp,size_table,kt_all)
+         call paratemp(state,label_world,nup,ndown,i_relax,success_PT,kt_updated,image_temp,E_temp,size_table,kt_all)
 #ifdef CPP_MPI
          endif
 

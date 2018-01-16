@@ -7,12 +7,13 @@
 ! Version : 1.1
 ! =====================================================================
 
-      SUBROUTINE EnergyDensity(EnOutput,EnDensityOutput,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
-      use m_rw_lattice, only : net,world,motif
-      use m_parameters, only : J_ij,EA,J_il,i_biq,i_four,i_DM,i_dip,DM,Periodic_log,J_z
+      SUBROUTINE EnergyDensity(EnOutput,EnDensityOutput,spin,shape_spin,tableNN,shape_tableNN, &
+                & masque,shape_masque,indexNN,shape_index,h_ext,my_lattice,my_motif)
+      use m_parameters, only : J_ij,EA,J_il,i_biq,i_four,i_DM,i_dip,DM,J_z
       use m_constants, only : pi
       use m_energy
       use m_table_dist
+      use m_derived_types
       Implicit None
 ! input
       integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
@@ -20,13 +21,15 @@
       integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
+      type(lattice), intent(in) :: my_lattice
+      type(cell), intent(in) :: my_motif
       Character (LEN = *), intent(inout) ::EnOutput, EnDensityOutput
 ! internals
       real(kind=8), allocatable ::EnDenTab(:)
-      Integer::ind,j,nb_col,NColEnergy,NStartDensity,col,i_x,i_y,i_z,i_m
+      Integer:: nb_col,NStartDensity,col,i_x,i_y,i_z,i_m
       real (kind=8), allocatable :: tabledist(:,:)
-      logical::dexists
-      real(kind=8) :: SNeigh, Sprevious, mu_B
+      logical:: Periodic_log(3)
+      real(kind=8) :: SNeigh, Sprevious, mu_B, net(3,3)
       integer :: N_Nneigh,Nei_z,N_nei_exch,N_nei_dm,Nei_DM,Nei_il
       integer :: alloc_check,nmag
 ! Table containing all energy terms. The different columns contain the
@@ -47,6 +50,8 @@
 ! --> (11+N_Nneigh) - (10+2*N_Nneigh) : surface energy density due to the
 ! k-th neighbours
 
+      net=my_lattice%areal
+      Periodic_log=my_lattice%boundary
 ! initialization of the local variables
       N_nei_exch=2
       N_nei_dm=2
@@ -68,12 +73,12 @@
        allocate(tabledist(N_Nneigh,1),stat=alloc_check)
        if (alloc_check.ne.0) stop 'can not allocate table of distance'
        tabledist=0.0d0
-       call Tdist(net,N_Nneigh,world,1,motif,tabledist(:,1))
+       call Tdist(net,N_Nneigh,my_lattice%world,my_motif,tabledist(:,1))
       else
        allocate(tabledist(N_Nneigh,2),stat=alloc_check)
        if (alloc_check.ne.0) stop 'can not allocate table of distance'
        tabledist=0.0d0
-       call Tdist(net,N_Nneigh,Nei_z,Nei_il,world,2,motif,tabledist(:,:))
+       call Tdist(net,N_Nneigh,Nei_z,Nei_il,my_lattice%world,2,my_motif,tabledist(:,:))
       endif
 
       nb_col   = 10 + 2*N_Nneigh+7
@@ -89,9 +94,6 @@
 ! If you change the number of Near neighbours, you might have some
 ! troubles with the format 1998. Please, always write it in the
 ! following form : format( (10+2*N_Nneigh)f14.8 ).
-99999  format(41f14.8)
-99998  format(33f14.8)
-99997  format(21f14.8)
 
 
       do i_z=1,shape_spin(4)
@@ -108,7 +110,7 @@
       EnDenTab(3)=EnDenTab(3)+Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
 !      EnDenTab(3)=EnDenTab(3)+Exchange(i_x,i_y,i_z,i_m)/dble(count(masque(2:N_nei_exch+1,i_x,i_y,i_z).ne.0))
 #ifdef CPP_BRUTDIP
-      if (i_dip) EnDenTab(4)=EnDenTab(4)+dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
+      if (i_dip) EnDenTab(4)=EnDenTab(4)+dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
 #else
       if (i_dip) EnDenTab(4)=EnDenTab(4)+fftdip(i_x,i_y,i_z,i_m)
 #endif
@@ -116,16 +118,16 @@
       if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
 
 !      if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m)/dble(count(masque(2:N_nei_dm+1,i_x,i_y,i_z).ne.0))
-      EnDenTab(7)=EnDenTab(7)+anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque)
+      EnDenTab(7)=EnDenTab(7)+anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
       if (i_biq) EnDenTab(8)=EnDenTab(8)+biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      if (i_four) EnDenTab(9)=EnDenTab(9)+fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque)
+      if (i_four) EnDenTab(9)=EnDenTab(9)+fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
         enddo
 
       EnDenTab(10)= sum(EnDenTab(3:9))
 
          
       NStartDensity = 10+N_Nneigh+1
-      Write(666,99998) (EnDenTab(col), col=1,10)
+      Write(666,'(33f14.8)') (EnDenTab(col), col=1,10)
 
         enddo
        enddo

@@ -7,21 +7,22 @@
 
 ! calculates the number of neighbours stored in indexNN
 
-       subroutine numneigh_simple(k,rad,r,Nei_z,world,motif,phase,indexNN)
+       subroutine numneigh_simple(k,rad,r,world,motif,indexNN)
        use m_derived_types
        use m_vector , only : norm
        implicit none
 ! input variable
-       integer, intent(in) :: k,Nei_z,world(:),phase
+       integer, intent(in) :: k,world(:)
        real (kind=8), intent(in) :: rad(:),r(3,3)
        type (cell), intent(in) :: motif
 ! variable that goes out
        integer, intent(inout) :: indexNN(:)
 !dummy variable
-       integer :: i,j
+       integer :: i,j,size_mag
        real (kind=8) :: u,v,w,val
 
        indexNN=0
+       size_mag=size(motif%i_mom)
 
        if (size(world).eq.1) then
 !----------------------------------------
@@ -29,8 +30,8 @@
        do i=1,k
         u=-dble(i)
         do while (int(dabs(u)).le.i)
-         do j=1,size(motif%i_m)
-          if (.not.motif%i_m(j)) cycle
+         do j=1,size_mag
+          if (.not.motif%i_mom(j)) cycle
           val=norm(r(1,:)*(u+motif%pos(j,1))+r(2,:)*motif%pos(j,2)+r(3,:)*motif%pos(j,3))
           if (abs(rad(i)-val).lt.1.0d-8) indexNN(i)=indexNN(i)+1
          enddo
@@ -45,8 +46,8 @@
         do while (int(dabs(u)).le.i)
          v=-dble(i)
          do while (int(dabs(v)).le.i)
-          do j=1,size(motif%i_m)
-           if (.not.motif%i_m(j)) cycle
+          do j=1,size_mag
+           if (.not.motif%i_mom(j)) cycle
            val=norm(r(1,:)*(u+motif%pos(j,1))+r(2,:)*(v+motif%pos(j,2))+r(3,:)*motif%pos(j,3))
            if (dabs(rad(i)-val).lt.1.0d-8) indexNN(i)=indexNN(i)+1
           enddo
@@ -65,8 +66,8 @@
          do while (int(dabs(v)).le.i)
           w=-dble(i)
           do while (int(dabs(w)).le.i)
-           do j=1,size(motif%i_m)
-            if (.not.motif%i_m(j)) cycle
+           do j=1,size_mag
+            if (.not.motif%i_mom(j)) cycle
             val=norm(r(1,:)*(u+motif%pos(j,2))+r(2,:)*(v+motif%pos(j,2))+r(3,:)*(w+motif%pos(j,3)))
             if (dabs(rad(i)-val).lt.1.0d-8) indexNN(i)=indexNN(i)+1
            enddo
@@ -98,10 +99,11 @@
 ! variable that goes out
        integer, intent(inout) :: indexNN(max(k,Nei_z),phase)
 !dummy variable
-       integer :: i,j
+       integer :: i,j,size_mag
        real (kind=8) :: u,v,w,val
 
        indexNN=0
+       size_mag=size(motif%i_mom)
 
        if (size(world).eq.1) then
 !----------------------------------------
@@ -109,8 +111,8 @@
        do i=1,max(k,Nei_il)
         u=-dble(i)
         do while (int(dabs(u)).le.i)
-         do j=1,size(motif%i_m)
-          if (.not.motif%i_m(j)) cycle
+         do j=1,size_mag
+          if (.not.motif%i_mom(j)) cycle
            val=norm(r(1,:)*(u+motif%pos(j,1))+r(2,:)*motif%pos(j,2)+r(3,:)*motif%pos(j,3))
            if ((abs(rad(i,1)-val).lt.1.0d-8).and.(abs(sum(motif%pos(j,2:3))).lt.1.0d-8)) then
             indexNN(i,1)=indexNN(i,1)+1
@@ -129,8 +131,8 @@
         do while (int(dabs(u)).le.i)
          v=-dble(i)
          do while (int(dabs(v)).le.i)
-          do j=1,size(motif%i_m)
-           if (.not.motif%i_m(j)) cycle
+          do j=1,size_mag
+           if (.not.motif%i_mom(j)) cycle
             val=norm(r(1,:)*(u+motif%pos(j,1))+r(2,:)*(v+motif%pos(j,2))+r(3,:)*motif%pos(j,3))
             if (i.le.k) then
              if ((dabs(rad(i,1)-val).lt.1.0d-8).and.(abs(motif%pos(j,3)).lt.1.0d-8)) indexNN(i,1)=indexNN(i,1)+1
@@ -154,8 +156,8 @@
          do while (int(dabs(v)).le.i)
           w=-dble(i)
           do while (int(dabs(w)).le.i)
-           do j=1,size(motif%i_m)
-            if (.not.motif%i_m(j)) cycle
+           do j=1,size_mag
+            if (.not.motif%i_mom(j)) cycle
             val=norm(r(1,:)*(u+motif%pos(j,1))+r(2,:)*(v+motif%pos(j,2))+r(3,:)*(w+motif%pos(j,3)))
 
             if ((abs(rad(i,1)-val).lt.1.0d-8).and.(abs(motif%pos(j,3)).lt.1.0d-8).and.(i.le.k)) indexNN(i,1)=indexNN(i,1)+1

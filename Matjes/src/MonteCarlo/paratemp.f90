@@ -50,7 +50,7 @@
 ! number of temperatures actually usefull
        integer :: Ntemp_used
 ! counters
-       integer :: i,j,l,errcode,ierr
+       integer :: i,j,l
 
        frac=0.0d0
        order_frac=-1.0d0
@@ -255,12 +255,11 @@
 
 !--------------------------------------------
 !--------------------------------------------
-       subroutine serial_paratemp(state,label,nup,ndown,nstart,Nsuccess,n_thousand, &
-      & kt_saved,image_temp,E_temp,N_temp,isize,kt_all)
+       subroutine serial_paratemp(state,label,nup,ndown,nstart,Nsuccess,kt_saved,image_temp,E_temp,isize,kt_all)
        use m_constants, only : k_B
        use mtprng
        implicit none
-       integer, intent(in) :: nstart,n_thousand,N_temp,isize
+       integer, intent(in) :: nstart,isize
        real(kind=8), intent(in) :: kt_saved(:),kt_all(:)
        integer, intent(inout) :: image_temp(:)
        real(kind=8), intent(inout) :: nup(:),ndown(:)
@@ -268,11 +267,11 @@
        real(kind=8), intent(inout) :: E_temp(:)
        type(mtprng_state), intent(inout) :: state
 !      internals
-       integer :: iin,iii
+       integer :: iii
        real(kind=8) :: choice,delta
-       real(kind=8) :: kTn,kti,Ei,En,success,kt
+       real(kind=8) :: kTn,kti,Ei,En
        logical :: accept
-       integer :: i,l,j,i_low,i_high,Ntemp,i_image,i_start
+       integer :: i,i_image,i_start
 
 
        accept=.False.

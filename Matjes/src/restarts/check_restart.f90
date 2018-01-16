@@ -26,7 +26,6 @@
     logical, intent(inout) :: i_test
 ! internal
     character(len=50) :: name_int
-    integer :: i
 
     name_int=trim(fname)
 

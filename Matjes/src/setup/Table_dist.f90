@@ -3,6 +3,7 @@
          module procedure Tdist_basic
          module procedure Tdist_SL
         end interface Tdist
+
         interface Tdir
          module procedure Tdir_basic
         end interface Tdir
@@ -16,26 +17,26 @@
 !1 atom per unit cell
 !no supercell
 !
-       subroutine Tdist_basic(r,k,N,phase,motif,tabledist)
+       subroutine Tdist_basic(r,k,N,motif,tabledist)
        use m_derived_types, only : cell
        use m_vector , only : norm
        implicit none
-       integer, intent(in) :: k,N(:),phase
+       integer, intent(in) :: k,N(:)
 !       real (kind=8) :: Tdist(k,phase)
 ! input variable
        real (kind=8), intent(in) :: r(3,3)
        type (cell), intent(in) :: motif
 !dummy variable
-       integer :: i,j,l,m,pos_min,nop,nip,nmag
+       integer :: j,m,pos_min,nmag
        real (kind=8) :: u,v,w,minimum,test_vec(3)
 ! allocation of the output data
        real(kind=8), intent(inout) :: tabledist(:)
 ! dummy results
-       real(kind=8) :: res((k+1)**size(N)*count(motif%i_m))
+       real(kind=8) :: res((k+1)**size(N)*count(motif%i_mom))
 !        real(kind=8):: res(36)
 
 
-       nmag=count(motif%i_m)
+       nmag=count(motif%i_mom)
 
        res=0.0d0
        test_vec=0.0d0
@@ -129,18 +130,18 @@
 ! allocation of the output data
        real(kind=8), intent(inout) :: tabledist(:,:)
 ! dummy results
-       real(kind=8) :: res(max(k+1,Nei_z+1,Nei_il+1)**size(N)*count(motif%i_m),phase)
+       real(kind=8) :: res(max(k+1,Nei_z+1,Nei_il+1)**size(N)*count(motif%i_mom),phase)
 
        if (phase.ge.2) then
         if (size(N).eq.1) then
-         nop=count((sum(motif%pos(:,2:3),2).gt.1.0d-8).and.(motif%i_m))
-         nip=count((motif%pos(:,1).lt.1.0d-8).and.(motif%i_m))
+         nop=count((sum(motif%pos(:,2:3),2).gt.1.0d-8).and.(motif%i_mom))
+         nip=count((motif%pos(:,1).lt.1.0d-8).and.(motif%i_mom))
         else
-         nop=count((motif%pos(:,3).gt.1.0d-8).and.(motif%i_m))
-         nip=count((motif%pos(:,3).lt.1.0d-8).and.(motif%i_m))
+         nop=count((motif%pos(:,3).gt.1.0d-8).and.(motif%i_mom))
+         nip=count((motif%pos(:,3).lt.1.0d-8).and.(motif%i_mom))
         endif
        else
-        nmag=count(motif%i_m)
+        nmag=count(motif%i_mom)
        endif
 
        res=0.0d0
@@ -164,8 +165,8 @@
         do while (int(u).le.boundary)
          if (phase.eq.1) then
           j=0
-          do i=1,size(motif%i_m)
-           if (.not.motif%i_m(i)) cycle
+          do i=1,size(motif%i_mom)
+           if (.not.motif%i_mom(i)) cycle
            j=j+1
            res(int(u)*nmag+j,1)= &
             norm(r(1,:)*(u+motif%pos(i,1))+r(2,:)*motif%pos(2,1)+r(2,:)*motif%pos(3,1))
@@ -173,8 +174,8 @@
           else
            j=0
            l=0
-           do i=1,size(motif%i_m)
-            if (.not.motif%i_m(i)) cycle
+           do i=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i)) cycle
             if (abs(sum(motif%pos(i,2:3))).gt.1.0d-8) then
              j=j+1
              res(int(u)*nop+j,2)= &
@@ -197,8 +198,8 @@
          do while (int(v).le.boundary)
           if (phase.eq.1) then
           j=0
-           do i=1,size(motif%i_m)
-            if (.not.motif%i_m(i)) cycle
+           do i=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i)) cycle
             j=j+1
             res(int(u)*nmag*max(k,Nei_z)+int(v)*nmag+j,1)= &
             norm(r(1,:)*(u+motif%pos(i,1))+r(2,:)*(v+motif%pos(i,2))+r(3,:)*motif%pos(i,3))
@@ -207,8 +208,8 @@
            else
            j=0
            l=0
-           do i=1,size(motif%i_m)
-            if (.not.motif%i_m(i)) cycle
+           do i=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i)) cycle
             if (abs(motif%pos(i,3)).gt.0.0d0) then
              j=j+1
              res(int(u)*nop*boundary+int(v)*nop+j,2)= &
@@ -237,16 +238,16 @@
           do while (int(w).le.boundary)
           if (phase.eq.1) then
           j=0
-           do i=1,size(motif%i_m)
-            if (.not.motif%i_m(i)) cycle
+           do i=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i)) cycle
             j=j+1
             res(int(u)*nmag*boundary**2+int(v)*nmag*boundary+int(w)*nmag+j,1)= &
             norm(r(1,:)*(u+motif%pos(i,1))+r(2,:)*(v+motif%pos(i,2))+r(3,:)*(w+motif%pos(i,3)))
            enddo
            ! phase=2 or 3
            else
-           do i=1,size(motif%i_m)
-            if (.not.motif%i_m(i)) cycle
+           do i=1,size(motif%i_mom)
+            if (.not.motif%i_mom(i)) cycle
             if (abs(motif%pos(i,3)).gt.1.0d-8) then
              j=j+1
              res(j,2)=norm(r(1,:)*(u+motif%pos(i,1))+r(2,:)*(v+motif%pos(i,2))+r(3,:)*(motif%pos(i,3)))
@@ -269,7 +270,7 @@
 ! routine that finds the minimum
 
        do i=1,phase
-       if (count(res(:,i).eq.0).eq.(k+1)**size(N)*count(motif%i_m)) cycle
+       if (count(res(:,i).eq.0).eq.(k+1)**size(N)*count(motif%i_mom)) cycle
        m=1
        minimum=minval(res(:,i),1,mask=(dabs(res(:,i)).gt.1.0d-8))
        tabledist(m,i)=minimum
@@ -301,26 +302,26 @@
 !1 atom per unit cell
 !no supercell
 !
-       subroutine Tdir_basic(r,k,N,phase,motif,tabledir)
+       subroutine Tdir_basic(r,k,N,motif,tabledir)
        use m_derived_types, only : cell
        use m_vector , only : norm
        implicit none
-       integer, intent(in) :: k,N(:),phase
+       integer, intent(in) :: k,N(:)
 !       real (kind=8) :: Tdist(k,phase)
 ! input variable
        real (kind=8), intent(in) :: r(3,3)
        type (cell), intent(in) :: motif
 !dummy variable
-       integer :: i,j,l,m,pos_min,nop,nip,nmag
+       integer :: j,m,pos_min,nmag
        real (kind=8) :: u,v,w,minimum,test_vec(3)
 ! allocation of the output data
        real(kind=8), intent(inout) :: tabledir(:,:)
 ! dummy results
-       real(kind=8) :: res((k+1)**size(N)*count(motif%i_m),4)
+       real(kind=8) :: res((k+1)**size(N)*count(motif%i_mom),4)
 !        real(kind=8):: res(36)
 
 
-       nmag=count(motif%i_m)
+       nmag=count(motif%i_mom)
 
        res=0.0d0
        test_vec=0.0d0

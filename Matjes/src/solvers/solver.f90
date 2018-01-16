@@ -5,6 +5,7 @@
          module procedure integrate_SIB
          module procedure integrate_SIB_NC_ohneT
         end interface integrate
+
         interface minimization
          module procedure euler_minimization
          module procedure euler_o2_minimization
@@ -68,10 +69,10 @@
        if (kt.gt.1.0d-10) then
         Dtemp=damping/(1+damping**2)*kT/sqrt(B(1)**2+B(2)**2+B(3)**2)
         if (stmtemp) then
-         W=(/randist(1,state),randist(1,state),randist(1,state)/)
+         W=(/randist(state),randist(state),randist(state)/)
          steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W))*htor(i_x,i_y,i_z)/maxh
         else
-         W=(/randist(1,state),randist(1,state),randist(1,state)/)
+         W=(/randist(state),randist(state),randist(state)/)
          steptemp=+sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W)
         endif
        endif
@@ -109,7 +110,7 @@
        real(kind=8), intent(inout) :: check(:)
        type(mtprng_state), intent(inout) :: state
        ! dummy
-       real(kind=8) :: Dtemp,W(3),droite(3),dt,denominator,dumy
+       real(kind=8) :: Dtemp,W(3),droite(3),dt,denominator
        real(kind=8) :: step(3),steptor(3),stepadia(3),stepsttor(3),sum_step(3),steptemp(3)
        integer :: v_x,v_y,v_z,v_m
 #ifndef CPP_MPI
@@ -144,10 +145,10 @@
        if (kt.gt.1.0d-10) then
         Dtemp=damping/(1+damping**2)*kT/sqrt(B(1)**2+B(2)**2+B(3)**2)
         if (stmtemp) then
-         W=(/randist(1,state),randist(1,state),randist(1,state)/)
+         W=(/randist(state),randist(state),randist(state)/)
          steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W))*htor(i_x,i_y,i_z)/maxh
         else
-         W=(/randist(1,state),randist(1,state),randist(1,state)/)
+         W=(/randist(state),randist(state),randist(state)/)
          steptemp=sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W)
         endif
        endif
@@ -229,7 +230,7 @@
 ! ----------------------------------------------
 ! SIB integration scheme for predicator. norm conserving
        function integrate_SIB_NC_ohneT(timestep,spin1,B,damping, &
-      & i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)
+      & i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)
        use m_constants, only : hbar
        use m_randist
        use m_dynamic, only : htor
@@ -242,11 +243,11 @@
        implicit none
        real(kind=8) :: integrate_SIB_NC_ohneT(3)
        real(kind=8), intent(in) :: timestep,B(:),spin1(:),damping,torque_FL,torque_AFL,adia, &
-      & nonadia,storque,maxh,Ipol(:),spin(:,:,:,:,:)
+      & nonadia,storque,Ipol(:),spin(:,:,:,:,:)
        integer, intent(in) :: i_x,i_y,i_z,i_m
        logical, intent(in) :: i_torque,stmtorque
        ! dummy
-       real(kind=8) :: sum_step(3),droite(3),denominator,dumy
+       real(kind=8) :: sum_step(3),droite(3),denominator
        real(kind=8) :: step(3),steptor(3),stepadia(3),stepsttor(3),dt
        integer :: v_x,v_y,v_z,v_m
 #ifndef CPP_MPI
@@ -329,7 +330,7 @@
        logical, intent(in) :: stmtemp,i_torque,stmtorque
        !dummy
        real(kind=8) :: spinfin(3),steptemp(3),step(3),steptor(3),stepadia(3),stepsttor(3),stepdamp(3),spini(3)
-       real(kind=8) :: norm,dt,ds(3),norm_b,B_norm(3),norm_S,S_norm(3),T_norm,dotp_SB
+       real(kind=8) :: dt,ds(3),norm_b,B_norm(3),norm_S,S_norm(3),T_norm,dotp_SB
        integer :: v_x,v_y,v_z,v_m
        integer :: X,Y,Z
 

@@ -147,14 +147,13 @@
 
       end function Bdm
 !!! Anisotropy field
-      function Bani(i_x,i_y,i_z,i_m,axis,spin,shape_spin,masque,shape_masque)
+      function Bani(i_x,i_y,i_z,i_m,axis,spin,shape_spin)
       use m_parameters, only : EA,c_ani,D_ani
       use m_vector, only : norm
       implicit none
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
-      integer, intent(in) :: shape_spin(5),shape_masque(4)
-      integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
+      integer, intent(in) :: shape_spin(5)
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
       real(kind=8) , intent(in) :: axis(3)
 ! value of the function
@@ -230,15 +229,17 @@
 ! ipuv is the corner along the diagonal u+v for k=3,6...
 ! ipu is along the first vector for k=1,4...
 ! ipv along the second k=2,5...
-      function Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque)
-      use m_parameters, only : c_Ki,K_1,Periodic_log
+      function Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
+      use m_parameters, only : c_Ki,K_1
       use m_sym_utils, only : corners
+      use m_derived_types
       implicit none
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
       integer, intent(in) :: shape_spin(5),shape_masque(4)
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      type(lattice), intent(in) :: my_lattice
 ! value of the function
       real(kind=8), dimension(3) :: Bfour
 ! coordinate of the spin
@@ -246,6 +247,9 @@
 ! internal variable
       real(kind=8), dimension(3) :: B_int,B_local
       integer :: k,ipu(3),ipv(3),ipuv(3)
+      logical :: Periodic_log(3)
+
+      Periodic_log=my_lattice%boundary
       B_int=0.0d0
       X=shape_spin(1)-3
       Y=shape_spin(1)-2
@@ -397,7 +401,6 @@
 ! Dipole Dipole interaction
       function Bdip(i_x,i_y,i_z,i_m,spin,shape_spin)
       use m_constants, only : pi
-      use m_parameters, only : periodic_log
       use m_vector, only : norm
       implicit none
 ! value of the function
@@ -407,7 +410,7 @@
       integer, intent(in) :: shape_spin(5)
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
 ! internal variable
-      integer :: j,i,j_x,j_y,j_z,j_m,nmag
+      integer :: j_x,j_y,j_z,j_m,nmag
       real(kind=8) :: rc(3),step(3),ss
       real(kind=8), parameter :: alpha=6.74582d-7
 

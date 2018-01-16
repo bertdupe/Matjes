@@ -1,9 +1,10 @@
-      subroutine field_sd(j,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext)
+      subroutine field_sd(j,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
       use m_fieldeff
-      use m_parameters, only : i_DM,i_biq,i_four,i_dip,EA,Periodic_log
+      use m_parameters, only : i_DM,i_biq,i_four,i_dip,EA
       use m_constants, only : pi
       use m_vector, only : norm,cross
       use m_dynamic, only : Ipol,torque_FL,torque_AFL
+      use m_derived_types
       implicit none
 
 ! Routine that calculates the Torque, the Energy and the force ensity fields
@@ -20,14 +21,18 @@
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)),h_ext(3)
+      type(lattice), intent(in) :: my_lattice
+
       real(kind=8), dimension(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5)) :: map_field,map_Tfield
-      integer :: iomp,i_x,i_y,i_z,i_m,k,i
+      integer :: i_x,i_y,i_z,i_m,i
       character(len=30) :: fname,toto
+      logical :: Periodic_log(3)
 !povray stuff
       real(kind=8) :: anglx,anglz,phi_color,widthc,Delta,Rc,Gc,Bc,dumy,max_force,max_Tforce
       real(kind=8) :: steptor(3),force(3),dmdr(3,3),f_in(3),f_ext(3),Torque_in(3),Torque_ext(3)
       integer :: ipu,ipv
 
+      Periodic_log=my_lattice%boundary
       max_force=0.0d0
       widthc=5.0d0
       Delta =PI(2.0d0/3.0d0)
@@ -56,11 +61,11 @@
 
         map_field(1:3,i_x,i_y,i_z,i_m)=Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN) &
    &     +BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext) &
-   &     +Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque,shape_masque) &
+   &     +Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin) &
    &     +efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
         if (i_DM) map_field(1:3,i_x,i_y,i_z,i_m)=map_field(1:3,i_x,i_y,i_z,i_m)+Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
         if (i_biq) map_field(1:3,i_x,i_y,i_z,i_m)=map_field(1:3,i_x,i_y,i_z,i_m)+Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-        if (i_four) map_field(1:3,i_x,i_y,i_z,i_m)=map_field(1:3,i_x,i_y,i_z,i_m)+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque)
+        if (i_four) map_field(1:3,i_x,i_y,i_z,i_m)=map_field(1:3,i_x,i_y,i_z,i_m)+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
         if (i_dip) map_field(1:3,i_x,i_y,i_z,i_m)=map_field(1:3,i_x,i_y,i_z,i_m)+Bdip(i_x,i_y,i_z,i_m,spin,shape_spin)
         if (norm(map_field(1:3,i_x,i_y,i_z,i_m)).gt.max_force) max_force=norm(map_field(1:3,i_x,i_y,i_z,i_m))
 
@@ -68,10 +73,10 @@
         if (norm(map_Tfield(1:3,i_x,i_y,i_z,i_m)).gt.max_Tforce) max_force=norm(map_Tfield(1:3,i_x,i_y,i_z,i_m))
 
         write(72,'(26(E20.10,2x))') Spin(1:6,i_x,i_y,i_z,i_m),Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN) &
-    &     ,BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext),Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque,shape_masque) &
+    &     ,BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext),Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin) &
     &     ,Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN), &
     &      dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)), &
-    &      dot_product(Spin(4:6,i_x,i_y,i_z,i_m),BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)),dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin,masque,shape_masque)), &
+    &      dot_product(Spin(4:6,i_x,i_y,i_z,i_m),BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)),dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)), &
     &      dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)),torque_FL*steptor, &
     &      torque_FL*torque_AFL*cross(steptor,spin(4:6,i_x,i_y,i_z,i_m))
 
