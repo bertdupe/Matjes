@@ -10,7 +10,3 @@ FFLAGS= -O0 -g -fcheck=all -Wall -Werror -fbacktrace -ffpe-trap=invalid,overflow
 
 CPPS= -DCPP_MRG -DCPP_BRUTDIP
 
-<<<<<<< HEAD
-=======
-INCS=-I/usr/include
->>>>>>> origin/Bertrand

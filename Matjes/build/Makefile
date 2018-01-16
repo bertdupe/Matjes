@@ -2,11 +2,9 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-<<<<<<< HEAD
-OBJS = pimc.o Beff_sd.o choosespin.o Torana.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
-=======
-OBJS = solver.o setup-Hamiltonian.o rw_motif.o check_inputs.o tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
->>>>>>> origin/Bertrand
+OBJS = simu-parameters.o \
+ io_files_utils.o io_utils.o solver.o setup-Hamiltonian.o rw_motif.o check_inputs.o \
+ tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
  MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o rw_skyrmion.o \
  create_lattice.o   fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o \
@@ -16,7 +14,9 @@ OBJS = solver.o setup-Hamiltonian.o rw_motif.o check_inputs.o tightbinding.o Bef
  setup-simu.o field_sd.o arrange_neihg.o mapping.o indexation.o order_lattice.o user_def_struct.o qorien.o \
  stdtypes.o error_correction_sd.o Efield_sd.o error.o setup_zdir.o structure.o rw_efield.o \
  rw_zdir.o gneb.o minimize.o MonteCarlo.o check_restart.o store_relaxation.o gneb_utils.o \
- initialize_temperature.o cal_local_energy.o welcome.o parallel_tempering.o paratemp.o field-eff_sd.o mpi_prop.o
+ initialize_temperature.o cal_local_energy.o welcome.o parallel_tempering.o paratemp.o field-eff_sd.o mpi_prop.o \
+ initial-configuration.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o get-position.o \
+ IO-modes.o
 
 Matjes: $(OBJS)
 	$(LD) -o $@ $^ $(LDFLAGS) $(LIBRARIES)
@@ -43,15 +43,21 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
-<<<<<<< HEAD
-pimc.o: mtprng.o
-structure.o:
-=======
+IO-modes.o: derived_types.o
+get-position.o: derived_types.o
+init-DW.o:
+init-skyrmions.o: io-utils.o vector.o constant.o create-lattice.o
+init-Sk-lattice.o: vector.o init-skyrmions.o
+init-heavyside.o:
+init-spiral.o: vector.o get-position.o io-utils.o
+initial-configuration.o: init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o io-utils.o
+simu-parameters.o:
+io_files_utils.o: derived_types.o
+io_utils.o: derived_types.o simu-parameters.o vector.o
 setup-Hamiltonian.o: derived_types.o inp_rw.o
 rw_motif.o: derived_types.o structure.o vector.o
 check_inputs.o:
 structure.o: vector.o
->>>>>>> origin/Bertrand
 gauge_util.o:
 entropic.o: cal_local_energy.o relaxationtype.o sampling.o
 mpi_prop.o:
@@ -83,7 +89,7 @@ DM_vector.o: main.o
 topocharge_sd.o: vector.o rw_lattice.o create_lattice.o constant.o inp_rw.o create_lattice.o
 coordinatesv4.o: rw_lattice.o create_lattice.o gauge_util.o
 sampling.o: vector.o
-InitSpin.o: create_lattice.o derived_types.o rw_lattice.o order_lattice.o mtprng.o
+InitSpin.o: IO-modes.o get-position.o create_lattice.o derived_types.o rw_lattice.o order_lattice.o mtprng.o
 createSpinFile.o: rw_lattice.o constant.o inp_rw.o
 computeDM.o: main.o
 field_sd.o: rw_lattice.o create_lattice.o
@@ -134,7 +140,7 @@ qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
 CalculateAverages.o: vector.o rw_lattice.o create_lattice.o topocharge_all.o
-main.o: welcome.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o check_inputs.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: init-variables.o welcome.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o check_inputs.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 error_correction_SD.o: create_lattice.o solver.o vector.o constant.o inp_rw.o derived_types.o
