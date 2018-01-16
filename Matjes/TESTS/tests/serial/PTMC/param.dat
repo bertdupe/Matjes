@@ -1,0 +1,16 @@
+#
+#Nx=             20   Ny=             20   Nz=              1
+#Total MC steps for the average (MC_Steps=)             10
+#Number of calculated Temperatures (n_TSteps=)   40
+#External magnetic field     0.00000     0.00000     0.00000
+#Temperature range:   1.00000  -  61.00000
+#with periodic boundary condition
+#Nb of steps for the fetching               1
+#Autocorrelation Time         20
+#Exchange Interactions Jij
+#Exchange Interactions J_il (if necessary)
+#anisotropy   0.0000005   0.0000000   0.0000000
+#easy axis 0.00 0.00 1.00
+#cone     1.0000000
+#C_jij=-1.000   C_Ki=-1.000   C_DM=-1.000
+#C_JB=-1.000   C_ani= 1.000
