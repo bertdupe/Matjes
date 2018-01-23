@@ -23,7 +23,6 @@
       if (i_dm) E(5)=total_DMenergy(spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index)
       if (i_biq) E(6)=total_biquadratic(spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index)
 #ifdef CPP_BRUTDIP
-      write(*,*) i_dip
       if (i_dip) E(7)=total_dipole(spin,shape_spin)
 #else
       if (i_dip) E(7)=total_fftdip()
