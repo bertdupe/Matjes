@@ -214,6 +214,7 @@
               my_simu%i_gneb=.True.
             case ("parallelte")
               my_simu%i_paratemp=.True.
+              i_separate=.True.
             case ("minimizati")
               my_simu%i_minimization=.True.
             case ("pimc")
