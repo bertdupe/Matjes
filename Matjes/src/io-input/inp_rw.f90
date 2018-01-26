@@ -214,6 +214,7 @@
               my_simu%i_gneb=.True.
             case ("parallelte")
               my_simu%i_paratemp=.True.
+              i_separate=.True.
             case ("minimizati")
               my_simu%i_minimization=.True.
             case ("pimc")
@@ -258,7 +259,7 @@
 #endif
            endif
          endif
-        if (my_simu%i_paratemp.or.(str(1:11) == 'print_relax')) then
+        if ((str(1:11) == 'print_relax')) then
          backspace(io)
          read(io,*) dummy, print_relax
         endif
