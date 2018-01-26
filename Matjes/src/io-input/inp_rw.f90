@@ -259,7 +259,7 @@
 #endif
            endif
          endif
-        if (my_simu%i_paratemp.or.(str(1:11) == 'print_relax')) then
+        if ((str(1:11) == 'print_relax')) then
          backspace(io)
          read(io,*) dummy, print_relax
         endif
