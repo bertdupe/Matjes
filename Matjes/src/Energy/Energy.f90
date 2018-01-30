@@ -109,12 +109,13 @@
       end function Exchange
 
 !Zeeman energy
-      real(kind=8) function Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,H_ext,mu_B)
+      real(kind=8) function Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,H_ext,mu_S)
+      use m_constants, only : mu_B
       implicit none
 ! input
       integer, intent(in) :: shape_spin(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      real(kind=8), intent(in) ::H_ext(:),mu_B
+      real(kind=8), intent(in) ::H_ext(:),mu_S
       integer, intent(in) :: masque(:,:,:,:)
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -126,8 +127,8 @@
       Z=shape_spin(1)-1
       M=shape_spin(1)
 
-      Zeeman=-mu_B*(H_ext(1)*Spin(X,i_x,i_y,i_z,i_m)+H_ext(2)*Spin(Y,i_x,i_y,i_z,i_m)+&
-      H_ext(3)*Spin(Z,i_x,i_y,i_z,i_m))*Spin(M,i_x,i_y,i_z,i_m)*dble(masque(1,i_x,i_y,i_z))
+      Zeeman=-mu_B*mu_S(H_ext(1)*Spin(X,i_x,i_y,i_z,i_m)+H_ext(2)*Spin(Y,i_x,i_y,i_z,i_m)+&
+      H_ext(3)*Spin(Z,i_x,i_y,i_z,i_m))*dble(masque(1,i_x,i_y,i_z))
 
       end function Zeeman
 
