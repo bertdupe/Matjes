@@ -342,9 +342,9 @@
        steptor=0.0d0
        stepadia=0.0d0
        stepsttor=0.0d0
-       X=shape_spin(1)-2
-       Y=shape_spin(1)-1
-       Z=shape_spin(1)-0
+       X=shape_spin(1)-3
+       Y=shape_spin(1)-2
+       Z=shape_spin(1)-1
        spini=spin(X:Z,i_x,i_y,i_z,i_m)
        stepdamp=0.0d0
 
