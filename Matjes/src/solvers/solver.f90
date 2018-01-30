@@ -311,103 +311,160 @@
 
        end function integrate_SIB_NC_ohneT
 
-! ----------------------------------------------
-! Euler integration scheme
-       function simple(timestep,B,kt,stmtemp,maxh,i_x,i_y,i_z,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia, &
-      & storque,i_torque,stmtorque,spin,shape_spin,tableNN)
-       use m_constants, only : hbar
-       use m_randist
-       use m_vector, only : cross
-       use m_dynamic, only : htor
-       implicit none
-       real(kind=8) :: simple(3)
-       integer, intent(in) :: tableNN(:,:,:,:,:,:),shape_spin(:)
-       real(kind=8), intent(in) :: timestep,B(:),kt,maxh,spin(:,:,:,:,:)
-       real(kind=8), intent(in) :: damping,torque_FL,torque_AFL,adia,nonadia,storque
-       real(kind=8), intent(in) :: Ipol(:)
-       integer, intent(in) :: i_x,i_y,i_z,i_m
-       logical, intent(in) :: stmtemp,i_torque,stmtorque
-       !dummy
-       real(kind=8) :: spinfin(3),steptemp(3),step(3),steptor(3),stepadia(3),stepsttor(3),stepdamp(3),spini(3)
-       real(kind=8) :: norm,dt,ds(3),norm_b,B_norm(3),norm_S,S_norm(3),T_norm,dotp_SB
-       integer :: v_x,v_y,v_z,v_m
-       integer :: X,Y,Z
 
-       steptemp=0.0d0
-       dt=timestep/hbar/(1+damping**2)
-       simple=0.0d0
-       step=0.0d0
-       steptor=0.0d0
-       stepadia=0.0d0
-       stepsttor=0.0d0
-       X=shape_spin(1)-3
-       Y=shape_spin(1)-2
-       Z=shape_spin(1)-1
-       spini=spin(X:Z,i_x,i_y,i_z,i_m)
-       stepdamp=0.0d0
+Last login: Tue Jan 30 12:17:47 on ttys007
+eduroam-103-137:Matjes Bertrand$ 
+eduroam-103-137:Matjes Bertrand$ 
+eduroam-103-137:Matjes Bertrand$ ls
+HPC-scripts	Imakefile	Makefile	Makefiles	TESTS		build		make.sys	src
+Imake.tmpl	Libraries	Makefile-mpi	Movies-script	bin		inputs		operators	utils
+eduroam-103-137:Matjes Bertrand$ cd ..
+eduroam-103-137:Matjes-master Bertrand$ ls
+Matjes
+eduroam-103-137:Matjes-master Bertrand$ cd ..
+eduroam-103-137:code Bertrand$ ls
+Matjes-master
+eduroam-103-137:code Bertrand$ cd ..
+eduroam-103-137:Ulli Bertrand$ ls
+Bertrand	Bertrand.zip	code		test
+eduroam-103-137:Ulli Bertrand$ cd ..
+eduroam-103-137:test Bertrand$ ls
+B_xc		Ulli		input		monolayer	multilayer	random
+eduroam-103-137:test Bertrand$ cd ..
+eduroam-103-137:~ Bertrand$ ls
+Creative Cloud Files	Dropbox (INSPIRE)	Movies			git			zdv-shared
+Desktop			Dropbox (Personnelle)	Music			old-Matjes
+Documents		Google Drive		Pictures		oregistry
+Downloads		Library			Public			program
+Dropbox			Matjes			bin			test
+eduroam-103-137:~ Bertrand$ 
+eduroam-103-137:~ Bertrand$ 
+eduroam-103-137:~ Bertrand$ 
+eduroam-103-137:~ Bertrand$ ls
+Creative Cloud Files	Dropbox (INSPIRE)	Movies			git			zdv-shared
+Desktop			Dropbox (Personnelle)	Music			old-Matjes
+Documents		Google Drive		Pictures		oregistry
+Downloads		Library			Public			program
+Dropbox			Matjes			bin			test
+eduroam-103-137:~ Bertrand$ cd git/
+eduroam-103-137:git Bertrand$ ls
+MC-spyndin	Makefile	Matjes		fleur-v26d
+eduroam-103-137:git Bertrand$ cd MC-spyndin/
+eduroam-103-137:MC-spyndin Bertrand$ ls
+CalculateAverages.f90		check_restart.f90		make_box.f90			setup_neigh.f90
+Correlation.f90			constant.f90			manual				setup_zdir.f90
+CreateSpinFile.f90		coordinatesv4.f90		mapping.f90			solver.f90
+CreationDestructionSkyrmion.f90	create_lattice.f90		minimize.F90			spin
+DeriveValue.f90			demag-matrix.f90		movie-script			spindynamics.f90
+Efield_sd.f90			demag-tensor.f90		mpi_gatherorsend.f90		split_work.f90
+Energy.f90			derived_types.f90		mpi_prop.f90			spstm.F90
+Energy_density.f90		dispBZ.f90			mtprng.f90			stdtypes.f90
+Imake.tmpl			error.f90			order_lattice.f90		store_relaxation.f90
+Imakefile			error_correction_SD.f90		parallel_tempering.f90		structure.f90
+InitSpin.f90			fft.F90				paratemp.f90			sym_utils.f90
+MC_fft.f90			field-eff.f90			qorien.f90			tests
+MC_transfer.f90			field_sd.f90			qorienplot.f90			topocharge.f90
+MCstep.f90			fit.f90				randist.f90			topocharge_all.f90
+Makefile			gauge_util.f90			randperm.f90			topocharge_local.f90
+MonteCarlo.f90			gneb.f90			reconstruct-matrix.f90		topocharge_sd.f90
+Relaxation.f90			gneb_utils.f90			relaxationtype.f90		topohall.f90
+SignatureFile.f90		indexation.f90			rw_dyna.f90			topoplot.f90
+SkX_utils.f90			init_rand_seed.f		rw_efield.f90			total_Energy.f90
+Table_dist.f90			initialize_temperature.f90	rw_lattice.f90			user_def_struct.f90
+WriteSpinAndCorrFile.f90	inp_rw.f90			rw_skyrmion.f90			utils
+archive				inputs				rw_zdir.f90			vector.f90
+arrange_neihg.f90		interface-fft.f90		sampling.f90			welcome.f90
+av_dynamics.f90			interface-mpi.f90		setup-simu.f90			write_EM.f90
+cal_local_energy.f90		job-script			setup_DM.f90
+calculate_Beff.f90		main.f90			setup_dipole.F90
+eduroam-103-137:MC-spyndin Bertrand$ less solver.f90 
+eduroam-103-137:MC-spyndin Bertrand$ 
+eduroam-103-137:MC-spyndin Bertrand$ 
+eduroam-103-137:MC-spyndin Bertrand$ 
+eduroam-103-137:MC-spyndin Bertrand$ ls
+CalculateAverages.f90		check_restart.f90		make_box.f90			setup_neigh.f90
+Correlation.f90			constant.f90			manual				setup_zdir.f90
+CreateSpinFile.f90		coordinatesv4.f90		mapping.f90			solver.f90
+CreationDestructionSkyrmion.f90	create_lattice.f90		minimize.F90			spin
+DeriveValue.f90			demag-matrix.f90		movie-script			spindynamics.f90
+Efield_sd.f90			demag-tensor.f90		mpi_gatherorsend.f90		split_work.f90
+Energy.f90			derived_types.f90		mpi_prop.f90			spstm.F90
+Energy_density.f90		dispBZ.f90			mtprng.f90			stdtypes.f90
+Imake.tmpl			error.f90			order_lattice.f90		store_relaxation.f90
+Imakefile			error_correction_SD.f90		parallel_tempering.f90		structure.f90
+InitSpin.f90			fft.F90				paratemp.f90			sym_utils.f90
+MC_fft.f90			field-eff.f90			qorien.f90			tests
+MC_transfer.f90			field_sd.f90			qorienplot.f90			topocharge.f90
+MCstep.f90			fit.f90				randist.f90			topocharge_all.f90
+Makefile			gauge_util.f90			randperm.f90			topocharge_local.f90
+MonteCarlo.f90			gneb.f90			reconstruct-matrix.f90		topocharge_sd.f90
+Relaxation.f90			gneb_utils.f90			relaxationtype.f90		topohall.f90
+SignatureFile.f90		indexation.f90			rw_dyna.f90			topoplot.f90
+SkX_utils.f90			init_rand_seed.f		rw_efield.f90			total_Energy.f90
+Table_dist.f90			initialize_temperature.f90	rw_lattice.f90			user_def_struct.f90
+WriteSpinAndCorrFile.f90	inp_rw.f90			rw_skyrmion.f90			utils
+archive				inputs				rw_zdir.f90			vector.f90
+arrange_neihg.f90		interface-fft.f90		sampling.f90			welcome.f90
+av_dynamics.f90			interface-mpi.f90		setup-simu.f90			write_EM.f90
+cal_local_energy.f90		job-script			setup_DM.f90
+calculate_Beff.f90		main.f90			setup_dipole.F90
+eduroam-103-137:MC-spyndin Bertrand$ cd ..
+eduroam-103-137:git Bertrand$ ls
+MC-spyndin	Makefile	Matjes		fleur-v26d
+eduroam-103-137:git Bertrand$ cd Ma
+-bash: cd: Ma: No such file or directory
+eduroam-103-137:git Bertrand$ cd Matjes/
+eduroam-103-137:Matjes Bertrand$ ls
+eduroam-103-137:Matjes Bertrand$ cd ..
+eduroam-103-137:git Bertrand$ ls
+MC-spyndin	Makefile	Matjes		fleur-v26d
+eduroam-103-137:git Bertrand$ cd ..
+eduroam-103-137:~ Bertrand$ ls
+Creative Cloud Files	Dropbox (INSPIRE)	Movies			git			zdv-shared
+Desktop			Dropbox (Personnelle)	Music			old-Matjes
+Documents		Google Drive		Pictures		oregistry
+Downloads		Library			Public			program
+Dropbox			Matjes			bin			test
+eduroam-103-137:~ Bertrand$ cd Matjes/
+eduroam-103-137:Matjes Bertrand$ ls
+Matjes
+eduroam-103-137:Matjes Bertrand$ cd Matjes/
+eduroam-103-137:Matjes Bertrand$ ls
+HPC-scripts	Imakefile	Makefile	Makefiles	TESTS		build		make.sys	src
+Imake.tmpl	Libraries	Makefile-mpi	Movies-script	bin		inputs		operators	utils
+eduroam-103-137:Matjes Bertrand$ cd src/
+eduroam-103-137:src Bertrand$ ls
+Energy			Imake.tmpl		Sparselib		main.f90		solvers
+GNEB			Imakefile		class-transport		parallelization		stdtypes.f90
+IO-input		Makefile		dynamics		random-numbers		tight-binding
+IO-ouputs		MonteCarlo		fixed-parameters	restarts		utilities
+IO-utils		PIMC			initialization		setup			welcome.f90
+eduroam-103-137:src Bertrand$ cd solvers/
+eduroam-103-137:solvers Bertrand$ ls
+solver.f90
+eduroam-103-137:solvers Bertrand$ less solver.f90 
 
-       if (kt.gt.1.0d-10) then
-        if (stmtemp) then
-         steptemp=cross(spini,(/randist(kt),randist(kt),randist(kt)/))*htor(i_x,i_y,i_z)/maxh
-        else
-         steptemp=cross(spini,(/randist(kt),randist(kt),randist(kt)/))
-        endif
-       endif
 
        v_x=tableNN(1,1,i_x,i_y,i_z,i_m)
        v_y=tableNN(2,1,i_x,i_y,i_z,i_m)
        v_z=tableNN(3,1,i_x,i_y,i_z,i_m)
        v_m=tableNN(4,1,i_x,i_y,i_z,i_m)
 
-! This part might look unnecessary but it is actually very very important
-! in order to stabilize the solver.
-! The problem comes from the small error that occurs when B and S are almost parallel.
-! Since the torque is only sensitive to S-B/|B| the numerical error becomes significant in case
-! of non-colinear spin structures because of the exchange actually.
-
-       norm_B=sqrt(B(1)**2+B(2)**2+B(3)**2)
        norm_S=sqrt(spini(1)**2+spini(2)**2+spini(3)**2)
-       dotp_SB=B(1)*spini(1)+B(2)*spini(2)+B(3)*spini(3)
        S_norm=spini/norm_S
 
-       if (norm_B.gt.1.0d-10) then
-        B_norm=B/norm_B
-       else
-        simple=S_norm
-        return
-       endif
-
-       if (damping.gt.0.0d0) then
-        norm_S=sqrt((B_norm(1)-S_norm(1)*dotp_SB)**2+(B_norm(2)-S_norm(2)*dotp_SB)**2+(B_norm(3)-S_norm(3)*dotp_SB)**2)
-        if (norm_S.gt.1.0d-10) then
-         stepdamp=(B_norm-S_norm*dotp_SB)/norm_S
-        else
-         stepdamp=0.0d0
-        endif
-       endif
-
-       T_norm=0.0d0
-
-       if ((B_norm(1)*S_norm(1)+B_norm(2)*S_norm(2)+B_norm(3)*S_norm(3))**2.lt.1.0d0) then
-            T_norm=norm_B*sqrt(1.0d0-(B_norm(1)*S_norm(1)+B_norm(2)*S_norm(2)+B_norm(3)*S_norm(3))**2)
-       else
-            write(6,'(a)') 'Warning: integrator not stable'
-       endif
-
-       if (damping.eq.0.0d0) then
-        step=cross(B_norm,S_norm)
-       else
-        step=cross(S_norm,stepdamp)
-       endif
 
        if (i_torque) steptor=cross(S_norm,Ipol)
-       if (i_torque) stepadia=cross(-spin(4:6,v_x,v_y,v_z,v_m),S_norm)
+       if (i_torque) stepadia=cross(-spin(:,v_x,v_y,v_z,v_m),S_norm)
        if (stmtorque) stepsttor=cross(S_norm,Ipol*htor(i_x,i_y,i_z))
 
-!       ds=step+damping*cross(S_norm,step)+torque*cross(steptor,S_norm)+adia*               &
-!        cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm)+steptemp
+       step=cross(B,S_norm)
 
-       ds=(step+damping*stepdamp)*T_norm+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
+       stepdamp=cross(S_norm,step)
+
+       ds=step+damping*stepdamp
+
+       ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
      &   torque_FL*(torque_AFL+damping)*cross(S_norm,steptor)+adia*       &
      &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm)+steptemp
 
@@ -417,8 +474,6 @@
        simple=spinfin/sqrt(spinfin(1)**2+spinfin(2)**2+spinfin(3)**2)
 
        end function simple
-
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!
