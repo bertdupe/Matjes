@@ -127,7 +127,7 @@
       Z=shape_spin(1)-1
       M=shape_spin(1)
 
-      Zeeman=-mu_B*mu_S(H_ext(1)*Spin(X,i_x,i_y,i_z,i_m)+H_ext(2)*Spin(Y,i_x,i_y,i_z,i_m)+&
+      Zeeman=-mu_B*mu_S*(H_ext(1)*Spin(X,i_x,i_y,i_z,i_m)+H_ext(2)*Spin(Y,i_x,i_y,i_z,i_m)+&
       H_ext(3)*Spin(Z,i_x,i_y,i_z,i_m))*dble(masque(1,i_x,i_y,i_z))
 
       end function Zeeman
