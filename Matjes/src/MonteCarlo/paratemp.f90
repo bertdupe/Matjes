@@ -496,6 +496,10 @@
                  Qm_sq_sum_av_local(k)=Qm_sq_sum_av(i_image)
                  E_sum_av_local(k)=E_sum_av(i_image)
                  E_sq_sum_av_local(k)=E_sq_sum_av(i_image)
+                 
+                 M_sum_av_local(:,k)=M_sum_av(:,i_image)
+                 M_sq_sum_av_local(:,k)=M_sq_sum_av(:,i_image)
+                 vortex_av_local(:,k)=vortex_av(:,i_image)
 
               enddo
           enddo
@@ -513,6 +517,10 @@
         E_sq_sum_av(1:nRepProc)=scatter(E_sq_sum_av_local,nRepProc,isize,0,MPI_COMM)
         label_world(1:nRepProc)=scatter(label_world_local,nRepProc,isize,0,MPI_COMM)
 
+
+        M_sum_av(:,1:nRepProc)=scatter(M_sum_av_local,3,nRepProc,isize,0,MPI_COMM)
+        M_sq_sum_av(:,1:nRepProc)=scatter(M_sq_sum_av_local,3,nRepProc,isize,0,MPI_COMM)
+        vortex_av(:,1:nRepProc)=scatter(vortex_av_local,3,nRepProc,isize,0,MPI_COMM)
 
          kt_updated(nRepProc+1:)=0.0d0
          image_temp(nRepProc+1:)=0
