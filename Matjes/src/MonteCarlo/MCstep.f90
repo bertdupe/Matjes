@@ -212,6 +212,7 @@
 !       Calculate the probability of this flip
          tmp=-DE/kT
          if (DE.lt.0.0d0) tmp=2.0d0
+         if (tmp.lt.-100.0d0) tmp=-100.0d0
         else
          tmp=-100.0d0
 !       Accept the change of the new energy is lower than the old one
