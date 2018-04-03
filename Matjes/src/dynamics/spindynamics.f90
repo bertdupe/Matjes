@@ -355,8 +355,7 @@
 
 ! the temperature is checked with 1 temperature step before
 !!! check temperature
-       check1=check1+sum(cross(spinafter(1:3,i_x,i_y,i_z,i_m),Beff)**2)
-       check2=check2+dot_product(spinafter(1:3,i_x,i_y,i_z,i_m),Beff)
+       call update_temp_measure(check1,check2,spinafter(1:3,i_x,i_y,i_z,i_m),Beff)
        if (norm_cross(spinafter(1:3,i_x,i_y,i_z,i_m),Beff).gt.test_torque) test_torque=norm_cross(spinafter(1:3,i_x,i_y,i_z,i_m),Beff)
 !!! end check
 
@@ -470,8 +469,7 @@
 
 ! the temperature is checked with 1 temperature step before
 !!! check temperature
-       check1=check1+sum(cross(spinafter(1:3,i_x,i_y,i_z,i_m),Beff**2))
-       check2=check2+dot_product(spinafter(1:3,i_x,i_y,i_z,i_m),Beff)
+       call update_temp_measure(check1,check2,spinafter(1:3,i_x,i_y,i_z,i_m),Beff)
        if (norm_cross(spinafter(1:3,i_x,i_y,i_z,i_m),Beff).gt.test_torque) test_torque=norm_cross(spinafter(1:3,i_x,i_y,i_z,i_m),Beff)
 !!! end check
 
@@ -916,8 +914,7 @@
       Edy=Edy/N_cell
       Mdy=Mdy/N_cell
 
-       if (dabs(check(2)).gt.1.0d-8) security(1)=check(1)/check(2)/2.0d0/k_B
-       if (dabs(check(2)).gt.1.0d-8) security(2)=(check(1)/check(2)/2.0d0-kT)/k_B*1000.0d0
+       if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
        if (mod(j-1,gra_freq).eq.0) Write(7,'(18(E20.12E3,2x),E20.12E3)') real_time,Edy, &
      &   norm(Mdy),Mdy,norm(vortex),vortex,qeuler, &
