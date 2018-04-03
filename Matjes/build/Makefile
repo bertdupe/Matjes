@@ -2,7 +2,7 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = pimc.o Beff_sd.o choosespin.o Torana.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
+OBJS = measure_temp.o pimc.o Beff_sd.o choosespin.o Torana.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
  MC_fft.o sampling.o Energy.o SignatureFile.o relaxationtype.o topocharge.o rw_skyrmion.o \
  create_lattice.o   fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o \
@@ -39,6 +39,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+measure_temp.o: vector.o constant.o
 pimc.o: mtprng.o
 structure.o:
 gauge_util.o:
@@ -119,7 +120,7 @@ solver.o: constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
 setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o
-spindynamics.o: av_sd.o Torana.o Efield_sd.o createSpinFile.o error_correction_sd.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
+spindynamics.o: measure_temp.o av_sd.o Torana.o Efield_sd.o createSpinFile.o error_correction_sd.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
 total_Energy.o: vector.o inp_rw.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o
