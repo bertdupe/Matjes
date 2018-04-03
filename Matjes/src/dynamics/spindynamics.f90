@@ -2,6 +2,7 @@
     &   N_cell, &
     &   i_biq,i_dm,i_four,i_dip,gra_topo,gra_log,gra_freq, &
     &   ktini,ktfin,EA,h_ext)
+      use m_measure_temp
       use m_fieldeff
       use m_solver
       use m_dynamic
