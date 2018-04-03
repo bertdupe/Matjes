@@ -20,7 +20,11 @@
 
 !      if (dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2).gt.0.0d0) STOP
 
-      gaussianran=dsqrt(2.0d0*damping*kT)*Choice1*dsqrt(-2.0d0*dlog( &
+!
+! according to the PhD of Schieback (2010) Constanz "Computersimulationen zur Struktur und Dynamik von Domänenwänden"
+!
+
+      gaussianran=dsqrt(2.0d0*damping*kT)*Choice1*dsqrt(-dlog( &
          Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
 
 ! as expressed in Mentink et al J. Phys. C 22, 176001 (2010)
