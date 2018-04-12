@@ -371,7 +371,7 @@
             write(fname2,'(a,14a,a)')'DensityOfEnergy_T_',(toto(i:i),i=1, &
             &  len_trim(toto)),'.dat'
 
-            Call EnergyDensity(fname,fname2,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index)
+            Call EnergyDensity(fname,fname2,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext)
         endif
 
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
