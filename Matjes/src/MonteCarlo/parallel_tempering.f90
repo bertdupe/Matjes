@@ -343,13 +343,13 @@
             Call CalculateAverages(replicas(:,:,:,:,:,i_image),shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system,my_lattice)
 
             Do i_MC=1,autocor_steps*N_cell
-                Call MCStep(state,E_total,E_decompose,Magnetization,kt,Nsuccess,rate,tries,cone,n_system, &
+                Call MCStep(E_total,E_decompose,Magnetization,kt,Nsuccess,rate,tries,cone,n_system, &
             & replicas(:,:,:,:,:,i_image),shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
             & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world,my_lattice)
             enddo
 
 ! In case T_relax set to zero at least one MCstep is done
-            Call MCStep(state,E_total,E_decompose,Magnetization,kt,Nsuccess,rate,tries,cone,n_system, &
+            Call MCStep(E_total,E_decompose,Magnetization,kt,Nsuccess,rate,tries,cone,n_system, &
        & replicas(:,:,:,:,:,i_image),shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
        & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,world)
 
@@ -401,7 +401,7 @@
 #ifdef CPP_MPI
          if (irank_working.eq.0) then
 #endif
-         call paratemp(state,label_world,nup,ndown,i_relax,success_PT,kt_updated,image_temp,E_temp,size_table,kt_all)
+         call paratemp(label_world,nup,ndown,i_relax,success_PT,kt_updated,image_temp,E_temp,size_table,kt_all)
 #ifdef CPP_MPI
          endif
 

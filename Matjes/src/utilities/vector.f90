@@ -1,29 +1,34 @@
-      module m_vector
-      interface norm
+module m_vector
+   interface norm
        module procedure norm_real
        module procedure norm_int
-      end interface norm
-      interface cross
+   end interface norm
+
+   interface cross
        module procedure cross_real
        module procedure cross_int
-      end interface cross
-      interface norm_cross
+   end interface cross
+
+   interface norm_cross
        module procedure norm_cross_real
        module procedure norm_cross_int
-      end interface norm_cross
-      interface distance
+   end interface norm_cross
+
+   interface distance
        module procedure d_1d
        module procedure d_2d
-      end interface distance
-      interface min_dist
+   end interface distance
+
+   interface min_dist
        module procedure one_d_dist
        module procedure min_dist_2D
        module procedure min_dist_3D
-      end interface min_dist
-      interface calculate_damping
+   end interface min_dist
+
+   interface calculate_damping
        module procedure damping_2V
-      end interface calculate_damping
-      contains
+   end interface calculate_damping
+contains
 
 ! ==============================================================
 
@@ -264,94 +269,103 @@
       cross_real(3) = a(1) * b(2) - a(2) * b(1)
       END FUNCTION cross_real
 
-      FUNCTION cross_int(a, b)
-      implicit none
-      real(kind=8), DIMENSION(3) :: cross_int
-      integer, INTENT(IN) :: a(:), b(:)
+FUNCTION cross_int(a, b)
+implicit none
+real(kind=8), DIMENSION(3) :: cross_int
+integer, INTENT(IN) :: a(:), b(:)
 
-      cross_int(1) = dble(a(2) * b(3) - a(3) * b(2))
-      cross_int(2) = dble(a(3) * b(1) - a(1) * b(3))
-      cross_int(3) = dble(a(1) * b(2) - a(2) * b(1))
-      END FUNCTION cross_int
+cross_int(1) = dble(a(2) * b(3) - a(3) * b(2))
+cross_int(2) = dble(a(3) * b(1) - a(1) * b(3))
+cross_int(3) = dble(a(1) * b(2) - a(2) * b(1))
+END FUNCTION cross_int
 
-      real(kind=8) FUNCTION M33DET (A)
-      IMPLICIT NONE
-      real(kind=8), DIMENSION(3,3), INTENT(IN)  :: A
-      real(kind=8) :: DET
+real(kind=8) FUNCTION M33DET (A)
+IMPLICIT NONE
+real(kind=8), DIMENSION(3,3), INTENT(IN)  :: A
+real(kind=8) :: DET
 
-      DET =   A(1,1)*A(2,2)*A(3,3) &
-           - A(1,1)*A(2,3)*A(3,2) &
-           - A(1,2)*A(2,1)*A(3,3) &
-           + A(1,2)*A(2,3)*A(3,1) &
-           + A(1,3)*A(2,1)*A(3,2) &
-           - A(1,3)*A(2,2)*A(3,1)
+DET =   A(1,1)*A(2,2)*A(3,3) &
+       - A(1,1)*A(2,3)*A(3,2) &
+       - A(1,2)*A(2,1)*A(3,3) &
+       + A(1,2)*A(2,3)*A(3,1) &
+       + A(1,3)*A(2,1)*A(3,2) &
+       - A(1,3)*A(2,2)*A(3,1)
 
-      M33DET=DET
-      END FUNCTION M33DET
+M33DET=DET
+END FUNCTION M33DET
 
 ! function used to calculate the topological charge
-      real(kind=8) function area(u0,v0,w0)
-      IMPLICIT NONE
-      real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
-      real(kind=8), DIMENSION(3,3) :: JACNN
-      real(kind=8)  :: pr
-       JACNN(1:3,1)=u0(1:3)
-       JACNN(1:3,2)=v0(1:3)
-       JACNN(1:3,3)=w0(1:3)
-       pr=1.0d0+dot_product(v0,w0)+dot_product(u0,w0)+dot_product(u0,v0)
-       if (abs(pr).lt.1.0d-8) then
-        area=acos(-1.0d0)*sign(1.0d0,pr)*sign(1.0d0,M33DET(JACNN))
-       else
-        area=2.0d0*atan2(M33DET(JACNN),pr)
-       endif
-      end function area
+real(kind=8) function area(u0,v0,w0)
+IMPLICIT NONE
+real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
+real(kind=8), DIMENSION(3,3) :: JACNN
+real(kind=8)  :: pr,n_u0,n_v0,n_w0
+
+area=0.0d0
+
+n_u0=sqrt(u0(1)**2+u0(2)**2+u0(3)**2)
+n_v0=sqrt(v0(1)**2+v0(2)**2+v0(3)**2)
+n_w0=sqrt(w0(1)**2+w0(2)**2+w0(3)**2)
+
+if (n_u0.gt.1.0d-8) JACNN(:,1)=u0/n_u0
+if (n_v0.gt.1.0d-8) JACNN(:,2)=v0/n_v0
+if (n_w0.gt.1.0d-8) JACNN(:,3)=w0/n_w0
+
+pr=1.0d0+dot_product(v0,w0)+dot_product(u0,w0)+dot_product(u0,v0)
+if (abs(pr).lt.1.0d-8) then
+    area=acos(-1.0d0)*sign(1.0d0,pr)*sign(1.0d0,M33DET(JACNN))
+else
+    area=2.0d0*atan2(M33DET(JACNN),pr)
+endif
+end function area
 
 ! function used to TEST the calculation of the topological charge
-      real(kind=8) function area_test(u0,v0,w0)
-      IMPLICIT NONE
-      real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
-      real(kind=8), DIMENSION(3,3) :: JACNN
-      real(kind=8)  :: pr
-       JACNN(1,1:3)=u0(1:3)
-       JACNN(2,1:3)=v0(1:3)
-       JACNN(3,1:3)=w0(1:3)
-       pr=1.0d0+dot_product(v0,w0)+dot_product(u0,w0)+dot_product(u0,v0)
-       if (abs(pr).lt.1.0d-8) then
-        area_test=acos(-1.0d0)*sign(1.0d0,pr)*sign(1.0d0,M33DET(JACNN))
-       else
-        area_test=2.0d0*atan2(M33DET(JACNN),pr)
-       endif
-      end function area_test
+!      real(kind=8) function area_test(u0,v0,w0)
+!      IMPLICIT NONE
+!      real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
+!      real(kind=8), DIMENSION(3,3) :: JACNN
+!      real(kind=8)  :: pr
+!       JACNN(1,1:3)=u0(1:3)
+!       JACNN(2,1:3)=v0(1:3)
+!       JACNN(3,1:3)=w0(1:3)
+!       pr=1.0d0+dot_product(v0,w0)+dot_product(u0,w0)+dot_product(u0,v0)
+!       if (abs(pr).lt.1.0d-8) then
+!        area_test=acos(-1.0d0)*sign(1.0d0,pr)*sign(1.0d0,M33DET(JACNN))
+!       else
+!        area_test=2.0d0*atan2(M33DET(JACNN),pr)
+!       endif
+!      end function area_test
 
-      function sorien(u0,v0,w0)
-      IMPLICIT NONE
-      real(kind=8) :: sorien(3)
-      real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
-      real(kind=8), DIMENSION(3,3) :: JACNN
-      real(kind=8) :: pr
-      real(kind=8) :: dumy(3)
-       dumy=u0+v0+w0
-       JACNN(1,1:3)=u0(1:3)
-       JACNN(2,1:3)=v0(1:3)
-       JACNN(3,1:3)=w0(1:3)
-       pr=1.0d0+dot_product(v0,w0)+dot_product(u0,w0)+dot_product(u0,v0)
-       if (abs(pr).lt.1.0d-8) pr=1.0d0
-       sorien=2.0d0*atan2(M33DET(JACNN),pr)*(u0+v0+w0)/sqrt(dumy(1)**2+dumy(2)**2+dumy(3)**2)
-      end function sorien
+function sorien(u0,v0,w0)
+IMPLICIT NONE
+real(kind=8) :: sorien(3)
+real(kind=8), DIMENSION(3), intent(in) :: u0,v0,w0
+real(kind=8), DIMENSION(3,3) :: JACNN
+real(kind=8) :: pr
+real(kind=8) :: dumy(3)
+
+dumy=u0+v0+w0
+JACNN(1,1:3)=u0(:)
+JACNN(2,1:3)=v0(:)
+JACNN(3,1:3)=w0(:)
+pr=1.0d0+dot_product(v0,w0)+dot_product(u0,w0)+dot_product(u0,v0)
+if (abs(pr).lt.1.0d-8) pr=1.0d0
+sorien=2.0d0*atan2(M33DET(JACNN),pr)*(u0+v0+w0)/sqrt(dumy(1)**2+dumy(2)**2+dumy(3)**2)
+end function sorien
 
 ! ===============================================================
-      real(kind=8) function TripleProduct(U,S,T)
-      Implicit none
+real(kind=8) function TripleProduct(U,S,T)
+Implicit none
 !     Vectors, and result Vector
-      real(kind=8), Dimension(1:3) :: S, T, U
+real(kind=8), Dimension(1:3) :: S, T, U
 
 !      res=0.0d0
 !      res(1)=(S(2)*T(3)-S(3)*T(2))*U(1)
 !      res(2)=(S(3)*T(1)-S(1)*T(3))*U(2)
 !      res(3)=(S(1)*T(2)-S(2)*T(1))*U(3)
 
-      TripleProduct=(S(2)*T(3)-S(3)*T(2))*U(1)+(S(3)*T(1)-S(1)*T(3))*U(2)+(S(1)*T(2)-S(2)*T(1))*U(3)
+TripleProduct=(S(2)*T(3)-S(3)*T(2))*U(1)+(S(3)*T(1)-S(1)*T(3))*U(2)+(S(1)*T(2)-S(2)*T(1))*U(3)
 
-      end function TripleProduct
+end function TripleProduct
 
-      end module m_vector
+end module m_vector

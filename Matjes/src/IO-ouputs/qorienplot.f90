@@ -1,7 +1,6 @@
       integer function qorienplot(map_qorien,my_lattice)
       use m_constants, only : k_b,pi
       use m_lattice, only : spin
-      use m_parameters, only : kt
       use m_derived_types
       implicit none
       real(kind=8), dimension(:,:,:,:), intent(in) :: map_qorien
@@ -18,7 +17,7 @@
 
       write(6,'(a)') 'plot the topological charge'
 
-      write(fname,'(f8.4)')kT/k_B
+!      write(fname,'(f8.4)')kT/k_B
       toto=trim(adjustl(fname))
       write(fname,'(a,18a,a)')'qorienmap',(toto(i:i),i=1, &
        len_trim(toto)),'.dat'

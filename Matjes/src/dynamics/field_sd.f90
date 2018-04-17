@@ -57,7 +57,7 @@
         do i_z=1,shape_spin(4)
          do i_y=1,shape_spin(3)
           do i_x=1,shape_spin(2)
-        steptor=cross(spin(4:6,i_x,i_y,i_z,i_m),Ipol)
+        steptor=cross(spin(:,i_x,i_y,i_z,i_m),Ipol)
 
         map_field(1:3,i_x,i_y,i_z,i_m)=Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN) &
    &     +BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext) &
@@ -69,16 +69,16 @@
         if (i_dip) map_field(1:3,i_x,i_y,i_z,i_m)=map_field(1:3,i_x,i_y,i_z,i_m)+Bdip(i_x,i_y,i_z,i_m,spin,shape_spin)
         if (norm(map_field(1:3,i_x,i_y,i_z,i_m)).gt.max_force) max_force=norm(map_field(1:3,i_x,i_y,i_z,i_m))
 
-           map_Tfield(1:3,i_x,i_y,i_z,i_m)=cross(map_field(1:3,i_x,i_y,i_z,i_m),spin(4:6,i_x,i_y,i_z,i_m))
+           map_Tfield(1:3,i_x,i_y,i_z,i_m)=cross(map_field(1:3,i_x,i_y,i_z,i_m),spin(1:3,i_x,i_y,i_z,i_m))
         if (norm(map_Tfield(1:3,i_x,i_y,i_z,i_m)).gt.max_Tforce) max_force=norm(map_Tfield(1:3,i_x,i_y,i_z,i_m))
 
-        write(72,'(26(E20.10,2x))') Spin(1:6,i_x,i_y,i_z,i_m),Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN) &
+        write(72,'(20(E20.10,2x))') Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN) &
     &     ,BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext),Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin) &
     &     ,Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN), &
-    &      dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)), &
-    &      dot_product(Spin(4:6,i_x,i_y,i_z,i_m),BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)),dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)), &
-    &      dot_product(Spin(4:6,i_x,i_y,i_z,i_m),Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)),torque_FL*steptor, &
-    &      torque_FL*torque_AFL*cross(steptor,spin(4:6,i_x,i_y,i_z,i_m))
+    &      dot_product(Spin(1:3,i_x,i_y,i_z,i_m),Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)), &
+    &      dot_product(Spin(1:3,i_x,i_y,i_z,i_m),BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)),dot_product(Spin(1:3,i_x,i_y,i_z,i_m),Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)), &
+    &      dot_product(Spin(1:3,i_x,i_y,i_z,i_m),Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)),torque_FL*steptor, &
+    &      torque_FL*torque_AFL*cross(steptor,spin(1:3,i_x,i_y,i_z,i_m))
 
           enddo
          enddo
@@ -134,9 +134,9 @@
 
 ! calculations of the Wronskian
 
-        dmdr(:,1)=spin(4:6,ipu,i_y,i_z,i_m)-(dot_product(spin(4:6,ipu,i_y,i_z,i_m),spin(4:6,i_x,i_y,i_z,i_m))*spin(4:6,i_x,i_y,i_z,i_m))
-        dmdr(:,2)=spin(4:6,i_x,ipv,i_z,i_m)-(dot_product(spin(4:6,i_x,ipv,i_z,i_m),spin(4:6,i_x,i_y,i_z,i_m))*spin(4:6,i_x,i_y,i_z,i_m))
-        dmdr(:,3)=spin(4:6,ipu,ipv,i_z,i_m)-(dot_product(spin(4:6,ipu,ipv,i_z,i_m),spin(4:6,i_x,i_y,i_z,i_m))*spin(4:6,i_x,i_y,i_z,i_m))
+        dmdr(:,1)=spin(1:3,ipu,i_y,i_z,i_m)-(dot_product(spin(1:3,ipu,i_y,i_z,i_m),spin(1:3,i_x,i_y,i_z,i_m))*spin(1:3,i_x,i_y,i_z,i_m))
+        dmdr(:,2)=spin(1:3,i_x,ipv,i_z,i_m)-(dot_product(spin(1:3,i_x,ipv,i_z,i_m),spin(1:3,i_x,i_y,i_z,i_m))*spin(1:3,i_x,i_y,i_z,i_m))
+        dmdr(:,3)=spin(1:3,ipu,ipv,i_z,i_m)-(dot_product(spin(1:3,ipu,ipv,i_z,i_m),spin(1:3,i_x,i_y,i_z,i_m))*spin(1:3,i_x,i_y,i_z,i_m))
 
 ! calculations on the internal forces (Exch, ani,Dm...)
 
@@ -150,7 +150,7 @@
 ! calculations on the external forces (Zeeman, Torques...)
 
         Torque_ext=BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)
-        Torque_ext=Torque_ext+cross(spin(4:6,i_x,i_y,i_z,i_m),Ipol)
+        Torque_ext=Torque_ext+cross(spin(1:3,i_x,i_y,i_z,i_m),Ipol)
 
         f_ext(1)=dot_product(Torque_ext,dmdr(:,1))
         f_ext(2)=dot_product(Torque_ext,dmdr(:,2))
@@ -160,7 +160,7 @@
 
         force=f_in+f_ext
 
-        write(73,'(15(E20.10,2x))') Spin(1:6,i_x,i_y,i_z,i_m),-f_in,-f_ext,-force
+        write(73,'(9(E20.10,2x))') -f_in,-f_ext,-force
 
           enddo
          enddo

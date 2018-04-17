@@ -1,9 +1,11 @@
 module m_get_position
 
-interface get_position
-module procedure get_position_lattice
-end interface get_position
+  interface get_position
+      module procedure get_position_lattice
+  end interface get_position
 
+private
+public :: get_position
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -5,11 +5,12 @@ Program Matjes
 use m_io_utils
 use m_io_files_utils
 use m_init_variables
+use mtprng
+use m_derived_types
 
 ! old code
       use m_write_spin
       use m_createspinfile
-      use m_derived_types
       use m_Corre
       use m_constants
       use m_lattice, only : spin,tableNN,masque,indexNN
@@ -21,9 +22,9 @@ use m_init_variables
       use m_welcome
       use m_check_restart
       use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,cone,gra_topo &
-     & ,Total_MC_Steps,kt,n_thousand,T_auto,EA,gra_fft,CalEnergy,Gra_log,T_relax,kTfin,kTini,spstmL &
+     & ,Total_MC_Steps,n_thousand,T_auto,gra_fft,CalEnergy,Gra_log,T_relax,spstmL &
      & ,i_separate,i_average,i_ghost,i_optTset,i_topohall,print_relax,gra_freq &
-     & ,i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,h_ext,N_temp,T_relax_temp,n_ghost &
+     & ,i_qorien,i_print_W,equi,overrel,sphere,underrel,N_temp,T_relax_temp,n_ghost &
      & ,nRepProc
 #ifdef CPP_MPI
       use m_randperm
@@ -38,23 +39,28 @@ use m_init_variables
 ! io_variables
 type(io_parameter) :: io_simu
 ! types of the simulation (it defines what type of simulation will be run)
-type(bool_var), dimension(:), allocatable :: my_simu
+type(bool_var) :: my_simu
 ! number of lattices that should be used + variables that contains all lattices
 Integer :: nlattice
 type(lattice),dimension(:),allocatable :: all_lattices
 ! unit parameters for the file
 integer :: io_param
+! description of the unit cell
+type(cell) :: mag_motif
+! Hamiltonian coefficients
+type(Coeff_Ham) :: Hamiltonian
+! external parameter
+type(simulation_parameters) :: ext_param
 
-
+! internal variables
+type(mtprng_state) :: state
 ! definition of the motif and the lattice
-      type(lattice) :: mag_lattice
-      type(cell) :: mag_motif
+type(lattice) :: mag_lattice
 ! tag that defines the system
       integer :: n_system
 ! size of the different table
       integer :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)
       Integer :: N_cell
-      logical :: godsky
 ! the computation time
       real(kind=8) :: computation_time
 
@@ -73,58 +79,58 @@ integer :: io_param
       if (irank.eq.0) call welcome(isize)
 #endif
 
+! welcome message
 #ifdef CPP_MPI
-      if (irank.eq.0) call welcome()
+  if (irank.eq.0) call welcome()
 #else
-      call welcome()
+  call welcome()
+#endif
+
+! initialize the random number generator
+#ifdef CPP_MRG
+#ifdef CPP_MPI
+  call mtprng_init(irank+1,state)
+#else
+  call mtprng_init(1,state)
+#endif
+#else
+  call init_rand_seed
 #endif
 
 io_param=open_file_read('input')
 
 call get_parameter(io_param,'input','nlattice',nlattice)
 
-call close_file('input',io_param)
-
 allocate(all_lattices(nlattice))
 
-#ifdef CPP_MRG
-#ifdef CPP_MPI
-      call mtprng_init(irank+1)
-#else
-      call mtprng_init(1)
-#endif
-#else
-      call init_rand_seed
-#endif
+!! initialize the variables
+! initialization of the type of simulation
+call init_variables(my_simu)
+! initialization of the lattice
+call init_variables(all_lattices)
+! initialization of the io_part
+call init_variables(io_simu)
+
+! get the simulation type
+call get_parameter(io_param,'input',my_simu)
+call close_file('input',io_param)
+
+! prepare the different lattices for the simulations
+!call setup_lattice(my_simu,all_lattices,io_simu)
+
 
 ! read the input
-      call setup_simu(my_simu,io_simu,mag_lattice,mag_motif)
+call setup_simu(my_simu,io_simu,mag_lattice,mag_motif,Hamiltonian,ext_param,state)
 
 ! number of cell in the simulation
-      N_cell=count(masque(1,:,:,:).ne.0)
-      n_system=mag_lattice%n_system
+N_cell=count(masque(1,:,:,:).ne.0)
+n_system=mag_lattice%n_system
+
 #ifdef CPP_MPI
       if (irank_working.eq.0) write(6,'(I6,a)') N_cell, ' unit cells'
 #else
       write(6,'(I6,a)') N_cell, ' unit cells'
 #endif
-
-! ******************************
-! Prepare the addition or removal of skyrmions.
-
-    inquire (file='rwskyrmion.in',exist=godsky)
-    if (godsky) then
-
-      if (i_print_W) then
-           WRITE(6,'(/,a)') 'WARNING!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-           WRITE(6,'(a)') 'You are creating artificially topologically protected spin structure'
-           WRITE(6,'(a)') 'Is that really what you want? If not, please have'
-           WRITE(6,'(a,/)') 'a look at lines 373 and 374'
-      endif
-
-        call rw_skyrmion()
-
-    end if
 
 #ifdef CPP_MPI
     if (irank_working.eq.0) then
@@ -152,87 +158,83 @@ allocate(all_lattices(nlattice))
     shape_tableNN=shape(tableNN)
     shape_masque=shape(masque)
 
-! ***********************
-! Here you can choose to add or remove a skyrmion.
-
-        if (godsky) call kornevien(kt)
-
 !!!!!!!! part that does the tight-binging from a frozen spin configuration
 
-if (my_simu(1)%name == 'tight-binding') then
-           call tightbinding(spin,shape_spin)
-endif
+!if (my_simu%name == 'tight-binding') then
+!           call tightbinding(spin,shape_spin)
+!endif
 !!!!!!!! part of the parallel tempering
 
-if (my_simu(1)%name == 'parallel-tempering') then
-            call parallel_tempering(i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,cor_log,gra_log, &
-            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,EA,n_system, &
-            &    n_sizerelax,T_auto,i_optTset,N_cell,print_relax,N_temp,T_relax_temp,kTfin,kTini,h_ext,cone,n_Tsteps, &
-            &    i_ghost,n_ghost,nRepProc,mag_lattice)
+!if (my_simu%name == 'parallel-tempering') then
+!            call parallel_tempering(i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,cor_log,gra_log, &
+!            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,EA,n_system, &
+!            &    n_sizerelax,T_auto,i_optTset,N_cell,print_relax,N_temp,T_relax_temp,kTfin,kTini,h_ext,cone,n_Tsteps, &
+!            &    i_ghost,n_ghost,nRepProc,mag_lattice)
 
-            call cpu_time(computation_time)
-            write(*,*) 'computation time:',computation_time,'seconds'
+!            call cpu_time(computation_time)
+!            write(*,*) 'computation time:',computation_time,'seconds'
 
-#ifdef CPP_MPI
-            if (irank_working.eq.0) Write(*,*) 'The program has reached the end.'
-            call MPI_FINALIZE(ierr)
-#else
-            Write(*,*) 'The program has reached the end.'
-#endif
+!#ifdef CPP_MPI
+!            if (irank_working.eq.0) Write(*,*) 'The program has reached the end.'
+!            call MPI_FINALIZE(ierr)
+!#else
+!            Write(*,*) 'The program has reached the end.'
+!#endif
 
-            stop
-endif
+!           stop
+!endif
 
 !---------------------------------
 !  Part which does a normal MC with the metropolis algorithm
 !---------------------------------
 !        if (my_simu%i_metropolis)
-if (my_simu(1)%name == 'metropolis') call MonteCarlo(N_cell,n_thousand,n_sizerelax, &
-            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
-            &    i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost, &
-            &    gra_topo,CalEnergy,CalTheta,Gra_log,spstmL,gra_fft, &
-            &    i_separate,i_average,i_topohall,print_relax,Cor_log, &
-            &    n_Tsteps,cone,Total_MC_Steps,T_auto,EA,T_relax,kTfin,kTini,h_ext, &
-            &    n_ghost,nRepProc,mag_lattice)
+!if (my_simu%name == 'metropolis') call MonteCarlo(N_cell,n_thousand,n_sizerelax, &
+!            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
+!            &    i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost, &
+!            &    gra_topo,CalEnergy,CalTheta,Gra_log,spstmL,gra_fft, &
+!            &    i_separate,i_average,i_topohall,print_relax,Cor_log, &
+!            &    n_Tsteps,cone,Total_MC_Steps,T_auto,EA,T_relax,kTfin,kTini,h_ext, &
+!            &    n_ghost,nRepProc,mag_lattice)
 
 !---------------------------------
 !  Part which does the Spin dynamics
 !    Loop for Spin dynamics
 !---------------------------------
-if (my_simu(1)%name == 'spin-dynamics') call spindynamics(spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
-      &  N_cell,mag_lattice, &
-      &  i_biq,i_dm,i_four,i_dip,gra_topo,gra_log,gra_freq, &
-      &  ktini,ktfin,EA,h_ext)
+
+if (my_simu%name == 'spin-dynamics') call spindynamics(mag_lattice,mag_motif,io_simu,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
+      &  N_cell, &
+      &  gra_topo, &
+      &  ext_param,Hamiltonian)
 
 !---------------------------------
 !  Part which does Entropic Sampling
 !---------------------------------
-if (my_simu(1)%name == 'entropics') call entropic(N_cell,n_system, &
-            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
-            &    i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,sphere,overrel,underrel,i_ghost, &
-            &    Gra_log,spstmL,gra_fft,cone,EA,T_relax,h_ext,n_ghost, &
-            &    kTfin,kTini,n_Tsteps,mag_lattice)
+!if (my_simu%name == 'entropics') call entropic(N_cell,n_system, &
+!            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
+!            &    i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,sphere,overrel,underrel,i_ghost, &
+!            &    spstmL,gra_fft,cone,EA,T_relax,h_ext,n_ghost, &
+!            &    kTfin,kTini,n_Tsteps,mag_lattice)
 
 
 !---------------------------------
 !  Part which does the GNEB
 !---------------------------------
-if (my_simu(1)%name == 'GNEB') then
-            write(6,'(a)') 'entering into the GNEB routine'
-!            call init_gneb()
-            call GNEB(i_biq,i_dm,i_four,i_dip,EA,h_ext,mag_lattice, &
-                    & indexNN,shape_index,shape_spin,tableNN,shape_tableNN,masque,shape_masque,N_cell)
-            !call set_gneb_defaults()
-endif
+!if (my_simu%name == 'GNEB') then
+!            write(6,'(a)') 'entering into the GNEB routine'
+!!            call init_gneb()
+!            call GNEB(i_biq,i_dm,i_four,i_dip,EA,h_ext,mag_lattice, &
+!                    & indexNN,shape_index,shape_spin,tableNN,shape_tableNN,masque,shape_masque,N_cell)
+!            !call set_gneb_defaults()
+!endif
 
-if (my_simu(1)%name == 'minimization') then
-            write(6,'(a)') 'entering into the minimization routine'
-
-            call CreateSpinFile('Spinse_start.dat',spin,shape_spin)
-
-            call minimize(i_biq,i_dm,i_four,i_dip,gra_log,gra_freq,EA, &
-              & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext,mag_lattice)
-endif ! montec, dynamic or i_gneb
+!if (my_simu%name == 'minimization') then
+!            write(6,'(a)') 'entering into the minimization routine'
+!
+!            call CreateSpinFile('Spinse_start.dat',mag_lattice,mag_motif)
+!
+!            call minimize(i_biq,i_dm,i_four,i_dip,gra_log,gra_freq,EA, &
+!              & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext,mag_lattice)
+!endif ! montec, dynamic or i_gneb
 
 
 !---------------------------------
@@ -252,9 +254,9 @@ endif ! montec, dynamic or i_gneb
 
 #ifndef CPP_MPI
 ! write the last spin structure
-        call WriteSpinAndCorrFile('SpinSTM_end.dat',spin,shape_spin)
+        call WriteSpinAndCorrFile(mag_lattice)
 
-        call CreateSpinFile('Spinse_end.dat',spin,shape_spin)
+        call CreateSpinFile(mag_lattice,mag_motif)
 #endif
 
         call cpu_time(computation_time)

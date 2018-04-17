@@ -1,9 +1,9 @@
       module m_energy
       contains
 
-      real(kind=8) function Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+      real(kind=8) function Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN,c_ji,J_ij)
       use m_efield, only : me,Efield_Jij
-      use m_parameters, only : J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il
+      use m_parameters, only : J_il,J_z,param_N_Nneigh,param_N_Nneigh_il
 #ifdef CPP_MPI
       use m_mpi_prop, only : start
 #endif
@@ -12,6 +12,7 @@
       integer, intent(in) :: shape_spin(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:)
+      real(kind=8), intent(in) :: c_ji,J_ij(:,:)
 ! external variable
       real (kind=8) :: E_int
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -29,9 +30,9 @@
 
       E_int=0.0d0
       Exchange=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
       ig_x=i_x-start(1)
       ig_y=i_y-start(2)
       ig_z=i_z-start(3)
@@ -109,32 +110,32 @@
       end function Exchange
 
 !Zeeman energy
-      real(kind=8) function Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,H_ext,mu_B)
+      real(kind=8) function Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,H_ext,mu_S)
+      use m_constants, only : mu_B
       implicit none
 ! input
       integer, intent(in) :: shape_spin(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      real(kind=8), intent(in) ::H_ext(:),mu_B
+      real(kind=8), intent(in) ::H_ext(:),mu_S
       integer, intent(in) :: masque(:,:,:,:)
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
 ! components of the spin
-      integer :: X,Y,Z,M
+      integer :: X,Y,Z
 
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
-      M=shape_spin(1)
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
-      Zeeman=-mu_B*(H_ext(1)*Spin(X,i_x,i_y,i_z,i_m)+H_ext(2)*Spin(Y,i_x,i_y,i_z,i_m)+&
-      H_ext(3)*Spin(Z,i_x,i_y,i_z,i_m))*Spin(M,i_x,i_y,i_z,i_m)*dble(masque(1,i_x,i_y,i_z))
+      Zeeman=-mu_S*mu_B*(H_ext(1)*Spin(X,i_x,i_y,i_z,i_m)+H_ext(2)*Spin(Y,i_x,i_y,i_z,i_m)+&
+      H_ext(3)*Spin(Z,i_x,i_y,i_z,i_m))*dble(masque(1,i_x,i_y,i_z))
 
       end function Zeeman
 
 !DM energy
-      real(kind=8) function DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+      real(kind=8) function DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN,c_dm,DM)
       use m_vector, only: TripleProduct,cross
-      use m_parameters, only : DM,DM_vector,c_DM
+      use m_parameters, only : DM_vector
 #ifdef CPP_MPI
       use m_mpi_prop, only : start
 #endif
@@ -142,13 +143,14 @@
 ! input
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:),shape_spin(:)
+      real(kind=8), intent(in) :: c_dm,DM(:,:,:)
 ! external variable
       real(kind=8) :: E_int
       integer , intent(in) :: i_x,i_y,i_z,i_m
 ! position of the neighbors along x,y,z and motif
       integer :: v_x,v_y,v_z,v_m,ig_x,ig_y,ig_z
 ! coordinates of the components of the spins
-      integer :: X,Y,Z,M
+      integer :: X,Y,Z
 !internal variable
       integer :: avant,i,j
 #ifndef CPP_MPI
@@ -159,10 +161,9 @@
 
       E_int=0.0d0
       DMenergy=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
-      M=shape_spin(1)
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
       ig_x=i_x-start(1)
       ig_y=i_y-start(2)
@@ -173,14 +174,14 @@
        return
       endif
 
-      do i=1,count(dabs(DM(:,i_m))>1.0d-8)
+      do i=1,count(dabs(DM(:,i_m,1))>1.0d-8)
        do j=1,indexNN(i,1)
         v_x=tableNN(1,avant+j,ig_x,ig_y,ig_z,i_m)
         v_y=tableNN(2,avant+j,ig_x,ig_y,ig_z,i_m)
         v_z=tableNN(3,avant+j,ig_x,ig_y,ig_z,i_m)
         v_m=tableNN(4,avant+j,ig_x,ig_y,ig_z,i_m)
 
-        E_int=E_int+DM(i,i_m)*TripleProduct(DM_vector(avant+j,:,i_m), &
+        E_int=E_int+DM(i,i_m,1)*TripleProduct(DM_vector(avant+j,:,i_m), &
          Spin(X:Z,i_x,i_y,i_z,i_m),Spin(X:Z,v_x,v_y,v_z,v_m))* &
          dble(masque(avant+j+1,i_x,i_y,i_z))
        enddo
@@ -191,43 +192,34 @@
 
       end function DMenergy
 !!! Anisotropy
-      real(kind=8) function anisotropy(i_x,i_y,i_z,i_m,axis,spin,shape_spin)
+      real(kind=8) function anisotropy(i_x,i_y,i_z,i_m,spin,shape_spin,D_ani,c_ani)
       use m_vector, only : norm
-      use m_parameters, only : D_ani,c_ani,EA
       implicit none
 ! input
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: shape_spin(:)
+      real(kind=8), intent(in) :: D_ani(:,:,:),c_ani
 ! external variable
       real(kind=8) :: E_int
-      real(kind=8) , intent(in) :: axis(3)
       integer , intent(in) :: i_x,i_y,i_z,i_m
 ! components of the spin
-      integer :: X,Y,Z,M
-! internal variable
-      integer :: i
-      real(kind=8) :: dumy(3)
+      integer :: X,Y,Z
 
 
       E_int=0.0d0
       anisotropy=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
-      M=shape_spin(1)
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
-      dumy=axis/norm(EA)
-      do i=1,count(dabs(D_ani)>1.0d-8)
-      E_int=D_ani(i)*(dumy(1)*spin(X,i_x,i_y,i_z,i_m)+dumy(2)*spin(Y,i_x,i_y,i_z,i_m)+ &
-      dumy(3)*spin(Z,i_x,i_y,i_z,i_m))**2+E_int
-      enddo
+      E_int=spin(X,i_x,i_y,i_z,i_m)**2*D_ani(1,1,1)+spin(Y,i_x,i_y,i_z,i_m)**2*D_ani(2,1,1)+ &
+      spin(Z,i_x,i_y,i_z,i_m)**2*D_ani(3,1,1)+E_int
 
       anisotropy=c_ani*E_int
       end function anisotropy
 
 ! biquadratic energy
-      real(kind=8) function biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      use m_parameters, only : c_JB,J_B
+      real(kind=8) function biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN,c_JB,J_B)
 #ifdef CPP_MPI
       use m_mpi_prop, only : start
 #endif
@@ -236,6 +228,7 @@
       integer, intent(in) :: shape_spin(:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:)
+      real(kind=8), intent(in) :: c_JB,J_B
 ! external variable
       real(kind=8) :: E_int
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -244,16 +237,15 @@
 ! position of the neighbors along x,y,z and motif
       integer :: v_x,v_y,v_z,v_m,ig_x,ig_y,ig_z
 ! components of the magnetic moments
-      integer :: X,Y,Z,M
+      integer :: X,Y,Z
 #ifndef CPP_MPI
       integer, dimension(3) :: start=0
 #endif
       E_int=0.0d0
       biquadratic=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
-      M=shape_spin(1)
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
       ig_x=i_x-start(1)
       ig_y=i_y-start(2)
@@ -273,28 +265,27 @@
       biquadratic=c_JB*J_B*E_int*dble(masque(1,i_x,i_y,i_z))
       end function biquadratic
 !4 spin term
-      real(kind=8) function fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
+      real(kind=8) function fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log,c_Ki,K_1)
       use m_sym_utils, only : corners
-      use m_parameters, only :c_Ki,K_1
       implicit none
 ! input
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: masque(:,:,:,:),shape_spin(:)
       logical, intent(in) :: Periodic_log(:)
+      real(kind=8), intent(in) :: c_Ki,K_1
 ! external variable
       real(kind=8) :: E_int,E_local
       integer , intent(in) :: i_x,i_y,i_z,i_m
 ! components of the spin
-      integer :: X,Y,Z,M
+      integer :: X,Y,Z
 ! internal variable
       integer :: k,ipu(3),ipv(3),ipuv(3)
 
       E_int=0.0d0
       fourspin=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
-      M=shape_spin(1)
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
       k=1
       do while (k.lt.size(corners,1))
@@ -389,7 +380,7 @@
       integer , intent(in) :: i_x,i_y,i_z,i_m
 ! coordinate of the magnetic moments
       integer :: Rx,Ry,Rz
-      integer :: X,Y,Z,M
+      integer :: X,Y,Z
 ! internal variable
       integer :: j_x,j_y,j_z,j_m,nmag
       real(kind=8) :: rc(3),step,ss
@@ -401,10 +392,9 @@
       Rx=shape_spin(1)-6
       Ry=shape_spin(1)-5
       Rz=shape_spin(1)-4
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
-      M=shape_spin(1)
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
 ! the choosen spin is the spin i_s. It has nn nearest neighbours. The numbers of nearest
 ! neighbours are stored in n(:). for example n(1)=4 means 4 nearest neighbours
@@ -429,8 +419,7 @@
 
           step=dot_product(rc,spin(X:Z,i_x,i_y,i_z,i_m))*dot_product(rc,spin(X:Z,j_x,j_y,j_z,j_m))
 
-          dipole=dipole+(dot_product(spin(X:Z,j_x,j_y,j_z,j_m),spin(X:Z,i_x,i_y,i_z,i_m))-3.0d0*step)/ss**3 &
-       &   *spin(M,i_x,i_y,i_z,i_m)*spin(M,j_x,j_y,j_z,j_m)
+          dipole=dipole+(dot_product(spin(X:Z,j_x,j_y,j_z,j_m),spin(X:Z,i_x,i_y,i_z,i_m))-3.0d0*step)/ss**3
 
           enddo
          enddo
@@ -443,12 +432,12 @@
 #endif
 
 !stoner energy
-      real(kind=8) function stoner(i_x,i_y,i_z,i_m,spin,masque,tableNN,indexNN)
-      use m_parameters, only : Ist
+      real(kind=8) function stoner(i_x,i_y,i_z,i_m,spin,masque,tableNN,indexNN,Ist)
       implicit none
 ! input
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
       integer, intent(in) :: tableNN(:,:,:,:,:,:),masque(:,:,:,:),indexNN(:,:)
+      real(kind=8), intent(in) :: Ist
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
 !internals

@@ -2,7 +2,7 @@ subroutine GNEB(i_biq,i_dm,i_four,i_dip,EA,h_ext,my_lattice, &
     & indexNN,shape_index,shape_spin,tableNN,shape_tableNN,masque,shape_masque,N_cell)!,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,state)
       use m_fieldeff
       use m_energy
-      use mtprng, only : state
+      use mtprng
       use m_gneb_utils
       use m_write_spin
       use m_createspinfile
@@ -23,6 +23,7 @@ subroutine GNEB(i_biq,i_dm,i_four,i_dip,EA,h_ext,my_lattice, &
       integer :: imax,i_x,i_y,i_z,i_m,ci
       logical :: exists
       character(len=8) :: num
+      type(mtprng_state) :: state
 
       
       spini=0.0d0

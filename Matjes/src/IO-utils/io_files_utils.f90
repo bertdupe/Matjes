@@ -1,7 +1,9 @@
 module m_io_files_utils
 implicit none
+
 private
-public :: open_file_read,close_file
+public :: open_file_read,close_file,open_file_write
+
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!
@@ -13,6 +15,33 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!
 
 ! function that open a file and return the unit for reading
+integer function open_file_write(fname)
+implicit none
+character(len=*), intent(in) :: fname
+! internal variables
+logical :: i_file
+integer :: io
+
+io=-1
+i_file=inquire_file(fname)
+
+if (i_file) then
+! find unit of the file that is alread
+  io=inquire_file_open(fname)
+endif
+
+if (io.lt.0) io=inquire_file_unit(io)
+
+open(io,file=fname,form='formatted',status='unknown',action='write')
+
+write(6,'(3a,/)') 'The file ', fname,' has been succesfully open'
+rewind(io)
+
+open_file_write=io
+
+end function open_file_write
+
+! function that open a file and return the unit for reading
 integer function open_file_read(fname)
 implicit none
 character(len=*), intent(in) :: fname
@@ -20,11 +49,17 @@ character(len=*), intent(in) :: fname
 logical :: i_file
 integer :: io
 
+io=-1
 i_file=inquire_file(fname)
 
-if (i_file) io=inquire_file_open(fname)
+if (i_file) then
+! find unit of the file that is alread
+  io=inquire_file_open(fname)
+endif
+! find a new unit for the file
 
-io=inquire_file_unit(io)
+if (io.lt.0) io=inquire_file_unit(io)
+
 
 open (io,file=fname,form='formatted',status='old',action='read')
 
@@ -64,9 +99,6 @@ if (inquire_file) then
   write(6,'(/,3a,/)') 'file ', filename, ' has been found'
 else
   write(6,'(/,3a)') 'file ', filename, ' has not been found'
-  write(6,'(3a,/)') 'the program will stop'
-  stop
-
 endif
 
 end function inquire_file

@@ -132,8 +132,8 @@
 !       and decider, if the Spin flip will be performed
 !----------------------------------
 !Energy of old configuration
-        E_dec_old=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+!        E_dec_old=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+!          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
 
         E_old=sum(E_dec_old)
 
@@ -151,8 +151,8 @@
         Spin(4:6,Ilat(1),Ilat(2),Ilat(3),Ilat(4))=S_new
         if (i_stone) Spin(7,Ilat(1),Ilat(2),Ilat(3),Ilat(4))=mu_s
 
-        E_dec_new=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+!        E_dec_new=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+!          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
 
         E_new=sum(E_dec_new)
 

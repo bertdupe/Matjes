@@ -1,131 +1,138 @@
-      module m_fft
-       interface fft
-        module procedure fft_standard
+module m_fft
+use m_derived_types
+use m_io_files_utils
+use m_io_utils
+use m_get_position
+use m_kmesh
+
+interface fft
+    module procedure fft_modes
 #ifndef CPP_BRUTDIP
-        module procedure fft_depol_r2c
-        module procedure fft_depol_c2r
+    module procedure fft_depol_r2c
+    module procedure fft_depol_c2r
 #endif
-       end interface fft
-      contains
+end interface fft
+
+private
+public :: fft
+
+contains
 
 !!!!!!!!!!!!!!!!!!!!!!
 ! easy FFT
 !!!!!!!!!!!!!!!!!!!!!!
-      subroutine fft_standard(my_lattice,kt)
-      use m_lattice, only : spin
-      use m_vector, only : cross,norm
-      use m_constants
-      use m_derived_types
-!#ifdef CPP_OPENMP
-!      use m_omp
-!#endif
-      implicit none
-      type(lattice), intent(in) :: my_lattice
-      real(kind=8), intent(in) :: kt
+subroutine fft_modes(my_lattice,my_motif,kt)
+use m_vector, only : cross,norm
+use m_constants
+
+implicit none
+type(lattice),intent(in) :: my_lattice
+type(cell), intent(in) :: my_motif
+real(kind=8),optional,intent(in) :: kt
 !internal
-      complex*16 :: cdum1
-      complex*16, allocatable :: fftcoef(:,:,:,:)
-      integer :: i,j,i_lat,j_lat,k,i1,i2,j1,j2,qnx,qny,fin,i3,N_site,dim_lat(3)
-      real(kind=8) :: dum, kv(3,3),kv0(3,3), net(3,3)
-      real(kind=8), allocatable :: fft_norm(:,:)
-      character(len=30) :: fname,toto
-      logical :: exists
+complex(kind=16) :: cdum1
+complex(kind=16), allocatable :: fftcoef(:,:,:,:)
+real(kind=8), allocatable :: position(:,:,:,:,:)
+integer :: i,j,i1,i2,j1,j2,qnx,qny,i3,N_site,dim_lat(3)
+integer :: io
+real(kind=8) :: dum, kv(3,3),kv0(3,3), net(3,3),kt_int
+real(kind=8), allocatable :: fft_norm(:,:),kmesh(:,:,:)
+character(len=30) :: fname,toto
+logical :: exists
 
-      dim_lat=my_lattice%dim_lat
-      net=my_lattice%areal
-      N_site=dim_lat(1)*dim_lat(2)*dim_lat(3)
-      allocate(fft_norm(3,dim_lat(3)+1))
+dim_lat=my_lattice%dim_lat
+net=my_lattice%areal
+kv0=my_lattice%astar
+N_site=dim_lat(1)*dim_lat(2)*dim_lat(3)
+qnx=dim_lat(1)
+qny=dim_lat(2)
 
-      inquire (file='inp',exist=exists)
-      if (.not. exists) then
-      write(6,*) 'qnx and qny should be in inp'
-      STOP
-      endif
+io=open_file_read('input')
+call get_parameter(io,'input','gra_fft',exists)
+! you do not want to do the FFT so leave the routine
+if (.not.exists) then
+  call close_file('input',io)
+  return
+endif
 
-      open (121,file='inp',form='formatted',status='old',action='read')
+call get_parameter(io,'input','qnx',qnx)
+call get_parameter(io,'input','qny',qny)
 
-      rewind(121)
-      do
-      read (121,'(a)',iostat=fin) toto
-        if (fin /= 0) exit
-        toto= trim(adjustl(toto))
-        if (len_trim(toto)==0) cycle
-        if ( toto(1:7) == 'gra_fft') then
-           backspace(121)
-           read(121,*) fname, exists, qnx, qny
-          endif
+call close_file('input',io)
+
+if (present(kt)) then
+  kt_int=kt
+else
+  kt_int=0.0d0
+endif
+
+allocate(kmesh(2,qnx,qny))
+call get_kmesh((/qnx,qny,1/),kv0,net,kmesh)
+
+allocate(position(3,dim_lat(1),dim_lat(2),dim_lat(3),1))
+
+call get_position(position,dim_lat,net,my_motif)
+
+allocate(fft_norm(3,dim_lat(3)+1))
+
+allocate(fftcoef(3,qnx,qny,dim_lat(3)+1))
+fftcoef=dcmplx(0.d0,0.d0)
+fft_norm=0.0d0
+
+do i3=1,dim_lat(3)
+   do j=1,dim_lat(2)
+      do i=1,dim_lat(1)
+        fft_norm(:,i3)=fft_norm(:,i3)+sum(my_lattice%l_modes(i,j,i3,1)%w(1:3)**2)
       enddo
-      close(121)
-
-      allocate(fftcoef(qnx,qny,3,dim_lat(3)+1))
-      fftcoef=dcmplx(0.d0,0.d0)
-      fft_norm=0.0d0
-
-      kv0(1,:) = pi(2.0d0)*cross(net(2,:),net(3,:))/dot_product(net(1,:),cross(net(2,:),net(3,:)))
-      kv0(2,:) = pi(2.0d0)*cross(net(3,:),net(1,:))/dot_product(net(1,:),cross(net(2,:),net(3,:)))
-      kv0(3,:) = pi(2.0d0)*cross(net(1,:),net(2,:))/dot_product(net(1,:),cross(net(2,:),net(3,:)))
-
-      do i3=1,dim_lat(3)
-       do i=1,dim_lat(1)
-        do j=1,dim_lat(2)
-         fft_norm(:,i3)=fft_norm(:,i3)+sum(Spin(4:6,i,j,i3,:))**2
-        enddo
-       enddo
-       fft_norm(:,i3)=dsqrt(fft_norm(:,i3)/dble(dim_lat(1)*dim_lat(2)))
-      enddo
+   enddo
+   fft_norm(:,i3)=sqrt(fft_norm(:,i3)/dble(dim_lat(1)*dim_lat(2)))
+enddo
 
 #ifdef CPP_OPENMP
 !$OMP parallel do default (shared) schedule(static) PRIVATE(i1,i2,j1,j2)
 #endif
 
-      do i3= 1,dim_lat(3)
+do i3= 1,dim_lat(3)
+   do i2= 1, qny
       do i1= 1, qnx
-       do i2= 1, qny
 
-        kv(1,:) = kv0(1,:)*dble(i1-1)/dble(qnx-1)/2.0d0
-        kv(2,:) = kv0(2,:)*dble(i2-1)/dble(qny-1)/2.0d0
+       kv(1,:) = kv0(1,:)*kmesh(1,i1,i2)
+       kv(2,:) = kv0(2,:)*kmesh(2,i1,i2)
         
-        do j1 = 1, dim_lat(1)
-         do j2 = 1, dim_lat(2)
+        do j2 = 1, dim_lat(2)
+          do j1 = 1, dim_lat(1)
 
-         dum = dot_product(Spin(1:3,j1,j2,i3,1),kv(1,:)+kv(2,:))
+         dum = dot_product(position(:,j1,j2,i3,1),kv(1,:)+kv(2,:))
          cdum1 = dcmplx(dcos(dum),dsin(dum))
 
-         fftcoef(i1,i2,:,i3)=fftcoef(i1,i2,:,i3)+sum(Spin(4:6,j1,j2,i3,:))*cdum1
+         fftcoef(:,i1,i2,i3)=fftcoef(:,i1,i2,i3)+my_lattice%l_modes(j1,j2,i3,1)%w(:)*cdum1
          enddo
         enddo
 
-        fftcoef(i1,i2,:,i3) = fftcoef(i1,i2,:,i3)/dble(N_site)/fft_norm(:,i3)
-       enddo
+        fftcoef(:,i1,i2,i3) = fftcoef(:,i1,i2,i3)/fft_norm(:,i3)/dble(N_site)
       enddo
-      enddo
+   enddo
+enddo
 
 #ifdef CPP_OPENMP
 !$OMP end parallel do
 #endif
 
-      do i3= 1,dim_lat(3)
-      write(fname,'(f8.4,a,i1)') kT/k_B,'_',i3
-      toto=trim(adjustl(fname))
-      write(fname,'(a,18a,a)')'fft_',(toto(i:i),i=1,len_trim(toto)),'.dat'
+do i3= 1,dim_lat(3)
 
-      open(10+i3,file=fname,form='formatted')
-      do j_lat=1,qnx
-        do i_lat=1,qny
-        write(10+i3,'(5(2x,f20.15))') norm(kv0(1,:)*dble(j_lat-1)/dble(qnx-1)/2.0d0), &
-        norm(kv0(2,:)*dble(i_lat-1)/dble(qny-1)/2.0d0),&
-        (dble(fftcoef(j_lat,i_lat,k,i3)**2+aimag(fftcoef(j_lat,i_lat,k,i3))**2),k=1,3)
-        enddo
-      if (mod(j_lat,qnx).eq.0) then
-        write(10+i3,*) ''
-      endif
-      enddo
-      close(10+i3)
-      enddo
+  write(fname,'(f8.4,a,i1)') kt_int/k_B,'_',i3
+  toto=trim(adjustl(fname))
+  write(fname,'(a,18a,a)')'fft_',(toto(i:i),i=1,len_trim(toto)),'.dat'
 
-      deallocate(fftcoef)
+  io=open_file_write(fname)
+  call dump_config(io,kv0,kmesh,fftcoef(:,:,:,i3))
 
-      end subroutine fft_standard
+  call close_file(fname,io)
+enddo
+
+deallocate(fftcoef,position,kmesh)
+
+end subroutine fft_modes
 
 #ifndef CPP_BRUTDIP
 !!!!!!!!!!!!!!!!!!!!!!

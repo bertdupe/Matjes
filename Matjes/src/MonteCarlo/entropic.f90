@@ -151,14 +151,14 @@
 
 ! calculate the energy before and after
 
-             E_decompose=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+!             E_decompose=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+!      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
              E_old=sum(E_decompose)
 
              Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s)=S_new
 
-             E_decompose=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
+!             E_decompose=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
+!      & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
              E_new=sum(E_decompose)
 
              Spin(4:6,i_x_s,i_y_s,i_z_s,i_m_s)=S_old

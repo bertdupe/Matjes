@@ -6,7 +6,6 @@
 ! in the second case, the spins are choosen in the direction of +dE/DM so energy increases
 !
       function underrelax(spin_in,i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
-      use m_parameters, only : EA,i_biq,i_four,i_DM
       use m_vector, only : cross
       use m_fieldeff
       implicit none
@@ -26,13 +25,13 @@
       real(kind=8) :: norm,dumy(3)
 
       S_int=0.0d0
-      S_int=S_int+Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      S_int=S_int+BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)
-      if (i_DM) S_int=S_int+Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
-      S_int=S_int+efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      if (i_biq) S_int=S_int+Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
+!      if (Hamiltonian%i_exch) S_int=S_int+Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      S_int=S_int+BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)
+!      if (i_DM) S_int=S_int+Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
+!      S_int=S_int+efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      if (i_biq) S_int=S_int+Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
 
       norm=sqrt(S_int(1)**2+S_int(2)**2+S_int(3)**2)
 ! Calculation of the new spin
@@ -51,7 +50,6 @@
       end function underrelax
 
       function overrelax(spin_in,i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
-      use m_parameters, only : EA,i_biq,i_four,i_DM
       use m_vector, only : cross
       use m_fieldeff
       implicit none
@@ -72,13 +70,13 @@
 
       S_int=0.0d0
 
-      S_int=S_int+Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      S_int=S_int+BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)
-      if (i_DM) S_int=S_int+Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
-      S_int=S_int+efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      if (i_biq) S_int=S_int+Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
+!      S_int=S_int+Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      S_int=S_int+BZ(i_x,i_y,i_z,i_m,spin,shape_spin,h_ext)
+!      if (i_DM) S_int=S_int+Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      S_int=S_int+Bani(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
+!      S_int=S_int+efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      if (i_biq) S_int=S_int+Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
+!      if (i_four) S_int=S_int+Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
 
       norm=sqrt(S_int(1)**2+S_int(2)**2+S_int(3)**2)
 ! Calculation of the new spin

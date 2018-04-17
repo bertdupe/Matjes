@@ -255,7 +255,7 @@
 
 !--------------------------------------------
 !--------------------------------------------
-       subroutine serial_paratemp(state,label,nup,ndown,nstart,Nsuccess,kt_saved,image_temp,E_temp,isize,kt_all)
+       subroutine serial_paratemp(label,nup,ndown,nstart,Nsuccess,kt_saved,image_temp,E_temp,isize,kt_all)
        use m_constants, only : k_B
        use mtprng
        implicit none
@@ -265,13 +265,13 @@
        real(kind=8), intent(inout) :: nup(:),ndown(:)
        real(kind=8), intent(inout) :: label(:),Nsuccess(:)
        real(kind=8), intent(inout) :: E_temp(:)
-       type(mtprng_state), intent(inout) :: state
 !      internals
        integer :: iii
        real(kind=8) :: choice,delta
        real(kind=8) :: kTn,kti,Ei,En
        logical :: accept
        integer :: i,i_image,i_start
+       type(mtprng_state) :: state
 
 
        accept=.False.

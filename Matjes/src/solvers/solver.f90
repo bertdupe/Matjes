@@ -62,7 +62,7 @@
          v_y=tableNN(2,1,i_x,i_y,i_z,i_m)
          v_z=tableNN(3,1,i_x,i_y,i_z,i_m)
          v_m=tableNN(4,1,i_x,i_y,i_z,i_m)
-         stepadia=cross(-spin(4:6,v_x,v_y,v_z,v_m),spin1)
+         stepadia=cross(-spin(:,v_x,v_y,v_z,v_m),spin1)
         endif
         if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z))
 
@@ -70,18 +70,18 @@
         Dtemp=damping/(1+damping**2)*kT/sqrt(B(1)**2+B(2)**2+B(3)**2)
         if (stmtemp) then
          W=(/randist(state),randist(state),randist(state)/)
-         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W))*htor(i_x,i_y,i_z)/maxh
+         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W))*htor(i_x,i_y,i_z)/maxh
         else
          W=(/randist(state),randist(state),randist(state)/)
-         steptemp=+sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W)
+         steptemp=+sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W)
         endif
        endif
 
-       sum_step=step+damping*cross(spin(4:6,i_x,i_y,i_z,i_m),step)+                        &
+       sum_step=step+damping*cross(spin(:,i_x,i_y,i_z,i_m),step)+                        &
      &     torque_FL*(1.0d0-damping*torque_AFL)*steptor+(damping+torque_AFL)*torque_FL*    &
-     &     cross(spin(4:6,i_x,i_y,i_z,i_m),steptor)+adia*                                  &
-     &     cross(spin(4:6,i_x,i_y,i_z,i_m),stepadia)-nonadia*stepadia                      &
-     &     +storque*cross(stepsttor,spin(4:6,i_x,i_y,i_z,i_m))
+     &     cross(spin(:,i_x,i_y,i_z,i_m),steptor)+adia*                                  &
+     &     cross(spin(:,i_x,i_y,i_z,i_m),stepadia)-nonadia*stepadia                      &
+     &     +storque*cross(stepsttor,spin(:,i_x,i_y,i_z,i_m))
 
        step=spin1+(sum_step*dt+cross(spin1,steptemp)*sqrt(dt))/2.0d0
 
@@ -138,7 +138,7 @@
          v_y=tableNN(2,1,i_x,i_y,i_z,i_m)
          v_z=tableNN(3,1,i_x,i_y,i_z,i_m)
          v_m=tableNN(4,1,i_x,i_y,i_z,i_m)
-         stepadia=cross(-spin(4:6,v_x,v_y,v_z,v_m),spin1)
+         stepadia=cross(-spin(:,v_x,v_y,v_z,v_m),spin1)
         endif
         if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z))
 
@@ -146,19 +146,19 @@
         Dtemp=damping/(1+damping**2)*kT/sqrt(B(1)**2+B(2)**2+B(3)**2)
         if (stmtemp) then
          W=(/randist(state),randist(state),randist(state)/)
-         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W))*htor(i_x,i_y,i_z)/maxh
+         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W))*htor(i_x,i_y,i_z)/maxh
         else
          W=(/randist(state),randist(state),randist(state)/)
-         steptemp=sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(4:6,i_x,i_y,i_z,i_m),W)
+         steptemp=sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W)
         endif
        endif
 
-       sum_step=step+damping*cross(spin(4:6,i_x,i_y,i_z,i_m),step)+     &
+       sum_step=step+damping*cross(spin(:,i_x,i_y,i_z,i_m),step)+     &
      &     torque_FL*(1.0d0-damping*torque_AFL)*steptor+                &
      &     torque_FL*(damping+torque_AFL)*                              &
-     &     cross(spin(4:6,i_x,i_y,i_z,i_m),steptor)+adia*               &
-     &     cross(spin(4:6,i_x,i_y,i_z,i_m),stepadia)-nonadia*stepadia   &
-     &     +storque*cross(stepsttor,spin(4:6,i_x,i_y,i_z,i_m))
+     &     cross(spin(:,i_x,i_y,i_z,i_m),steptor)+adia*               &
+     &     cross(spin(:,i_x,i_y,i_z,i_m),stepadia)-nonadia*stepadia   &
+     &     +storque*cross(stepsttor,spin(:,i_x,i_y,i_z,i_m))
 
        dt=timestep/hbar/(1+damping**2)
 
@@ -275,16 +275,16 @@
          v_y=tableNN(2,1,i_x,i_y,i_z,i_m)
          v_z=tableNN(3,1,i_x,i_y,i_z,i_m)
          v_m=tableNN(4,1,i_x,i_y,i_z,i_m)
-         stepadia=cross(-spin(4:6,v_x,v_y,v_z,v_m),spin1)
+         stepadia=cross(-spin(:,v_x,v_y,v_z,v_m),spin1)
         endif
         if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z))
 
-       sum_step=step+damping*cross(spin(4:6,i_x,i_y,i_z,i_m),step)+     &
+       sum_step=step+damping*cross(spin(:,i_x,i_y,i_z,i_m),step)+     &
      &     torque_FL*(1.0d0-damping*torque_AFL)*steptor+                                           &
      &     torque_FL*(damping+torque_AFL)*                                        &
-     &     cross(spin(4:6,i_x,i_y,i_z,i_m),steptor)+adia*               &
-     &     cross(spin(4:6,i_x,i_y,i_z,i_m),stepadia)-nonadia*stepadia   &
-     &     +storque*cross(stepsttor,spin(4:6,i_x,i_y,i_z,i_m))
+     &     cross(spin(:,i_x,i_y,i_z,i_m),steptor)+adia*               &
+     &     cross(spin(:,i_x,i_y,i_z,i_m),stepadia)-nonadia*stepadia   &
+     &     +storque*cross(stepsttor,spin(:,i_x,i_y,i_z,i_m))
 
 ! 3x3 system
 ! SX=droite
@@ -342,9 +342,9 @@
        steptor=0.0d0
        stepadia=0.0d0
        stepsttor=0.0d0
-       X=shape_spin(1)-3
-       Y=shape_spin(1)-2
-       Z=shape_spin(1)-1
+       X=shape_spin(1)-2
+       Y=shape_spin(1)-1
+       Z=shape_spin(1)-0
        spini=spin(X:Z,i_x,i_y,i_z,i_m)
        stepdamp=0.0d0
 
@@ -366,7 +366,7 @@
 
 
        if (i_torque) steptor=cross(S_norm,Ipol)
-       if (i_torque) stepadia=cross(-spin(4:6,v_x,v_y,v_z,v_m),S_norm)
+       if (i_torque) stepadia=cross(-spin(:,v_x,v_y,v_z,v_m),S_norm)
        if (stmtorque) stepsttor=cross(S_norm,Ipol*htor(i_x,i_y,i_z))
 
        step=cross(B,S_norm)
@@ -377,7 +377,8 @@
 
        ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
      &   torque_FL*(torque_AFL+damping)*cross(S_norm,steptor)+adia*       &
-     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm)+steptemp
+     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm)+    &
+     &   steptemp+damping*cross(steptemp,S_norm)
 
 
        spinfin=S_norm+dt*ds

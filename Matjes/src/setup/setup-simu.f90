@@ -1,17 +1,21 @@
-      subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif)
-      use m_lattice
-      use m_voisins
-      use m_setup_DM
-      use m_parameters
-      use m_sym_utils
-      use m_derived_types
-      use m_table_dist
-      use m_mapping
-      use m_indexation
-      use m_arrange_neigh
-      use m_topoplot
-      use mtprng
-      use m_Hamiltonian
+subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif,Hamiltonian,ext_param,state)
+use m_derived_types
+use m_fft
+use m_lattice
+use m_voisins
+use m_setup_DM
+use m_energy_calculations
+
+use m_parameters
+use m_sym_utils
+use m_table_dist
+use m_mapping
+use m_indexation
+use m_arrange_neigh
+use m_topoplot
+use mtprng
+use m_Hamiltonian
+
 #ifdef CPP_MPI
       use m_make_box
       use m_split_work
@@ -20,16 +24,19 @@
 #ifndef CPP_BRUTDIP
       use m_setup_dipole
 #endif
-      implicit none
+
+implicit none
 ! this subroutine is used only to setup the simulation box
 ! it reads first the parameters of the simulation i.e. inp file
 ! then it reads the lattice
 ! this order aims at not taking care of too many neigbours if the Jij are set to 0
-      type(io_parameter), intent(out) :: io_simu
-      type(type_simu), intent(out) :: my_simu
-      type(mtprng_state), intent(inout) :: state
-      type(lattice), intent(out) :: my_lattice
-      type(cell), intent(out) :: my_motif
+type(io_parameter), intent(out) :: io_simu
+type(bool_var), intent(in) :: my_simu
+type(lattice), intent(out) :: my_lattice
+type(cell), intent(out) :: my_motif
+type(Coeff_Ham), intent(out) :: Hamiltonian
+type (mtprng_state),intent(inout) :: state
+type(simulation_parameters),intent (inout) :: ext_param
 ! variable of the system
       real (kind=8), allocatable :: tabledist(:,:)
       real (kind=8), allocatable :: map_vort(:,:,:,:),map_toto(:,:,:)
@@ -52,41 +59,59 @@
       alloc_check=0
 
 #ifdef CPP_MPI
-if (irank.eq.0) write(6,'(/,a)') 'entering the setup routine'
+   if (irank.eq.0) write(6,'(/,a)') 'entering the setup routine'
 #else
-write(6,'(/,a)') 'entering the setup routine'
+   write(6,'(/,a)') 'entering the setup routine'
 #endif
 ! read the important inputs
 #ifdef CPP_MPI
-if (irank.eq.0) write(6,'(a)') 'reading the lattice in the input file'
+   if (irank.eq.0) write(6,'(a)') 'reading the lattice in the input file'
 #else
-write(6,'(a)') 'reading the lattice in the input file'
+   write(6,'(a)') 'reading the lattice in the input file'
 #endif
-      call rw_lattice(my_lattice)
+call rw_lattice(my_lattice)
 
 ! read the important inputs
 #ifdef CPP_MPI
-if (irank.eq.0) write(6,'(a)') 'reading the motif in the input file'
+   if (irank.eq.0) write(6,'(a)') 'reading the motif in the input file'
 #else
-write(6,'(a)') 'reading the motif in the input file'
+   write(6,'(a)') 'reading the motif in the input file'
 #endif
-      call rw_motif(my_motif,my_lattice)
+call rw_motif(my_motif,my_lattice)
 
 #ifdef CPP_MPI
-if (irank.eq.0) write(6,'(a)') 'reading the inp file'
+   if (irank.eq.0) write(6,'(a)') 'reading the input file'
 #else
-write(6,'(a,/)') 'reading the inp file'
+   write(6,'(a,/)') 'reading the inp file'
 #endif
-      call inp_rw(my_simu,io_simu,N_Nneigh,phase,Nei_z,Nei_il)
+call inp_rw(io_simu,N_Nneigh,phase,Nei_z,Nei_il)
 
 #ifdef CPP_MPI
-if (irank.eq.0) write(6,'(a)') 'checking for the presence of electric field'
+   if (irank.eq.0) write(6,'(a)') 'Read external parameters'
 #else
-write(6,'(a,/)') 'checking for the presence of electric field'
+   write(6,'(a,/)') 'Read external parameters'
+#endif
+call ext_param_rw(ext_param)
+
+#ifdef CPP_MPI
+   if (irank.eq.0) write(6,'(a)') 'reading the Hamiltonian in the input file'
+#else
+   write(6,'(a,/)') 'reading the Hamiltonian in the input file'
+#endif
+if (my_simu%value) write(*,*) 'Bertrand avant Hamiltonian'
+! setup the Hamiltonian of the system
+call get_Hamiltonians(Hamiltonian)
+write(6,'(/,a)') 'done'
+
+
+#ifdef CPP_MPI
+  if (irank.eq.0) write(6,'(a)') 'checking for the presence of electric field'
+#else
+  write(6,'(a,/)') 'checking for the presence of electric field'
 #endif
 
 ! check for electric field
-      call rw_efield(my_lattice%dim_lat,my_lattice%areal)
+call rw_efield(my_lattice%dim_lat,my_lattice%areal)
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! create the lattice depending on the simulation that one chooses
 #ifdef CPP_MPI
@@ -251,7 +276,7 @@ write(6,'(a)') 'seting up the masque for non-periodic systems'
 ! hard part: setup DM interaction
 ! I send an example neighbor table to setup the DM
 
-      if (i_DM) then
+      if (Hamiltonian%i_DM) then
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(a)') 'Calculating the DM vectors for each shells'
 #else
@@ -298,7 +323,7 @@ write(6,'(a)') 'Re-aranging the position of the DM vectors'
        DM_vector=0.0d0
       endif
 
-      if (i_four) then
+      if (Hamiltonian%i_four) then
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(a)') 'Calculating the position of the corners of the unit cell for the 4-spin'
 #else
@@ -309,6 +334,15 @@ write(6,'(a)') 'Calculating the position of the corners of the unit cell for the
        allocate(corners(1,1))
       endif
 
+! setup the energy operator
+#ifdef CPP_MPI
+if (irank.eq.0) write(6,'(a)') 'dealing with the z-direction'
+#else
+write(6,'(a)') 'dealing with the z-direction'
+#endif
+
+
+
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(a)') 'dealing with the z-direction'
 #else
@@ -317,20 +351,17 @@ write(6,'(a)') 'dealing with the z-direction'
 !! check the z direction structure
 !      call setup_zdir(phase,tot_N_Nneigh,motif)
 
-
-! setup the Hamiltonian of the system
-write(6,'(/,a)') 'setting the Hamiltonian'
-      call setup_Hamilton()
-write(6,'(/,a)') 'done'
+! do a first FFT for the initial magnetiy configuration
+call fft(my_lattice,my_motif)
 
 
 !!--------------------------------------------------------------------
 
 !c Calculation of the dispertion in the full BZ
 ! this is here because we have the table of distances
-      if (dispersion) then
-       call fullBZ(tabledist,N_Nneigh,Nei_z,phase)
-      endif
+!      if (dispersion) then
+!       call fullBZ(tabledist,N_Nneigh,Nei_z,phase)
+!      endif
 
       deallocate(tabledist)
 

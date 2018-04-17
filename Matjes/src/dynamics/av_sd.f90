@@ -22,13 +22,13 @@
       ipu=mod(1+i_x+dim_lat(1)-1,dim_lat(1))+1
       ipv=mod(i_y+1+dim_lat(2)-1,dim_lat(2))+1
 
-       qtopo=area(spin(4:6,i_x,i_y,i_z,i_m),spin(4:6,ipu,i_y,i_z,i_m),spin(4:6,ipu,ipv,i_z,i_m))+ &
-        area(spin(4:6,i_x,i_y,i_z,i_m),spin(4:6,ipu,ipv,i_z,i_m),spin(4:6,i_x,ipv,i_z,i_m))
+       qtopo=area(spin(:,i_x,i_y,i_z,i_m),spin(:,ipu,i_y,i_z,i_m),spin(:,ipu,ipv,i_z,i_m))+ &
+        area(spin(:,i_x,i_y,i_z,i_m),spin(:,ipu,ipv,i_z,i_m),spin(:,i_x,ipv,i_z,i_m))
 
-       vort=cross(Spin(4:6,i_x,i_y,i_z,i_m),Spin(4:6,ipu,i_y,i_z,i_m))+ &
-        cross(Spin(4:6,ipu,i_y,i_z,i_m),Spin(4:6,ipu,ipv,i_z,i_m)) &
-        +cross(Spin(4:6,ipu,ipv,i_z,i_m),Spin(4:6,i_x,ipv,i_z,i_m))+ &
-        cross(Spin(4:6,i_x,ipv,i_z,i_m),Spin(4:6,i_x,i_y,i_z,i_m))
+       vort=cross(Spin(:,i_x,i_y,i_z,i_m),Spin(:,ipu,i_y,i_z,i_m))+ &
+        cross(Spin(:,ipu,i_y,i_z,i_m),Spin(:,ipu,ipv,i_z,i_m)) &
+        +cross(Spin(:,ipu,ipv,i_z,i_m),Spin(:,i_x,ipv,i_z,i_m))+ &
+        cross(Spin(:,i_x,ipv,i_z,i_m),Spin(:,i_x,i_y,i_z,i_m))
 
 
       sd_charge_2D(1)=qtopo
@@ -52,13 +52,13 @@
       ipv=mod(i_y+1+dim_lat(2)-1,dim_lat(2))+1
       ipm=mod(i_m+size(spin,5),size(spin,5))+1
 
-       qtopo=area(spin(4:6,i_x,i_y,i_z,i_m),spin(4:6,ipu,i_y,i_z,i_m),spin(4:6,ipu,ipv,i_z,i_m))+ &
-        area(spin(4:6,i_x,i_y,i_z,i_m),spin(4:6,ipu,ipv,i_z,i_m),spin(4:6,i_x,ipv,i_z,i_m))
+       qtopo=area(spin(:,i_x,i_y,i_z,i_m),spin(:,ipu,i_y,i_z,i_m),spin(:,ipu,ipv,i_z,i_m))+ &
+        area(spin(:,i_x,i_y,i_z,i_m),spin(:,ipu,ipv,i_z,i_m),spin(:,i_x,ipv,i_z,i_m))
 
-       vort=cross(Spin(4:6,i_x,i_y,i_z,i_m),Spin(4:6,ipu,i_y,i_z,i_m))+ &
-       cross(Spin(4:6,ipu,i_y,i_z,i_m),Spin(4:6,ipu,ipv,i_z,i_m)) &
-        +cross(Spin(4:6,ipu,ipv,i_z,i_m),Spin(4:6,i_x,ipv,i_z,i_m))+ &
-        cross(Spin(4:6,i_x,ipv,i_z,i_m),Spin(4:6,i_x,i_y,i_z,i_m))
+       vort=cross(Spin(:,i_x,i_y,i_z,i_m),Spin(:,ipu,i_y,i_z,i_m))+ &
+       cross(Spin(:,ipu,i_y,i_z,i_m),Spin(:,ipu,ipv,i_z,i_m)) &
+        +cross(Spin(:,ipu,ipv,i_z,i_m),Spin(:,i_x,ipv,i_z,i_m))+ &
+        cross(Spin(:,i_x,ipv,i_z,i_m),Spin(:,i_x,i_y,i_z,i_m))
 
 
       sd_charge_2D_SL(1)=qtopo

@@ -1,49 +1,56 @@
-      module m_createspinfile
-      interface CreateSpinFile
+module m_createspinfile
+use m_constants, only : pi
+use m_get_position
+use m_derived_types
+use m_io_files_utils
+use m_io_utils
+
+  interface CreateSpinFile
        module procedure CreateSpinFile_usernamed
        module procedure CreateSpinFile_I_simple_5d
+       module procedure CreateSpinFile_I_lattice
        module procedure CreateSpinFile_R_simple_5d
        module procedure CreateSpinFile_simple_4d
        module procedure CreateSpinFile_end
        module procedure CreateSpinFile_simple_5d_usernamed
-      end interface
-      contains
+       module procedure CreateSpinFile_usernamed_spin
+  end interface
+
+private
+public :: CreateSpinFile
+
+contains
 !
 ! Create files to plot with Povray
 !
 !
 ! ===============================================================
-      subroutine CreateSpinFile_simple_5d_usernamed(fname,signature,spin,shape_spin)
-      use m_constants, only : pi
-      Implicit none
-      real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: shape_spin(:),signature
-      character(len=*), intent(in) :: fname
+subroutine CreateSpinFile_simple_5d_usernamed(fname,signature,spin,shape_spin)
+use m_constants, only : pi
+Implicit none
+real(kind=8), intent(in) :: spin(:,:,:,:,:)
+integer, intent(in) :: shape_spin(:),signature
+character(len=*), intent(in) :: fname
 !     Slope Indexes for three dim spins
-      INTEGER :: i_x,i_y,i_z,i_m,i
+INTEGER :: i_x,i_y,i_z,i_m,i
 ! coordinate of the spins
-      integer :: X,Y,Z
-! position of the spins
-      integer :: Rx,Ry,Rz
+integer :: X,Y,Z
+
 !     calculating the angles
-      real(kind=8) :: theta, phi
+real(kind=8) :: theta, phi
 !     colors
-      real(kind=8) :: phi_color, Delta, widthc
-      real(kind=8) :: Rc,Gc,Bc
-      character(len=50) :: toto,fname2,fname3
+real(kind=8) :: phi_color, Delta, widthc
+real(kind=8) :: Rc,Gc,Bc
+character(len=50) :: toto,fname2,fname3
 
-      toto=trim(adjustl(fname))
-      write(fname2,'(I10)') signature
-      fname3=trim(adjustl(fname2))
-      write(fname2,'(50a,a,50a,a)')(toto(i:i),i=1,len_trim(toto)),'_',(fname3(i:i),i=1,len_trim(fname3)),'.dat'
+toto=trim(adjustl(fname))
+write(fname2,'(I10)') signature
+fname3=trim(adjustl(fname2))
+write(fname2,'(50a,a,50a,a)')(toto(i:i),i=1,len_trim(toto)),'_',(fname3(i:i),i=1,len_trim(fname3)),'.dat'
 
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
-
-      Rx=shape_spin(1)-6
-      Ry=shape_spin(1)-5
-      Rz=shape_spin(1)-4
+X=shape_spin(1)-2
+Y=shape_spin(1)-1
+Z=shape_spin(1)
 
 !     Constants used for the color definition
       widthc=5.0d0
@@ -83,7 +90,7 @@
         if (Bc.lt.0.000001d0)  Bc=0.0d0
 
          write(15,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',Spin(Rx,i_x,i_y,i_z,i_m),',',Spin(Ry,i_x,i_y,i_z,i_m),',',Spin(Rz,i_x,i_y,i_z,i_m),',', &
+     & theta,',',phi,',',Spin(1,i_x,i_y,i_z,i_m),',',Spin(2,i_x,i_y,i_z,i_m),',',Spin(3,i_x,i_y,i_z,i_m),',', &
      & Rc,',',Bc,',',Gc,')'
 
          enddo
@@ -97,160 +104,97 @@
 ! ===============================================================
 
 ! ===============================================================
-      subroutine CreateSpinFile_usernamed(fname,spin,shape_spin)
-      use m_constants, only : pi
-      Implicit none
-      real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: shape_spin(:)
-      character(len=*), intent(in) :: fname
-!     Slope Indexes for three dim spins
-      INTEGER :: i_x,i_y,i_z,i_m
+subroutine CreateSpinFile_usernamed_spin(fname,spin,shape_spin)
+Implicit none
+character(len=*), intent(in) :: fname
+real(kind=8), intent(in) :: spin(:,:,:,:,:)
+integer, intent(in) :: shape_spin(:)
 ! coordinate of the spins
-      integer :: X,Y,Z
-! position of the spins
-      integer :: Rx,Ry,Rz
-!     calculating the angles
-      real(kind=8) :: theta, phi
-!     colors
-      real(kind=8) :: phi_color, Delta, widthc
-      real(kind=8) :: Rc,Gc,Bc
-      character(len=50) :: toto
+integer :: io
 
-      toto=trim(adjustl(fname))
+io=open_file_write(trim(adjustl(fname)))
 
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+call dump_config(io,spin,shape_spin)
 
-      Rx=shape_spin(1)-6
-      Ry=shape_spin(1)-5
-      Rz=shape_spin(1)-4
+call close_file(trim(adjustl(fname)),io)
 
-!     Constants used for the color definition
-      widthc=5.0d0
-      Delta =PI(2.0d0/3.0d0)
-
-      OPEN(15,FILE=toto,status='replace')
-
-      do i_m=1,shape_spin(5)
-       Do i_z=1,shape_spin(4)
-        Do i_y=1,shape_spin(3)
-         Do i_x=1,shape_spin(2)
-
-!       Yes for these formulars it is helpfull to make a picture.
-!       The initial object is a cone with its top at
-!       coordinates (0,0,1). First turn it around the y-achse into
-!       the x-z-plane around angly, then turn it around the z-achse
-!       into the right position.
-!       Then translate it to the right r_x,r_y position.
-        if (abs(Spin(Z,i_x,i_y,i_z,i_m)).lt.1.0d0) then
-          theta=acos(Spin(Z,i_x,i_y,i_z,i_m))*180.0d0/pi(1.0d0)
-        else
-          theta=90.0d0-dsign(90.0d0,Spin(Z,i_x,i_y,i_z,i_m))
-        endif
-
-        phi=atan2(Spin(Y,i_x,i_y,i_z,i_m),Spin(X,i_x,i_y,i_z,i_m))
-
-        phi=phi*180.0d0/pi(1.0d0)
-
-!       Calcualting the color as a function of the angle in or
-!       out of the plane
-        phi_color=pi(theta/300.0d0*2.0d0)
-        Rc = widthc*(cos(phi_color+0*Delta))
-        if (Rc.lt.0.000001d0)  Rc=0.0d0
-        Gc = widthc*(cos(phi_color+1*Delta))
-        if (Gc.lt.0.000001d0)  Gc=0.0d0
-        Bc = widthc*(cos(phi_color+2*Delta))
-        if (Bc.lt.0.000001d0)  Bc=0.0d0
-
-         write(15,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',Spin(Rx,i_x,i_y,i_z,i_m),',',Spin(Ry,i_x,i_y,i_z,i_m),',',Spin(Rz,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
-
-         enddo
-        enddo
-       enddo
-      enddo
-
-      Close(15)
-
-      END subroutine CreateSpinFile_usernamed
+END subroutine CreateSpinFile_usernamed_spin
 ! ===============================================================
 
 ! ===============================================================
-      subroutine CreateSpinFile_end(spin,shape_spin)
-      use m_constants, only : pi
-      Implicit none
-      real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: shape_spin(:)
-!     Slope Indexes for three dim spins
-      INTEGER :: i_x,i_y,i_z,i_m
+subroutine CreateSpinFile_usernamed(fname,my_lattice,my_motif)
+Implicit none
+character(len=*), intent(in) :: fname
+type(lattice), intent(in) :: my_lattice
+type(cell), intent(in) :: my_motif
+! lattice of the positions
+real(kind=8), allocatable, dimension(:,:,:,:,:) :: position
 ! coordinate of the spins
-      integer :: X,Y,Z
-! position of the spins
-      integer :: Rx,Ry,Rz
-!     calculating the angles
-      real(kind=8) :: theta, phi
-!     colors
-      real(kind=8) :: phi_color, Delta, widthc
-      real(kind=8) :: Rc,Gc,Bc
+integer :: N(4),Natom_motif,io
+! calculating the angles
+real(kind=8) :: r(3,3)
 
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
 
-      Rx=shape_spin(1)-6
-      Ry=shape_spin(1)-5
-      Rz=shape_spin(1)-4
+N=shape(my_lattice%l_modes)
+Natom_motif=size(my_motif%i_mom)
+r=my_lattice%areal
 
-!     Constants used for the color definition
-      widthc=5.0d0
-      Delta =PI(2.0d0/3.0d0)
+allocate(position(3,N(1),N(2),N(3),N(4)))
+position=0.0d0
 
-      OPEN(15,FILE='Spinse_end.dat',status='replace')
+call get_position(position,N,r,my_motif)
 
-      do i_m=1,shape_spin(5)
-       Do i_z=1,shape_spin(4)
-        Do i_y=1,shape_spin(3)
-         Do i_x=1,shape_spin(2)
+io=open_file_write(trim(adjustl(fname)))
 
-!       Yes for these formulars it is helpfull to make a picture.
-!       The initial object is a cone with its top at
-!       coordinates (0,0,1). First turn it around the y-achse into
-!       the x-z-plane around angly, then turn it around the z-achse
-!       into the right position.
-!       Then translate it to the right r_x,r_y position.
-        if (abs(Spin(Z,i_x,i_y,i_z,i_m)).lt.1.0d0) then
-          theta=acos(Spin(Z,i_x,i_y,i_z,i_m))*180.0d0/pi(1.0d0)
-        else
-          theta=90.0d0-dsign(90.0d0,Spin(Z,i_x,i_y,i_z,i_m))
-        endif
+call dump_config(io,my_lattice,position)
 
-        phi=atan2(Spin(Y,i_x,i_y,i_z,i_m),Spin(X,i_x,i_y,i_z,i_m))
+call close_file(trim(adjustl(fname)),io)
 
-        phi=phi*180.0d0/pi(1.0d0)
+deallocate(position)
 
-!       Calcualting the color as a function of the angle in or
-!       out of the plane
-        phi_color=pi(theta/300.0d0*2.0d0)
-        Rc = widthc*(cos(phi_color+0*Delta))
-        if (Rc.lt.0.000001d0)  Rc=0.0d0
-        Gc = widthc*(cos(phi_color+1*Delta))
-        if (Gc.lt.0.000001d0)  Gc=0.0d0
-        Bc = widthc*(cos(phi_color+2*Delta))
-        if (Bc.lt.0.000001d0)  Bc=0.0d0
+END subroutine CreateSpinFile_usernamed
+! ===============================================================
 
-         write(15,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',Spin(Rx,i_x,i_y,i_z,i_m),',',Spin(Ry,i_x,i_y,i_z,i_m),',',Spin(Rz,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
+! ===============================================================
+subroutine CreateSpinFile_end(my_lattice,my_motif)
+Implicit none
+type(lattice), intent(in) :: my_lattice
+type(cell), intent(in) :: my_motif
+! lattice of the positions
+real(kind=8), allocatable, dimension(:,:,:,:,:) :: position
+! coordinate of the spins
+integer :: N(4),Natom_motif,io
+! calculating the angles
+real(kind=8) :: r(3,3)
 
-         enddo
-        enddo
-       enddo
-      enddo
+N=shape(my_lattice%l_modes)
+Natom_motif=size(my_motif%i_mom)
+r=my_lattice%areal
 
-      Close(15)
-      END subroutine CreateSpinFile_end
+allocate(position(3,N(1),N(2),N(3),N(4)))
+position=0.0d0
+
+call get_position(position,N,r,my_motif)
+
+! dump the positions of the sites
+
+io=open_file_write('positions.dat')
+
+call dump_config(io,position)
+
+call close_file('positions.dat',io)
+
+! dump the povray file
+
+io=open_file_write('Spinse_end.dat')
+
+call dump_config(io,my_lattice,position)
+
+call close_file('Spinse_end.dat',io)
+
+deallocate(position)
+
+END subroutine CreateSpinFile_end
 ! ===============================================================
 
 ! ===============================================================
@@ -330,87 +274,101 @@
 ! ===============================================================
 
 ! ===============================================================
-      subroutine CreateSpinFile_I_simple_5d(signature,spin,shape_spin)
-      use m_constants, only : pi
-      Implicit none
-      integer, intent(in) :: signature
-      real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: shape_spin(:)
+subroutine CreateSpinFile_I_simple_5d(signature,spin,shape_spin)
+use m_constants, only : pi
+Implicit none
+integer, intent(in) :: signature,shape_spin(:)
+real(kind=8), intent(in) :: spin(:,:,:,:,:)
+! internal variables
 !     Slope Indexes for three dim spins
-      INTEGER :: i_x,i_y,i_z,i_m
-! coordinate of the spins
-      integer :: X,Y,Z
-! position of the spins
-      integer :: Rx,Ry,Rz
+INTEGER :: i_x,i_y,i_z,i_m
 !     calculating the angles
-      real(kind=8) :: theta, phi
+real(kind=8) :: theta, phi
 !     Is the row even (1) or not (0)
-      Integer :: i
+Integer :: i
 !     colors
-      real(kind=8) :: phi_color, Delta, widthc
-      real(kind=8) :: Rc,Gc,Bc
+real(kind=8) :: Rc,Gc,Bc
+! position
+real(kind=8) :: pos(3)
 !   name of files
-      character(len=30) :: fname,toto
+character(len=30) :: fname,toto
 
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+write(fname,'(I10)') signature
+toto=trim(adjustl(fname))
+write(fname,'(a,18a,a)')'Spinse_',(toto(i:i),i=1,len_trim(toto)),'.dat'
+OPEN(15,FILE=fname,status='unknown')
 
-      Rx=shape_spin(1)-6
-      Ry=shape_spin(1)-5
-      Rz=shape_spin(1)-4
-
-!     Constants used for the color definition
-      widthc=5.0d0
-      Delta =PI(2.0d0/3.0d0)
-
-      write(fname,'(I10)') signature
-      toto=trim(adjustl(fname))
-      write(fname,'(a,18a,a)')'Spinse_',(toto(i:i),i=1,len_trim(toto)),'.dat'
-      OPEN(15,FILE=fname,status='unknown')
-
-      do i_m=1,shape_spin(5)
-       Do i_z=1,shape_spin(4)
-        Do i_y=1,shape_spin(3)
+do i_m=1,shape_spin(5)
+   Do i_z=1,shape_spin(4)
+      Do i_y=1,shape_spin(3)
          Do i_x=1,shape_spin(2)
 
-!       Yes for these formulars it is helpfull to make a picture.
-!       The initial object is a cone with its top at
-!       coordinates (0,0,1). First turn it around the y-achse into
-!       the x-z-plane around angly, then turn it around the z-achse
-!       into the right position.
-!       Then translate it to the right r_x,r_y position.
-        if (abs(Spin(Z,i_x,i_y,i_z,i_m)).lt.1.0d0) then
-          theta=acos(Spin(Z,i_x,i_y,i_z,i_m))*180.0d0/pi(1.0d0)
-        else
-          theta=90.0d0-dsign(90.0d0,Spin(Z,i_x,i_y,i_z,i_m))
-        endif
 
-        phi=atan2(Spin(Y,i_x,i_y,i_z,i_m),Spin(X,i_x,i_y,i_z,i_m))
+         call get_colors(Rc,Gc,Bc,theta,phi,spin(4:6,i_x,i_y,i_z,i_m))
 
-        phi=phi*180.0d0/pi(1.0d0)
-
-!       Calcualting the color as a function of the angle in or
-!       out of the plane
-        phi_color=pi(theta/300.0d0*2.0d0)
-        Rc = widthc*(cos(phi_color+0*Delta))
-        if (Rc.lt.0.000001d0)  Rc=0.0d0
-        Gc = widthc*(cos(phi_color+1*Delta))
-        if (Gc.lt.0.000001d0)  Gc=0.0d0
-        Bc = widthc*(cos(phi_color+2*Delta))
-        if (Bc.lt.0.000001d0)  Bc=0.0d0
+        pos=spin(1:3,i_x,i_y,i_z,i_m)
 
          write(15,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',Spin(Rx,i_x,i_y,i_z,i_m),',',Spin(Ry,i_x,i_y,i_z,i_m),',',Spin(Rz,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
+     & theta,',',phi,',',pos(1),',',pos(2),',',pos(3),',',Rc,',',Bc,',',Gc,')'
 
          enddo
-        enddo
-       enddo
       enddo
+   enddo
+enddo
 
-      Close(15)
-      END subroutine CreateSpinFile_I_simple_5d
+Close(15)
+END subroutine CreateSpinFile_I_simple_5d
+! ===============================================================
+
+! ===============================================================
+subroutine CreateSpinFile_I_lattice(signature,my_lattice,my_motif)
+use m_constants, only : pi
+Implicit none
+integer, intent(in) :: signature
+type(lattice), intent(in) :: my_lattice
+type(cell), intent(in) :: my_motif
+! internal variables
+!     Slope Indexes for three dim spins
+INTEGER :: i_x,i_y,i_z,i_m
+!     calculating the angles
+real(kind=8) :: theta, phi
+!     Is the row even (1) or not (0)
+Integer :: i,shape_spin(4)
+!     colors
+real(kind=8) :: Rc,Gc,Bc,net(3,3)
+! position
+real(kind=8) :: pos(3)
+!   name of files
+character(len=30) :: fname,toto
+
+shape_spin=shape(my_lattice%l_modes)
+net=my_lattice%areal
+
+write(fname,'(I10)') signature
+toto=trim(adjustl(fname))
+write(fname,'(a,18a,a)')'Spinse_',(toto(i:i),i=1,len_trim(toto)),'.dat'
+OPEN(15,FILE=fname,status='unknown')
+
+do i_m=1,shape_spin(4)
+   Do i_z=1,shape_spin(3)
+      Do i_y=1,shape_spin(2)
+         Do i_x=1,shape_spin(1)
+
+
+         call get_colors(Rc,Gc,Bc,theta,phi,my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(:))
+
+        pos=net(1,:)*real(i_x-1)+net(2,:)*real(i_y-1)+net(3,:)*real(i_z-1)+my_motif%pos(i_m,:)
+
+         write(15,'(8(a,f16.8),a)') 'Spin(', &
+     & theta,',',phi,',',pos(1),',',pos(2),',',pos(3),',',Rc,',',Bc,',',Gc,')'
+
+         enddo
+      enddo
+   enddo
+enddo
+
+Close(15)
+END subroutine CreateSpinFile_I_lattice
 ! ===============================================================
 
 ! ===============================================================
@@ -495,5 +453,49 @@
 
       Close(15)
       END subroutine CreateSpinFile_R_simple_5d
+
 ! ===============================================================
-      end module m_createspinfile
+! function that gets the RGB colors
+! ===============================================================
+subroutine get_colors(Rc,Gc,Bc,theta,phi,mode)
+use m_constants,only : pi
+implicit none
+real(kind=8),intent(inout) :: Rc,Gc,Bc,theta,phi
+real(kind=8),intent(in) :: mode(3)
+! internal
+real(kind=8) :: widthc,Delta,phi_color
+
+widthc=5.0d0
+Delta =PI(2.0d0/3.0d0)
+
+!       Yes for these formulars it is helpfull to make a picture.
+!       The initial object is a cone with its top at
+!       coordinates (0,0,1). First turn it around the y-achse into
+!       the x-z-plane around angly, then turn it around the z-achse
+!       into the right position.
+!       Then translate it to the right r_x,r_y position.
+
+if (abs(mode(3)).lt.1.0d0) then
+  theta=acos(mode(3))*180.0d0/pi(1.0d0)
+else
+  theta=90.0d0-dsign(90.0d0,mode(3))
+endif
+
+phi=atan2(mode(2),mode(1))
+
+phi=phi*180.0d0/pi(1.0d0)
+
+!       Calcualting the color as a function of the angle in or
+!       out of the plane
+phi_color=pi(theta/300.0d0*2.0d0)
+Rc = widthc*(cos(phi_color+0*Delta))
+if (Rc.lt.0.000001d0)  Rc=0.0d0
+Gc = widthc*(cos(phi_color+1*Delta))
+if (Gc.lt.0.000001d0)  Gc=0.0d0
+Bc = widthc*(cos(phi_color+2*Delta))
+if (Bc.lt.0.000001d0)  Bc=0.0d0
+
+end subroutine get_colors
+! ===============================================================
+
+end module m_createspinfile

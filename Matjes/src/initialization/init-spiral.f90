@@ -24,8 +24,10 @@ real(kind=8), allocatable :: position(:,:,:,:,:)
 
 kvec=my_lattice%astar
 r=my_lattice%areal
+Rq=(/0.0,0.0,1.0/)
+Iq=(/1.0,0.0,0.0/)
 
-call get_parameter(io,fname,'qvec',3,qvec,1.0d0)
+call get_parameter(io,fname,'qvec',3,qvec)
 dumy_vec=qvec(1)*kvec(1,:)+qvec(2)*kvec(2,:)+qvec(3)*kvec(3,:)
 qvec=dumy_vec
 

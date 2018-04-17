@@ -14,31 +14,6 @@
       use m_mpi_prop, only : isize,irank_working,MPI_COMM,MPI_COMM_BOX,irank_box
 #endif
       Implicit none
-!!! -------------------------------  !!!
-!!!
-! interface of the main subroutines
-!!!
-!!! -------------------------------  !!!
-      interface
-         subroutine MCstep(state,E_total,E,Magnetization,kt,acc,rate,nb,cone,n_system, &
-         &  spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,EA, &
-         & i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,n_world,my_lattice)
-          use m_derived_types
-          use mtprng
-          implicit none
-          type(lattice), intent(in) :: my_lattice
-          integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4),n_system
-          integer, intent(in) :: tableNN(shape_tableNN(1),shape_tableNN(2),shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
-          integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
-          integer, intent(in) :: indexNN(shape_index(1),shape_index(2)),n_world
-          logical, intent(in) :: i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel
-          real(kind=8), intent(in) :: kt,h_ext(3),EA(3)
-          real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-          type(mtprng_state), intent(inout) :: state
-          real(kind=8), intent(inout) :: E_total,Magnetization(3),E(8),acc,rate,cone,nb
-         end subroutine
-      end interface
-
 ! input
       type(lattice), intent(in) :: my_lattice
       integer, intent(in) :: shape_index(2),shape_spin(5),shape_tableNN(6),shape_masque(4)

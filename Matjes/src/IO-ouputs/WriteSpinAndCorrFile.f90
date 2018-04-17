@@ -1,14 +1,21 @@
-      module m_write_spin
-      interface WriteSpinAndCorrFile
+module m_write_spin
+use m_get_position
+use m_derived_types
+use m_io_utils
+use m_io_files_utils
+
+  interface WriteSpinAndCorrFile
        module procedure write_SD
        module procedure write_usernamed
        module procedure write_MC
        module procedure write_general_5d
        module procedure write_general_4d
        module procedure write_general_end
-      end interface WriteSpinAndCorrFile
+  end interface WriteSpinAndCorrFile
 
-      contains
+private
+public :: WriteSpinAndCorrFile
+contains
 
 ! ===============================================================
 ! works only with matrices of rank 5 with the name given by the user
@@ -48,32 +55,21 @@
 
 ! ===============================================================
 ! works only with matrices of rank 4
-      SUBROUTINE write_general_end(spin,shape_spin)
-      Implicit none
-      real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: shape_spin(:)
+SUBROUTINE write_general_end(my_lattice)
+Implicit none
+type(lattice), intent(in) :: my_lattice
 !     Coordinates of the Spins
-      Integer :: i_x,i_y,i_z,i_m,j_lat,size_z
-
-      size_z=shape_spin(5)
+integer :: io
 
 !     write Spinconfiguration in a file for STM-simulation
 
-      OPEN(15,FILE='SpinSTM_end.dat')
+io=open_file_write('SpinSTM_end.dat')
 
-      do i_z=1,shape_spin(4)
-       do i_y=1,shape_spin(3)
-        do i_x=1,shape_spin(2)
+call dump_config(io,my_lattice)
 
-        Write(15,'(7f14.8)') ((Spin(j_lat,i_x,i_y,i_z,i_m), j_lat=1,shape_spin(1)),i_m=1,size_z)
+call close_file('SpinSTM_end.dat',io)
 
-        enddo
-       enddo
-      enddo
-
-      Close(15)
-
-      END SUBROUTINE write_general_end
+END SUBROUTINE write_general_end
 ! ===============================================================
 
 ! ===============================================================
@@ -248,8 +244,6 @@
 !     We want badly to have a picture of Spins and Correlation
 !     at the lowest temperature. Nothing else is that important
 !     Therefore we need that add-values
-!      add_gra=mod(n_Tsteps,n_spingra)
-!      add_cor=mod(n_Tsteps,n_cor)
 
       size_z=shape_spin(5)
 

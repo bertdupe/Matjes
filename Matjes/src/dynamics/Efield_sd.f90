@@ -8,7 +8,6 @@
 
       subroutine Efield_sd_serial(j,spin,shape_spin,tableNN,masque,indexNN,h_ext,my_lattice)
       use m_energy
-      use m_parameters, only : i_DM,i_biq,i_four,i_dip,EA
       implicit none
 ! input
       type(lattice), intent(in) :: my_lattice
@@ -17,7 +16,7 @@
       integer, intent(in) :: shape_spin(:)
       integer, intent(in) :: j
 ! internals
-      integer :: i_x,i_y,i_z,i_m,k,i
+      integer :: i_x,i_y,i_z,i_m,i
       character(len=30) :: fname,toto
       real(kind=8) :: E_int,E_DM,E_xch,E_ani,E_z,E_4,E_biq,E_dip,mu_B
 
@@ -36,30 +35,30 @@
          len_trim(toto)),'.dat'
       OPEN(70,FILE=fname,action='write',status='unknown',form='formatted')
 
-      Write(70,'(a)') '1:Posx   2:Posy   3:Posz   4:E_tot   5:E_xch   6:E_DM   7:E_ani   8:E_z   9:E_4   10:E_biq   11:E_dip'
+      Write(70,'(a)') '#1:E_tot   2:E_xch   3:E_DM   4:E_ani   5:E_z   6:E_4   7:E_biq   8:E_dip'
 
       do i_m=1,shape_spin(5)
        do i_z=1,shape_spin(4)
         do i_y=1,shape_spin(3)
          do i_x=1,shape_spin(2)
 
-         mu_B=spin(7,i_x,i_y,i_z,i_m)
+         mu_B=2.7d0
 
-          E_xch=Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-          E_z=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
-          E_ani=anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
-          if (i_DM) E_DM=DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-          if (i_four) E_4=fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,my_lattice%boundary)
-          if (i_biq) E_biq=biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+!          E_xch=Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+!          E_z=Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext+(/0.0d0,0.0d0,20.0d0/),mu_B)
+!          E_ani=anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
+!          if (i_DM) E_DM=DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+!          if (i_four) E_4=fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,my_lattice%boundary)
+!          if (i_biq) E_biq=biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
 #ifdef CPP_BRUTDIP
-          if (i_dip) E_dip=dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,my_lattice%boundary)
+!          if (i_dip) E_dip=dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,my_lattice%boundary)
 #else
-          if (i_dip) E_dip=fftdip(i_x,i_y,i_z,i_m)
+!          if (i_dip) E_dip=fftdip(i_x,i_y,i_z,i_m)
 #endif
 
           E_int=E_xch+E_DM+E_ani+E_z+E_4+E_biq+E_dip
 
-          Write(70,'(3(f10.4,2x),8(E20.12E3,2x))') (Spin(k,i_x,i_y,i_z,i_m),k=1,3),E_int,E_xch,E_DM,E_ani,E_z,E_4,E_biq,E_dip
+          Write(70,'(8(E20.12E3,2x))') E_int,E_xch,E_DM,E_ani,E_z,E_4,E_biq,E_dip
 
          enddo
         enddo

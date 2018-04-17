@@ -1,13 +1,14 @@
 module m_init_variables
 use m_derived_types
 
+private
+public :: init_variables
+
 interface init_variables
   module procedure init_simu
   module procedure init_lattice
+  module procedure init_io_parameter
 end interface
-
-private
-public :: init_variables,init_lattice
 
 contains
 
@@ -15,26 +16,37 @@ contains
 ! initialization of the derived type variables
 !!!!!!!!!!!!!!!!!!
 
+! Initialization of the io parameters
+subroutine init_io_parameter(io_simu)
+implicit none
+type(io_parameter), intent(out) :: io_simu
+
+! io_of the simulation
+io_simu%io_dispersion=.False.
+io_simu%io_qorien=.False.
+io_simu%io_spstmL=.False.
+io_simu%io_spstmonly=.False.
+io_simu%io_Xstruct=.False.
+io_simu%io_fft_Xstruct=.False.
+io_simu%io_topo=.False.
+io_simu%io_topohall=.False.
+io_simu%io_frequency=1
+io_simu%io_warning=.True.
+io_simu%io_writing=1
+
+end subroutine init_io_parameter
+
 ! Initialization of the simulation type
 subroutine init_simu(simu)
 implicit none
-type(bool_var), intent(out) :: simu(:)
+type(bool_var), intent(out) :: simu
 ! internal variables
-integer :: i, n_size
 
-n_size=size(simu)
-
-do i=1,n_size
 ! type of the simulation
-   simu(i)%value=.False.
+simu%value=.False.
 
-! name of the simulations
-   simu(i)%name=''
-
-! name of the variables
-   simu(i)%var_name=''
-
-enddo
+! name of the simulation
+simu%name=''
 
 end subroutine init_simu
 
@@ -55,7 +67,7 @@ start_lattice%alat=0.0
 
 start_lattice%boundary=.True.
 
-nullify(start_lattice%l_modes)
+!nullify(start_lattice%l_modes)
 
 do i=1,nsize
     my_lattice(i)=start_lattice

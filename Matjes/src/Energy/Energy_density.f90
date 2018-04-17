@@ -9,7 +9,7 @@
 
       SUBROUTINE EnergyDensity(EnOutput,EnDensityOutput,spin,shape_spin,tableNN,shape_tableNN, &
                 & masque,shape_masque,indexNN,shape_index,h_ext,my_lattice,my_motif)
-      use m_parameters, only : J_ij,EA,J_il,i_biq,i_four,i_DM,i_dip,DM,J_z
+      use m_parameters, only : J_ij,J_il,DM,J_z
       use m_constants, only : pi
       use m_energy
       use m_table_dist
@@ -107,20 +107,20 @@
         mu_B=spin(7,i_x,i_y,i_z,i_m)
 !           do i_m=1,1
 
-      EnDenTab(3)=EnDenTab(3)+Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-!      EnDenTab(3)=EnDenTab(3)+Exchange(i_x,i_y,i_z,i_m)/dble(count(masque(2:N_nei_exch+1,i_x,i_y,i_z).ne.0))
+!      EnDenTab(3)=EnDenTab(3)+Exchange(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+!!      EnDenTab(3)=EnDenTab(3)+Exchange(i_x,i_y,i_z,i_m)/dble(count(masque(2:N_nei_exch+1,i_x,i_y,i_z).ne.0))
 #ifdef CPP_BRUTDIP
-      if (i_dip) EnDenTab(4)=EnDenTab(4)+dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
+!      if (i_dip) EnDenTab(4)=EnDenTab(4)+dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
 #else
-      if (i_dip) EnDenTab(4)=EnDenTab(4)+fftdip(i_x,i_y,i_z,i_m)
+!      if (i_dip) EnDenTab(4)=EnDenTab(4)+fftdip(i_x,i_y,i_z,i_m)
 #endif
-      EnDenTab(5)=EnDenTab(5)+Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
-      if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+!      EnDenTab(5)=EnDenTab(5)+Zeeman(i_x,i_y,i_z,i_m,spin,shape_spin,masque,h_ext,mu_B)
+!      if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
 
-!      if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m)/dble(count(masque(2:N_nei_dm+1,i_x,i_y,i_z).ne.0))
-      EnDenTab(7)=EnDenTab(7)+anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
-      if (i_biq) EnDenTab(8)=EnDenTab(8)+biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
-      if (i_four) EnDenTab(9)=EnDenTab(9)+fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
+!!      if (i_DM) EnDenTab(6)=EnDenTab(6)+DMenergy(i_x,i_y,i_z,i_m)/dble(count(masque(2:N_nei_dm+1,i_x,i_y,i_z).ne.0))
+!      EnDenTab(7)=EnDenTab(7)+anisotropy(i_x,i_y,i_z,i_m,EA,spin,shape_spin)
+!      if (i_biq) EnDenTab(8)=EnDenTab(8)+biquadratic(i_x,i_y,i_z,i_m,spin,shape_spin,tableNN,masque,indexNN)
+!      if (i_four) EnDenTab(9)=EnDenTab(9)+fourspin(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
         enddo
 
       EnDenTab(10)= sum(EnDenTab(3:9))

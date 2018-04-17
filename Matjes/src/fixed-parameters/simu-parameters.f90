@@ -1,5 +1,5 @@
 module m_simu_parameters
-
+use m_basic_types
 !!!!!!!!!!!!!!!!!!!!!!!!!
 !
 !  A module that contains the different parameters to run the simulations
@@ -7,19 +7,6 @@ module m_simu_parameters
 !  The variables are defined depending on the type of options that they trigger
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-!  Basic type to store strings with different length
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!
-
-type var_name
-     character(len=30) :: name
-end type var_name
 
 !!!!!!!!!!!!!!!!!!!!!!!!!
 !

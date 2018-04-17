@@ -6,7 +6,8 @@ use m_init_Sk
 use m_init_Sklattice
 use m_io_utils
 use m_init_heavyside
-implicit none
+use m_io_files_utils
+
 private
 public :: init_config
 contains
@@ -14,6 +15,7 @@ contains
 !!!!!!!!!!!
 ! find the different starting configurations for the order parameters
 subroutine init_config(fname,my_lattice,my_motif)
+implicit none
 character(len=*), intent(in) :: fname
 type (lattice), intent(inout) :: my_lattice
 type (cell), intent(in) :: my_motif
@@ -23,11 +25,9 @@ character(len=10) :: configuration
 integer :: nconfig
 
 nconfig=0
-open(newunit=io,file=fname,form='formatted',status='old',action='read')
+io=open_file_read(fname)
 
 call get_parameter(io,fname,'configuration',configuration)
-
-close(io)
 
 select case (adjustl(configuration))
    case('spiral')
@@ -46,6 +46,8 @@ select case (adjustl(configuration))
       write(6,'(a)') 'spiral - domainwall - heavyside - skyrmion - skyrmionlattice'
       STOP
 end select
+
+call close_file(fname,io)
 
 end subroutine init_config
 

@@ -8,8 +8,8 @@
 ! May the force be with you
 !
 !!!! exchange field
-      function Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      use m_parameters, only : J_ij,J_il,c_ji,J_z,param_N_Nneigh,param_N_Nneigh_il
+      function Bexch(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,c_ji)
+      use m_parameters, only : J_ij,J_il,J_z,param_N_Nneigh,param_N_Nneigh_il
       implicit none
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -18,6 +18,7 @@
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      real(kind=8), intent(in) :: c_ji
 ! value of the function variable
       real(kind=8), dimension(3) :: Bexch
 ! internal variable
@@ -28,9 +29,9 @@
 ! position of the neighbors along x,y,z and motif
       integer :: v_x,v_y,v_z,v_m,lay
 
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
       k=1
       B_int=0.0d0
@@ -100,8 +101,7 @@
       Bexch=-2.0d0*B_int*c_ji
       end function Bexch
 !DM field
-      function Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      use m_parameters, only : c_DM,DM,DM_vector
+      function Bdm(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,c_DM,DM)
       use m_vector, only: cross
       implicit none
 ! external variable
@@ -111,24 +111,25 @@
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      real(kind=8), intent(in) :: c_DM,DM(:,:,:)
 ! value of the function
       real(kind=8), dimension(3) :: Bdm
 !internal variable
       integer :: avant,i,j
-      real(kind=8) :: B_int(3)
+      real(kind=8) :: B_int(3),DM_vector(6,3,1)
 ! coordinate of the spin
       integer :: X,Y,Z
 ! position of the neighbors along x,y,z and motif
       integer :: v_x,v_y,v_z,v_m
 
       avant=0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
       B_int=0.0d0
 
-      do i=1,count(abs(DM(:,i_m))>1.0d-8)
+      do i=1,count(abs(DM(:,i_m,1))>1.0d-8)
        do j=1,indexNN(i,1)
 
         v_x=tableNN(1,avant+j,i_x,i_y,i_z,i_m)
@@ -136,7 +137,7 @@
         v_z=tableNN(3,avant+j,i_x,i_y,i_z,i_m)
         v_m=tableNN(4,avant+j,i_x,i_y,i_z,i_m)
 
-        B_int=B_int-DM(i,i_m)*cross(DM_vector(avant+j,:,i_m),Spin(X:Z,v_x,v_y,v_z,v_m)) &
+        B_int=B_int-DM(i,i_m,1)*cross(DM_vector(avant+j,:,i_m),Spin(X:Z,v_x,v_y,v_z,v_m)) &
          *dble(masque(avant+j+1,i_x,i_y,i_z))
 
        enddo
@@ -147,40 +148,33 @@
 
       end function Bdm
 !!! Anisotropy field
-      function Bani(i_x,i_y,i_z,i_m,axis,spin,shape_spin)
-      use m_parameters, only : EA,c_ani,D_ani
+      function Bani(i_x,i_y,i_z,i_m,spin,shape_spin,c_ani,D_ani)
       use m_vector, only : norm
       implicit none
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
       integer, intent(in) :: shape_spin(5)
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-      real(kind=8) , intent(in) :: axis(3)
+      real(kind=8) , intent(in) :: c_ani,D_ani(:,:,:)
 ! value of the function
       real(kind=8), dimension(3) :: Bani
 ! coordinate of the spin
       integer :: X,Y,Z
 ! internal variable
-      integer :: i
-      real(kind=8) :: dumy(3)
       real(kind=8) , dimension(3) :: B_int
 
       B_int=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
-      dumy=axis/norm(EA)
-      do i=1,count(abs(D_ani)>1.0d-7)
-      B_int=B_int+2.0d0*D_ani(i)*dumy*(spin(X,i_x,i_y,i_z,i_m)*dumy(1)+spin(Y,i_x,i_y,i_z,i_m)* &
-      dumy(2)+spin(Z,i_x,i_y,i_z,i_m)*dumy(3))
-      enddo
+      B_int=B_int+2.0d0*(spin(X,i_x,i_y,i_z,i_m)*D_ani(1,1,1)+spin(Y,i_x,i_y,i_z,i_m)* &
+      D_ani(2,1,1)+spin(Z,i_x,i_y,i_z,i_m)*D_ani(3,1,1))
 
       Bani=-c_ani*B_int
       end function Bani
 ! biquadratic field
-      function Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      use m_parameters, only : c_JB,J_B
+      function Bbiqd(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,c_JB,J_B)
       implicit none
 ! external variable
       integer , intent(in) :: i_x,i_y,i_z,i_m
@@ -189,6 +183,7 @@
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      real(kind=8), intent(in) :: c_JB,J_B
 ! value of the function
       real(kind=8), dimension(3) :: Bbiqd
 ! internal variable
@@ -200,9 +195,9 @@
       integer :: v_x,v_y,v_z,v_m
 
       B_int=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
 ! the choosen spin is the spin i_s. It has nn nearest neighbours. The numbers of nearest
 ! neighbours are stored in n(:). for example n(1)=4 means 4 nearest neighbours
@@ -229,8 +224,7 @@
 ! ipuv is the corner along the diagonal u+v for k=3,6...
 ! ipu is along the first vector for k=1,4...
 ! ipv along the second k=2,5...
-      function Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice)
-      use m_parameters, only : c_Ki,K_1
+      function Bfour(i_x,i_y,i_z,i_m,spin,shape_spin,masque,shape_masque,my_lattice,c_Ki,K_1)
       use m_sym_utils, only : corners
       use m_derived_types
       implicit none
@@ -239,6 +233,7 @@
       integer, intent(in) :: shape_spin(5),shape_masque(4)
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      real(kind=8), intent(in) :: c_Ki,K_1
       type(lattice), intent(in) :: my_lattice
 ! value of the function
       real(kind=8), dimension(3) :: Bfour
@@ -251,9 +246,9 @@
 
       Periodic_log=my_lattice%boundary
       B_int=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
       k=1
       do while (k.lt.size(corners,1))
@@ -338,17 +333,12 @@
       real(kind=8), intent(in) :: h_ext(3)
 ! value of the function
       real(kind=8), dimension(3) :: BZ
-!internal variable
-      integer :: M
 
-      M=shape_spin(1)
-
-      BZ=mu_B*H_ext*Spin(M,i_x,i_y,i_z,i_m)
+      BZ=mu_B*H_ext*sqrt(Spin(1,i_x,i_y,i_z,i_m)**2+Spin(2,i_x,i_y,i_z,i_m)**2+Spin(3,i_x,i_y,i_z,i_m)**2)
 
       end function BZ
 !!!! electric field
-      function Efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN)
-      use m_parameters, only : c_ji,J_ij
+      function Efield(i_x,i_y,i_z,i_m,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,c_ji,J_ij)
       use m_efield, only : me,efield_jij
       implicit none
 ! external variable
@@ -358,6 +348,7 @@
       integer, intent(in) :: masque(shape_masque(1),shape_masque(2),shape_masque(3),shape_masque(4))
       integer, intent(in) :: indexNN(shape_index(1),shape_index(2))
       real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+      real(kind=8), intent(in) :: c_ji,J_ij(:,:,:)
 ! value of the function
       real(kind=8), dimension(3) :: Efield
 ! internal variable
@@ -371,9 +362,9 @@
       E_int=0.0d0
       avant=0
       Efield=0.0d0
-      X=shape_spin(1)-3
-      Y=shape_spin(1)-2
-      Z=shape_spin(1)-1
+      X=shape_spin(1)-2
+      Y=shape_spin(1)-1
+      Z=shape_spin(1)-0
 
       if (sum(dabs(me)).lt.1.0d-8) return
 ! the choosen spin is the spin i_s. It has nn nearest neighbours. The numbers of nearest
