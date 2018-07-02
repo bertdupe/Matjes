@@ -47,7 +47,7 @@
       real(kind=8) :: dumy(4),ds(3),security(2),B(3),step(3),steptor(3),stepadia(3),stepsttor(3),steptemp(3)
       real(kind=8) :: timestep_ini,real_time,h_int(3)
       character(len=30) :: fname,toto
-      integer :: i_x,i_y,i_z,i_m,iomp(3),N_site,ierr
+      integer :: i_x,i_y,i_z,i_m,iomp(3),N_site,ierr,shape_spinini(5)
 ! temperature (incase it is needed)
       real(kind=8) :: kT
 ! the computation time
@@ -82,6 +82,7 @@
       Zstart=start(3)+1
       Zstop=start(3)+shape_tableNN(5)
       Mstop=shape_tableNN(6)
+      shape_spinini=shape(spinini)
 
       N_site_comm=(Xstop-Xstart+1)*(Ystop-Ystart+1)*(Zstop-Zstart+1)*shape_spin(5)
       i_anatorque=.False.
@@ -464,7 +465,7 @@
         Beff=(Beff+Bini(:,i_x,i_y,i_z,i_m))/2.0d0
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,Beff,kt,stmtemp,maxh,i_x,i_y,i_z &
-      & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin,shape_spin,tableNN)
+      & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spinini,shape_spinini,tableNN)
 
         spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
 
