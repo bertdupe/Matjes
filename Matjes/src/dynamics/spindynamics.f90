@@ -353,7 +353,7 @@
           &  spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
 
       spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,Beff,kt,stmtemp,maxh,i_x,i_y,i_z &
-     & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin,shape_spin,tableNN)
+     & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,sttorque_field,spin,shape_spin,tableNN)
 
 ! the temperature is checked with 1 temperature step before
 !!! check temperature
@@ -409,7 +409,7 @@
   &      spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int)
 
        spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,Bini(:,i_x,i_y,i_z,i_m),kt,stmtemp, &
-     & maxh,i_x,i_y,i_z,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin,shape_spin,tableNN)
+     & maxh,i_x,i_y,i_z,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,sttorque_field,spin,shape_spin,tableNN)
 
        spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
 
@@ -465,7 +465,7 @@
         Beff=(Beff+Bini(:,i_x,i_y,i_z,i_m))/2.0d0
 
         spinafter(1:3,i_x,i_y,i_z,i_m)=integrate(timestep,Beff,kt,stmtemp,maxh,i_x,i_y,i_z &
-      & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spinini,shape_spinini,tableNN)
+      & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,sttorque_field,spinini,shape_spinini,tableNN)
 
         spinafter(4,i_x,i_y,i_z,i_m)=spinini(4,i_x,i_y,i_z,i_m)
 
