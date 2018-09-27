@@ -316,7 +316,7 @@
 ! ----------------------------------------------
 ! Euler integration scheme
        function simple(timestep,B,kt,stmtemp,maxh,i_x,i_y,i_z,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia, &
-      & storque,i_torque,stmtorque,spin,shape_spin,tableNN)
+      & storque,i_torque,stmtorque,sttorque_field,spin,shape_spin,tableNN)
        use m_constants, only : hbar
        use m_randist
        use m_vector, only : cross
@@ -326,7 +326,7 @@
        integer, intent(in) :: tableNN(:,:,:,:,:,:),shape_spin(:)
        real(kind=8), intent(in) :: timestep,B(:),kt,maxh,spin(:,:,:,:,:)
        real(kind=8), intent(in) :: damping,torque_FL,torque_AFL,adia,nonadia,storque
-       real(kind=8), intent(in) :: Ipol(:)
+       real(kind=8), intent(in) :: Ipol(:),sttorque_field
        integer, intent(in) :: i_x,i_y,i_z,i_m
        logical, intent(in) :: stmtemp,i_torque,stmtorque
        !dummy
@@ -377,7 +377,9 @@
 
        ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
      &   torque_FL*(torque_AFL+damping)*cross(S_norm,steptor)+adia*       &
-     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm)+steptemp
+     &   cross(S_norm,stepadia)-nonadia*stepadia+     &
+     &   sttorque_field*(storque+damping)*cross(stepsttor,S_norm)+sttorque_field*(1.0d0-damping*storque)*    &
+     &   stepsttor+steptemp
 
 
        spinfin=S_norm+dt*ds
