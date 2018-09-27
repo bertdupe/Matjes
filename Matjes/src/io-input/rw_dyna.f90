@@ -1,7 +1,7 @@
       module m_dynamic
       real(kind=8) :: timestep,damping,temps,hfin(3),max_error
       integer :: duration,ti,tf,times,tstart,htimes,hstart,Efreq
-      real(kind=8) :: torque_FL,torque_AFL,Ipol(3),adia,nonadia,storque,hstep(3)
+      real(kind=8) :: sttorque_field,torque_FL,torque_AFL,Ipol(3),adia,nonadia,storque,hstep(3)
       logical :: stmtorque,marche,rampe,hsweep,Ffield,i_Efield,i_torque,stmtemp
       real(kind=8), dimension(:,:,:), allocatable :: htor
 ! integration type
@@ -77,6 +77,10 @@
         if ( str(1:8) == 'timestep') then
            backspace(io)
            read(io,*) dummy, timestep
+          endif
+        if ( str(1:14) == 'sttorque_field') then
+           backspace(io)
+           read(io,*) dummy, sttorque_field
           endif
         if ( str(1:5) == 'Efreq') then
            backspace(io)
