@@ -8,6 +8,7 @@
       interface local_energy
        module procedure local_energy_decompose
        module procedure local_energy_av
+       module procedure local_energy_pointer
       end interface local_energy
 
       contains
@@ -141,4 +142,39 @@
 
       end subroutine local_energy_av
 
-      end module m_local_energy
+subroutine local_energy_pointer(E_int,i_dip,iomp,spin,E_line,h_ext)
+use m_energy_commons
+implicit none
+! input
+type(point_shell_mode), intent(in) :: spin
+type(point_shell_Operator), intent(in) :: E_line
+real(kind=8), intent(in) :: h_ext(:)
+integer, intent(in) :: iomp
+logical, intent(in) :: i_dip
+! ouput
+real(kind=8), intent(out) :: E_int
+! internal
+real(kind=8) :: S(3)
+integer :: i,N
+
+N=size(spin%shell)
+E_int=dot_product(spin%shell(1)%w,h_ext)
+S=0.0d0
+
+do i=1,N
+
+   S=S+matmul(spin%shell(i)%w,E_line%shell(i)%Op_loc)
+
+enddo
+
+E_int=dot_product(spin%shell(1)%w,S)+E_int
+
+!#ifdef CPP_BRUTDIP
+!      if (i_dip) E_int=E_int+dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
+!#else
+!      if (i_dip) E_int=E_int+fftdip(i_x,i_y,i_z,i_m)
+!#endif
+
+end subroutine local_energy_pointer
+
+end module m_local_energy

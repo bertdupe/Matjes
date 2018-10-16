@@ -2,8 +2,8 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = ext_param_rw.o energy_matrix.o simu-parameters.o basic_types.o \
- io_files_utils.o solver.o setup-Hamiltonian.o rw_motif.o check_inputs.o \
+OBJS = topology.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
+ operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o check_inputs.o \
  tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
  MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o \
@@ -12,9 +12,9 @@ OBJS = ext_param_rw.o energy_matrix.o simu-parameters.o basic_types.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o av_sd.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o DeriveValue.o Relaxation.o topoplot.o \
  setup-simu.o arrange_neihg.o mapping.o indexation.o order_lattice.o user_def_struct.o qorien.o \
- stdtypes.o Efield_sd.o error.o setup_zdir.o structure.o rw_efield.o \
- rw_zdir.o MonteCarlo.o check_restart.o store_relaxation.o \
- initialize_temperature.o cal_local_energy.o welcome.o parallel_tempering.o paratemp.o field-eff_sd.o mpi_prop.o \
+ stdtypes.o Efield_sd.o error.o setup_zdir.o rw_efield.o energy_commons.o \
+ rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o \
+ initialize_temperature.o cal_local_energy.o user_information.o parallel_tempering.o paratemp.o field-eff_sd.o mpi_prop.o \
  initial-configuration.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o get-position.o \
  IO-modes.o io-utils.o get-random.o simu-parameters.o init-variables.o convert.o kmesh.o dyna-utils.o pointgrp.o
 
@@ -43,10 +43,14 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+measure_temp.o: constant.o vector.o
+operator_pointer_utils.o: derived_types.o get-position.o
+topology.o: derived_types.o operator_pointer_utils.o
+internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
+energy_commons.o: get-position.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
-energy_matrix.o: basic_types.o
 basic_types.o:
-pointgrp.o: basic_types.o
+pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o
 dyna-utils.o:
 kmesh.o: io_files_utils.o
 convert.o:
@@ -63,18 +67,16 @@ initial-configuration.o: init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattic
 simu-parameters.o: basic_types.o
 io_files_utils.o: derived_types.o
 io-utils.o: constant.o convert.o derived_types.o simu-parameters.o vector.o
-setup-Hamiltonian.o: derived_types.o inp_rw.o
-rw_motif.o: derived_types.o structure.o vector.o
+rw_motif.o: derived_types.o vector.o
 check_inputs.o:
-structure.o: vector.o
 gauge_util.o:
 entropic.o: cal_local_energy.o relaxationtype.o sampling.o
 mpi_prop.o:
 constant.o:
 field-eff_sd.o: inp_rw.o sym_utils.o rw_efield.o
-Beff_sd.o: field-eff_sd.o
-welcome.o:
-CreateSpinFile.o: get-position.o constant.o
+Beff_sd.o: internal_fields.o field-eff_sd.o
+user_information.o:
+CreateSpinFile.o: get-position.o constant.o io-utils.o
 topocharge_local.o: vector.o create_lattice.o inp_rw.o rw_lattice.o
 topohall.o: vector.o constant.o create_lattice.o rw_lattice.o
 fit.o:
@@ -106,7 +108,7 @@ MC_fft.o: vector.o constant.o rw_lattice.o create_lattice.o
 Table_dist.o: vector.o derived_types.o
 setup_neigh.o: rw_lattice.o create_lattice.o vector.o
 spstm.o: rw_lattice.o create_lattice.o vector.o
-setup_DM.o: vector.o derived_types.o Table_dist.o
+setup_DM.o: vector.o derived_types.o Table_dist.o pointgrp.o
 create_lattice.o: derived_types.o
 error.o:
 mapping.o: create_lattice.o inp_rw.o vector.o derived_types.o
@@ -140,18 +142,18 @@ solver.o: constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
 setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o
-spindynamics.o: dyna-utils.o av_sd.o Efield_sd.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
-total_Energy.o: vector.o inp_rw.o
+spindynamics.o: measure_temp.o dyna-utils.o av_sd.o Efield_sd.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
+total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
 CalculateAverages.o: vector.o rw_lattice.o create_lattice.o topocharge_all.o
-main.o: io-utils.o init-variables.o welcome.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o check_inputs.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o check_inputs.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o
 
-setup-simu.o: setup-Hamiltonian.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o setup_neigh.o sym_utils.o Table_dist.o mtprng.o
+setup-simu.o: get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o setup_neigh.o sym_utils.o Table_dist.o mtprng.o
 Energy.o:
 cal_local_energy.o: Energy.o
 choosespin.o: mtprng.o
