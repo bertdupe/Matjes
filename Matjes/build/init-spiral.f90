@@ -34,12 +34,12 @@ qvec=dumy_vec
 call get_parameter(io,fname,'Rq',3,Rq,1.0d0)
 dumy_vec=Rq(1)*r(1,:)+Rq(2)*r(2,:)+Rq(3)*r(3,:)
 ss=norm(dumy_vec)
-Rq=Rq/ss
+Rq=dumy_vec/ss
 
 call get_parameter(io,fname,'Iq',3,Iq,1.0d0)
 dumy_vec=Iq(1)*r(1,:)+Iq(2)*r(2,:)+Iq(3)*r(3,:)
 ss=norm(dumy_vec)
-Rq=Rq/ss
+Iq=dumy_vec/ss
 
 ! get the position of the sites on the lattice
 Nx=my_lattice%dim_lat(1)

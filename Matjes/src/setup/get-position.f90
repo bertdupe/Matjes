@@ -1,12 +1,49 @@
 module m_get_position
-
+use m_io_files_utils
   interface get_position
       module procedure get_position_lattice
+      module procedure get_position_file
   end interface get_position
 
 private
 public :: get_position,get_position_ND_to_1D
 contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! subroutine that reads the position from file
+! input:
+! dim_lat(3): dimension of the lattice in the x, y and z directions
+!
+! outpout:
+! position: position of the sites in cartesian coordinates
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine get_position_file(pos,fname)
+implicit none
+real(kind=8), intent(inout) :: pos(:,:,:,:,:)
+character(len=*), intent(in) :: fname
+! internal variables
+integer :: dim_lat(5),io
+integer :: i_z,i_y,i_x,i_m,j_lat
+
+dim_lat= shape(pos)
+
+! Read the configurations
+io=open_file_read(fname)
+
+do i_m=1,dim_lat(5)
+   do i_z=1,dim_lat(4)
+      do i_y=1,dim_lat(3)
+         do i_x=1,dim_lat(2)
+           read(io,*) (pos(j_lat,i_x,i_y,i_z,i_m),j_lat=1,3)
+         enddo
+      enddo
+   enddo
+enddo
+
+call close_file(fname,io)
+
+end subroutine get_position_file
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! subroutine that gives out the position of the of the sites

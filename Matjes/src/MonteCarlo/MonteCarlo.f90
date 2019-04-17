@@ -1,6 +1,7 @@
 !
 ! Routine that does the Monte Carlo (and not the parallel tempering)
 !
+!subroutine MonteCarlo(my_lattices,mag_motif,io_simu,gra_topo,ext_param)
       subroutine montecarlo(N_cell,n_relaxation,n_sizerelax, &
             &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
             &    i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost, &
@@ -8,8 +9,13 @@
             &    print_relax,Cor_log, &
             &    n_Tsteps,coni,Total_MC_Steps,T_auto,EA,T_relax,kTfin,kTini,h_ext, &
             &    my_lattice)
-      use m_constants, only : k_b,pi
-      use m_vector, only : norm
+use m_constants, only : k_b,pi
+use m_vector, only : norm
+use m_derived_types
+
+
+
+
       use m_Corre
       use m_check_restart
       use m_topocharge
@@ -28,6 +34,13 @@
       implicit none
 
 !variable part
+!type(lattice), intent(inout) :: my_lattices
+!type(cell), intent(in) :: mag_motif
+!type(io_parameter), intent(in) :: io_simu
+!type(simulation_parameters), intent(in) :: ext_param
+!logical, intent(in) :: gra_topo
+
+
       type(lattice), intent(in) :: my_lattice
       integer, intent(in) :: N_cell,n_relaxation,n_sizerelax,n_Tsteps,Total_MC_Steps,T_auto,T_relax
       integer, intent(in) :: shape_spin(5),shape_tableNN(6),shape_masque(4),shape_index(2)
@@ -38,7 +51,12 @@
     &   print_relax,Cor_log,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost
       real(kind=8), intent(in) :: kTfin,kTini,coni,EA(3),h_ext(3)
       real(kind=8), intent(inout) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
+
+!!!!!!!!!!!!!!!!!!!!!!!
 ! internal variables
+!!!!!!!!!!!!!!!!!!!!!!!
+! size of the lattices
+!      integer :: shape_spin(5)
 ! slope of the MC
       integer :: i_relax,n_kT,n_MC,world,n_system
 !restart variables
@@ -92,63 +110,65 @@
       allocate(kt_all(size_table),E_sum_av(size_table),E_sq_sum_av(size_table))
 
 ! updating data during the simulation
-      qeulerp=0.0d0
-      qeulerm=0.0d0
-      vortex=0.0d0
-      magnetization=0.0d0
-      E_total=0.0d0
-      E_decompose=0.0d0
-      kt_all=0.0d0
-      world=size(my_lattice%world)
-      n_system=my_lattice%n_system
-      Periodic_log=my_lattice%boundary
-
+!shape_spin=shape(my_lattices%l_modes)
+qeulerp=0.0d0
+qeulerm=0.0d0
+vortex=0.0d0
+magnetization=0.0d0
+E_total=0.0d0
+E_decompose=0.0d0
+kt_all=0.0d0
+world=size(my_lattice%world)
+n_system=my_lattice%n_system
+Periodic_log=my_lattice%boundary
+!ktini=ext_param%ktini%value
+!ktfin=ext_param%ktfin%value
 ! initializing the variables above
-      call DeriveValue(N_cell,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,E_decompose, &
+call DeriveValue(N_cell,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,E_decompose, &
            &   i_four,i_dm,i_biq,i_dip,i_stone,EA,h_ext)
-      E_total=sum(E_decompose)
+E_total=sum(E_decompose)
 
-      Call CalculateAverages(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system,my_lattice)
+Call CalculateAverages(spin,shape_spin,masque,shape_masque,qeulerp,qeulerm,vortex,magnetization,n_system,my_lattice)
 
 ! Measured data
-      E_av=0.0d0
-      C_av=0.0d0
-      chi_Q=0.0d0
-      E_err_av=0.0d0
-      E_sum_av=0.0d0
-      M_err_av=0.0d0
-      M_sum_av=0.0d0
-      vortex_av=0.0d0
-      qeulerp_av=0.0d0
-      qeulerm_av=0.0d0
-      M_sq_sum_av=0.0d0
-      E_sq_sum_av=0.0d0
-      Q_sq_sum_av=0.0d0
-      Qp_sq_sum_av=0.0d0
-      Qm_sq_sum_av=0.0d0
-      chi_l=0.0d0
-      chi_M=0.0d0
-      M_av=0.0d0
+E_av=0.0d0
+C_av=0.0d0
+chi_Q=0.0d0
+E_err_av=0.0d0
+E_sum_av=0.0d0
+M_err_av=0.0d0
+M_sum_av=0.0d0
+vortex_av=0.0d0
+qeulerp_av=0.0d0
+qeulerm_av=0.0d0
+M_sq_sum_av=0.0d0
+E_sq_sum_av=0.0d0
+Q_sq_sum_av=0.0d0
+Qp_sq_sum_av=0.0d0
+Qm_sq_sum_av=0.0d0
+chi_l=0.0d0
+chi_M=0.0d0
+M_av=0.0d0
 
 ! statistics on the MC
-      acc=0.0d0
-      rate=0.0d0
-      tries=0.0d0
-      cone=coni
+acc=0.0d0
+rate=0.0d0
+tries=0.0d0
+cone=coni
 
 ! initialization of the spin_sum and angle_sum. Used in case of the FFT
-      spin_sum=0.0d0
-      angle_sum=0.0d0
+spin_sum=0.0d0
+angle_sum=0.0d0
 
 ! values in case of restart
-      restart_MC_steps=0
-      i_restart=.False.
+restart_MC_steps=0
+i_restart=.False.
 
 ! initialize the temperatures
 #ifdef CPP_MPI
-      call ini_temp(kt_all,kTfin,kTini,size_table,irank_working,nRepProc,i_print_W)
+call ini_temp(kt_all,kTfin,kTini,size_table,irank_working,nRepProc,i_print_W)
 #else
-      call ini_temp(kt_all,kTfin,kTini,size_table,i_print_W)
+call ini_temp(kt_all,kTfin,kTini,size_table,i_print_W)
 #endif
 
 #ifdef CPP_DEBUG

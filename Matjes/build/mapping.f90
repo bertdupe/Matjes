@@ -229,6 +229,7 @@ do i_nei=1,nei
 
       enddo
    enddo
+
    avant=avant+indexNN(i_Nei)
 
 enddo

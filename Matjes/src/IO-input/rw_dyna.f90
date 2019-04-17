@@ -1,8 +1,8 @@
 module m_dynamic
 real(kind=8) :: timestep,damping,temps,hfin(3),max_error
-integer :: duration,ti,tf,times,tstart,htimes,hstart,Efreq
+integer :: duration,times,tstart,htimes,hstart,Efreq
 real(kind=8) :: torque_FL,torque_AFL,Ipol(3),adia,nonadia,storque,hstep(3)
-logical :: stmtorque,marche,rampe,hsweep,Ffield,i_Efield,i_torque,stmtemp
+logical :: stmtorque,marche,hsweep,Ffield,i_Efield,i_torque,stmtemp
 real(kind=8), dimension(:,:,:), allocatable :: htor
 ! integration type
 integer :: integtype
@@ -45,7 +45,6 @@ timestep=0.0d0
 temps=0.0d0
 stmtorque=.False.
 marche=.False.
-rampe=.False.
 hsweep=.False.
 Ffield=.False.
 i_Efield=.False.
@@ -80,15 +79,6 @@ do
  str= trim(adjustl(str))
  if (len_trim(str)==0) cycle
 
- if ( str(1:4) == 'step') then
-     backspace(io)
-     read(io,*) dummy, marche, ti, tf
- endif
- if ( str(1:5) == 'rampe') then
-     backspace(io)
-     read(io,*) dummy, rampe, ry, times, tstart
-     temps=ry*k_B
- endif
  if ( str(1:6) == 'Hsweep') then
      backspace(io)
      read(io,*) dummy, hsweep,(hstep(i),i=1,3),htimes,hstart,(hfin(i),i=1,3)

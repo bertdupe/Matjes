@@ -1,6 +1,7 @@
 subroutine spindynamics(mag_lattice,mag_motif,io_simu,gra_topo,ext_param)
 use m_fieldeff
 use m_measure_temp
+use m_topo_commons, only : get_size_Q_operator,associate_Q_operator
 use m_derived_types
 use m_solver
 use m_dynamic
@@ -20,6 +21,7 @@ use m_dyna_utils
 use m_energy_commons, only : associate_line_Hamiltonian
 use m_internal_fields_commons, only : associate_line_field
 use m_user_info
+use m_excitations, only : update_EM_fields
 #ifndef CPP_BRUTDIP
       use m_setup_dipole, only : mmatrix
 #endif
@@ -39,17 +41,17 @@ logical, intent(in) :: gra_topo
 logical :: gra_log
 integer :: i,j,l,k,h,gra_freq
 ! lattices that are used during the calculations
-real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter,Bini
-type(vec_point),allocatable,dimension(:) :: spin1,spin2,B_point
+real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter,Bini,BT
+type(vec_point),allocatable,dimension(:) :: spin1,spin2,B_point,B_after_point,BT_point
 ! lattice pf pointer that will be used in the simulation
-type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line
-type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column
+type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line_1,B_line_2
+type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column_1,mode_B_column_2
 ! dummys
 real(kind=8) :: dum_norm,qeuler,vortex(3),Mdy(3),Edy,stmtorquebp,check1,check2,Eold,check3,Et
 real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
 real(kind=8) :: dumy(4),ds(3),security(2),B(3),step(3),steptor(3),stepadia(3),stepsttor(3),steptemp(3)
 real(kind=8) :: timestep_ini,real_time,h_int(3)
-real(kind=8) :: kt,ktini,ktfin
+real(kind=8) :: kt,ktini,ktfin,kt1
 real(kind=8) :: time
 integer :: iomp,shape_lattice(4),shape_spin(4),N_cell
 ! parameter for the Heun integration scheme
@@ -105,17 +107,20 @@ integer :: N_site_comm
 
 call rw_dyna(shape_lattice(1:3),mag_lattice)
 
-allocate(spin1(N_cell),spin2(N_cell),B_point(N_cell))
+allocate(spin1(N_cell),spin2(N_cell),B_point(N_cell),BT_point(N_cell))
 allocate(spinafter(3,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4)))
 allocate(Bini(3,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4)))
+allocate(BT(3,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4)))
 
 shape_spin=shape_lattice
 Bini=0.0d0
 spinafter=0.0d0
+BT=0.0d0
 
 call associate_pointer(spin1,mag_lattice)
 call associate_pointer(spin2,spinafter)
 call associate_pointer(B_point,Bini)
+call associate_pointer(BT_point,BT)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the pointers for the B-field and the energy
@@ -126,15 +131,26 @@ call associate_pointer(B_point,Bini)
 time=0.0d0
 call user_info(6,time,'associate H_line, B_line and S_line',.true.)
 
-allocate(E_line(N_cell),B_line(N_cell))
-allocate(mode_E_column(N_cell),mode_B_column(N_cell))
+allocate(E_line(N_cell),B_line_1(N_cell),B_line_2(N_cell))
+allocate(mode_E_column(N_cell),mode_B_column_1(N_cell),mode_B_column_2(N_cell))
 
 call associate_line_Hamiltonian(N_cell,E_line,spin1,mode_E_column)
 
-call associate_line_field(N_cell,B_line,spin1,mode_B_column)
+call associate_line_field(N_cell,B_line_1,spin1,mode_B_column_1)
+call associate_line_field(N_cell,B_line_2,spin1,mode_B_column_2)
 
 call user_info(6,time,'done - ready to start calculations',.true.)
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! associate pointer for the topological charge, vorticity calculations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+call user_info(6,time,'topological operators',.false.)
+
+call get_size_Q_operator(mag_lattice)
+
+call associate_Q_operator(spin1,mag_lattice%boundary,shape_spin)
+
+call user_info(6,time,'done',.true.)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
@@ -234,7 +250,7 @@ end select
 #endif
 
 ! To put back
-      call calculate_Beff(iomp,B,mode_B_column(iomp),h_int,B_line(iomp))
+      call calculate_Beff(iomp,B,mode_B_column_1(iomp),h_int,B_line_1(iomp))
 
       step=cross(B,spin1(iomp)%w)
 
@@ -271,8 +287,8 @@ end select
       write(6,'(a,2x,f12.8)') 'ds', norm(ds)
       if (kT.ne.0.0d0) write(6,'(a,2x,f12.6,2x,a,2x,f14.10,2x,a,f12.9)') 'Temperature', kT/k_B &
      &   ,'amplitude', dsqrt(2.0d0*damping*kT), 'example dsT', dsqrt(2.0d0*damping*kT)*norm(steptemp)
-      if (rampe) write(6,'(a,2x,f12.6,2x,a,2x,f12.7,2x,a,I6,2x,a,I6)') 'step rampe', temps/k_B &
-     &   , 'Tf=', kTfin/k_B, 'time step', times, 'time start', tstart
+!      if (rampe) write(6,'(a,2x,f12.6,2x,a,2x,f12.7,2x,a,I6,2x,a,I6)') 'step rampe', temps/k_B &
+!     &   , 'Tf=', kTfin/k_B, 'time step', times, 'time start', tstart
       if (hsweep) write(6,'(a,2x,3(f8.4,2x),a,2x,3(f8.4,2x),a,I6,2x,a,I6,2x,a,3(f8.4,2x))') 'Hini', (H_int(i),i=1,3) &
      &   , 'Hstep', (hstep(i),i=1,3), 'time step', htimes, 'time start', hstart, 'Hfin', (hfin(i),i=1,3)
 
@@ -311,7 +327,6 @@ do j=1,duration
 !       write(*,*) j
 !       write(*,*) '-----------------------'
 
-       spinafter=0.0d0
        call init_temp_measure(check,check1,check2,check3)
        qeuler=0.0d0
        vx=0.0d0
@@ -328,20 +343,23 @@ do j=1,duration
        l=l+1
        h=h+1
 
-       if (((j.lt.ti).or.(j.gt.tf)).and.(marche)) then
-        storque=0.0d0
-        elseif (((j.gt.ti).and.(j.lt.tf)).and.(marche)) then
-        storque=stmtorquebp
-       endif
+!       if (((j.lt.ti).or.(j.gt.tf)).and.(marche)) then
+!        storque=0.0d0
+!        elseif (((j.gt.ti).and.(j.lt.tf)).and.(marche)) then
+!        storque=stmtorquebp
+!       endif
 
 !       kT=(118.0d0/(1+(real(j)*timestep-10.0d0)**2/2.9d0)+250.0d0)/650.0d0*60.0d0
-       if ((l.gt.times).and.(rampe).and.(j.gt.tstart)) then
-        kT=kT+temps
-        l=1
-        write(6,'(a,2x,f16.6)') 'Final Temp', check(1)/check(2)/2.0d0/k_B
-        write(6,'(a,f10.5)') 'T=',kT/k_B
-        check=0.0d0
-       endif
+!       if (j.lt.1538) then
+!          kt1=250.0d0+300.0d0*exp(-(real(j)*timestep/1000.0d0-1.5)**2/0.5)
+!       else
+!          kt1=100.0d0+400.0d0/log(real(j)*timestep/1000.0d0+0.9)
+!       endif
+!
+!       kt=kt1/650.0d0*28.0d0*k_b
+
+       call update_EM_fields(j,kt,h_int,check)
+
        if ((h.gt.htimes).and.(hsweep).and.(norm((H_int-Hfin)).gt.1.0d-6).and. &
           (j.gt.hstart)) then
         H_int=H_int+hstep
@@ -365,26 +383,24 @@ do j=1,duration
 #endif
 test_torque=0.0d0
 
-!do iomp=1,N_cell
+do iomp=1,N_cell
 
 ! different integration types
 !-----------------------------------------------
 ! Euler integration scheme
 !-----------------------------------------------
-!      select case (integtype)
-!       case (1)
-!         exit
+      select case (integtype)
+       case (1)
+
+       call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column_1(iomp),h_int,B_line_1(iomp))
 
 !
 !-----------------------------------------------
 ! Heun integration scheme
 !-----------------------------------------------
-!       case (3)
-!
-!       call calculate_Beff(iomp,B(iomp)%w,spin,h_int,Hamiltonian)
-!
-!       spin2(iomp)%w=integrate(timestep,B(iomp)%w,kt,stmtemp, &
-!     & maxh,iomp,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1)
+       case (3)
+
+       call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column_1(iomp),h_int,B_line_1(iomp))
 
 !
 !-----------------------------------------------
@@ -430,93 +446,40 @@ test_torque=0.0d0
 !-----------------------------------------------
 ! other cases
 !-----------------------------------------------
-!      case default
-!
-!      stop 'not implemented'
-!
-!      end select
+      case default
 
-! the temperature is checked with 1 temperature step before
-!!! check temperature
-!       check1=check1+sum(cross(spinafter(:,i_x,i_y,i_z,i_m),Bini(:,i_x,i_y,i_z,i_m))**2)
-!       check2=check2+dot_product(spinafter(:,i_x,i_y,i_z,i_m),Bini(:,i_x,i_y,i_z,i_m))
-!
-!       if (norm_cross(spinafter(iomp)%w,Bini(iomp)%w).gt.test_torque) test_torque=norm_cross(spinafter(iomp)%w,Bini(iomp)%w)
-!!! end check
+      stop 'not implemented'
 
-!enddo
-
-
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
-!check(1)=check(1)+check1
-!check(2)=check(2)+check2
-!real_time=real_time+timestep
-
-#ifdef CPP_MPI
-trans(1)=test_torque
-call MPI_REDUCE(trans(1),test_torque,1,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
-#endif
-
-if (j.eq.1) check3=test_torque
-
-! select case (integtype)
-!   case (2:)
-#ifdef CPP_MPI
-! gather to take into account the possible change of size of spinafter
-!------------------------------
-!if (i_ghost) then
-!   call rebuild_mat(spinafter,N_site_comm*4,spin)
-!else
-!   call copy_lattice(spin,spinafter)
-!endif
-#else
-!call copy_lattice(spin,spinafter)
-#endif
-!   case default
-!end select
-
-
-test_torque=0.0d0
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-!     SECOND LOOP
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-do iomp=1,N_cell
-
-
-! different integration types
-!-----------------------------------------------
-! Euler integration scheme
-!-----------------------------------------------
-!     select case (integtype)
-!      case (1)
-!
-      call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column(iomp),h_int,B_line(iomp))
+      end select
 
 enddo
 
 do iomp=1,N_cell
 
-     spin2(iomp)%w=integrate(timestep,B_point(iomp)%w,kt,stmtemp,maxh,iomp &
+! different integration types
+!-----------------------------------------------
+! Euler integration scheme
+!-----------------------------------------------
+      select case (integtype)
+       case (1)
+        spin2(iomp)%w=integrate(timestep,B_point(iomp)%w,BT_point(iomp)%w,kt,stmtemp,maxh,iomp &
    & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1)
 
-!
+! the temperature is checked with 1 temperature step before
+!!! check temperature
+        call update_temp_measure(check1,check2,spin2(iomp)%w,B_point(iomp)%w)
+        if (norm_cross(spin2(iomp)%w,B_point(iomp)%w).gt.test_torque) test_torque=norm_cross(spin2(iomp)%w,B_point(iomp)%w)
+!!! end check
+
 !-----------------------------------------------
 ! Heun integration scheme
 !-----------------------------------------------
-!       case (3)
-!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
-!
-!        Beff=(Beff+Bini(:,i_x,i_y,i_z,i_m))/2.0d0
-!
-!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep,Beff,kt,stmtemp,maxh,i_x,i_y,i_z &
-!      & ,i_m,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin,shape_spin)
-!
-!
+       case (3)
+
+        spin2(iomp)%w=integrate(timestep,B_point(iomp)%w,BT_point(iomp)%w,kt,stmtemp,maxh,iomp &
+   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1)
+
+
 !-----------------------------------------------
 ! SIA and IMP integration scheme
 !-----------------------------------------------
@@ -553,15 +516,109 @@ do iomp=1,N_cell
 !        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep,spinini(:,i_x,i_y,i_z,i_m),Beff,damping &
 !     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)
 !
-!       case default
-!        stop 'not implemented'
-!       end select
+       case default
+        stop 'not implemented'
+       end select
+
+enddo
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!     SECOND LOOP
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+do iomp=1,N_cell
+
+
+! different integration types
+!-----------------------------------------------
+! Euler integration scheme
+!-----------------------------------------------
+     select case (integtype)
+      case (1)
+
+      exit
+
+!-----------------------------------------------
+! Heun integration scheme
+!-----------------------------------------------
+      case (3)
+
+       call calculate_Beff(iomp,B,mode_B_column_2(iomp),h_int,B_line_2(iomp))
+
+       B_point(iomp)%w=(B+B_point(iomp)%w)/2.0d0
+
+      case default
+        stop 'not implemented'
+     end select
+
+enddo
+
+do iomp=1,N_cell
+
+! different integration types
+!-----------------------------------------------
+! Euler integration scheme
+!-----------------------------------------------
+     select case (integtype)
+      case (1)
+
+      exit
+
+!-----------------------------------------------
+! Heun integration scheme
+!-----------------------------------------------
+       case (3)
+
+         spin2(iomp)%w=integrate(timestep,B_point(iomp)%w,BT_point(iomp)%w,kt,stmtemp,maxh,iomp &
+   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1)
+
+!-----------------------------------------------
+! SIA and IMP integration scheme
+!-----------------------------------------------
+!       case (2)
+!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
+!
+!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
+!     &   ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
+!
+!
+!-----------------------------------------------
+! SIA and IMP integration scheme
+!-----------------------------------------------
+!       case (4)
+!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
+!
+!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
+!     & ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
+!
+!-----------------------------------------------
+! SIB without temperature and with error control
+!-----------------------------------------------
+!       case (6)
+!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
+!
+! check if there is any thing to do
+!        dum_norm=sqrt(Beff(1)**2+Beff(2)**2+Beff(3)**2)
+!        if ((dum_norm.lt.1.0d-8).or.((abs(dot_product(Beff,spin(4:6,i_x,i_y,i_z,i_m))/dum_norm-1.0d0)).lt.1.0d-10)) then
+!         spinafter(:,i_x,i_y,i_z,i_m)=spinini(:,i_x,i_y,i_z,i_m)
+!         cycle
+!        endif
+!
+!
+!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep,spinini(:,i_x,i_y,i_z,i_m),Beff,damping &
+!     & ,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)
+!
+       case default
+        stop 'not implemented'
+       end select
 
 
 ! the temperature is checked with 1 temperature step before
 !!! check temperature
-       call update_temp_measure(check1,check2,spin2(iomp)%w,B_point(iomp)%w)
-       if (norm_cross(spin2(iomp)%w,B_point(iomp)%w).gt.test_torque) test_torque=norm_cross(spin2(iomp)%w,B_point(iomp)%w)
+    call update_temp_measure(check1,check2,spin2(iomp)%w,B_point(iomp)%w)
+    if (norm_cross(spin2(iomp)%w,B_point(iomp)%w).gt.test_torque) test_torque=norm_cross(spin2(iomp)%w,B_point(iomp)%w)
 !!! end check
 
 enddo
@@ -599,15 +656,15 @@ call copy_lattice(spin2,spin1)
 do iomp=1,N_cell
 
 ! call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column(iomp),h_int,B_line(iomp))
-    call local_energy_pointer(Et,.false.,iomp,mode_B_column(iomp),E_line(iomp),h_int)
+    call local_energy_pointer(Et,.false.,iomp,mode_B_column_1(iomp),E_line(iomp),h_int)
 
     Edy=Edy+Et
     Mx=Mx+Spin1(iomp)%w(1)
     My=My+Spin1(iomp)%w(2)
     Mz=Mz+Spin1(iomp)%w(3)
 
-!    dumy=sd_charge(iomp,spin1,mag_lattice)
-     dumy=0.0d0
+    dumy=sd_charge(iomp)
+    dumy=0.0d0
 
     qeuler=qeuler+dumy(1)/pi(4.0d0)
     vx=vx+dumy(2)

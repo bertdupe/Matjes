@@ -3,13 +3,54 @@ use m_derived_types, only : operator_real
 
 interface associate_pointer
    module procedure associate_pointer_real_3D
+   module procedure associate_pointer_real_1D
 end interface associate_pointer
 
 private
 public :: associate_pointer,dissociate
 contains
 
+!
+! routine that associates a (:) pointer to a 1D matrix
+! this is typically used when the electromagnetic field is associated. At least the amplitude
+!
+subroutine associate_pointer_real_1D(point,static_target,tableNN)
+use m_derived_types, only : vec_point,vec_dim_n
+use m_get_position
+implicit none
+integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
+type(vec_point), intent(inout) :: point(:)
+!type(Coeff_Ham), intent(in) :: static_target
+type(vec_dim_n), target, intent(in) :: static_target
+! internal
+integer :: i,Nspin,N_size_target,i_x,i_y,i_z,i_m
+integer :: ilat(4),shape_tableNN(6)
 
+Nspin=size(point)
+N_size_target=size(static_target%w)
+shape_tableNN=shape(tableNN)
+
+do i_m=1,shape_tableNN(6)
+  do i_z=1,shape_tableNN(5)
+    do i_y=1,shape_tableNN(4)
+      do i_x=1,shape_tableNN(3)
+
+         Ilat=(/i_x,i_y,i_z,i_m/)
+         i=get_position_ND_to_1D(Ilat,shape_tableNN(3:6))
+
+         point(i)%w=>static_target%w
+
+      enddo
+    enddo
+  enddo
+enddo
+
+end subroutine associate_pointer_real_1D
+
+!
+! routine that associates a (:,:) pointer to a 3D matrix
+! typical assocication for the Hamiltonian
+!
 subroutine associate_pointer_real_3D(point,static_target,my_lattice,tableNN,indexNN)
 use m_derived_types, only : lattice,operator_real,shell_Ham
 use m_get_position
@@ -96,8 +137,8 @@ type(operator_real), intent(inout) :: matrix
 ! internal
 integer :: i,j
 
-do i=1,N
-   do j=1,M
+do j=1,M
+   do i=1,N
 
    nullify(matrix%value(i,j)%Op_loc)
 

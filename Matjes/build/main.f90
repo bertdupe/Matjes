@@ -49,7 +49,6 @@ integer :: io_param
 type(cell) :: mag_motif
 ! external parameter
 type(simulation_parameters) :: ext_param
-
 ! internal variables
 type(mtprng_state) :: state
 ! definition of the motif and the lattice
@@ -175,8 +174,9 @@ n_system=mag_lattice%n_system
 !---------------------------------
 !  Part which does a normal MC with the metropolis algorithm
 !---------------------------------
-!        if (my_simu%i_metropolis)
-!if (my_simu%name == 'metropolis') call MonteCarlo(N_cell,n_thousand,n_sizerelax, &
+
+if (my_simu%name == 'metropolis') call MonteCarlo(all_lattices,mag_motif,io_simu,gra_topo,ext_param)
+!   call MonteCarlo(N_cell,n_thousand,n_sizerelax, &
 !            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
 !            &    i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost, &
 !            &    gra_topo,CalEnergy,CalTheta,Gra_log,spstmL,gra_fft, &

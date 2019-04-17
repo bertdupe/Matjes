@@ -9,6 +9,7 @@ type cell
      logical, allocatable :: i_mom(:)
 end type cell
 
+! variable that defines the lattice
 type lattice
      real(kind=8) :: areal(3,3),astar(3,3),alat(3)
      integer :: dim_lat(3),n_system

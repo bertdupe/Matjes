@@ -17,6 +17,8 @@ use m_topoplot
 use mtprng
 use m_total_energy
 use m_get_position
+use m_external_fields
+use m_excitations
 #ifdef CPP_MPI
       use m_make_box
       use m_split_work
@@ -89,6 +91,7 @@ call ext_param_rw(ext_param)
 
 call user_info(6,time,'reading the Hamiltonian in the input file',.false.)
 
+call get_excitations('input')
 ! setup the Hamiltonian of the system
 
 call get_Hamiltonians('input',ext_param%H_ext%value)
@@ -211,6 +214,15 @@ call mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice,pos)
 
 call user_info(6,time,'done',.true.)
 
+! prepare the external electromagnetic fields
+call user_info(6,time,'get the external magnetic field matrix',.false.)
+
+call get_EM_external_fields(ext_param%H_ext%value,ext_param%E_ext%value,my_motif)
+
+call initialize_external_fields(my_lattice)
+
+call user_info(6,time,'done',.false.)
+
 !-------------------------------------------------
 ! take care of the periodic boundary conditions
 ! to be changed
@@ -294,7 +306,7 @@ call user_info(6,time,'dealing with the z-direction',.false.)
 
 call user_info(6,time,'done',.true.)
 
-! do a first FFT for the initial magnetiy configuration
+! do a first FFT for the initial magnetic configuration
 call fft(my_lattice,my_motif)
 
 !!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!
@@ -311,10 +323,12 @@ call  get_total_Hamiltonian(DM_vector,indexNN)
 !
 ! update the Hamiltonian to take into account the lattice i.e. SOC (DMI...)
 !
+
 call associate_energy_Hamiltonian(my_lattice,tableNN,indexNN(:,1))
 
-
 call associate_internal_Beff(my_lattice,tableNN,indexNN(:,1))
+
+call associate_external_fields(tableNN)
 
 call user_info(6,time,'done',.true.)
 

@@ -18,6 +18,7 @@ contains
 subroutine normal(iomp,B,spin,h_int,B_line)
 use m_internal_fields_commons, only : B_total
 use m_derived_types
+use m_external_fields, only : ext_field
 implicit none
 ! input variable
 integer, intent(in) :: iomp
@@ -33,8 +34,8 @@ integer :: N,i
 
 !N=B_total%ncolumn
 N=size(B_line%shell)
-mu_s=sum(spin%shell(1)%w**2)
-B=h_int*mu_s
+B=0.0d0
+if (size(ext_field(iomp)%w).ne.0) B=ext_field(iomp)%w
 
 do i=1,N
 

@@ -44,6 +44,7 @@ interface get_parameter
  module procedure get_character
  module procedure get_my_simu
  module procedure get_atomic
+ module procedure get_excitations
 end interface get_parameter
 
 private
@@ -866,6 +867,71 @@ check=check_read(nread,vname,fname)
 if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', vec
 
 end subroutine get_1D_vec_int
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! get the excitations for all the cycles
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine get_excitations(io,fname,vname,excite)
+implicit none
+type(excitations), intent(out) :: excite(:)
+integer, intent(in) :: io
+character(len=*), intent(in) :: vname,fname
+! internal variable
+integer :: fin,len_string,nread,check,n_excite,i
+character(len=100) :: str
+character(len=10) :: dummy
+logical :: dum_logic
+
+nread=0
+len_string=len(vname)
+n_excite=size(excite)
+
+do i=1,n_excite
+   excite(i)%start_value(:)=0.0d0
+   excite(i)%end_value(:)=0.0d0
+   excite(1)%t_start=0
+   excite(1)%t_end=0
+enddo
+
+rewind(io)
+do
+   read (io,'(a)',iostat=fin) str
+   if (fin /= 0) exit
+   str= trim(adjustl(str))
+
+   if (len_trim(str)==0) cycle
+   if (str(1:1) == '#' ) cycle
+
+!cccc We start to read the input
+   if ( str(1:len_string) == vname) then
+      nread=nread+1
+      backspace(io)
+      read(io,*) dummy,dum_logic,excite(1)%name
+      if ((excite(1)%name.eq.'H_ext').or.(excite(1)%name.eq.'E_ext')) then
+         backspace(io)
+         read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1:3),excite(1)%t_start,excite(1)%t_end
+      else
+         backspace(io)
+         read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1),excite(1)%t_start,excite(1)%t_end
+      endif
+
+      do i=2,n_excite
+         if ((excite(1)%name.eq.'H_ext').or.(excite(1)%name.eq.'E_ext')) then
+            backspace(io)
+            read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1:3),excite(1)%t_start,excite(1)%t_end
+         else
+            backspace(io)
+            read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1),excite(1)%t_start,excite(1)%t_end
+         endif
+      enddo
+
+   endif
+
+enddo
+
+check=check_read(nread,vname,fname)
+
+end subroutine get_excitations
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get the number of lines in a ASCII file

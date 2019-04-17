@@ -77,10 +77,18 @@ number_sym=0
 ! loop over all symmetry
 do i=1,64
 
-      rtest=matmul(all_sym_op(i)%mat,areal)
+!
+! I multiply the rotation matrice written in line with the lattice vector written in lign too
+! I have to take the transpose of alat to have it written in column
+! the matrix rtest is then written in column in (column,line)
+!
+      rtest=matmul(all_sym_op(i)%mat,transpose(areal))
 
       if ((.not.periodic(3)).and.(rtest(3,3).ne.areal(3,3))) cycle
 
+!
+! I have to take the transpose of rtest to have it written in lign again
+!
       areal_rot=transpose(rtest)
 
       do j=1,3
@@ -96,10 +104,9 @@ enddo
 
 #ifdef CPP_DEBUG
 do j=1,number_sym
-   u=sym_index(j)
-   write(6,'(3)') all_sym_op(u)%name
+   write(6,*) all_sym_op(sym_index(j))%name
    do i=1,3
-      write(6,'(3f3.8)') all_sym_op(u)%mat(i,:)
+      write(6,'(3f8.3)') all_sym_op(sym_index(j))%mat(i,:)
    enddo
 enddo
 #endif
@@ -123,7 +130,7 @@ type(cell), intent(in) :: my_motif
 !internal
 integer :: natom,i,j,i_sim,n_sym,new_index(64),io_sym
 type(symop) :: all_sym_op(64)
-real(kind=8) :: test_vec(3)
+real(kind=8) :: test_vec(3),pos(3)
 logical :: found
 
 natom=size(my_motif%atomic)
@@ -143,9 +150,13 @@ do i=1,natom
    do j=1,number_sym
       i_sim=sym_index(j)
 
-      test_vec=matmul(all_sym_op(i_sim)%mat,my_motif%atomic(i)%position)
+! position in cartesian coordinate
+! the basis vectors have the fomat (line, column)
+! take the transpose before making the product
+      pos=matmul(transpose(areal),my_motif%atomic(i)%position)
+      test_vec=matmul(all_sym_op(i_sim)%mat,pos)
 
-      found=look_translation(test_vec,areal,my_motif%atomic(i)%position)
+      found=look_translation(test_vec,areal,pos)
 
       if (.not.found) then
          sym_index(j)=0
@@ -159,7 +170,7 @@ do i=1,number_sym
 
    if (sym_index(i).eq.0) cycle
    j=j+1
-   new_index(j)=sym_index(j)
+   new_index(j)=sym_index(i)
 
 enddo
 
@@ -179,22 +190,26 @@ real(kind=8), intent(in), optional :: translation(3)
 logical :: look_translation
 !internal
 integer :: u,v,w
-real(kind=8) :: test_vec(3),eps
+real(kind=8) :: test_vec(3),eps(3)
 
 if (present(translation)) then
-   eps=norm(translation)
+   eps=translation
 else
    eps=0.0d0
 endif
 
 look_translation=.false.
-do u=-1,1,1
-   do v=-1,1,1
-      do w=-1,1,1
+do u=-2,2,1
+   do v=-2,2,1
+      do w=-2,2,1
 
-         test_vec=areal_rot+u*areal(1,:)+v*areal(2,:)+w*areal(3,:)
+         test_vec=areal_rot-eps+real(u)*areal(1,:)+real(v)*areal(2,:)+real(w)*areal(3,:)
 
-         if (norm(test_vec).le.eps+1.0d-8) then
+!
+! be very carefull here! If the positions are not given with enough precision, the symetries will not be found
+!
+
+         if (norm(test_vec).lt.1.0d-6) then
             look_translation=.true.
             return
          endif
@@ -285,6 +300,7 @@ subroutine get_symop(rotmat)
 !  rotmat , real*8(3,3,64) : All 64 3x3 rotation matriced of the point groups
 !  rotname , char*10(64)   : Names of the 64 rotation matrixes after J.F. Cornwell
 !
+! the basis vectors have the fomat (line,column)
 ! *********************************************
 implicit none
 integer i1,is

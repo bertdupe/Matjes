@@ -18,6 +18,14 @@ end type Op_Im
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!
 
+! varible that contains the the excitations form (sweep of EM field...)
+type excitations
+    real(kind=8) :: start_value(3),end_value(3)
+    integer :: t_start,t_end
+    character(len=30) :: name
+end type excitations
+
+! variable that contains the name of a variable
 type var_name
      character(len=30) :: name
 end type var_name
@@ -50,6 +58,10 @@ end type symop
 type vec
      real(kind=8) :: w(3)
 end type vec
+
+type vec_dim_N
+     real(kind=8), allocatable :: w(:)
+end type vec_dim_N
 
 type vec_point
      real(kind=8), pointer :: w(:)

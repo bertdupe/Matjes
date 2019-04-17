@@ -183,10 +183,6 @@ call get_parameter(io_input,'input','SPSTM-image',io_simu%io_spstmL)
            endif
          endif
 
-         if ( str(1:7) == 'T_sweep') then
-           backspace(io_input)
-           read(io_input,*) dummy,T_sweep
-         endif
          if ( str(1:8) == 'sampling') then
            backspace(io_input)
            read(io_input,*) dummy, tag

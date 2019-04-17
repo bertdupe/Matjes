@@ -144,6 +144,7 @@
 
 subroutine local_energy_pointer(E_int,i_dip,iomp,spin,E_line,h_ext)
 use m_energy_commons
+use m_external_fields, only : ext_field
 implicit none
 ! input
 type(point_shell_mode), intent(in) :: spin
@@ -158,7 +159,8 @@ real(kind=8) :: S(3)
 integer :: i,N
 
 N=size(spin%shell)
-E_int=dot_product(spin%shell(1)%w,h_ext)
+E_int=0.0d0
+if (size(ext_field(iomp)%w).ne.0) E_int=dot_product(spin%shell(1)%w,ext_field(iomp)%w)
 S=0.0d0
 
 do i=1,N

@@ -318,28 +318,28 @@ contains
 ! ----------------------------------------------
 ! ----------------------------------------------
 ! Euler integration scheme
-function simple(timestep,B,kt,stmtemp,maxh,iomp,damping,Ipol,torque_FL,torque_AFL,adia,nonadia, &
-   & storque,i_torque,stmtorque,spin)
+function simple(timestep,B,BT,kt,stmtemp,maxh,iomp,damping,Ipol,torque_FL,torque_AFL,adia,nonadia, &
+      & storque,i_torque,stmtorque,spin)
 use m_constants, only : hbar
 use m_randist
+use m_basic_types, only : vec_point
 use m_vector, only : cross
 use m_dynamic, only : htor
 implicit none
 real(kind=8) :: simple(3)
-real(kind=8), intent(in) :: timestep,B(:),kt,maxh
+real(kind=8), intent(inout) :: BT(:)
 type(vec_point), intent(in) :: spin(:)
-real(kind=8), intent(in) :: damping,torque_FL,torque_AFL,adia,nonadia,storque
-real(kind=8), intent(in) :: Ipol(:)
 integer, intent(in) :: iomp
+real(kind=8), intent(in) :: timestep,B(:),kt,maxh
+real(kind=8), intent(in) :: damping,torque_FL,torque_AFL,adia,nonadia,storque   !,stm_field_torque
+real(kind=8), intent(in) :: Ipol(:)
 logical, intent(in) :: stmtemp,i_torque,stmtorque
 !dummy
 real(kind=8) :: spinfin(3),steptemp(3),step(3),steptor(3),stepadia(3),stepsttor(3),stepdamp(3),spini(3)
-real(kind=8) :: dt,ds(3),norm_S,S_norm(3)
-integer :: v_x,v_y,v_z,v_m
-integer :: X,Y,Z
+real(kind=8) :: dt,ds(3),norm_S,S_norm(3),BT_norm,DTs(3),step_T(3)
 
 steptemp=0.0d0
-dt=timestep/hbar/(1+damping**2)
+dt=1.0d0/hbar/(1.0d0+damping**2)
 simple=0.0d0
 step=0.0d0
 steptor=0.0d0
@@ -347,22 +347,24 @@ stepadia=0.0d0
 stepsttor=0.0d0
 spini=spin(iomp)%w
 stepdamp=0.0d0
+step_T=0.0d0
+DTs=0.0d0
+BT_norm=sqrt(BT(1)**2+BT(2)**2+BT(3)**2)
 
 if (kt.gt.1.0d-10) then
-   if (stmtemp) then
-!      steptemp=cross(spini,(/randist(kt),randist(kt),randist(kt)/))*htor(i_x,i_y,i_z)/maxh
-   else
-      steptemp=cross(spini,(/randist(kt),randist(kt),randist(kt)/))
-   endif
+  if (stmtemp) then
+!    steptemp=cross(spini,(/randist(kt),randist(kt),randist(kt)/))*htor(i_x,i_y,i_z)/maxh
+  else
+    if (BT_norm.lt.1.0d-8) BT=(/randist(kt),randist(kt),randist(kt)/)
+  endif
 endif
 
-norm_S=sqrt(sum(spini(:)**2))
+norm_S=sqrt(spini(1)**2+spini(2)**2+spini(3)**2)
 S_norm=spini/norm_S
 
 
-!if (i_torque) steptor=cross(S_norm,Ipol)
-!if (i_torque) stepadia=cross(-spin(:,v_x,v_y,v_z,v_m),S_norm)
-!if (stmtorque) stepsttor=cross(S_norm,Ipol*htor(i_x,i_y,i_z))
+if (i_torque) steptor=cross(S_norm,Ipol)
+!if (stmtorque) stepsttor=storque*cross(S_norm,Ipol*htor(i_x,i_y,i_z))
 
 step=cross(B,S_norm)
 
@@ -372,10 +374,14 @@ ds=step+damping*stepdamp
 
 ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
      &   torque_FL*(torque_AFL+damping)*cross(S_norm,steptor)+adia*       &
-     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm)+    &
-     &   steptemp !+damping*cross(steptemp,S_norm)
+     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm) ! +steptemp !+stm_field_torque*stepsttor+steptemp
 
-spinfin=S_norm+dt*ds
+if (kt.gt.1.0d-10) then
+   step_T=cross(BT,S_norm)
+!   DTs= step_T+damping*cross(S_norm,step_T)
+endif
+
+spinfin=S_norm+dt*(ds*timestep+step_T*sqrt(timestep))
 
 simple=spinfin/sqrt(spinfin(1)**2+spinfin(2)**2+spinfin(3)**2)
 
