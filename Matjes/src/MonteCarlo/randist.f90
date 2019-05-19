@@ -19,7 +19,7 @@ Choice2=(Choice2*2.0d0-1.0d0)/dsqrt(2.0d0)
 
 !      if (dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2).gt.0.0d0) STOP
 
-gaussianran=dsqrt(2.0d0*damping*kT)*Choice1*dsqrt(-dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
+gaussianran=dsqrt(2.0d0*kT)*Choice1*dsqrt(-dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
 
 ! as expressed in Mentink et al J. Phys. C 22, 176001 (2010)
 !      gaussianran=2.0d0*damping*kT/(1+damping**2)*Choice1*dsqrt(-2.0d0*dlog( &

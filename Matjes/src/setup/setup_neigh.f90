@@ -4,7 +4,7 @@
        end interface periodic
        contains
 
-       subroutine period(ind,nvoi,d,NN,mask,spin,tableNN,my_lattice,my_motif)
+       subroutine period(ind,nvoi,d,NN,mask,tableNN,pos,my_lattice,my_motif)
        use m_vector , only : norm
        use m_derived_types, only : lattice,cell
 #ifdef CPP_MPI
@@ -14,10 +14,9 @@
 #endif
        implicit none
 ! variable that come in
-       real(kind=8), intent(in) :: spin(:,:,:,:,:)
        integer, intent(in) :: nvoi,NN,tableNN(:,:,:,:,:,:)
        integer, intent(in) :: ind(:)
-       real(kind=8), intent(in) :: d(:)
+       real(kind=8), intent(in) :: d(:),pos(:,:,:,:,:)
        type(lattice), intent(in) :: my_lattice
        type(cell), intent(in) :: my_motif
 ! value of the function
@@ -85,7 +84,7 @@
            v_z=tableNN(3,avant+l,ig_x,ig_y,ig_z,i_m)
            v_m=tableNN(4,avant+l,ig_x,ig_y,ig_z,i_m)
 
-         vec=Spin(1:3,i_x,i_y,i_z,i_m)-Spin(1:3,v_x,v_y,v_z,v_m)
+         vec=pos(1:3,i_x,i_y,i_z,i_m)-pos(1:3,v_x,v_y,v_z,v_m)
 
          dist=norm(vec)
 
@@ -130,11 +129,11 @@
            v_z=tableNN(3,avant+l,ig_x,ig_y,ig_z,i_m)
            v_m=tableNN(4,avant+l,ig_x,ig_y,ig_z,i_m)
 
-       dist=norm(Spin(1:3,i_x,i_y,i_z,i_m)-Spin(1:3,v_x,v_y,v_z,v_m))
+       dist=norm(pos(1:3,i_x,i_y,i_z,i_m)-pos(1:3,v_x,v_y,v_z,v_m))
        if (abs(dist-d(k)).gt.1.0d-8) then
         do i=1,3
          if (boundary(i)) cycle
-         dist=abs(Spin(i,i_x,i_y,i_z,i_m)-Spin(i,v_x,v_y,v_z,v_m))
+         dist=abs(pos(i,i_x,i_y,i_z,i_m)-pos(i,v_x,v_y,v_z,v_m))
          if (abs(dist-d(k)).gt.1.0d-8) masque(avant+l+1,i_x,i_y,i_z)=0
         enddo
        else

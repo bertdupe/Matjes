@@ -8,7 +8,6 @@
        subroutine topohall_2D(map_qorien,n,mag_motif)
        use m_vector, only : cross
        use m_constants, only : qel,pi
-       use m_lattice, only : spin
        use m_derived_types, only : lattice
        implicit none
        real(kind=8), intent(in) :: map_qorien(:,:,:)
@@ -43,8 +42,7 @@
 
        do i_y=1,n(2)
         do i_x=1,n(1)
-         Write(70,'(5(E20.10E3,2x))') (Spin(j,i_x,i_y,1,1)+translation(j),j=1,3), &
-     &    (devia_F(j,i_x,i_y),j=1,2)
+         Write(70,'(2(E20.10E3,2x))') (devia_F(j,i_x,i_y),j=1,2)
         enddo
        enddo
 

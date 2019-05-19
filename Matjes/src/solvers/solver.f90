@@ -360,6 +360,7 @@ if (kt.gt.1.0d-10) then
 endif
 
 norm_S=sqrt(spini(1)**2+spini(2)**2+spini(3)**2)
+!if (norm_S.lt.1.0d-8) stop 'error in solver S=0'
 S_norm=spini/norm_S
 
 
@@ -377,11 +378,11 @@ ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
      &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm) ! +steptemp !+stm_field_torque*stepsttor+steptemp
 
 if (kt.gt.1.0d-10) then
-   step_T=cross(BT,S_norm)
-!   DTs= step_T+damping*cross(S_norm,step_T)
+   step_T=cross(S_norm,BT)
+   DTs= step_T+damping*cross(S_norm,step_T)
 endif
 
-spinfin=S_norm+dt*(ds*timestep+step_T*sqrt(timestep))
+spinfin=S_norm+(ds*timestep*dt+DTs*sqrt(timestep*damping*dt))
 
 simple=spinfin/sqrt(spinfin(1)**2+spinfin(2)**2+spinfin(3)**2)
 

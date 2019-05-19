@@ -6,7 +6,7 @@ use m_init_config
 use m_vector, only : cross,norm
 use m_constants
 use m_derived_types
-use m_get_random
+use mtprng, only : mtprng_state
 Implicit none
 ! variables that come in
 type (cell), intent(in) :: motif
@@ -29,6 +29,9 @@ dim_lat=my_lattice%dim_lat
 r=my_lattice%areal
 
 !     Check if spin lattice input is present
+inquire(file='SpinSTMi.dat',exist=i_exi)
+if (i_exi) stop 'please rename the file init-modes.dat'
+
 inquire(file='init-modes.dat',exist=i_exi)
 
 ! part that reads the old lattice
@@ -55,44 +58,29 @@ endif
 i_init_config=.False.
 inquire(file='init.config',exist=i_init_config)
 if (i_init_config) then
-    call init_config('init.config',my_lattice,motif)
+    call init_config('init.config',my_lattice,motif,state)
     return
 endif
 
-nmag=count(motif%atomic(:)%moment.gt.0.0d0)
-do i_m=1,nmag
-   do i_z=1,dim_lat(3)
-      do i_y=1,dim_lat(2)
-         do i_x=1,dim_lat(1)
-
-! fix the spin direction as random
-
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(:)=get_rand_classic(state,3,1.0d0)
-
-          enddo
-      enddo
-   enddo
-enddo
-
 
 #ifdef CPP_MPI
-   endif
+endif
 
-   spin=bcast(Spin,7,dim_lat(1),dim_lat(2),dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0),MPI_REAL8,0,MPI_COMM)
+spin=bcast(Spin,7,dim_lat(1),dim_lat(2),dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0),MPI_REAL8,0,MPI_COMM)
 
 #endif
 
 #ifdef CPP_DEBUG
-      do i_m=1,nmag
-       do i_z=1,dim_lat(3)
-        do i_y=1,dim_lat(2)
+do i_m=1,nmag
+   do i_z=1,dim_lat(3)
+      do i_y=1,dim_lat(2)
          do i_x=1,dim_lat(1)
           write(*,*) my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(:)
          enddo
-        enddo
-       enddo
       enddo
-      stop
+   enddo
+enddo
+stop
 #endif
 
 END SUBROUTINE InitSpin

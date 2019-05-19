@@ -13,7 +13,6 @@ use m_derived_types
       use m_createspinfile
       use m_Corre
       use m_constants
-      use m_lattice, only : spin,tableNN,masque,indexNN
       use m_vector, only : norm
       use m_average_MC
       use m_topoplot

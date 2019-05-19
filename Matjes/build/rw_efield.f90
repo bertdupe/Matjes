@@ -5,7 +5,6 @@
 
       subroutine rw_efield(N,net)
       use m_efield
-      use m_lattice, only : spin
       use m_vector, only : norm
       implicit none
 ! entry variable
@@ -123,7 +122,7 @@
          do j=1,N(2)
           do k=1,N(3)
 
-        Efield_Jij(i,j,k)=EF*height/(height**2+((xmed-Spin(1,i,j,k,1))**2+(ymed-Spin(2,i,j,k,1))**2))**2
+        Efield_Jij(i,j,k)=EF*height/(height**2+((xmed)**2+(ymed)**2))**2
           enddo
          enddo
         enddo
@@ -133,7 +132,7 @@
         do i=1,N(1)
          do j=1,N(2)
           do k=1,N(3)
-          if (dsqrt((xmed-Spin(1,i,j,k,1))**2+(ymed-Spin(2,i,j,k,1))**2).lt.radius) then
+          if (dsqrt((xmed)**2+(ymed)**2).lt.radius) then
            Efield_Jij(i,j,k)=EF
            else
            Efield_Jij(i,j,k)=0.0d0

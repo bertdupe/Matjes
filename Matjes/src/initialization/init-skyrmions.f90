@@ -30,14 +30,14 @@ call get_parameter(io,fname,'N_pinning',N_pinning)
 
 allocate(tab_XSky(NSkyAdd),tab_YSky(NSkyAdd),tab_RSky(NSkyAdd),tab_coeffx(NSkyAdd),tab_coeffy(NSkyAdd),tab_starx(NSkyAdd),tab_stary(NSkyAdd),chirality(NSkyAdd))
 
-call get_parameter(io,fname,'XSky',NSkyAdd,tab_XSky,0.0d0)
-call get_parameter(io,fname,'YSky',NSkyAdd,tab_YSky,0.0d0)
-call get_parameter(io,fname,'RSky',NSkyAdd,tab_RSky,0.0d0)
-call get_parameter(io,fname,'coeffx',NSkyAdd,tab_coeffx,0.0d0)
-call get_parameter(io,fname,'coeffy',NSkyAdd,tab_coeffy,0.0d0)
-call get_parameter(io,fname,'starx',NSkyAdd,tab_starx,0.0d0)
-call get_parameter(io,fname,'stary',NSkyAdd,tab_stary,0.0d0)
-call get_parameter(io,fname,'chirality',NSkyAdd,chirality,0.0d0)
+call get_parameter(io,fname,'XSky',NSkyAdd,tab_XSky)
+call get_parameter(io,fname,'YSky',NSkyAdd,tab_YSky)
+call get_parameter(io,fname,'RSky',NSkyAdd,tab_RSky)
+call get_parameter(io,fname,'coeffx',NSkyAdd,tab_coeffx)
+call get_parameter(io,fname,'coeffy',NSkyAdd,tab_coeffy)
+call get_parameter(io,fname,'starx',NSkyAdd,tab_starx)
+call get_parameter(io,fname,'stary',NSkyAdd,tab_stary)
+call get_parameter(io,fname,'chirality',NSkyAdd,chirality)
 
 if (N_pinning.ne.0) allocate(TabPinning(N_pinning))
 
@@ -178,13 +178,15 @@ If (R0.gt. 0.0d0) then
 ! on the crystal symmetries.
 ! to write a skyrmion, x->-x i.e. a symmetry around the y axis
              Psi = Phi(position(1:2,i_x,i_y,i_z,i_m),x0,y0,dim_lat,net)+pi(1.0d0)
-           else
-           cycle
-          endif
 
              my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(1) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi(1.0d0))
              my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(2) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi(1.0d0))
              my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(3) = Cos(Theta)
+
+           else
+           cycle
+          endif
+
 
              if (MinDist.gt.dist) then
                  minIndex = (/i_x,i_y/)

@@ -7,6 +7,8 @@ use m_init_Sklattice
 use m_io_utils
 use m_init_heavyside
 use m_io_files_utils
+use mtprng, only : mtprng_state
+use m_init_random_config
 
 private
 public :: init_config
@@ -14,11 +16,12 @@ contains
 
 !!!!!!!!!!!
 ! find the different starting configurations for the order parameters
-subroutine init_config(fname,my_lattice,my_motif)
+subroutine init_config(fname,my_lattice,my_motif,state)
 implicit none
 character(len=*), intent(in) :: fname
 type (lattice), intent(inout) :: my_lattice
 type (cell), intent(in) :: my_motif
+type (mtprng_state),intent(inout) :: state
 ! internal variables
 integer :: io
 character(len=10) :: configuration
@@ -37,14 +40,14 @@ select case (adjustl(configuration))
    case('heavyside')
       call init_heavyside(my_lattice,my_motif)
    case('skyrmion')
+      call init_spiral(io,fname,my_lattice,my_motif)
       call init_Sk(io,fname,my_lattice,my_motif)
    case('skyrmionla')
+      call init_spiral(io,fname,my_lattice,my_motif)
       call init_Sk_lattice(io,fname,my_lattice,my_motif)
    case default
-      write(6,'(a)') 'initial configuration not found'
-      write(6,'(a)') 'the difference choices are'
-      write(6,'(a)') 'spiral - domainwall - heavyside - skyrmion - skyrmionlattice'
-      STOP
+      write(6,'(a)') 'random configuration was choosen'
+      call init_random_config(my_lattice,my_motif,state)
 end select
 
 call close_file(fname,io)

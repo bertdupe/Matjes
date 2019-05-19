@@ -10,7 +10,6 @@
 
       subroutine spstm(my_lattice)
       use m_derived_types
-      use m_lattice, only : spin
       use m_parameters, only : spstmonly
       use m_vector, only : norm
       use m_constants, only : pi
@@ -225,12 +224,12 @@
       daten=0.0d0
 
       n_atoms=product(dim_lat)
-      i_m=size(spin,5)
+      i_m=1
       do i_x=1,dim_lat(1)
        do i_y=1,dim_lat(2)
         do i_z=1,dim_lat(3)
         i=i_x+(i_y-1)*dim_lat(1)+(i_z-1)*dim_lat(1)*dim_lat(2)
-        daten(i,:)=spin(1:6,i_x,i_y,i_z,i_m)
+        daten(i,:)=my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(1:3)
         enddo
        enddo
       enddo

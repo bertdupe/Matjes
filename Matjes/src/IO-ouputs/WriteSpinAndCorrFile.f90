@@ -57,16 +57,17 @@ contains
 
 ! ===============================================================
 ! works only with pointers of rank 1
-SUBROUTINE write_general_pointer(i_count,spin)
+SUBROUTINE write_general_pointer(i_count,spin,filename)
 use m_convert
 Implicit none
 type(vec_point), intent(in) :: spin(:)
 integer, intent(in) :: i_count
+character(len=*), intent(in) :: filename
 !     Coordinates of the Spins
 integer :: io
 character(len=30) :: str
 
-str=convert('SpinSTM_',i_count,'.dat')
+str=convert(filename,i_count,'.dat')
 !     write Spinconfiguration in a file for STM-simulation
 
 io=open_file_write(str)

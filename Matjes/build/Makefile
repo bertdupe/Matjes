@@ -2,7 +2,7 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
+OBJS = TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o check_inputs.o \
  tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
@@ -15,7 +15,7 @@ OBJS = heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-
  stdtypes.o Efield_sd.o error.o setup_zdir.o rw_efield.o energy_commons.o excitations.o \
  rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o \
  initialize_temperature.o cal_local_energy.o user_information.o parallel_tempering.o paratemp.o field-eff_sd.o mpi_prop.o \
- initial-configuration.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o get-position.o \
+ initial-configuration.o init-spiral.o init_random_config.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o get-position.o \
  IO-modes.o io-utils.o get-random.o simu-parameters.o init-variables.o convert.o kmesh.o dyna-utils.o pointgrp.o
 
 Matjes: $(OBJS)
@@ -43,13 +43,15 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+TPulse.o: constant.o io-utils.o
+init_random_config.o: derived_types.o init_random.o
 heavyside.o: constant.o basic_types.o
 rampe.o: constant.o basic_types.o 
-excitations.o: simu-parameters.o heavyside.o rampe.o derived_types.o io-utils.o io_files_utils.o
+excitations.o: TPulse.o simu-parameters.o heavyside.o rampe.o derived_types.o io-utils.o io_files_utils.o
 external_fields.o: operator_pointer_utils.o derived_types.o get-position.o
 measure_temp.o: constant.o vector.o
 operator_pointer_utils.o: derived_types.o get-position.o
-topo_commons.o: get-position.o derived_types.o operator_pointer_utils.o
+topo_commons.o: vector.o get-position.o derived_types.o operator_pointer_utils.o
 internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
 energy_commons.o: get-position.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
@@ -61,13 +63,13 @@ convert.o:
 simu-parameters.o: basic_types.o
 get-random.o:
 IO-modes.o: derived_types.o
-get-position.o: derived_types.o
+get-position.o: io_files_utils.o derived_types.o
 init-DW.o:
 init-skyrmions.o: io-utils.o vector.o constant.o create_lattice.o
 init-Sk-lattice.o: vector.o init-skyrmions.o
 init-heavyside.o:
 init-spiral.o: vector.o get-position.o io-utils.o
-initial-configuration.o: init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o io-utils.o
+initial-configuration.o: init_random_config.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o io-utils.o
 simu-parameters.o: basic_types.o
 io_files_utils.o: derived_types.o
 io-utils.o: constant.o convert.o derived_types.o simu-parameters.o vector.o

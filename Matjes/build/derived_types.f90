@@ -26,6 +26,8 @@ type io_parameter
      logical :: io_spstmL, io_spstmonly
 ! plot the spin structure (or the order parameter structure)
      logical :: io_Xstruct
+! plot the stochastic field
+     logical :: io_Tfield
 ! frequency for writting the plotting data (magnetization density and so one)
      integer :: io_frequency
 ! plot the fourrier tranform of the spin structure (or the order parameter structure)

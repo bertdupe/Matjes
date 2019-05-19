@@ -3,6 +3,7 @@ use m_basic_types, only : excitations
 use m_simu_parameters, only : type_excitations
 use m_rampe
 use m_heavyside
+use m_TPulse
 
 type cycle
     type(excitations), allocatable :: external_param(:)
@@ -11,6 +12,8 @@ type cycle
 end type cycle
 
 type(cycle) :: EM_of_t
+
+logical :: i_excitations
 
 private
 public :: get_excitations,update_EM_fields
@@ -31,6 +34,7 @@ logical :: test
 character(len=30) :: excitations
 
 test=.false.
+i_excitations=.false.
 n_excite=size(type_excitations)
 
 io_input=open_file_read(fname)
@@ -43,6 +47,14 @@ do i=1,n_excite
    endif
 enddo
 
+i_excitations=test
+
+if (.not.i_excitations) then
+   write(6,'(a)') 'no excitations found'
+   call close_file('input',io_input)
+   return
+endif
+
 EM_of_t%counter=0
 EM_of_t%name=excitations
 
@@ -50,22 +62,25 @@ select case (excitations)
 ! part of the rampe function
   case('rampe')
 
-  EM_of_t%counter=get_num_variable(io_input,EM_of_t%name)
+    EM_of_t%counter=get_num_variable(io_input,EM_of_t%name)
 
-  allocate(EM_of_t%external_param(EM_of_t%counter))
+    allocate(EM_of_t%external_param(EM_of_t%counter))
 
-  call get_parameter(io_input,EM_of_t%name,trim(excitations),EM_of_t%external_param)
+    call get_parameter(io_input,EM_of_t%name,trim(excitations),EM_of_t%external_param)
 
 ! part of the step function
   case('heavyside')
 
-  EM_of_t%counter=get_num_variable(io_input,EM_of_t%name)
+    EM_of_t%counter=get_num_variable(io_input,EM_of_t%name)
 
-  allocate(EM_of_t%external_param(EM_of_t%counter))
+    allocate(EM_of_t%external_param(EM_of_t%counter))
 
-  call get_parameter(io_input,EM_of_t%name,trim(excitations),EM_of_t%external_param)
+    call get_parameter(io_input,EM_of_t%name,trim(excitations),EM_of_t%external_param)
 
-  case('pulse')
+  case('TPulse')
+
+    write(6,'(a)') 'initialization of the electron temperature pulse'
+    call get_parameter_TPulse(io_input,'input')
 
   case default
      write(6,'(a)') 'no excitations selected'
@@ -86,6 +101,8 @@ real(kind=8), intent(inout) :: kt,h_int(:),check(:)
 ! internal parameters
 integer :: size_excitations
 
+if (.not.i_excitations) return
+
 size_excitations=size(EM_of_t%external_param)
 
 select case (EM_of_t%name)
@@ -97,7 +114,12 @@ select case (EM_of_t%name)
 
     if (EM_of_t%counter.le.size_excitations) call update_heavyside(time,kt,h_int,EM_of_t%external_param,EM_of_t%counter,check)
 
+  case('TPulse')
+
+    if (EM_of_t%counter.le.size_excitations) call update_TPulse(time,kt)
+
   case default
+    stop 'excitation not implemented'
 
 end select
 

@@ -50,7 +50,6 @@ Ilat_vois(4)=i_m
          if (i_y.lt.size_spins(2)) ipv=i_y+1
         endif
       end select
-      Ilat_vois(2)=i_y
 
          do i_x=1,size_spins(1)
          Ilat(1)=i_x
@@ -65,25 +64,28 @@ Ilat_vois(4)=i_m
             if (i_x.lt.size_spins(1)) ipu=i_x+1
            endif
          end select
-         Ilat_vois(1)=i_x
 
          position=get_position_ND_to_1D(Ilat,size_spins)
          Q_topo(1,position)%w=>spins(position)%w
 
          ! ipu
          Ilat_vois(1)=ipu
+         Ilat_vois(2)=i_y
          position_vois=get_position_ND_to_1D(Ilat_vois,size_spins)
          Q_topo(2,position)%w=>spins(position_vois)%w
 
          !ipuv
+         Ilat_vois(1)=ipu
          Ilat_vois(2)=ipv
          position_vois=get_position_ND_to_1D(Ilat_vois,size_spins)
          Q_topo(3,position)%w=>spins(position_vois)%w
 
          !ipv
          Ilat_vois(1)=i_x
+         Ilat_vois(2)=ipv
          position_vois=get_position_ND_to_1D(Ilat_vois,size_spins)
          Q_topo(4,position)%w=>spins(position_vois)%w
+
 
          enddo
       enddo

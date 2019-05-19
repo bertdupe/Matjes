@@ -1,5 +1,4 @@
 module m_sd_averages
-use m_basic_types, only : vec_point
 use m_topo_commons, only : Q_topo
 interface sd_charge
    module procedure sd_charge_2D
@@ -10,7 +9,7 @@ contains
 function sd_charge_2D(i)
 use m_vector, only : cross,norm,area
 Implicit none
-real(kind=8), dimension(4) :: sd_charge_2D
+real(kind=8), dimension(5) :: sd_charge_2D
 integer, intent(in) :: i
 ! internal
 real(kind=8) :: vort(3),qtopo
@@ -18,15 +17,16 @@ integer :: N_spin,j
 
 qtopo=0.0d0
 vort=0.0d0
+sd_charge_2D=0.0d0
 
 qtopo=area(Q_topo(1,i)%w,Q_topo(2,i)%w,Q_topo(3,i)%w)+area(Q_topo(1,i)%w,Q_topo(3,i)%w,Q_topo(4,i)%w)
 
 vort=cross(Q_topo(1,i)%w,Q_topo(2,i)%w)+cross(Q_topo(2,i)%w,Q_topo(3,i)%w) &
         +cross(Q_topo(3,i)%w,Q_topo(4,i)%w)+cross(Q_topo(4,i)%w,Q_topo(1,i)%w)
 
-
-sd_charge_2D(1)=qtopo
-sd_charge_2D(2:4)=vort
+if (qtopo.gt.0.0d0) sd_charge_2D(1)=qtopo
+if (qtopo.lt.0.0d0) sd_charge_2D(2)=qtopo
+sd_charge_2D(3:5)=vort
 
 end function sd_charge_2D
 

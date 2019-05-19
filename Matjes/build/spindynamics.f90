@@ -21,7 +21,7 @@ use m_dyna_utils
 use m_energy_commons, only : associate_line_Hamiltonian
 use m_internal_fields_commons, only : associate_line_field
 use m_user_info
-use m_excitations, only : update_EM_fields
+use m_excitations
 #ifndef CPP_BRUTDIP
       use m_setup_dipole, only : mmatrix
 #endif
@@ -38,7 +38,7 @@ type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 logical, intent(in) :: gra_topo
 ! internal
-logical :: gra_log
+logical :: gra_log,io_stochafield
 integer :: i,j,l,k,h,gra_freq
 ! lattices that are used during the calculations
 real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter,Bini,BT
@@ -47,9 +47,9 @@ type(vec_point),allocatable,dimension(:) :: spin1,spin2,B_point,B_after_point,BT
 type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line_1,B_line_2
 type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column_1,mode_B_column_2
 ! dummys
-real(kind=8) :: dum_norm,qeuler,vortex(3),Mdy(3),Edy,stmtorquebp,check1,check2,Eold,check3,Et
+real(kind=8) :: dum_norm,qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,stmtorquebp,check1,check2,Eold,check3,Et
 real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
-real(kind=8) :: dumy(4),ds(3),security(2),B(3),step(3),steptor(3),stepadia(3),stepsttor(3),steptemp(3)
+real(kind=8) :: dumy(5),ds(3),security(2),B(3),step(3),steptor(3),stepadia(3),stepsttor(3),steptemp(3)
 real(kind=8) :: timestep_ini,real_time,h_int(3)
 real(kind=8) :: kt,ktini,ktfin,kt1
 real(kind=8) :: time
@@ -92,10 +92,10 @@ integer :: N_site_comm
       if (irank.eq.0) then
 #endif
       OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
-      Write(7,'(19(a,2x))') '# 1:time','2:E_av','3:M', &
+      Write(7,'(21(a,2x))') '# 1:time','2:E_av','3:M', &
      &  '4:Mx','5:My','6:Mz','7:vorticity','8:vx', &
-     &  '9:vy','10:vz','11:qeuler','12:STMtorque','13:torque','14:T=', &
-     &  '15:Tfin=','16:Ek=','17:Hx','18:Hy=','19:Hz='
+     &  '9:vy','10:vz','11:qeuler','12:q+','13:q-','14:STMtorque','15:torque','16:T=', &
+     &  '17:Tfin=','18:Ek=','19:Hx','20:Hy=','21:Hz='
 
 ! check the convergence
       open(8,FILE='convergence.dat',action='write',form='formatted')
@@ -158,6 +158,7 @@ call user_info(6,time,'done',.true.)
 
 timestep_ini=timestep
 gra_log=io_simu%io_Xstruct
+io_stochafield=io_simu%io_Tfield
 gra_freq=io_simu%io_frequency
 ktini=ext_param%ktini%value
 ktfin=ext_param%ktfin%value
@@ -297,6 +298,12 @@ end select
 #endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! part of the excitations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+call get_excitations('input')
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! beginning of the
 do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -329,6 +336,8 @@ do j=1,duration
 
        call init_temp_measure(check,check1,check2,check3)
        qeuler=0.0d0
+       q_plus=0.0d0
+       q_moins=0.0d0
        vx=0.0d0
        vy=0.0d0
        vz=0.0d0
@@ -342,6 +351,10 @@ do j=1,duration
        ave_torque=0.0d0
        l=l+1
        h=h+1
+
+       do iomp=1,N_cell
+          BT_point(iomp)%w=0.0d0
+       enddo
 
 !       if (((j.lt.ti).or.(j.gt.tf)).and.(marche)) then
 !        storque=0.0d0
@@ -358,7 +371,7 @@ do j=1,duration
 !
 !       kt=kt1/650.0d0*28.0d0*k_b
 
-       call update_EM_fields(j,kt,h_int,check)
+       call update_EM_fields(int(j*timestep),kt,h_int,check)
 
        if ((h.gt.htimes).and.(hsweep).and.(norm((H_int-Hfin)).gt.1.0d-6).and. &
           (j.gt.hstart)) then
@@ -664,12 +677,13 @@ do iomp=1,N_cell
     Mz=Mz+Spin1(iomp)%w(3)
 
     dumy=sd_charge(iomp)
-    dumy=0.0d0
 
-    qeuler=qeuler+dumy(1)/pi(4.0d0)
-    vx=vx+dumy(2)
-    vy=vy+dumy(3)
-    vz=vz+dumy(4)
+    q_plus=q_plus+dumy(1)/pi(4.0d0)
+    q_moins=q_moins+dumy(2)/pi(4.0d0)
+
+    vx=vx+dumy(3)
+    vy=vy+dumy(4)
+    vz=vz+dumy(5)
 
 enddo
 
@@ -707,14 +721,19 @@ enddo
 
 if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
-if (mod(j-1,gra_freq).eq.0) Write(7,'(18(E20.12E3,2x),E20.12E3)') real_time,Edy, &
-     &   norm(Mdy),Mdy,norm(vortex),vortex,qeuler, &
+if (mod(j-1,Efreq).eq.0) Write(7,'(20(E20.12E3,2x),E20.12E3)') real_time,Edy, &
+     &   norm(Mdy),Mdy,norm(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
      &   storque, torque_FL, kT/k_B,(security(i),i=1,2),H_int
 
 if ((gra_log).and.(mod(j-1,gra_freq).eq.0)) then
          call CreateSpinFile(j/gra_freq,spin1)
-         call WriteSpinAndCorrFile(j/gra_freq,spin1)
-         write(6,'(a,I10)')'wrote Spin configuration and povray file number',j
+         call WriteSpinAndCorrFile(j/gra_freq,spin1,'SpinSTM_')
+         write(6,'(a,I10)')'wrote Spin configuration and povray file number',j/gra_freq
+      endif
+
+if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
+         call WriteSpinAndCorrFile(j/gra_freq,BT_point,'Stocha-field_')
+         write(6,'(a,I10)')'wrote Spin configuration and povray file number',j/gra_freq
       endif
 
 if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) then

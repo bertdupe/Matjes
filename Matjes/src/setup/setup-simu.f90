@@ -91,7 +91,7 @@ call ext_param_rw(ext_param)
 
 call user_info(6,time,'reading the Hamiltonian in the input file',.false.)
 
-call get_excitations('input')
+!call get_excitations('input')
 ! setup the Hamiltonian of the system
 
 call get_Hamiltonians('input',ext_param%H_ext%value)
@@ -111,7 +111,7 @@ call rw_efield(my_lattice%dim_lat,my_lattice%areal)
 call user_info(6,time,'allocating the spin, table of neighbors and the index...',.false.)
 time=0.0d0
 
-call create_lattice(my_lattice,my_motif)
+call create_lattice(my_lattice,my_motif,ext_param)
 
 dim_lat=my_lattice%dim_lat
 n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
@@ -234,14 +234,14 @@ if (all(my_lattice%boundary)) then
 else
    call user_info(6,time,'setting up the Hamiltonian for non-periodic systems',.false.)
 
-   call periodic(indexNN(:,1),sum(indexNN(:,1))+1,tabledist(:,1),N_Nneigh,masque,spin,tableNN,my_lattice,my_motif)
+   call periodic(indexNN(:,1),sum(indexNN(:,1))+1,tabledist(:,1),N_Nneigh,masque,tableNN,pos,my_lattice,my_motif)
 
    call user_info(6,time,'done',.true.)
 endif
 
 !check for the structure.xyz file for shape modification
 inquire (file='structure.xyz',exist=i_usestruct)
-if (i_usestruct) call user_def_struct(masque,spin, &
+if (i_usestruct) call user_def_struct(masque,pos, &
      & my_lattice%dim_lat,count(my_motif%i_mom),tot_N_Nneigh+1,my_lattice%areal)
 
 ! setup the different parameters for the interaction DM, 4-spin... 

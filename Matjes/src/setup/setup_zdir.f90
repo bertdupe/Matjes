@@ -1,5 +1,4 @@
-      subroutine setup_zdir(phase,nvois,my_lattice,motif)
-      use m_lattice, only : tableNN,spin
+      subroutine setup_zdir(phase,nvois,my_lattice,motif,tableNN,pos)
       use m_vector, only : norm
       use m_derived_types
 #ifdef CPP_MPI
@@ -10,6 +9,8 @@
       type (cell), intent(in) :: motif
       type (lattice), intent(in) :: my_lattice
       integer, intent(in) :: phase,nvois
+      integer, intent(inout) :: tableNN(:,:,:,:,:,:)
+      real(kind=8), intent(in) :: pos(:,:,:,:,:)
 !!! dummy
       integer :: j,i,k,l,i_m,dim_lat(3)
 !!! position of the 2 atoms
@@ -43,8 +44,8 @@
            v_z=tableNN(3,l,i,j,k,i_m)
            v_m=tableNN(4,l,i,j,k,i_m)
 
-           zs=spin(3,i,j,k,i_m)
-           zv=spin(3,v_x,v_y,v_z,v_m)
+           zs=pos(3,i,j,k,i_m)
+           zv=pos(3,v_x,v_y,v_z,v_m)
            if (dabs(zv-zs).gt.1.0d-7) then
             tableNN(5,l,i,j,k,i_m)=0
             tableNN(6,l,i,j,k,i_m)=1
