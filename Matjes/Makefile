@@ -8,7 +8,7 @@ serial: copy
 copy:
 	cp src/*.f90 src/*/*.f* src/*/*.F* build/.
 
-install:  serial
+install:  clean serial
 	+@(cd build && mv Matjes ../bin/.)
 	
 clean: 

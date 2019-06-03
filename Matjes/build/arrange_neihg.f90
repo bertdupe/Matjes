@@ -91,6 +91,7 @@
        do k=1,size(DM_vector,1)
         write(6,*) DM_vector(k,:),tableNN(1:2,k,dim_lat(1)/2,dim_lat(2)/2,1)
        enddo
+    pause
 #endif
 
 

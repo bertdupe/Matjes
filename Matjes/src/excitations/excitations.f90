@@ -87,7 +87,7 @@ select case (excitations)
 
 end select
 
-call close_file('input',io_input)
+call close_file(fname,io_input)
 
 end subroutine get_excitations
 
@@ -96,7 +96,7 @@ end subroutine get_excitations
 !
 subroutine update_EM_fields(time,kt,h_int,check)
 implicit none
-integer, intent(in) :: time
+real(kind=8), intent(in) :: time
 real(kind=8), intent(inout) :: kt,h_int(:),check(:)
 ! internal parameters
 integer :: size_excitations

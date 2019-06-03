@@ -364,7 +364,7 @@ norm_S=sqrt(spini(1)**2+spini(2)**2+spini(3)**2)
 S_norm=spini/norm_S
 
 
-if (i_torque) steptor=cross(S_norm,Ipol)
+!if (i_torque) steptor=cross(S_norm,Ipol)
 !if (stmtorque) stepsttor=storque*cross(S_norm,Ipol*htor(i_x,i_y,i_z))
 
 step=cross(B,S_norm)
@@ -373,9 +373,9 @@ stepdamp=cross(S_norm,step)
 
 ds=step+damping*stepdamp
 
-ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
-     &   torque_FL*(torque_AFL+damping)*cross(S_norm,steptor)+adia*       &
-     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm) ! +steptemp !+stm_field_torque*stepsttor+steptemp
+!ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
+!     &   torque_FL*(torque_AFL+damping)*cross(S_norm,steptor)+adia*       &
+!     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm) ! +steptemp !+stm_field_torque*stepsttor+steptemp
 
 if (kt.gt.1.0d-10) then
    step_T=cross(S_norm,BT)

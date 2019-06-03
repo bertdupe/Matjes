@@ -9,8 +9,7 @@ contains
 
 subroutine update_rampe(time,kt,h_int,excite,counter,check)
 implicit none
-integer, intent(in) :: time
-real(kind=8), intent(in) :: check(:)
+real(kind=8), intent(in) :: check(:),time
 type(excitations), intent(inout) :: excite(:)
 integer, intent(inout) :: counter
 real(kind=8), intent(inout) :: kt,h_int(:)

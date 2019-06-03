@@ -77,7 +77,7 @@ N_coeff_DMI=size(Hamiltonian%DMI,3)
 allocate(B_int%DMI(3,3,N_coeff_DMI))
 
 do i=1,N_coeff_DMI
-  B_int%DMI=Hamiltonian%DMI
+  B_int%DMI=-2.0d0*Hamiltonian%DMI
 enddo
 
 ! in case I want to put the magnetic field there
@@ -96,10 +96,10 @@ do i=2,N_all_shell
 
          do l=1,indexNN(i-1)
 
-            B_int%total_shell(i)%atom(l)%H=Hamiltonian%total_shell(i)%atom(l)%H
-            B_int%total_shell(i)%atom(l)%H(1,1)=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H(1,1)
-            B_int%total_shell(i)%atom(l)%H(2,2)=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H(2,2)
-            B_int%total_shell(i)%atom(l)%H(3,3)=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H(3,3)
+            B_int%total_shell(i)%atom(l)%H=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H
+!            B_int%total_shell(i)%atom(l)%H(1,1)=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H(1,1)
+!            B_int%total_shell(i)%atom(l)%H(2,2)=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H(2,2)
+!            B_int%total_shell(i)%atom(l)%H(3,3)=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H(3,3)
 
          enddo
       endif
@@ -131,6 +131,7 @@ do i=1,N_all_shell
       write(6,*) B_int%total_shell(i)%atom(j)%H(1,:)
       write(6,*) B_int%total_shell(i)%atom(j)%H(2,:)
       write(6,*) B_int%total_shell(i)%atom(j)%H(3,:)
+      pause
    enddo
 enddo
 #endif

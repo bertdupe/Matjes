@@ -121,9 +121,9 @@ enddo
 
 ! set up the DMI
 do i=1,N_coeff_DMI
-   Hamiltonian%DMI(2,1,i)=D_ij(i)*Hamiltonian%c_DM
-   Hamiltonian%DMI(3,1,i)=-D_ij(i)*Hamiltonian%c_DM
-   Hamiltonian%DMI(3,2,i)=D_ij(i)*Hamiltonian%c_DM
+   Hamiltonian%DMI(2,1,i)=-D_ij(i)*Hamiltonian%c_DM
+   Hamiltonian%DMI(3,1,i)=D_ij(i)*Hamiltonian%c_DM
+   Hamiltonian%DMI(3,2,i)=-D_ij(i)*Hamiltonian%c_DM
 
    Hamiltonian%DMI(1,2,i)=-Hamiltonian%DMI(2,1,i)
    Hamiltonian%DMI(2,3,i)=-Hamiltonian%DMI(3,2,i)

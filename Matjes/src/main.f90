@@ -7,6 +7,7 @@ use m_io_files_utils
 use m_init_variables
 use mtprng
 use m_derived_types
+use m_lattice
 
 ! old code
       use m_write_spin

@@ -43,6 +43,15 @@ do i=1,N
 !   if (.not.associated(B_total%value(i,iomp)%Op_loc)) cycle
 
       B=B+matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
+!      if (iomp.eq.1) then
+!      write(*,*) 'shell',i
+!      write(*,*) spin%shell(i)%w
+!      write(*,*) B_line%shell(i)%Op_loc(1,:)
+!      write(*,*) B_line%shell(i)%Op_loc(2,:)
+!      write(*,*) B_line%shell(i)%Op_loc(3,:)
+!      write(*,*) matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
+!      write(*,*) ' '
+!      endif
 
 enddo
 

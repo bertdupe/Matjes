@@ -43,15 +43,15 @@ light_source { <12, 0, -12>
 camera {
   sky   <0,0,1>
 //top view//
-  location <0,0,200 > //top
-  look_at  <50,0,0>
-  right    <0,-1,0>
+  location <50,50,120 > //top
+  look_at  <50,50,0>
+  right    <1,0,0>
 //  location <35, 25 , 34 > // #1
 //  look_at  <15, 15  2.>   // #1
 //  location <35, 30 ,-70 > 
 //  look_at  <35, 36  ,2.> 
 
-  angle 40
+  angle 50
 }
 
 background { color White }
@@ -66,8 +66,12 @@ background { color White }
 //    Spin macro for the Mainz group
 //    uncomment to use
 //----------------------------------------------------
-#macro Spin(theta,phi,px,py,pz,Rc,Bc,Gc)
+/*#macro Spin(theta,phi,N,Rc,Bc,Gc)
 object{
+
+#local py = 1.0*div(N-1,10)+1;
+#local px = 1.0*mod(N-1,10)+1;
+#local pz = 0;
 
 #local arrowLength = 1.0;
 #local arrowTipSize = 0.9;
@@ -76,6 +80,7 @@ object{
 #local point=arrowLength * arrowDirection;
 #local tipSize=arrowTipSize;
 #local tubeRadius=arrowTubeRadius;
+
 
   merge {
       sphere { <0, 0, 0>, tubeRadius }
@@ -108,14 +113,14 @@ translate <px,py,pz>                 // position of the vector
 texture {pigment  {color rgb <Cred,Cgreen,Cblue>}}      //colors
 
      }
-#end
+#end*/
 //----------------------------------------------------
 
 //----------------------------------------------------
 //    Spin macro for the Kiel group
 //    uncomment to use
 //----------------------------------------------------
-/*#macro Spin(theta,phi,px,py,pz,Rc,Bc,Gc)
+#macro Spin(theta,phi,px,py,pz,Rc,Bc,Gc)
 object{
 cone{
      <0.0,0.0,1.0>, 0.0  // Center and radius of one end
@@ -126,7 +131,7 @@ translate <px,py,pz>                 // position of the vector
 texture {pigment  {color rgb <Rc,Bc,Gc>}}      //colors
 
      }}
-#end*/
+#end
 //----------------------------------------------------
 
 #macro Vector(length,theta,phi,px,py,pz,Rc,Bc,Gc)
@@ -159,5 +164,5 @@ box{
 }
 #end
 
-#include "Spinse1.0000.dat"
+#include "Spinse_0.dat"
 

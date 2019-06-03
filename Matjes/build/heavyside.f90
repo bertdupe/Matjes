@@ -9,7 +9,7 @@ contains
 
 subroutine update_heavyside(time,kt,h_int,excite,counter,check)
 implicit none
-integer, intent(in) :: time
+real(kind=8), intent(in) :: time
 real(kind=8), intent(in) :: check(:)
 type(excitations), intent(inout) :: excite(:)
 integer, intent(inout) :: counter

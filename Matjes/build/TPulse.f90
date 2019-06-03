@@ -59,10 +59,10 @@ end subroutine get_parameter_TPulse
 subroutine update_TPulse(time,kt)
 use m_constants, only : k_b
 implicit none
-integer, intent(in) :: time
+real(kind=8), intent(in) :: time
 real(kind=8), intent(inout) :: kt
 ! internal
-real(kind=8) :: kt1
+real(kind=8) :: kt1,dumy
 
 kt1=0.0d0
 

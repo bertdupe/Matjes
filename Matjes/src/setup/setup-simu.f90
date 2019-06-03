@@ -41,7 +41,7 @@ type (mtprng_state),intent(inout) :: state
 type(simulation_parameters),intent (inout) :: ext_param
 ! variable of the system
 real(kind=8), allocatable :: tabledist(:,:)
-!integer, allocatable :: tableNN(:,:,:,:,:,:),indexNN(:,:)
+integer, allocatable :: indexNN(:,:) !,tableNN(:,:,:,:,:,:)
 real (kind=8), allocatable :: map_vort(:,:,:,:),map_toto(:,:,:),pos(:,:,:,:,:)
 integer :: N_Nneigh,phase,tot_N_Nneigh
 real(kind=8) :: time

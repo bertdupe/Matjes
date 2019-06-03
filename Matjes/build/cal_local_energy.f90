@@ -160,12 +160,13 @@ integer :: i,N
 
 N=size(spin%shell)
 E_int=0.0d0
-if (size(ext_field(iomp)%w).ne.0) E_int=dot_product(spin%shell(1)%w,ext_field(iomp)%w)
+
+if (size(ext_field(iomp)%w).ne.0) E_int=-dot_product(spin%shell(1)%w,ext_field(iomp)%w)
 S=0.0d0
 
 do i=1,N
 
-   S=S+matmul(spin%shell(i)%w,E_line%shell(i)%Op_loc)
+   S=S+matmul(E_line%shell(i)%Op_loc,spin%shell(i)%w)
 
 enddo
 
