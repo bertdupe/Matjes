@@ -4,6 +4,7 @@ use m_simu_parameters, only : type_excitations
 use m_rampe
 use m_heavyside
 use m_TPulse
+use m_EMwave
 
 type cycle
     type(excitations), allocatable :: external_param(:)
@@ -82,6 +83,11 @@ select case (excitations)
     write(6,'(a)') 'initialization of the electron temperature pulse'
     call get_parameter_TPulse(io_input,'input')
 
+  case('EMwave')
+
+    write(6,'(a)') 'initialization of the electron temperature pulse'
+    call get_parameter_EMwave(io_input,'input')
+
   case default
      write(6,'(a)') 'no excitations selected'
 
@@ -117,6 +123,10 @@ select case (EM_of_t%name)
   case('TPulse')
 
     if (EM_of_t%counter.le.size_excitations) call update_TPulse(time,kt)
+
+  case('EMwave')
+
+    if (EM_of_t%counter.le.size_excitations) call update_EMwave(time,h_int)
 
   case default
     stop 'excitation not implemented'

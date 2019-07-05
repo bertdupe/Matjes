@@ -5,6 +5,10 @@ real(kind=8), Parameter :: k_B=0.000086173324d0
 real(kind=8), Parameter :: mu_0=1.0d0
 ! bohr magneton, units eV/T
 real(kind=8), Parameter :: mu_B=0.0000578838180661d0
+! dielectric permeability of vacuum, units fs**2/nm**2
+real(kind=8), Parameter :: epsilon_0=0.00001112650056053618d0
+! speed of light, units nm/fs
+real(kind=8), Parameter :: c=299.792458d0
 !      real(kind=8), Parameter :: mu_B=1.0d0
 ! h in eV.s (wiki)
 !      real(kind=8), parameter :: h=4.135667516d-15

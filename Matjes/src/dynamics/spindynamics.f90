@@ -1,5 +1,6 @@
 subroutine spindynamics(mag_lattice,mag_motif,io_simu,gra_topo,ext_param)
 use m_fieldeff
+use m_eval_BTeff
 use m_measure_temp
 use m_topo_commons, only : get_size_Q_operator,associate_Q_operator
 use m_derived_types
@@ -413,6 +414,8 @@ do iomp=1,N_cell
 
        call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column_1(iomp),h_int,B_line_1(iomp))
 
+       if (kt.gt.1.0d-10) call calculate_BTeff(stmtemp,kt,BT_point(iomp)%w)
+
 !
 !-----------------------------------------------
 ! Heun integration scheme
@@ -420,6 +423,8 @@ do iomp=1,N_cell
        case (3)
 
        call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column_1(iomp),h_int,B_line_1(iomp))
+
+       if (kt.gt.1.0d-10) call calculate_BTeff(stmtemp,kt,BT_point(iomp)%w)
 
 !
 !-----------------------------------------------
@@ -481,8 +486,9 @@ do iomp=1,N_cell
 !-----------------------------------------------
       select case (integtype)
        case (1)
-        spin2(iomp)%w=integrate(timestep_int,B_point(iomp)%w,BT_point(iomp)%w,kt,stmtemp,maxh,iomp &
-   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1)
+
+        spin2(iomp)%w=integrate(timestep_int,B_point(iomp)%w,BT_point(iomp)%w &
+   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1(iomp)%w)
 
 ! the temperature is checked with 1 temperature step before
 !!! check temperature
@@ -495,8 +501,8 @@ do iomp=1,N_cell
 !-----------------------------------------------
        case (3)
 
-        spin2(iomp)%w=integrate(timestep_int,B_point(iomp)%w,BT_point(iomp)%w,kt,stmtemp,maxh,iomp &
-   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1)
+        spin2(iomp)%w=integrate(timestep_int,B_point(iomp)%w,BT_point(iomp)%w &
+   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1(iomp)%w)
 
 
 !-----------------------------------------------
@@ -590,8 +596,8 @@ do iomp=1,N_cell
 !-----------------------------------------------
        case (3)
 
-         spin2(iomp)%w=integrate(timestep_int,B_point(iomp)%w,BT_point(iomp)%w,kt,stmtemp,maxh,iomp &
-   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1)
+         spin2(iomp)%w=integrate(timestep_int,B_point(iomp)%w,BT_point(iomp)%w &
+   & ,damping,Ipol,torque_FL,torque_AFL,adia,nonadia,storque,i_torque,stmtorque,spin1(iomp)%w)
 
 !-----------------------------------------------
 ! SIA and IMP integration scheme

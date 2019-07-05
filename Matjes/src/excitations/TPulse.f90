@@ -3,6 +3,7 @@ module m_TPulse
 type Temp_Pulse
     real(kind=8) :: t_cut_pulse,T0,alpha,I_exp,I_over_x,t_exp,t_frac,expo,sigma
     integer :: t_start
+    character(len=30) :: forme
 end type Temp_Pulse
 
 type(Temp_Pulse) :: TPulse
@@ -32,8 +33,9 @@ TPulse%I_over_x=286.415
 TPulse%t_exp=22.57
 TPulse%t_frac=19.62
 TPulse%expo=0.47
-TPulse%sigma=52.29
+TPulse%sigma=sqrt(52.29)
 TPulse%t_cut_pulse=2500
+TPulse%forme='exponential'
 
 call get_parameter(io,fname,'T0',TPulse%T0)
 call get_parameter(io,fname,'t_start',TPulse%t_start)
@@ -44,9 +46,13 @@ call get_parameter(io,fname,'t_exp',TPulse%t_exp)
 call get_parameter(io,fname,'t_frac',TPulse%t_frac)
 call get_parameter(io,fname,'expo',TPulse%expo)
 call get_parameter(io,fname,'sigma',TPulse%sigma)
+
+TPulse%t_cut_pulse=(TPulse%t_exp-TPulse%t_frac)/TPulse%I_over_x/TPulse%expo+TPulse%t_exp
+
 call get_parameter(io,fname,'t_cut_pulse',TPulse%t_cut_pulse)
+call get_parameter(io,fname,'forme',TPulse%forme)
 
-
+TPulse%forme=trim(TPulse%forme)
 TPulse%I_exp=TPulse%I_exp*TPulse%alpha
 TPulse%I_over_x=TPulse%I_over_x*TPulse%alpha
 
@@ -62,19 +68,35 @@ implicit none
 real(kind=8), intent(in) :: time
 real(kind=8), intent(inout) :: kt
 ! internal
-real(kind=8) :: kt1,dumy
+real(kind=8) :: kt1
 
 kt1=0.0d0
 
-if (time.le.TPulse%t_start) then
-    kt1=TPulse%T0
-elseif ((time.gt.TPulse%t_start).and.(time.lt.(TPulse%t_start+TPulse%t_cut_pulse))) then
-    kt1=TPulse%T0+TPulse%I_exp*exp(-(real(time-TPulse%t_start)-TPulse%t_exp)**2/TPulse%sigma)
-elseif (time.ge.(TPulse%t_start+TPulse%t_cut_pulse)) then
-    kt1=TPulse%T0+TPulse%I_over_x/(real(time-TPulse%t_start)-TPulse%t_frac)**TPulse%expo
-endif
+select case (TPulse%forme)
+  case ('exponential')
 
-kt=kt1/650.0d0*29.0d0*k_b
+   if ((time.le.(TPulse%t_exp-3.0*TPulse%sigma)).or.(time.ge.(TPulse%t_exp+3.0*TPulse%sigma))) then
+     kt1=TPulse%T0
+   else
+     kt1=TPulse%T0+TPulse%I_exp*exp(-(time-TPulse%t_exp)**2/2.0d0/TPulse%sigma**2)
+   endif
+
+  case default
+
+   if (time.le.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)) then
+     kt1=TPulse%T0
+    elseif ((time.gt.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)).and.(time.lt.(TPulse%t_exp+TPulse%t_start))) then
+     kt1=TPulse%T0+TPulse%I_exp*exp(-(real(time-TPulse%t_start)-TPulse%t_exp)**2/TPulse%sigma**2)
+    elseif ((time.ge.(TPulse%t_start+TPulse%t_exp)).and.(time.lt.(TPulse%t_cut_pulse+TPulse%t_start))) then
+     kt1=TPulse%T0+TPulse%I_over_x/(real(time-TPulse%t_start)-TPulse%t_frac)**TPulse%expo
+    else
+     kt1=TPulse%T0
+   endif
+
+end select
+
+!kt=kt1/650.0d0*29.0d0*k_b
+kt=kt1*k_b
 
 end subroutine update_TPulse
 
