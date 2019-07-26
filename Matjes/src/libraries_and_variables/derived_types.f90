@@ -40,6 +40,12 @@ type io_parameter
      logical :: io_warning
 ! frequency of writting of the data in convergence.dat and EM.dat
      integer :: io_writing
+! theta and phi distribution
+     logical :: io_Angle_Distrib
+! energy density distribution
+     logical :: io_Energy_Distrib
+! field density distribution
+     logical :: io_Field_Distrib
 end type io_parameter
 
 ! mpi variable
@@ -127,9 +133,14 @@ end type simulation_parameters
 !    integer :: nline,ncolumn
 !end type operator_poly
 
+!type Op_real
+!     real(kind=8), pointer :: Op_loc(:,:)
+!end type Op_real
+
 type operator_real
     type(Op_real), allocatable, dimension(:,:) :: value
     integer :: nline,ncolumn
+    integer, allocatable :: line(:,:)
 end type operator_real
 
 

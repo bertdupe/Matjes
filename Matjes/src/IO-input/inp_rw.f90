@@ -38,8 +38,6 @@
       integer :: gra_freq
 ! which programfiles should be written
       Logical :: Cor_log, Gra_log, gra_fft, gra_topo,dispersion
-! Periodic boundary conditions and cool down or heat up algorithm
-      Logical :: CalTheta,CalEnergy
 ! calculate the topological Hall effect
       logical ::  i_topohall
 ! epsilon
@@ -113,7 +111,6 @@ integer  :: io_input
       i_sliptun=.False.
       i_qorien=.False.
       i_topohall=.False.
-      CalTheta=.False.
       DM_loc=0.0d0
       J_loc=0.0d0
       J_illoc=0.0d0
@@ -149,6 +146,10 @@ call get_parameter(io_input,'input','gra_StochF',io_simu%io_Tfield)
 call get_parameter(io_input,'input','gra_freq',io_simu%io_frequency)
 call get_parameter(io_input,'input','SPSTM-only',io_simu%io_spstmonly)
 call get_parameter(io_input,'input','SPSTM-image',io_simu%io_spstmL)
+call get_parameter(io_input,'input','Energy_Distrib',io_simu%io_Energy_Distrib)
+call get_parameter(io_input,'input','Angle_Distrib',io_simu%io_Angle_Distrib)
+call get_parameter(io_input,'input','Field_Distrib',io_simu%io_Field_Distrib)
+
 
 !do i=1,12
 !  call convert()
@@ -199,15 +200,6 @@ call get_parameter(io_input,'input','SPSTM-image',io_simu%io_spstmL)
            endif
          endif
 ! read the constant from the inp file
-
-        if ( str(1:8) == 'CalTheta') then
-           backspace(io_input)
-           read(io_input,*) dummy, CalTheta
-          endif
-        if ( str(1:9) == 'CalEnergy') then
-           backspace(io_input)
-           read(io_input,*) dummy, CalEnergy
-          endif
 
         if ( str(1:4) == 'cone') then
            backspace(io_input)

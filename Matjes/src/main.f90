@@ -21,11 +21,11 @@ use m_lattice
       use m_fft
       use m_user_info
       use m_check_restart
-      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,cone,gra_topo &
-     & ,Total_MC_Steps,n_thousand,T_auto,gra_fft,CalEnergy,Gra_log,T_relax,spstmL &
-     & ,i_separate,i_average,i_ghost,i_optTset,i_topohall,print_relax,gra_freq &
-     & ,i_qorien,i_print_W,equi,overrel,sphere,underrel,N_temp,T_relax_temp,n_ghost &
-     & ,nRepProc
+!      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,cone,gra_topo &
+!     & ,Total_MC_Steps,n_thousand,T_auto,gra_fft,CalEnergy,Gra_log,T_relax,spstmL &
+!     & ,i_separate,i_average,i_ghost,i_optTset,i_topohall,print_relax,gra_freq &
+!     & ,i_qorien,i_print_W,equi,overrel,sphere,underrel,N_temp,T_relax_temp,n_ghost &
+!     & ,nRepProc
 #ifdef CPP_MPI
       use m_randperm
       use m_make_box
@@ -46,7 +46,7 @@ type(lattice) :: all_lattices
 ! unit parameters for the file
 integer :: io_param
 ! description of the unit cell
-type(cell) :: mag_motif
+type(cell) :: motif
 ! external parameter
 type(simulation_parameters) :: ext_param
 ! internal variables
@@ -115,11 +115,11 @@ call close_file('input',io_param)
 
 
 ! read the input
-call setup_simu(my_simu,io_simu,all_lattices,mag_motif,ext_param,state)
+call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param,state)
 
 ! number of cell in the simulation
-N_cell=size(mag_lattice%l_modes)
-n_system=mag_lattice%n_system
+N_cell=size(all_lattices%l_modes)
+n_system=all_lattices%n_system
 
 #ifdef CPP_MPI
       if (irank_working.eq.0) write(6,'(I6,a)') N_cell, ' unit cells'
@@ -175,7 +175,7 @@ n_system=mag_lattice%n_system
 !  Part which does a normal MC with the metropolis algorithm
 !---------------------------------
 
-if (my_simu%name == 'metropolis') call MonteCarlo(all_lattices,mag_motif,io_simu,gra_topo,ext_param)
+!if (my_simu%name == 'metropolis') call MonteCarlo(all_lattices,mag_motif,io_simu,gra_topo,ext_param)
 !   call MonteCarlo(N_cell,n_thousand,n_sizerelax, &
 !            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
 !            &    i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost, &
@@ -189,7 +189,7 @@ if (my_simu%name == 'metropolis') call MonteCarlo(all_lattices,mag_motif,io_simu
 !    Loop for Spin dynamics
 !---------------------------------
 
-if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,mag_motif,io_simu,gra_topo,ext_param)
+if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_simu,.False.,ext_param)
 
 !---------------------------------
 !  Part which does Entropic Sampling
@@ -241,7 +241,7 @@ if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,mag_motif,
 ! write the last spin structure
         call WriteSpinAndCorrFile(all_lattices)
 
-        call CreateSpinFile(all_lattices,mag_motif)
+        call CreateSpinFile(all_lattices,motif)
 #endif
 
         call cpu_time(computation_time)

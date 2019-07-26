@@ -29,13 +29,13 @@ phase=size(DM_vector,3)
 
 inquire_file=.false.
 inquire(file='symmetries.out',exist=inquire_file)
-if (inquire_file) then
-   n_sym=get_num_sym_file()
-   allocate(symmetries(n_sym))
-   call read_symmetries(n_sym,symmetries)
-else
+if (.not.inquire_file) then
    call get_group(my_lattice%areal,my_motif,my_lattice%boundary)
 endif
+
+n_sym=get_num_sym_file()
+allocate(symmetries(n_sym))
+call read_symmetries(n_sym,symmetries)
 
 atom_all_shells=sum(indexNN(1:i,1))
 if (.not.my_lattice%boundary(3)) DM_vector=get_DM_vectors(atom_all_shells,my_lattice%areal,my_motif,n_sym,symmetries)

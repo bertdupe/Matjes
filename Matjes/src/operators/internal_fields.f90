@@ -5,18 +5,9 @@ use m_operator_pointer_utils
 type(Coeff_Ham),public,protected,target,save :: B_int
 ! total effective field tensor
 type(operator_real),public,protected,save :: B_total
-! Exchange effective field tensor
-type(operator_real),public,protected,save :: B_exchange
-! DMI effective field tensor
-type(operator_real),public,protected,save :: B_DMI
-! anisotropy effective field tensor
-type(operator_real),public,protected,save :: B_anisotropy
-! Zeeman field tensor
-type(operator_real),public,protected,save :: B_Zeeman
-
 
 private
-public :: associate_internal_Beff,associate_line_field
+public :: associate_internal_Beff,get_B_line
 
 contains
 
@@ -45,7 +36,7 @@ integer, intent(in) :: indexNN(:)
 ! internal
 !type(operator_real),save :: energy
 ! slope of the sums
-integer :: i,j,N_coeff_DMI,N_all_vois,N_all_shell,N_coeff_ani,N_coeff_Exch,l
+integer :: i,j,N_coeff_DMI,N_all_vois,N_all_shell,N_coeff_ani,N_coeff_Exch,l,size_energy(2)
 integer :: Nl,Nc
 
 Nl=energy%nline
@@ -54,9 +45,10 @@ Nc=energy%ncolumn
 !Hamiltonian%total_shell(i)%atom(l)%H(2,1)
 ! allocate the variables
 N_all_shell=size(Hamiltonian%total_shell)
-N_all_vois=size(Hamiltonian%total_shell(1)%atom)
+
 allocate(B_int%total_shell(N_all_shell))
 do i=1,N_all_shell
+   N_all_vois=size(Hamiltonian%total_shell(i)%atom)
    allocate(B_int%total_shell(i)%atom(N_all_vois))
    do j=1,N_all_vois
       allocate(B_int%total_shell(i)%atom(j)%H(3,3))
@@ -112,12 +104,15 @@ do i=2,N_all_shell
    if (i.le.N_coeff_ani) B_int%total_shell(i)%atom(1)%H=B_int%total_shell(i)%atom(1)%H+B_int%ani(:,:,i)
 enddo
 
-allocate(B_total%value(Nl,Nc))
+size_energy=shape(energy%value)
+allocate(B_total%value(size_energy(1),size_energy(2)))
+allocate(B_total%line(size_energy(1),size_energy(2)))
 B_total%nline=Nl
 B_total%ncolumn=Nc
+B_total%line=0
 
 ! first nullify all pointer
-call dissociate(B_total,Nl,Nc)
+call dissociate(B_total%value,size_energy(1),size_energy(2))
 
 call associate_pointer(B_total,B_int%total_shell,my_lattice,tableNN,indexNN)
 
@@ -138,49 +133,28 @@ enddo
 
 end subroutine associate_internal_Beff
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! optimize the calculation time
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine associate_line_field(N_cell,B_line,spin,mode_B_column)
+subroutine get_B_line(B_line,mode_B_column,spin)
+use m_derived_types, only : point_shell_Operator,point_shell_mode,vec_point
+use m_operator_pointer_utils
 implicit none
-integer, intent(in) :: N_cell
-type(vec_point),intent(in) :: spin(:)
 type(point_shell_Operator), intent(inout) :: B_line(:)
-type(point_shell_mode), intent(inout) :: mode_B_column(:)
-!internal energy
-integer :: i,k,j,n_atom_shell
+type(point_shell_mode),intent(inout) :: mode_B_column(:)
+type(vec_point),target,intent(in) :: spin(:)
+! internal variables
+integer :: shape_B_total(2),i
 
-do i=1,N_cell
+shape_B_total=shape(B_total%value)
 
-   n_atom_shell=0
-   do j=1,N_cell
-      if (associated(B_total%value(j,i)%Op_loc)) n_atom_shell=n_atom_shell+1
-   enddo
-
-   allocate(B_line(i)%shell(n_atom_shell))
-   allocate(mode_B_column(i)%shell(n_atom_shell))
-
-   ! the k=1 case should be the case i=j
-   ! it should be the first atom in the shell
-   k=1
-   do j=1,N_cell
-
-      if (associated(B_total%value(j,i)%Op_loc)) then
-         ! taking care of the on-site term
-         if (i.eq.j) then
-            B_line(i)%shell(1)%Op_loc=>B_total%value(j,i)%Op_loc
-            mode_B_column(i)%shell(1)%w=>spin(j)%w
-            cycle
-         endif
-
-         k=k+1
-         B_line(i)%shell(k)%Op_loc=>B_total%value(j,i)%Op_loc
-         mode_B_column(i)%shell(k)%w=>spin(j)%w
-      endif
-
-   enddo
+do i=1,shape_B_total(2)
+   allocate(B_line(i)%shell(shape_B_total(1)))
+   allocate(mode_B_column(i)%shell(shape_B_total(1)))
 enddo
+call dissociate(B_line,shape_B_total(1),shape_B_total(2))
+call dissociate(mode_B_column,shape_B_total(1),shape_B_total(2))
 
-end subroutine associate_line_field
+
+call associate_pointer(mode_B_column,spin,B_line,B_total)
+
+end subroutine get_B_line
 
 end module m_internal_fields_commons

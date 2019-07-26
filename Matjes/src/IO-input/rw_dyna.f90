@@ -1,8 +1,8 @@
 module m_dynamic
 real(kind=8) :: timestep,damping,temps,hfin(3),max_error
 integer :: duration,times,tstart,htimes,hstart,Efreq
-real(kind=8) :: torque_FL,torque_AFL,Ipol(3),adia,nonadia,storque,hstep(3)
-logical :: stmtorque,marche,hsweep,Ffield,i_Efield,i_torque,stmtemp
+real(kind=8) :: storque,hstep(3)
+logical :: stmtorque,marche,hsweep,Ffield,i_Efield,stmtemp
 real(kind=8), dimension(:,:,:), allocatable :: htor
 ! integration type
 integer :: integtype
@@ -27,13 +27,7 @@ net=my_lattice%areal
 
 allocate(htor(N(1),N(2),N(3)))
 
-i_torque=.False.
 stmtemp=.False.
-torque_FL=0.0d0
-torque_AFL=0.0d0
-Ipol=0.0d0
-adia=0.0d0
-nonadia=0.0d0
 storque=0.0d0
 hstep=0.0d0
 damping=0.0d0
@@ -58,16 +52,6 @@ call get_parameter(io,'input','Efreq',Efreq)
 call get_parameter(io,'input','duration',duration)
 call get_parameter(io,'input','STMtemp',stmtemp)
 call get_parameter(io,'input','damping',damping)
-
-! Torques part
-call get_parameter(io,'input','torque',torque_FL)
-call get_parameter(io,'input','damptorque',torque_AFL)
-if (dabs(torque_FL).gt.1.0d-8) i_torque=.true.
-
-call get_parameter(io,'input','adia',adia)
-call get_parameter(io,'input','nonadia',nonadia)
-! polarized current
-call get_parameter(io,'input','Ipol',3,Ipol,1.0d0)
 
 call get_parameter(io,'input','Ffield',Ffield)
 call get_parameter(io,'input','Efield',i_Efield)

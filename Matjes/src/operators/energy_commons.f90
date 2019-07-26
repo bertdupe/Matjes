@@ -1,18 +1,14 @@
 module m_energy_commons
 use m_derived_types, only : operator_real,Coeff_Ham,shell_Ham,point_shell_Operator,vec_point,point_shell_mode
 use m_operator_pointer_utils
+!
+! This has to be public so the variable can be accessed from elsewhere
+! BUT it has to be protected so it can only be read and not written from outside the module
+!
 ! coefficients of the Hamiltonian
 type(Coeff_Ham),public,protected,target,save :: Hamiltonian
 ! total energy tensor
 type(operator_real),public,protected,save :: energy
-! Exchange energy tensor
-type(operator_real),public,protected,save :: exchange
-! DMI energy tensor
-type(operator_real),public,protected,save :: DMI
-! anisotropy energy tensor
-type(operator_real),public,protected,save :: anisotropy
-! Zeeman energy tensor
-type(operator_real),public,protected,save :: Zeeman
 
 interface number_nonzero_coeff
   module procedure number_nonzero_coeff_1d
@@ -20,7 +16,7 @@ interface number_nonzero_coeff
 end interface number_nonzero_coeff
 
 private
-public :: associate_energy_Hamiltonian,get_Hamiltonians,get_number_shell,get_total_Hamiltonian,associate_line_Hamiltonian
+public :: associate_energy_Hamiltonian,get_Hamiltonians,get_number_shell,get_total_Hamiltonian,get_E_line
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!
@@ -88,6 +84,9 @@ if (N_coeff_ani.eq.0) N_coeff_ani=1
 call close_file(fname,io_param)
 
 ! allocate the variables
+! A word of warning here.
+! The size of the energy matrix increases as the number of the exchange constants
+! NOT as a function of the number of atoms in the shells
 allocate(Hamiltonian%exchange(3,3,N_coeff_Exch))
 allocate(Hamiltonian%ani(3,3,N_coeff_ani))
 allocate(Hamiltonian%DMI(3,3,N_coeff_DMI))
@@ -159,6 +158,10 @@ N_tot_vec_shell=size(indexNN(:,1),1)
 N_max_nei=maxval(indexNN(:,1),1)
 
 ! total number of matrices to take into account into the total energy
+! only if you have DMI of such interactions then the number of atom/shell is necessary
+! because the energy Hamiltonian depends on the position of the neighbors.
+! So if the Hamiltonian is symmetric, the energy is stored of only ONE atom in each shell.
+
 N_Dim_Htot=1    ! that is to take into account the anisotropy
 do i=1,N_tot_vec_shell
 
@@ -316,7 +319,6 @@ type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
 integer, intent(in) :: indexNN(:)
 ! internal
-!type(operator_real),save :: energy
 ! slope of the sums
 integer :: Nspin,all_size(4),shape_tableNN(6)
 
@@ -324,62 +326,42 @@ all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
 shape_tableNN=shape(tableNN)
 
-allocate(energy%value(Nspin,Nspin))
+allocate(energy%value(shape_tableNN(2)+1,Nspin))
+allocate(energy%line(shape_tableNN(2)+1,Nspin))
 energy%nline=Nspin
 energy%ncolumn=Nspin
+energy%line=0
 
-call dissociate(energy,Nspin,Nspin)
+call dissociate(energy%value,shape_tableNN(2)+1,Nspin)
 
 call associate_pointer(energy,Hamiltonian%total_shell,my_lattice,tableNN,indexNN)
 
 end subroutine associate_energy_Hamiltonian
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! optimize the calculation time
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine associate_line_Hamiltonian(N_cell,E_line,spin,mode_E_column)
+subroutine get_E_line(E_line,mode_E_column,spin)
+use m_derived_types, only : point_shell_Operator,point_shell_mode,vec_point
+use m_operator_pointer_utils
 implicit none
-integer, intent(in) :: N_cell
-type(vec_point),intent(in) :: spin(:)
 type(point_shell_Operator), intent(inout) :: E_line(:)
-type(point_shell_mode), intent(inout) :: mode_E_column(:)
-!internal energy
-integer :: i,k,j,n_atom_shell
+type(point_shell_mode),intent(inout) :: mode_E_column(:)
+type(vec_point),target,intent(in) :: spin(:)
+! internal variables
+integer :: shape_energy(2)
+! slope variables
+integer :: i,j
 
-do i=1,N_cell
-   ! count the number of shell per line
-   n_atom_shell=0
-   do j=1,N_cell
-      if (associated(energy%value(j,i)%Op_loc)) n_atom_shell=n_atom_shell+1
-   enddo
+shape_energy=shape(energy%value)
 
-   allocate(E_line(i)%shell(n_atom_shell))
-   allocate(mode_E_column(i)%shell(n_atom_shell))
-
-   ! the k=1 case should be the case i=j
-   ! it should be the first atom in the shell
-   k=1
-   do j=1,N_cell
-
-      if (associated(energy%value(j,i)%Op_loc)) then
-         ! taking care of the on-site term
-         if (i.eq.j) then
-            E_line(i)%shell(1)%Op_loc=>energy%value(j,i)%Op_loc
-            mode_E_column(i)%shell(1)%w=>spin(j)%w
-            cycle
-         endif
-
-         k=k+1
-         E_line(i)%shell(k)%Op_loc=>energy%value(j,i)%Op_loc
-         mode_E_column(i)%shell(k)%w=>spin(j)%w
-      endif
-
-   enddo
-
-   if (k.ne.n_atom_shell) stop 'error in associate_line_Hamiltonian'
-
+do i=1,shape_energy(2)
+   allocate(E_line(i)%shell(shape_energy(1)))
+   allocate(mode_E_column(i)%shell(shape_energy(1)))
 enddo
+call dissociate(E_line,shape_energy(1),shape_energy(2))
+call dissociate(mode_E_column,shape_energy(1),shape_energy(2))
 
-end subroutine associate_line_Hamiltonian
+
+call associate_pointer(mode_E_column,spin,E_line,energy)
+
+end subroutine get_E_line
 
 end module m_energy_commons

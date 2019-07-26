@@ -1,18 +1,22 @@
 module m_solver
 use m_derived_types
 
-   interface integrate
-      module procedure simple
-      module procedure integrate_pred
-      module procedure integrate_SIB
-      module procedure integrate_SIB_NC_ohneT
-      module procedure FM_resonnance
-   end interface integrate
+!   interface integrate
+!      module procedure simple
+!      module procedure integrate_pred
+!      module procedure integrate_SIB
+!      module procedure integrate_SIB_NC_ohneT
+!      module procedure FM_resonnance
+!   end interface integrate
+
 
    interface minimization
       module procedure euler_minimization
       module procedure euler_o2_minimization
    end interface minimization
+
+private
+public :: simple,integrate_SIB_NC_ohneT
 contains
 
 ! ----------------------------------------------
@@ -232,115 +236,84 @@ contains
 
 ! ----------------------------------------------
 ! SIB integration scheme for predicator. norm conserving
-       function integrate_SIB_NC_ohneT(timestep,spin1,B,damping, &
-      & i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,Ipol,i_x,i_y,i_z,i_m,spin)
-       use m_constants, only : hbar
-       use m_randist
-       use m_dynamic, only : htor
-       use m_lattice, only : tableNN,masque
-       use m_vector, only : cross,norm
-       use mtprng
+function integrate_SIB_NC_ohneT(timestep,B,BT,damping,spin)
+use m_constants, only : hbar
+use m_dynamic, only : htor
+use m_vector, only : cross,norm
+use m_torques
 #ifdef CPP_MPI
-       use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
+use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
 #endif
-       implicit none
-       real(kind=8) :: integrate_SIB_NC_ohneT(3)
-       real(kind=8), intent(in) :: timestep,B(:),spin1(:),damping,torque_FL,torque_AFL,adia, &
-      & nonadia,storque,Ipol(:),spin(:,:,:,:,:)
-       integer, intent(in) :: i_x,i_y,i_z,i_m
-       logical, intent(in) :: i_torque,stmtorque
-       ! dummy
-       real(kind=8) :: sum_step(3),droite(3),denominator
-       real(kind=8) :: step(3),steptor(3),stepadia(3),stepsttor(3),dt
-       integer :: v_x,v_y,v_z,v_m
+implicit none
+real(kind=8) :: integrate_SIB_NC_ohneT(3)
+real(kind=8), intent(in) :: timestep,B(:),spin(:),damping,BT(:)
+! dummy
+real(kind=8) :: droite(3),denominator,B_int(3)
+real(kind=8) :: step(3),stepdamp(3),dt,ds(3)
 #ifndef CPP_MPI
        integer, parameter :: Xstart=1
        integer, parameter :: Ystart=1
        integer, parameter :: Zstart=1
 #endif
 
-       if (masque(1,i_x,i_y,i_z).eq.0) then
-         integrate_SIB_NC_ohneT=0.0d0
-         return
-       endif
+dt=timestep/hbar/(1+damping**2)
+B_int=B
 
-       dt=timestep/hbar/(1+damping**2)
+!        if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z))
+step=cross(B,spin)
 
-       step=0.0d0
-       steptor=0.0d0
-       stepadia=0.0d0
-       stepsttor=0.0d0
+stepdamp=cross(spin,step)
 
-        step=cross(B,spin1)
-        if (i_torque) steptor=cross(spin1,Ipol)
-        if (i_torque) then
-         v_x=tableNN(1,1,i_x,i_y,i_z,i_m)
-         v_y=tableNN(2,1,i_x,i_y,i_z,i_m)
-         v_z=tableNN(3,1,i_x,i_y,i_z,i_m)
-         v_m=tableNN(4,1,i_x,i_y,i_z,i_m)
-         stepadia=cross(-spin(:,v_x,v_y,v_z,v_m),spin1)
-        endif
-        if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z))
+ds=step+damping*stepdamp
 
-       sum_step=step+damping*cross(spin(:,i_x,i_y,i_z,i_m),step)+     &
-     &     torque_FL*(1.0d0-damping*torque_AFL)*steptor+                                           &
-     &     torque_FL*(damping+torque_AFL)*                                        &
-     &     cross(spin(:,i_x,i_y,i_z,i_m),steptor)+adia*               &
-     &     cross(spin(:,i_x,i_y,i_z,i_m),stepadia)-nonadia*stepadia   &
-     &     +storque*cross(stepsttor,spin(:,i_x,i_y,i_z,i_m))
+call update_DS(spin,damping,ds)
+
+call update_B(spin,damping,B_int)
 
 ! 3x3 system
 ! SX=droite
-       droite=spin1+sum_step*dt/2.0d0
-       denominator=(4.0d0+B(1)**2*dt**2+B(2)**2*dt**2+B(3)**2*dt**2)
+droite=spin+ds*dt/2.0d0
+denominator=(4.0d0+B_int(1)**2*dt**2+B_int(2)**2*dt**2+B_int(3)**2*dt**2)
 
 ! first term
-       integrate_SIB_NC_ohneT(1)=-(-4.0d0*droite(1)+ &
-     &  dt*(2.0d0*B(3)*droite(2)-2.0d0*B(2)*droite(3)) + &
-     &  dt**2*(-B(1)**2*droite(1)-B(1)*B(2)*droite(2)-B(1)*B(3)*droite(3))) &
+integrate_SIB_NC_ohneT(1)=-(-4.0d0*droite(1)+ &
+     &  dt*(2.0d0*B_int(3)*droite(2)-2.0d0*B_int(2)*droite(3)) + &
+     &  dt**2*(-B_int(1)**2*droite(1)-B_int(1)*B(2)*droite(2)-B_int(1)*B(3)*droite(3))) &
      &  /denominator
 
 ! second term
-       integrate_SIB_NC_ohneT(2)=-(-4.0d0*droite(2)+ &
-     &  dt*(-2.0d0*B(3)*droite(1)+2.0d0*B(1)*droite(3))+ &
-     &  dt**2*(-B(2)**2*droite(2)-B(1)*B(2)*droite(1)-B(2)*B(3)*droite(3))) &
+integrate_SIB_NC_ohneT(2)=-(-4.0d0*droite(2)+ &
+     &  dt*(-2.0d0*B_int(3)*droite(1)+2.0d0*B_int(1)*droite(3))+ &
+     &  dt**2*(-B_int(2)**2*droite(2)-B_int(1)*B_int(2)*droite(1)-B_int(2)*B_int(3)*droite(3))) &
      &  /denominator
 
 ! third term
-       integrate_SIB_NC_ohneT(3)=-(-4.0d0*droite(3)+ &
-     &  dt*(2.0d0*B(2)*droite(1)-2.0d0*B(1)*droite(2))+ &
-     &  dt**2*(-B(3)**2*droite(3)-B(1)*B(3)*droite(1)-B(2)*B(3)*droite(2))) &
+integrate_SIB_NC_ohneT(3)=-(-4.0d0*droite(3)+ &
+     &  dt*(2.0d0*B_int(2)*droite(1)-2.0d0*B_int(1)*droite(2))+ &
+     &  dt**2*(-B_int(3)**2*droite(3)-B_int(1)*B_int(3)*droite(1)-B_int(2)*B_int(3)*droite(2))) &
      &  /denominator
 
 
-       end function integrate_SIB_NC_ohneT
+end function integrate_SIB_NC_ohneT
 
 ! ----------------------------------------------
 ! ----------------------------------------------
 ! Euler integration scheme
-function simple(timestep,B,BT,damping,Ipol,torque_FL,torque_AFL,adia,nonadia, &
-      & storque,i_torque,stmtorque,spini)
+function simple(timestep,B,BT,damping,spini)
 use m_constants, only : hbar
 use m_vector, only : cross
 use m_dynamic, only : htor
+use m_torques, only : update_DS
 implicit none
 real(kind=8) :: simple(3)
-real(kind=8), intent(in) :: spini(:),damping,torque_FL,torque_AFL,adia,nonadia,storque,BT(:),timestep,B(:)   !,stm_field_torque
-real(kind=8), intent(in) :: Ipol(:)
-logical, intent(in) :: i_torque,stmtorque
+real(kind=8), intent(in) :: spini(:),damping,BT(:),timestep,B(:)   !,stm_field_torque
 !dummy
-real(kind=8) :: spinfin(3),steptemp(3),step(3),steptor(3),stepadia(3),stepsttor(3),stepdamp(3)
+real(kind=8) :: spinfin(3),step(3),stepdamp(3)
 real(kind=8) :: dt,ds(3),norm_S,S_norm(3),BT_norm,DTs(3),step_T(3)
 
-steptemp=0.0d0
 dt=1.0d0/hbar/(1.0d0+damping**2)
 simple=0.0d0
 step=0.0d0
-steptor=0.0d0
-stepadia=0.0d0
-stepsttor=0.0d0
-stepdamp=0.0d0
-step_T=0.0d0
 DTs=0.0d0
 
 
@@ -350,7 +323,6 @@ BT_norm=sqrt(BT(1)**2+BT(2)**2+BT(3)**2)
 S_norm=spini/norm_S
 
 
-!if (i_torque) steptor=cross(S_norm,Ipol)
 !if (stmtorque) stepsttor=storque*cross(S_norm,Ipol*htor(i_x,i_y,i_z))
 
 step=cross(B,S_norm)
@@ -359,9 +331,7 @@ stepdamp=cross(S_norm,step)
 
 ds=step+damping*stepdamp
 
-!ds=ds+torque_FL*(1.0d0-damping*torque_AFL)*steptor+     &
-!     &   torque_FL*(torque_AFL+damping)*cross(S_norm,steptor)+adia*       &
-!     &   cross(S_norm,stepadia)-nonadia*stepadia+storque*cross(stepsttor,S_norm) ! +steptemp !+stm_field_torque*stepsttor+steptemp
+call update_DS(S_norm,damping,ds)
 
 if (BT_norm.gt.1.0d-10) then
    step_T=cross(S_norm,BT)

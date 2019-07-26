@@ -3,7 +3,7 @@ include ../make.sys
 .SUFFIXES: .o .f90 .F90 .f
 
 OBJS = EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
- operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o check_inputs.o \
+ operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o \
  tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
  MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o external_fields.o \
@@ -12,8 +12,8 @@ OBJS = EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commo
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o av_sd.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o DeriveValue.o Relaxation.o topoplot.o \
  setup-simu.o arrange_neihg.o mapping.o indexation.o order_lattice.o user_def_struct.o qorien.o \
- stdtypes.o Efield_sd.o error.o setup_zdir.o rw_efield.o energy_commons.o excitations.o \
- rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o \
+ stdtypes.o Energy_distrib.o error.o setup_zdir.o rw_efield.o energy_commons.o excitations.o \
+ rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o torques.o \
  initialize_temperature.o cal_local_energy.o user_information.o parallel_tempering.o paratemp.o field-eff_sd.o mpi_prop.o \
  initial-configuration.o init-spiral.o init_random_config.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o get-position.o \
  IO-modes.o io-utils.o get-random.o simu-parameters.o init-variables.o convert.o kmesh.o dyna-utils.o pointgrp.o
@@ -43,6 +43,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+torques.o: derived_types.o vector.o io-utils.o io_files_utils.o
 EMwave.o: constant.o vector.o io-utils.o io_files_utils.o
 BTeff_sd.o: randist.o
 update_time.o: constant.o vector.o io-utils.o io_files_utils.o
@@ -77,7 +78,6 @@ simu-parameters.o: basic_types.o
 io_files_utils.o: derived_types.o
 io-utils.o: constant.o convert.o derived_types.o simu-parameters.o vector.o
 rw_motif.o: derived_types.o vector.o
-check_inputs.o:
 gauge_util.o:
 entropic.o: cal_local_energy.o relaxationtype.o sampling.o
 mpi_prop.o:
@@ -129,7 +129,7 @@ qorienplot.o: rw_lattice.o inp_rw.o constant.o create_lattice.o
 SkX_utils.o: rw_lattice.o vector.o
 stdtypes.o:
 mtprng.o: stdtypes.o
-Efield_sd.o: rw_lattice.o create_lattice.o inp_rw.o Energy.o
+Energy_distrib.o: operator_pointer_utils.o convert.o io_files_utils.o derived_types.o energy_commons.o
 #minimize.o: Beff_sd.o inp_rw.o WriteSpinAndCorrFile.o solver.o av_sd.o
 DeriveValue.o: inp_rw.o total_Energy.o
 #gneb.o: Energy.o minimize.o gneb_utils.o
@@ -147,22 +147,22 @@ cal_local_energy.o: external_fields.o Energy.o
 
 arrange_neihg.o: create_lattice.o inp_rw.o sym_utils.o constant.o
 MCstep.o: choosespin.o cal_local_energy.o main.o create_lattice.o inp_rw.o rw_lattice.o  Energy.o sampling.o relaxationtype.o mtprng.o
-solver.o: constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
+solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
 setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o
-spindynamics.o: BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o av_sd.o Efield_sd.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
+spindynamics.o: torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o av_sd.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
 total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
 CalculateAverages.o: vector.o rw_lattice.o create_lattice.o topocharge_all.o
-main.o: io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o check_inputs.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o
 
-setup-simu.o: topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o setup_neigh.o sym_utils.o Table_dist.o mtprng.o
+setup-simu.o: io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o setup_neigh.o sym_utils.o Table_dist.o mtprng.o
 Energy.o:
 cal_local_energy.o: Energy.o
 choosespin.o: mtprng.o

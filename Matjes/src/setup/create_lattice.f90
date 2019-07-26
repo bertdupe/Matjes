@@ -44,6 +44,7 @@ do l=1,nmag
          do i=1,dim_lat(1)
 
        mag_lattice%l_modes(i,j,k,l)%w=>modes(:,i,j,k,l)
+
          enddo
       enddo
    enddo

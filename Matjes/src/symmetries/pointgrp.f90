@@ -288,6 +288,7 @@ do i=1,n_sym
 enddo
 
 call close_file('symmetries.out',io_sym)
+
 end subroutine
 
 subroutine get_symop(rotmat)

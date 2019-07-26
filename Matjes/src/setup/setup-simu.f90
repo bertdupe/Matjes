@@ -1,5 +1,6 @@
 subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif,ext_param,state)
 use m_derived_types
+use m_energyfield, only : init_Energy_distrib
 use m_energy_commons
 use m_internal_fields_commons
 use m_fft
@@ -19,6 +20,8 @@ use m_total_energy
 use m_get_position
 use m_external_fields
 use m_excitations
+use m_io_files_utils
+use m_io_utils
 #ifdef CPP_MPI
       use m_make_box
       use m_split_work
@@ -43,7 +46,7 @@ type(simulation_parameters),intent (inout) :: ext_param
 real(kind=8), allocatable :: tabledist(:,:)
 integer, allocatable :: indexNN(:,:) !,tableNN(:,:,:,:,:,:)
 real (kind=8), allocatable :: map_vort(:,:,:,:),map_toto(:,:,:),pos(:,:,:,:,:)
-integer :: N_Nneigh,phase,tot_N_Nneigh
+integer :: N_Nneigh,phase,tot_N_Nneigh,io
 real(kind=8) :: time
 !nb of neighbors in the z direction
       integer :: Nei_z
@@ -208,6 +211,10 @@ if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate position for
 ! get position
 pos=0.0d0
 call get_position(pos,dim_lat,my_lattice%areal,my_motif)
+! write the positions into a file
+io=open_file_write('positions.dat')
+call dump_config(io,pos)
+call close_file('positions.dat',io)
 
 ! get table of neighbors
 call mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice,pos)
@@ -314,12 +321,10 @@ call fft(my_lattice,my_motif)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call user_info(6,time,'associating the operator matrices with the different local variables',.true.)
-
 !
 ! prepare the total Hamiltonian depending on the different interactions
 !
 call  get_total_Hamiltonian(DM_vector,indexNN)
-
 !
 ! update the Hamiltonian to take into account the lattice i.e. SOC (DMI...)
 !
@@ -334,13 +339,14 @@ call user_info(6,time,'done',.true.)
 
 !!--------------------------------------------------------------------
 
+!if (io_simu%io_Energy_Distrib) call init_Energy_distrib(my_lattice,tableNN,indexNN(:,1))
 !c Calculation of the dispertion in the full BZ
 ! this is here because we have the table of distances
 !      if (dispersion) then
 !       call fullBZ(tabledist,N_Nneigh,Nei_z,phase)
 !      endif
 
-deallocate(tabledist,tableNN,indexNN)
+!deallocate(tabledist,tableNN,indexNN)
 
 !!!! part of the FFT dipole dipole interaction
 #ifndef CPP_BRUTDIP
