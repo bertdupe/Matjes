@@ -3,10 +3,10 @@ include ../make.sys
 .SUFFIXES: .o .f90 .F90 .f
 
 OBJS = EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
- operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o \
+ operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
  tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
- MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o external_fields.o \
+ MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o external_fields.o init_constant.o \
  create_lattice.o   fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o \
  qorienplot.o   CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o av_sd.o randist.o spindynamics.o setup_DM.o \
@@ -43,6 +43,9 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+init_constant.o:
+symmetry_operators.o:
+info-dynamics.o:
 torques.o: derived_types.o vector.o io-utils.o io_files_utils.o
 EMwave.o: constant.o vector.o io-utils.o io_files_utils.o
 BTeff_sd.o: randist.o
@@ -57,7 +60,7 @@ measure_temp.o: constant.o vector.o
 operator_pointer_utils.o: derived_types.o get-position.o
 topo_commons.o: vector.o get-position.o derived_types.o operator_pointer_utils.o
 internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
-energy_commons.o: get-position.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
+energy_commons.o: constant.o symmetry_operators.o get-position.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
 basic_types.o:
 pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o
@@ -73,7 +76,7 @@ init-skyrmions.o: io-utils.o vector.o constant.o create_lattice.o
 init-Sk-lattice.o: vector.o init-skyrmions.o
 init-heavyside.o:
 init-spiral.o: vector.o get-position.o io-utils.o
-initial-configuration.o: init_random_config.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o io-utils.o
+initial-configuration.o: init_constant.o init_random_config.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o io-utils.o
 simu-parameters.o: basic_types.o
 io_files_utils.o: derived_types.o
 io-utils.o: constant.o convert.o derived_types.o simu-parameters.o vector.o
@@ -102,7 +105,7 @@ MakeLattice.o: main.o
 relaxationtype.o:
 fft.o: kmesh.o rw_lattice.o create_lattice.o vector.o constant.o
 randist.o: rw_dyna.o mtprng.o
-Energy_density.o: main.o Energy.o MakeLattice.o rw_lattice.o create_lattice.o inp_rw.o Table_dist.o
+Energy_density.o: total_Energy.o main.o Energy.o MakeLattice.o rw_lattice.o create_lattice.o inp_rw.o Table_dist.o
 rw_dyna.o: main.o
 DM_vector.o: main.o
 topocharge_sd.o: vector.o rw_lattice.o create_lattice.o constant.o inp_rw.o create_lattice.o
@@ -151,7 +154,7 @@ solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_d
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
 setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o
-spindynamics.o: torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o av_sd.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
+spindynamics.o: info-dynamics.o torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o av_sd.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
 total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o
