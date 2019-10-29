@@ -2,7 +2,8 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
+OBJS =	zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o \
+ EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
  tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
@@ -43,8 +44,14 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+zeeman.o: create_lattice.o symmetry_operators.o io-utils.o io_files_utils.o derived_types.o constant.o
+anisotropy_heisenberg.o: create_lattice.o symmetry_operators.o io-utils.o io_files_utils.o derived_types.o
+exchange_Heisenberg.o: create_lattice.o symmetry_operators.o io-utils.o io_files_utils.o derived_types.o
+couplage_ME.o: create_lattice.o io-utils.o io_files_utils.o symmetry_operators.o derived_types.o
+propagator.o: BTeff_sd.o io-utils.o io_files_utils.o constant.o vector.o torques.o
+solver_commun.o: update_time.o propagator.o Beff_sd.o solver.o derived_types.o info-dynamics.o
 init_constant.o:
-symmetry_operators.o:
+symmetry_operators.o: derived_types.o
 info-dynamics.o:
 torques.o: derived_types.o vector.o io-utils.o io_files_utils.o
 EMwave.o: constant.o vector.o io-utils.o io_files_utils.o
@@ -55,12 +62,12 @@ init_random_config.o: derived_types.o init_random.o
 heavyside.o: constant.o basic_types.o
 rampe.o: constant.o basic_types.o 
 excitations.o: EMwave.o TPulse.o simu-parameters.o heavyside.o rampe.o derived_types.o io-utils.o io_files_utils.o
-external_fields.o: operator_pointer_utils.o derived_types.o get-position.o
+external_fields.o: create_lattice.o operator_pointer_utils.o derived_types.o get-position.o
 measure_temp.o: constant.o vector.o
 operator_pointer_utils.o: derived_types.o get-position.o
 topo_commons.o: vector.o get-position.o derived_types.o operator_pointer_utils.o
 internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
-energy_commons.o: constant.o symmetry_operators.o get-position.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
+energy_commons.o: convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
 basic_types.o:
 pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o
@@ -154,7 +161,7 @@ solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_d
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
 setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o
-spindynamics.o: info-dynamics.o torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o av_sd.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
+spindynamics.o: solver_commun.o info-dynamics.o torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o av_sd.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o av_sd.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
 total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o

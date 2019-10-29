@@ -5,12 +5,11 @@ module m_basic_types
 !!!!
 
 type Op_real
-!     real(kind=8), pointer, contiguous :: Op_loc(:,:)
      real(kind=8), pointer :: Op_loc(:,:)
 end type Op_real
 
 type Op_Im
-     complex(kind=16), pointer, contiguous :: Op_loc(:,:)
+     complex(kind=16), pointer :: Op_loc(:,:)
 end type Op_Im
 
 !!!!!!!!!!!!!!!!!!!!!!!!!

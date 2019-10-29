@@ -18,7 +18,8 @@ end interface dump_spinse
 
 interface dump_config
  module procedure dump_config_modes
- module procedure dump_config_matrix_real
+ module procedure dump_config_matrix_2D_real
+ module procedure dump_config_matrix_5D_real
  module procedure dump_config_FFT
  module procedure dump_config_vec_point
 end interface dump_config
@@ -47,8 +48,14 @@ interface get_parameter
  module procedure get_excitations
 end interface get_parameter
 
+interface number_nonzero_coeff
+  module procedure number_nonzero_coeff_1d
+  module procedure number_nonzero_coeff_2d
+end interface number_nonzero_coeff
+
+
 private
-public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse
+public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse,number_nonzero_coeff
 
 contains
 
@@ -209,9 +216,33 @@ enddo
 end subroutine dump_config_spinse
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that dumps a matrix of real numbers
+! routine that dumps a 5D matrix of real numbers
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_matrix_real(io,matrix)
+subroutine dump_config_matrix_2D_real(io,matrix)
+use m_derived_types
+implicit none
+integer, intent(in) :: io
+real(kind=8), intent(in) :: matrix(:,:)
+! internale variables
+Integer :: i_x,j,N(2)
+character(len=30) :: rw_format
+
+N=shape(matrix)
+
+write(rw_format,'( "(", I4, "f14.8,2x)" )') N(1)
+
+do i_x=1,N(2)
+
+   Write(io,rw_format) (matrix(j,i_x), j=1,N(1))
+
+enddo
+
+end subroutine dump_config_matrix_2D_real
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! routine that dumps a 5D matrix of real numbers
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine dump_config_matrix_5D_real(io,matrix)
 use m_derived_types
 implicit none
 integer, intent(in) :: io
@@ -234,7 +265,7 @@ do i_z=1,N(4)
   enddo
 enddo
 
-end subroutine dump_config_matrix_real
+end subroutine dump_config_matrix_5D_real
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local modes configurations
@@ -299,7 +330,7 @@ character(len=*), intent(in) :: var_name,fname
 integer, intent(in) :: io
 ! internal variable
 integer :: nread,length_string,fin,check,nvariable,n_var_fin
-character(len=10) :: str,var_name_local,integer_number
+character(len=30) :: str,var_name_local,integer_number
 ! slope
 integer :: i
 
@@ -387,6 +418,7 @@ write(6,'(/)')
 do i=1,N
    integer_number=convert(i)
    var_name_local=convert(var_name,integer_number)
+   write(*,*) var_name_local
    call get_parameter(io,fname,var_name_local(1:length_string),coeff(i))
 enddo
 
@@ -641,7 +673,7 @@ do
    if (str(1:1) == '#' ) cycle
 
 !cccc We start to read the input
-   if ( str(1:len_string) == trim(adjustl(vname)) ) then
+   if ( (str(1:len_string) == trim(adjustl(vname))) .and. ( check_last_char(str(len_string+1:len_string+1)) )) then
       nread=nread+1
       backspace(io)
       read(io,*) dummy, number
@@ -682,7 +714,7 @@ do
    if (str(1:1) == '#' ) cycle
 
 !cccc We start to read the input
-   if ( str(1:len_string) == trim(adjustl(vname)) ) then
+   if (( str(1:len_string) == trim(adjustl(vname))) .and. ( check_last_char(str(len_string+1:len_string+1)) )) then
       nread=nread+1
       backspace(io)
       read(io,*) dummy, number
@@ -992,6 +1024,19 @@ N=ncol
 end function get_NB_columns
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! check the last character of a string (should be ' ' or '=')
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+logical function check_last_char(string)
+implicit none
+character(len=1), intent(in) :: string
+
+check_last_char=.false.
+
+if ( (string.eq.' ') .or. (string.eq.'=') ) check_last_char=.true.
+
+end function check_last_char
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! check that the reading went fine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 integer function check_read(nread,vname,fname)
@@ -1066,5 +1111,54 @@ if (Bc.lt.0.000001d0)  Bc=0.0d0
 
 end subroutine get_colors
 ! ===============================================================
+
+
+
+!
+! function that determines how many coefficients are none 0 in the exchange or the DMI or whatever
+!
+integer function number_nonzero_coeff_2d(coeff,name)
+implicit none
+real(kind=8), intent(in) :: coeff(:,:)
+character(len=*), intent(in) :: name
+! internal
+integer :: i,N(2)
+real(kind=8) :: norm
+
+N=shape(coeff(:,:))
+number_nonzero_coeff_2d=0
+
+! loop over the number of coefficients
+do i=1,N(2)
+   norm=sqrt(coeff(1,i)**2+coeff(2,i)**2+coeff(3,i)**2)
+   if (norm.gt.1.0d-8) number_nonzero_coeff_2d=i
+enddo
+
+if (number_nonzero_coeff_2d.eq.0) then
+   write(6,'(2a)') 'no non-zero coefficients found for ',name
+endif
+
+end function number_nonzero_coeff_2d
+
+integer function number_nonzero_coeff_1d(coeff,name)
+implicit none
+real(kind=8), intent(in) :: coeff(:)
+character(len=*), intent(in) :: name
+! internal
+integer :: i,N
+
+N=size(coeff)
+number_nonzero_coeff_1d=0
+
+! loop over the number of coefficients
+do i=1,N
+   if (abs(coeff(i)).gt.1.0d-8) number_nonzero_coeff_1d=i
+enddo
+
+if (number_nonzero_coeff_1d.eq.0) then
+   write(6,'(2a)') 'no non-zero coefficients found for ',name
+endif
+
+end function number_nonzero_coeff_1d
 
 end module m_io_utils

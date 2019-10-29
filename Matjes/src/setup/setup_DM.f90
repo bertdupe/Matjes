@@ -73,8 +73,10 @@ type(symop), intent(in) :: symmetries(:)
 real(kind=8) :: get_DM_vectors(atom_all_shells,3,1)
 ! internal
 integer :: i,natom,n_at_mag,n_at_nonmag,j,k,l
+integer :: n_at_nonmag_incell,n_at_mag_inshell
 real(kind=8) :: R1(3),R2(3),DMV(3),test,test_pos_A(3),test_pos_B(3),dumy
-real(kind=8),allocatable ::  R_mag(:,:),R_non_mag(:,:),pos_mag_atom_in_shell(:,:)
+real(kind=8),allocatable :: R_mag(:,:),R_non_mag(:,:)
+real(kind=8),allocatable :: pos_mag_atom_in_shell(:,:),pos_nonmag_atom_in_shell(:,:)
 logical :: if_present,exists
 
 natom=size(my_motif%atomic)
@@ -98,44 +100,27 @@ do i=1,natom
 
 enddo
 
-allocate(pos_mag_atom_in_shell(3,atom_all_shells*n_at_mag+1))
 ! find all magnetic atoms in the unit cell
-! the number of atom in the shell is atom_all_shells
+! the number of directions for the different atoms are put in pos_mag_atom_in_shell
 ! for that apply symmetry operations
-
-j=2
+n_at_mag_inshell=find_all_equivalent_atom(R_mag(:,1)+areal(1,:),n_sym,symmetries,areal)
+allocate(pos_mag_atom_in_shell(3,n_at_mag_inshell))
 pos_mag_atom_in_shell=0.0d0
-pos_mag_atom_in_shell(:,1)=R_mag(:,1)
-do i=1,n_at_mag
-   do k=1,n_sym
-      test_pos_A=0.0d0
-      test_pos_B=0.0d0
-      test_pos_A=matmul(symmetries(k)%mat,R_mag(:,i))
-      test_pos_B=matmul(symmetries(k)%mat,R_mag(:,i)+areal(1,:))
+call find_all_atom(pos_mag_atom_in_shell,R_mag(:,1)+areal(1,:),n_sym,symmetries,areal)
 
-      if_present=.false.
-      do l=1,j
-         if (norm(pos_mag_atom_in_shell(:,l)-(test_pos_B-test_pos_A)).lt.1.0d-8) if_present=.true.
-      enddo
-
-      if (.not.(if_present)) then
-         pos_mag_atom_in_shell(:,j)=test_pos_B-test_pos_A
-         j=j+1
-      endif
-
-      if (j.gt.atom_all_shells*n_at_mag+1) exit
-   enddo
-enddo
+! find all equivalent non magnetic atoms
+! for that apply symmetry operations
+n_at_nonmag_incell=find_all_equivalent_atom(R_non_mag(:,1)-R_mag(:,1),n_sym,symmetries,areal)
+allocate(pos_nonmag_atom_in_shell(3,n_at_nonmag_incell))
+call find_all_atom(pos_nonmag_atom_in_shell,R_non_mag(:,1)-R_mag(:,1),n_sym,symmetries,areal)
 
 ! for all magnetic atoms in the unit cell
 ! find the unique non-magnetic atom that verifies the Moriya rules
 
 l=1
-do i=2,n_at_mag*atom_all_shells+1
+do i=1,n_at_mag_inshell
 
-   R1=pos_mag_atom_in_shell(:,1)
-   R2=pos_mag_atom_in_shell(:,i)
-   DMV=check_moryia_rules(R1,R2,R_non_mag(:,1),n_sym,symmetries)
+   DMV=check_moryia_rules(pos_mag_atom_in_shell(:,i),pos_nonmag_atom_in_shell)
 
    if_present=.false.
    do j=1,l
@@ -163,6 +148,7 @@ endif
 do i=1,atom_all_shells
    write(*,*) get_DM_vectors(i,:,1)
 enddo
+
 #endif
 
 end function get_DM_vectors
@@ -176,56 +162,126 @@ end function get_DM_vectors
 
 
 
+
+
+!
+! function that finds ne number of equivalent atoms in the unit cell
+!
+
+function find_all_equivalent_atom(R,n_sym,symmetries,areal)
+implicit none
+real(kind=8), intent(in) :: R(:),areal(:,:)
+integer, intent(in) :: n_sym
+type(symop), intent(in) :: symmetries(:)
+integer :: find_all_equivalent_atom
+! internal variables
+integer :: i,j,l
+real(kind=8) :: test_pos(3)
+logical :: if_present
+real(kind=8),allocatable :: atom_position(:,:)
+
+allocate(atom_position(3,n_sym+1))
+atom_position=0.0d0
+test_pos=0.0d0
+
+j=2
+atom_position(:,1)=R
+do i=1,n_sym
+   test_pos=matmul(symmetries(i)%mat,R(:))
+
+   if_present=.false.
+
+   do l=1,j-1
+      if (norm(atom_position(:,l)-test_pos).lt.1.0d-8) if_present=.true.
+   enddo
+
+   if (.not.(if_present)) then
+      atom_position(:,j)=test_pos
+      j=j+1
+   endif
+
+enddo
+
+find_all_equivalent_atom=j-1
+
+end function find_all_equivalent_atom
+
+!
+! function that finds all the equivalent atom in the unitcell
+! choose an atom type (magnetic or not)
+! calculate the position of all the atoms which at a distance R_1 of one atom.
+!
+
+subroutine find_all_atom(pos_atom_in_shell,R,n_sym,symmetries,areal)
+implicit none
+real(kind=8), intent(inout) :: pos_atom_in_shell(:,:)
+real(kind=8), intent(in) :: R(:),areal(:,:)
+integer, intent(in) :: n_sym
+type(symop), intent(in) :: symmetries(:)
+! internal
+real(kind=8) :: test_pos(3)
+integer :: j,l,k
+logical :: if_present
+
+j=2
+pos_atom_in_shell(:,1)=R(:)
+
+do k=1,n_sym
+
+   test_pos=matmul(symmetries(k)%mat,R(:))
+
+   if_present=.false.
+   do l=1,j-1
+      if (norm(pos_atom_in_shell(:,l)-test_pos).lt.1.0d-8) if_present=.true.
+   enddo
+
+   if (.not.(if_present)) then
+      pos_atom_in_shell(:,j)=test_pos
+      j=j+1
+   endif
+
+   if ((j-1).gt.size(pos_atom_in_shell,2)) stop 'error in setup_DM - find_all_atom'
+enddo
+
+end subroutine find_all_atom
+
 !
 ! function that checks if the DM vector verifies the Moriya rules
-! choose a non magnetic atom and a magnetic atom
-! calculate the R1, R2 and R12
-! apply all symmetry operations on R1 and R2 (in practice, calculate all possible direction of DM vectors)
-! check that the Moriya rules are still applying
-! if they apply, add the DM contribution of the symmetry equivalent atom to the DM vector
+! choose a non magnetic direction (AB) and a non-magnetic atom direction at position C
+! when the projection of the non-magnetic direction on AB (called C) is:
+! (1) - a center of inversion for the triangle ABC then D=0
+! (2) - when a mirror plane perpendicular to AB passes though C that DMI is in this plane
+! (3) - when there is a mirror plane including A and B then DMI perpendicular to the mirror plane
+! (4) - when there is a two-fold rotation axis perpendicular to AB and going through C and D perpendicular to the two fold axis
+! (5) - when there is a n-fold rotation axis (n>1) along AB then D parallel to AB
 !
-function check_moryia_rules(R1,R2,R12,n_sym,symmetries)
+function check_moryia_rules(R,R_nonmag)
 implicit none
-integer, intent(in) :: n_sym
-real(kind=8), intent(in) :: R1(3),R2(3),R12(3)
-type(symop), intent(in) :: symmetries(:)
+real(kind=8), intent(in) :: R(:),R_nonmag(:,:)
 real(kind=8) :: check_moryia_rules(3)
 ! internal
-real(kind=8) :: test1,test2,DM_candidate(3),R12_sym(3),test,cross_R12_sym(3)
-logical :: rule1,rule2
+real(kind=8) :: DM_candidate(3),test
 integer :: i
 
 check_moryia_rules=0.0d0
 DM_candidate=0.0d0
 
-do i=1,n_sym
-   rule1=.false.
-   rule2=.false.
+do i=1,size(R_nonmag,2)
 
-! apply symmetry operation on R1 and R2
-   R12_sym=matmul(symmetries(i)%mat,R12)
-! (R(1)-R12)x(R(2)-R12) should be perpendicular to R1-R2
-   cross_R12_sym=cross(R1-R12_sym,R2-R12_sym,1,3)
-   test1=dot_product(R1-R2,cross_R12_sym)
+! rule (1) collinearity and inversion of symmetry
+   if ((norm(cross(R,R_nonmag(:,i),1,3)).lt.1.0d-8).and.(norm(R_nonmag(:,i)-R/2.0d0).lt.1.0d-8)) cycle
 
-   if (test1.lt.1.0d-6) rule1=.true.
+! rule (2) and (3) DMI must be perpendicular to R. By construction it is always true
+   DM_candidate=cross(R,R_nonmag(:,i),1,3)
 
-! the non-magnetic atom should be in the middle between the 2 magneti atoms
-   test1=norm(R1-R12_sym)
-   test2=norm(R2-R12_sym)
-
-   if (abs(test1-test2).lt.1.0d-6) rule2=.true.
-
-   if (rule1.and.rule2) DM_candidate=cross(R1-R12_sym,R2-R12_sym,1,3)
+   check_moryia_rules=check_moryia_rules+DM_candidate
 
 enddo
 
-test=norm(DM_candidate)
-if (test.lt.1.0d-8) then
-   write(6,'(a)') 'cannot find DM vector'
-   stop
-endif
-check_moryia_rules=DM_candidate/test
+test=norm(check_moryia_rules)
+if (test.lt.1.0d-8) stop 'cannot find DM vector - check_moryia_rules '
+
+check_moryia_rules=check_moryia_rules/test
 
 end function
 ! routine that calculates the direction of the DM vector depending on the position of the non-magnetic atoms in the unit cell

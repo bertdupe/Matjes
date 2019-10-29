@@ -2,21 +2,117 @@ module m_operator_pointer_utils
 
 interface associate_pointer
    module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target
+   module procedure associate_mode_name,associate_mode_real2D_name
 end interface associate_pointer
 
 interface dissociate
    module procedure dissociate_OpReal_2D,diss_point_shell_Operator_1D,diss_point_shell_mode_1D,dissociate_basicOpReal_2D
-   module procedure diss_point_shell_1D_Operator_1D,diss_point_shell_1D_mode_1D
+   module procedure diss_point_shell_1D_Operator_1D,diss_point_shell_1D_mode_1D,diss_vec_point_1D
 end interface dissociate
 
 private
 public :: associate_pointer,dissociate,associate_line_target
 
 contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! routine that associates a (:) pointer to part of the first dimension of a 2D matrix
+! this is typically used when you only want to get the magnetic moments or the integrator fields
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine associate_mode_real2D_name(point,static_target,name,i_name)
+use m_derived_types, only : vec_point
+use m_lattice, only : my_order_parameters
+implicit none
+type(vec_point), intent(inout) :: point(:)
+logical, intent(inout) :: i_name
+real(kind=8), target, intent(in) :: static_target(:,:)
+character(len=*), intent(in) :: name
+! internal
+integer :: i,size_point,size_target,N_orders,N_order_found,istart,iend
+integer, allocatable :: position_found(:,:)
+
+size_point=size(point)
+size_target=size(static_target,2)
+
+if (size_point.ne.size_target) stop 'error in associate_mode_real2D_name - DIM unequal'
+
+! function at the end of the module
+N_order_found=numer_order_param(name)
+if (N_order_found.ne.0) then
+   i_name=.true.
+else
+   return
+endif
+
+allocate(position_found(3,N_order_found))
+position_found=0
+
+! function at the end of the module
+position_found=find_position_order(N_order_found,name)
+
+istart=position_found(2,1)
+iend=position_found(3,N_order_found)
+
+do i=1,size_point
+   point(i)%w=>static_target(istart:iend,i)
+enddo
+
+end subroutine associate_mode_real2D_name
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! routine that associates a (:) pointer to a part of another pointer
+! this is typically used when you only want to get the magnetic moments or the local modes and not all modes
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine associate_mode_name(point,static_target,name,i_name)
+use m_derived_types, only : vec_point
+use m_lattice, only : my_order_parameters
+implicit none
+type(vec_point), intent(inout) :: point(:)
+logical, intent(inout) :: i_name
+type(vec_point), intent(in) :: static_target(:)
+character(len=*), intent(in) :: name
+! internal
+integer :: i,size_point,size_target,N_orders,N_order_found,istart,iend
+integer, allocatable :: position_found(:,:)
+
+size_point=size(point)
+size_target=size(static_target)
+
+if (size_point.ne.size_target) stop 'error in associate_mode_name - DIM unequal'
+
+! function at the end of the module
+N_order_found=numer_order_param(name)
+if (N_order_found.ne.0) then
+   i_name=.true.
+else
+   return
+endif
+
+allocate(position_found(3,N_order_found))
+position_found=0
+
+! function at the end of the module
+position_found=find_position_order(N_order_found,name)
+
+istart=position_found(2,1)
+iend=position_found(3,N_order_found)
+
+do i=1,size_point
+   point(i)%w=>static_target(i)%w(istart:iend)
+enddo
+
+end subroutine associate_mode_name
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 ! routine that associates a (:) pointer to a 1D matrix
 ! this is typically used when the electromagnetic field is associated. At least the amplitude
 !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_vecpoint1D_vecdimn(point,static_target,tableNN)
 use m_derived_types, only : vec_point,vec_dim_n
 use m_get_position
@@ -50,10 +146,12 @@ enddo
 
 end subroutine A_vecpoint1D_vecdimn
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 ! routine that associates a (:,:) pointer to a Hamiltonian matrix
 ! typical assocication for the Hamiltonian
 !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_shellHam1D(point,static_target,my_lattice,tableNN,indexNN)
 use m_derived_types, only : lattice,operator_real,shell_Ham
 use m_get_position
@@ -68,7 +166,6 @@ integer, intent(in) :: indexNN(:)
 integer :: i_x,i_y,i_z,i_m,ipos_1,ipos_2,v_x,v_y,v_z,v_m,i_voisin,i_shell
 integer :: Nspin,all_size(4),shape_tableNN(6),avant,Ilat(4),line_index
 integer :: N_shell
-real(kind=8) :: test
 
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
@@ -87,13 +184,13 @@ do i_m=1,shape_tableNN(6)
 
         ! anisotropy
 
-        point%value(line_index,ipos_2)%Op_loc=>static_target(1)%atom(1)%H(:,:)
+        point%value(line_index,ipos_2)%Op_loc=>static_target(1)%atom(1)%H
         point%line(line_index,ipos_2)=ipos_2
 
         avant=0
         do i_shell=1,N_shell-1
 
-          do i_voisin=1,indexNN(i_shell)
+          do i_voisin=1,size(static_target(i_shell+1)%atom)
 
           line_index=line_index+1
 
@@ -107,18 +204,7 @@ do i_m=1,shape_tableNN(6)
 
           point%line(line_index,ipos_2)=ipos_1
 
-! if the matrix is symmetric (exchnage only) then there is no point is storing
-! as much energy matrices as in the number of atom in the shell.
-!
-! Therefore if the energy for the atom i_voisin in shell i_shell is 0 it does not mean that Hamiltonian of this shell
-! should be 0. One has to check the Hamiltonian for the 1st atom in the shell
-          test=sum(abs(static_target(i_shell+1)%atom(i_voisin)%H(:,:)))
-
-          if (test.gt.1.0d-8) then
-             point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(i_voisin)%H(:,:)
-          else
-             point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(1)%H(:,:)
-          endif
+          point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(i_voisin)%H
 
 !#ifdef CPP_DEBUG
 !          write(*,*) v_x,v_y,v_z,v_m
@@ -134,7 +220,7 @@ do i_m=1,shape_tableNN(6)
 !#endif
 
           enddo
-          avant=avant+indexNN(i_shell)
+          avant=avant+size(static_target(i_shell+1)%atom)
 
         enddo
 
@@ -145,10 +231,12 @@ enddo
 
 end subroutine A_Opreal_shellHam1D
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 ! routine that associates a (:,:) pointer to a 2D matrix of reals
 ! typical assocication for the shell decomposition of the Hamiltonian
 !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_real2D(point,static_target,my_lattice,tableNN,Nvoisin,avant)
 use m_derived_types, only : lattice,operator_real,shell_Ham
 use m_get_position
@@ -365,5 +453,72 @@ do j=1,N
 enddo
 
 end subroutine diss_point_shell_1D_mode_1D
+
+!!!!!!!!!!!!!!!!!
+!
+! Dissociate a vector of modes
+!
+!!!!!!!!!!!!!!!!!
+
+subroutine diss_vec_point_1D(point,N)
+use m_derived_types, only : vec_point
+implicit none
+integer, intent(in) :: N
+type(vec_point), intent(out) :: point(N)
+! internal
+integer :: i
+
+do i=1,N
+  nullify(point(i)%w)
+enddo
+
+end subroutine diss_vec_point_1D
+
+
+!!!!!!!!!!!!!!!!!
+!
+! some simple functions
+!
+!!!!!!!!!!!!!!!!!
+
+integer function numer_order_param(name)
+use m_lattice, only : my_order_parameters
+implicit none
+character(len=*), intent(in) :: name
+! internal
+integer :: i
+
+numer_order_param=0
+do i=1,size(my_order_parameters)
+   if (name.eq.trim(my_order_parameters(i)%name)) numer_order_param=numer_order_param+1
+enddo
+
+end function
+
+function find_position_order(N_order_found,name)
+use m_lattice, only : my_order_parameters
+implicit none
+integer, intent(in) :: N_order_found
+character(len=*), intent(in) :: name
+integer :: find_position_order(3,N_order_found)
+! internal
+integer :: i,N_orders,N
+
+N_orders=size(my_order_parameters)
+N=0
+find_position_order=0
+
+do i=1,N_orders
+   if (name.eq.trim(my_order_parameters(i)%name)) then
+     N=N+1
+     find_position_order(1,N_order_found)=i
+     find_position_order(2,N_order_found)=my_order_parameters(i)%start
+     find_position_order(3,N_order_found)=my_order_parameters(i)%end
+   endif
+enddo
+
+if (N.ne.N_order_found) stop 'ERROR in find_position_order in module m_operator_pointer_utils'
+
+end function
 
 end module m_operator_pointer_utils

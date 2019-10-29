@@ -1,22 +1,13 @@
 module m_solver
 use m_derived_types
 
-!   interface integrate
-!      module procedure simple
-!      module procedure integrate_pred
-!      module procedure integrate_SIB
-!      module procedure integrate_SIB_NC_ohneT
-!      module procedure FM_resonnance
-!   end interface integrate
-
-
    interface minimization
       module procedure euler_minimization
       module procedure euler_o2_minimization
    end interface minimization
 
 private
-public :: simple,integrate_SIB_NC_ohneT
+public :: Euler,integrate_SIB_NC_ohneT,implicite
 contains
 
 ! ----------------------------------------------
@@ -25,7 +16,6 @@ contains
       & i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)
        use m_constants, only : hbar
        use m_randist
-       use m_dynamic, only : htor
        use m_vector, only : cross,norm
        use mtprng
 #ifdef CPP_MPI
@@ -58,13 +48,12 @@ contains
 
         step=cross(B,spin1,1,3)
         if (i_torque) steptor=cross(spin1,Ipol,1,3)
-        if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z),1,3)
 
        if (kt.gt.1.0d-10) then
         Dtemp=damping/(1+damping**2)*kT/norm(B)
         if (stmtemp) then
-         W=(/randist(state),randist(state),randist(state)/)
-         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W,1,3))*htor(i_x,i_y,i_z)/maxh
+!         W=(/randist(state),randist(state),randist(state)/)
+!         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W,1,3))*htor(i_x,i_y,i_z)/maxh
         else
          W=(/randist(state),randist(state),randist(state)/)
          steptemp=+sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W,1,3)
@@ -89,7 +78,6 @@ contains
       & i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
       use m_constants, only : hbar
        use m_randist
-       use m_dynamic, only : htor
        use m_vector, only : cross,norm
        use mtprng
 #ifdef CPP_MPI
@@ -122,13 +110,11 @@ contains
         step=cross(B,spin1,1,3)
         if (i_torque) steptor=cross(spin1,Ipol,1,3)
 
-        if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z),1,3)
-
        if (kt.gt.1.0d-10) then
         Dtemp=damping/(1+damping**2)*kT/norm(B)
         if (stmtemp) then
-         W=(/randist(state),randist(state),randist(state)/)
-         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W,1,3))*htor(i_x,i_y,i_z)/maxh
+!         W=(/randist(state),randist(state),randist(state)/)
+!         steptemp=(sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W,1,3))*htor(i_x,i_y,i_z)/maxh
         else
          W=(/randist(state),randist(state),randist(state)/)
          steptemp=sqrt(2.0d0*Dtemp)*W+damping*sqrt(2.0d0*Dtemp)*cross(spin(:,i_x,i_y,i_z,i_m),W,1,3)
@@ -213,7 +199,6 @@ contains
 ! SIB integration scheme for predicator. norm conserving
 function integrate_SIB_NC_ohneT(timestep,B,BT,damping,spin)
 use m_constants, only : hbar
-use m_dynamic, only : htor
 use m_vector, only : cross,norm
 use m_torques
 #ifdef CPP_MPI
@@ -233,8 +218,6 @@ real(kind=8) :: step(3),stepdamp(3),dt,ds(3)
 
 dt=timestep/hbar/(1+damping**2)
 B_int=B
-
-!        if (stmtorque) stepsttor=cross(spin1,Ipol*htor(i_x,i_y,i_z))
 step=cross(B,spin,1,3)
 
 stepdamp=cross(spin,step,1,3)
@@ -273,55 +256,81 @@ end function integrate_SIB_NC_ohneT
 
 ! ----------------------------------------------
 ! ----------------------------------------------
-! Euler integration scheme
-function simple(timestep,B,BT,damping,spini)
-use m_constants, only : hbar
+! implicit integration scheme
+function implicite(mode_t,D_mode,DT_mode,dt,size_mode)
 use m_vector, only : cross,norm
-use m_dynamic, only : htor
-use m_torques, only : update_DS
 implicit none
-real(kind=8), intent(in) :: spini(:),damping,BT(:),timestep,B(:)   !,stm_field_torque
-real(kind=8) :: simple(size(B))
+integer, intent(in) :: size_mode
+real(kind=8), intent(in) :: mode_t(:),D_mode(:),dt,DT_mode(:)
+real(kind=8) :: implicite(size_mode)
 !dummy
-real(kind=8) :: spinfin(size(B)),step(size(B)),stepdamp(size(B))
-real(kind=8) :: dt,ds(size(B)),norm_S,BT_norm,DTs(size(B)),step_T(size(B))
-real(kind=8) :: S_norm(size(B))
-integer :: size_b
+real(kind=8) :: droite(size_mode),denominator,B_int(size_mode)
+integer :: i,start
 
-dt=1.0d0/hbar/(1.0d0+damping**2)
-simple=0.0d0
-step=0.0d0
-DTs=0.0d0
-S_norm=spini
-size_b=size(B)
+implicite=0.0d0
+B_int=-D_mode*dt
 
-norm_S=norm(spini)
-BT_norm=norm(BT)
+do i=1,size_mode/3
+  start=3*(i-1)+1
 
-!if (norm_S.lt.1.0d-8) stop 'error in solver S=0'
-S_norm=spini/norm_S
+! 3x3 system
+! SX=droite
 
+  droite(start:start+2)=mode_t(start:start+2)+cross(mode_t,D_mode,start,start+2)
+  denominator=(4.0d0+norm(B_int(start:start+2))**2)
 
-!if (stmtorque) stepsttor=storque*cross(S_norm,Ipol*htor(i_x,i_y,i_z))
+! first term
+  implicite(start)=-(-4.0d0*droite(start)+ &
+     &  (2.0d0*B_int(start+2)*droite(start+1)-2.0d0*B_int(start+1)*droite(start+2)) + &
+     &  (-B_int(start)**2*droite(start)-B_int(start)*B_int(start+1)*droite(start+1)-B_int(start)*B_int(start+2)*droite(start+2))) &
+     &  /denominator
 
-step=cross(B,S_norm,1,size_b)
+! second term
+  implicite(start+1)=-(-4.0d0*droite(start+1)+ &
+     &  (-2.0d0*B_int(start+2)*droite(start)+2.0d0*B_int(start)*droite(start+2))+ &
+     &  (-B_int(start+1)**2*droite(start+1)-B_int(start)*B_int(start+1)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+2))) &
+     &  /denominator
 
-stepdamp=cross(S_norm,step,1,size_b)
+! third term
+  implicite(start+2)=-(-4.0d0*droite(start+2)+ &
+     &  (2.0d0*B_int(start+1)*droite(start)-2.0d0*B_int(start)*droite(start+1))+ &
+     &  (-B_int(start+2)**2*droite(start+2)-B_int(start)*B_int(start+2)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+1))) &
+     &  /denominator
 
-ds=step+damping*stepdamp
+enddo
 
-call update_DS(S_norm,damping,ds)
+end function implicite
 
-if (BT_norm.gt.1.0d-10) then
-   step_T=cross(S_norm,BT,1,3)
-   DTs= step_T+damping*cross(S_norm,step_T,1,3)
-endif
+! ----------------------------------------------
+! ----------------------------------------------
+! Euler integration scheme
+function euler(mode_t,D_mode,DT_mode,dt,size_mode)
+use m_vector, only : cross,norm
+implicit none
+integer, intent(in) :: size_mode
+real(kind=8), intent(in) :: mode_t(:),D_mode(:),dt,DT_mode(:)
+real(kind=8) :: euler(size_mode)
+!dummy
+real(kind=8) :: euler_int(size_mode)
+real(kind=8) :: norm_mode
+integer :: i,start,end
 
-spinfin=S_norm+(ds*timestep*dt+DTs*sqrt(timestep*damping*dt))
+euler=mode_t
 
-simple=spinfin/norm(spinfin)
+!if (BT_norm.gt.1.0d-10) then
+!   step_T=cross(S_norm,BT,1,3)
+!   DTs= step_T+damping*cross(S_norm,step_T,1,3)
+!endif
 
-end function simple
+do i=1,size_mode/3
+   start=3*(i-1)+1
+   end=3*i
+   norm_mode=norm(mode_t(start:end))
+   euler_int(start:end)=mode_t(start:end)+D_mode(start:end)*dt+sqrt(dt)*DT_mode(start:end)
+   euler(start:end)=euler_int(start:end)*norm_mode/norm(euler_int(start:end))
+enddo
+
+end function euler
 
 ! ----------------------------------------------
 ! ----------------------------------------------
@@ -330,7 +339,6 @@ function FM_resonnance(timestep,B,maxh,iomp,Ipol,torque_FL,adia,storque,i_torque
 use m_constants, only : hbar
 use m_randist
 use m_vector, only : cross
-use m_dynamic, only : htor
 implicit none
 real(kind=8) :: FM_resonnance(3)
 real(kind=8), intent(in) :: timestep,B(:),maxh

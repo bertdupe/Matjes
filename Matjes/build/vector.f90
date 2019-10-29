@@ -257,8 +257,8 @@ end function norm_int
 real(kind=8) FUNCTION norm_cross_real(a, b,P,N)
 implicit none
 integer, intent(in) :: N,P
-real(kind=8), INTENT(IN) :: a(P:N), b(P:N)
-real(kind=8) :: cross_real(N-P+1)
+real(kind=8), INTENT(IN) :: a(:), b(:)
+real(kind=8) :: cross_real(P:N)
 ! internal
 integer :: i,j
 
@@ -278,8 +278,8 @@ END FUNCTION norm_cross_real
 real(kind=8) FUNCTION norm_cross_int(a, b,P,N)
 implicit none
 integer, intent(in) :: N,P
-integer, INTENT(IN) :: a(P:N), b(P:N)
-real(kind=8) :: cross_real(N-P+1)
+integer, INTENT(IN) :: a(:), b(:)
+real(kind=8) :: cross_real(P:N)
 ! internal
 integer :: i,j
 
@@ -303,8 +303,8 @@ END FUNCTION norm_cross_int
 FUNCTION cross_real(a, b, P, N)
 implicit none
 integer, intent(in) :: N,P
-real(kind=8), INTENT(IN) :: a(P:N), b(P:N)
-real(kind=8), DIMENSION(N-P+1) :: cross_real
+real(kind=8), INTENT(IN) :: a(:), b(:)
+real(kind=8) :: cross_real(P:N)
 ! internal
 integer :: i,j
 
@@ -322,8 +322,8 @@ END FUNCTION cross_real
 FUNCTION cross_int(a, b, P, N)
 implicit none
 integer, intent(in) :: N,P
-integer, INTENT(IN) :: a(P:N), b(P:N)
-real(kind=8), DIMENSION(N-P+1) :: cross_int
+integer, INTENT(IN) :: a(:), b(:)
+real(kind=8) :: cross_int(P:N)
 ! internal
 integer :: i,j
 

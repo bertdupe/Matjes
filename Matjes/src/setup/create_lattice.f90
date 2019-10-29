@@ -1,10 +1,6 @@
 module m_lattice
 use m_basic_types, only : var_name
-
-type order_parameter
-    character(len=30) :: name
-    integer :: start,end
-end type
+use m_derived_types, only : order_parameter
 
 ! array that stores what are the order parameter used
 type(order_parameter),protected,allocatable,save,target :: my_order_parameters(:)

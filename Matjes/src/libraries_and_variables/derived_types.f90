@@ -74,8 +74,24 @@ type point_shell_mode
      type(vec_point), allocatable, dimension(:) :: shell
 end type point_shell_mode
 
-! Hamiltonian coefficients
+!!!!!!!!
+! Hamiltonian type
+!!!!!!!!
 
+type coeff_ham_inter_spec
+     real(kind=8) :: c_ham=-1.0d0
+     character(len=30) :: name=''
+     logical :: i_exist=.false.
+     type(site_Ham), allocatable, dimension(:) :: ham
+end type coeff_ham_inter_spec
+
+type coeff_ham_inter_spec_pointer
+     character(len=30) :: name=''
+     type(Op_real), allocatable :: ham(:)
+end type coeff_ham_inter_spec_pointer
+
+! Hamiltonian coefficients
+! to be deleted
 type Coeff_Ham
      real(kind=8) :: c_Ji=-1.0d0
      real(kind=8) :: c_DM=-1.0d0
@@ -117,31 +133,21 @@ type simulation_parameters
     type(vec_var) :: H_ext=vec_var((/0.0d0,0.0d0,0.0d0/),'external B-field'),E_ext=vec_var((/0.0d0,0.0d0,0.0d0/),'external E-field')
 end type simulation_parameters
 
-!type site_ham_op
-!     class(Ham_op), pointer, dimension(:) :: Op
-!     integer :: nei
-!end type site_ham_op
-
-
-
-
-
-!Operators of the simulations
-!type operator_poly
-!    class (*), pointer, dimension(:,:) :: Op
-!    integer :: il,ic
-!    integer :: nline,ncolumn
-!end type operator_poly
-
-!type Op_real
-!     real(kind=8), pointer :: Op_loc(:,:)
-!end type Op_real
-
+!!!!!!!!!
+! operator type
+!!!!!!!!!
 type operator_real
     type(Op_real), allocatable, dimension(:,:) :: value
     integer :: nline,ncolumn
     integer, allocatable :: line(:,:)
 end type operator_real
 
+!!!!!!!!!
+! order parameter type
+!!!!!!!!!
+type order_parameter
+    character(len=30) :: name
+    integer :: start,end
+end type
 
 end module m_derived_types

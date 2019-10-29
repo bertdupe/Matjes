@@ -186,7 +186,7 @@ type(vec_point),intent(inout) :: point(:)
 real(kind=8),target,intent(in) :: matrix2(:,:,:,:,:)
 ! internal variables
 integer :: i,j,k,l,N_mat2(5),Ilat(4),pos
-logical :: test
+!logical :: test
 
 ! check that the dimensions are equal
 N_mat2=shape(matrix2)
@@ -222,7 +222,7 @@ type(vec_point),intent(inout) :: point(:)
 type(lattice),target,intent(in) :: my_lattice
 ! internal variables
 integer :: i,j,k,l,N_mat2(4),Ilat(4),pos
-logical :: test
+!logical :: test
 
 ! check that the dimensions are equal
 N_mat2=shape(my_lattice%l_modes)

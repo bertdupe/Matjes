@@ -1,14 +1,12 @@
 subroutine spindynamics(mag_lattice,mag_motif,io_simu,gra_topo,ext_param)
 use m_fieldeff
-use m_info_dynamics
 use m_torques, only : get_torques
+use m_lattice, only : my_order_parameters
 use m_eval_BTeff
 use m_measure_temp
 use m_topo_commons, only : get_size_Q_operator,associate_Q_operator
 use m_derived_types
-use m_update_time
-use m_solver
-use m_dynamic
+use m_update_time, only : update_time,get_dt_LLG,init_update_time
 use m_vector, only : cross,norm,norm_cross
 use m_sd_averages
 use m_randist
@@ -25,6 +23,8 @@ use m_energy_commons, only : get_E_line
 use m_internal_fields_commons, only : get_B_line
 use m_user_info
 use m_excitations
+use m_operator_pointer_utils
+use m_solver_commun
 #ifndef CPP_BRUTDIP
       use m_setup_dipole, only : mmatrix
 #endif
@@ -44,25 +44,33 @@ logical, intent(in) :: gra_topo
 logical :: gra_log,io_stochafield
 integer :: i,j,l,k,h,gra_freq
 ! lattices that are used during the calculations
-real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter,Bini,BT
-type(vec_point),allocatable,dimension(:) :: spin1,spin2,B_point,B_after_point,BT_point
+real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter
+real(kind=8),allocatable,dimension(:,:) :: D_mode,D_T,Bini,BT
+type(vec_point),allocatable,dimension(:) :: all_mode_1,all_mode_2
+! pointers specific for the modes
+type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield
+type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
+type(vec_point),target,allocatable,dimension(:) :: D_mode_mag,D_T_mag,B_mag,BT_mag
+type(vec_point),target,allocatable,dimension(:) :: D_mode_disp,D_T_disp,B_disp,BT_disp
 ! lattice pf pointer that will be used in the simulation
 type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line_1,B_line_2
 type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column_1,mode_B_column_2
 ! dummys
-real(kind=8) :: dum_norm,qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,stmtorquebp,check1,check2,Eold,check3,Et
+real(kind=8) :: dum_norm,qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,stmtorquebp,check1,check2,Eold,check3,Et,dt
 real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
-real(kind=8) :: dumy(5),ds(3),security(2),B(3),step(3),steptor(3),stepadia(3),stepsttor(3),steptemp(3)
-real(kind=8) :: timestep_int,real_time,h_int(3)
+real(kind=8) :: dumy(5),security(2),B(mag_lattice%dim_mode)
+real(kind=8) :: timestep_int,real_time,h_int(3),damping
 real(kind=8) :: kt,ktini,ktfin,kt1
 real(kind=8) :: time
-integer :: iomp,shape_lattice(4),shape_spin(4),N_cell
+integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq
+!! switch that controls the presence of magnetism, electric fields and magnetic fields
+logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield
 ! parameter for the Heun integration scheme
 real(kind=8) :: maxh
 ! parameter for the rkky integration
 integer :: N_site_comm
 ! dumy
-      logical :: said_it_once,i_anatorque
+logical :: said_it_once,test
 ! starting and ending points of the sums
       integer :: Mstop
 #ifndef CPP_MPI
@@ -89,7 +97,6 @@ integer :: N_site_comm
       N_cell=product(shape_lattice(1:3))
 
       N_site_comm=(Xstop-Xstart+1)*(Ystop-Ystart+1)*(Zstop-Zstart+1)*shape_lattice(4)
-      i_anatorque=.False.
 
 #ifdef CPP_MPI
       if (irank.eq.0) then
@@ -108,22 +115,26 @@ integer :: N_site_comm
 
 ! prepare the matrices for integration
 
-call rw_dyna(shape_lattice(1:3),mag_lattice)
+call rw_dyna(shape_lattice(1:3),mag_lattice,timestep_int,damping,Efreq,duration)
 
-allocate(spin1(N_cell),spin2(N_cell),B_point(N_cell),BT_point(N_cell))
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! Select the propagators and the integrators
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+call select_propagator(ext_param%ktini%value,N_loop)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! Allocate the matrix of after spin and the pointers associated to it
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+allocate(all_mode_1(N_cell),all_mode_2(N_cell))
 allocate(spinafter(mag_lattice%dim_mode,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4)))
-allocate(Bini(mag_lattice%dim_mode,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4)))
-allocate(BT(mag_lattice%dim_mode,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4)))
 
 shape_spin=shape_lattice
-Bini=0.0d0
 spinafter=0.0d0
-BT=0.0d0
 
-call associate_pointer(spin1,mag_lattice)
-call associate_pointer(spin2,spinafter)
-call associate_pointer(B_point,Bini)
-call associate_pointer(BT_point,BT)
+call associate_pointer(all_mode_1,mag_lattice)
+call associate_pointer(all_mode_2,spinafter)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the pointers for the B-field and the energy
@@ -137,14 +148,14 @@ call user_info(6,time,'associate H_line, B_line and S_line',.true.)
 allocate(E_line(N_cell),B_line_1(N_cell),B_line_2(N_cell))
 allocate(mode_E_column(N_cell),mode_B_column_1(N_cell),mode_B_column_2(N_cell))
 
-call get_E_line(E_line,mode_E_column,spin1)
+call get_E_line(E_line,mode_E_column,all_mode_1)
 
-call get_B_line(B_line_1,mode_B_column_1,spin1)
-call get_B_line(B_line_2,mode_B_column_2,spin2)
+call get_B_line(B_line_1,mode_B_column_1,all_mode_1)
+call get_B_line(B_line_2,mode_B_column_2,all_mode_2)
 
 if (io_simu%io_Energy_Distrib) then
    write(6,'(a)') 'setting up energy distribution'
-   call get_Energy_distrib_line(spin1)
+   call get_Energy_distrib_line(all_mode_1)
 endif
 
 call user_info(6,time,'done - ready to start calculations',.true.)
@@ -156,42 +167,105 @@ call user_info(6,time,'topological operators',.false.)
 
 call get_size_Q_operator(mag_lattice)
 
-call associate_Q_operator(spin1,mag_lattice%boundary,shape_spin)
+call associate_Q_operator(all_mode_1,mag_lattice%boundary,shape_spin)
 
 call user_info(6,time,'done',.true.)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! allocate the element of integrations and associate the pointers to them
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+allocate(D_mode(mag_lattice%dim_mode,N_cell),D_T(mag_lattice%dim_mode,N_cell))
+D_mode=0.0d0
+D_T=0.0d0
+
+allocate(Bini(mag_lattice%dim_mode,N_cell),BT(mag_lattice%dim_mode,N_cell))
+Bini=0.0d0
+BT=0.0d0
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! associate pointers only for the magnetization or local modes
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+i_magnetic=.false.
+i_temperature=.false.
+i_mode=.false.
+i_Efield=.false.
+i_Hfield=.false.
+
+! magnetization
+do i=1,size(my_order_parameters)
+  if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_magnetic(N_cell,N_loop),D_mode_mag(N_cell),D_T_mag(N_cell),B_mag(N_cell),BT_mag(N_cell))
+   do j=1,N_loop
+     call dissociate(mode_magnetic(:,j),N_cell)
+     if (j.eq.1) call associate_pointer(mode_magnetic(:,j),all_mode_1,'magnetic',i_magnetic)
+     if (j.eq.2) call associate_pointer(mode_magnetic(:,j),all_mode_2,'magnetic',i_magnetic)
+   enddo
+
+   call dissociate(D_mode_mag,N_cell)
+   call associate_pointer(D_mode_mag,D_mode,'magnetic',i_magnetic)
+
+   call dissociate(D_T_mag,N_cell)
+   call associate_pointer(D_T_mag,D_T,'magnetic',i_magnetic)
+
+   call dissociate(B_mag,N_cell)
+   call associate_pointer(B_mag,Bini,'magnetic',i_magnetic)
+
+   call dissociate(BT_mag,N_cell)
+   call associate_pointer(BT_mag,BT,'magnetic',i_magnetic)
+
+   exit
+  endif
+enddo
+
+! temperature
+do i=1,size(my_order_parameters)
+  if ('temperature'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_temp(N_cell))
+   call dissociate(mode_temp,N_cell)
+   call associate_pointer(mode_temp,all_mode_1,'temperature',i_temperature)
+
+   exit
+  endif
+enddo
+
+! magnetic field
+do i=1,size(my_order_parameters)
+  if ('Bfield'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_Hfield(N_cell))
+   call dissociate(mode_Hfield,N_cell)
+   call associate_pointer(mode_Hfield,all_mode_1,'Bfield',i_Hfield)
+
+   exit
+  endif
+enddo
+
+! Electric field
+do i=1,size(my_order_parameters)
+  if ('Efield'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_Efield(N_cell))
+   call dissociate(mode_Efield,N_cell)
+   call associate_pointer(mode_Efield,all_mode_1,'Efield',i_Efield)
+
+   exit
+  endif
+enddo
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-timestep_int=timestep
 gra_log=io_simu%io_Xstruct
 io_stochafield=io_simu%io_Tfield
 gra_freq=io_simu%io_frequency
 ktini=ext_param%ktini%value
 ktfin=ext_param%ktfin%value
 kt=ktini
-
-      iomp=1
-!      if (maxh.lt.1.0d-8)
-      maxh=1.0d0
-      Eold=100.0d0
-      k=0
-      h=0
-      l=0
-      kt=ktini
-      step=0.0d0
-      steptor=0.0d0
-      stepadia=0.0d0
-      stepsttor=0.0d0
-      steptemp=0.0d0
-      real_time=0.0d0
-      Einitial=0.0d0
-      h_int=ext_param%H_ext%value
-      said_it_once=.False.
-
-      stmtorquebp=storque
-      security=0.0d0
+Eold=100.0d0
+real_time=0.0d0
+Einitial=0.0d0
+h_int=ext_param%H_ext%value
+said_it_once=.False.
+security=0.0d0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! part of the excitations
@@ -230,300 +304,75 @@ do j=1,duration
 #endif
       endif
 #endif
-! send the lattice to the processors
-!------------------------------
-!        call dyna_split(i_dip,MPI_WORKING_WORLD,irank)
-!       call MPI_BCAST(Spin(4:7,:,:,:,:),product(dim_lat)*count(motif%i_m)*4,MPI_REAL8,0, &
-!     &     MPI_WORKING_WORLD,ierr)
-!       write(*,*) '-----------------------'
-!       write(*,*) j
-!       write(*,*) '-----------------------'
 
-       call init_temp_measure(check,check1,check2,check3)
-       qeuler=0.0d0
-       q_plus=0.0d0
-       q_moins=0.0d0
-       vx=0.0d0
-       vy=0.0d0
-       vz=0.0d0
-       Mx=0.0d0
-       My=0.0d0
-       Mz=0.0d0
-       Edy=0.0d0
-       Mdy=0.0d0
-       vortex=0.0d0
-       test_torque=0.0d0
-       ave_torque=0.0d0
-       l=l+1
-       h=h+1
+   call init_temp_measure(check,check1,check2,check3)
+   qeuler=0.0d0
+   q_plus=0.0d0
+   q_moins=0.0d0
+   vx=0.0d0
+   vy=0.0d0
+   vz=0.0d0
+   Mx=0.0d0
+   My=0.0d0
+   Mz=0.0d0
+   Edy=0.0d0
+   Mdy=0.0d0
+   vortex=0.0d0
+   test_torque=0.0d0
+   ave_torque=0.0d0
+   l=l+1
+   h=h+1
+   BT=0.0d0
+   Bini=0.0d0
+   D_mode=0.0d0
+   Mdy=0.0d0
 
-       do iomp=1,N_cell
-          BT_point(iomp)%w=0.0d0
-       enddo
-
-
-!       if (((j.lt.ti).or.(j.gt.tf)).and.(marche)) then
-!        storque=0.0d0
-!        elseif (((j.gt.ti).and.(j.lt.tf)).and.(marche)) then
-!        storque=stmtorquebp
-!       endif
-
-!       kT=(118.0d0/(1+(real(j)*timestep_int-10.0d0)**2/2.9d0)+250.0d0)/650.0d0*60.0d0
-!       if (j.lt.1538) then
-!          kt1=250.0d0+300.0d0*exp(-(real(j)*timestep_int/1000.0d0-1.5)**2/0.5)
-!       else
-!          kt1=100.0d0+400.0d0/log(real(j)*timestep_int/1000.0d0+0.9)
-!       endif
-!
-!       kt=kt1/650.0d0*28.0d0*k_b
-
-       call update_EM_fields(real_time,kt,h_int,check)
-
-
-       if ((h.gt.htimes).and.(hsweep).and.(norm((H_int-Hfin)).gt.1.0d-6).and. &
-          (j.gt.hstart)) then
-        H_int=H_int+hstep
-        h=1
-#ifdef CPP_MPI
-        if (irank.eq.0) write(6,'(a,2x,3f8.4)') 'applied field', (H_int(i),i=1,3)
-#else
-        write(6,'(a,2x,3f8.4)') 'applied field', (H_int(i),i=1,3)
-#endif
-       endif
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-!     FIRST LOOP
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   call update_EM_fields(real_time,kt,h_int,check)
 
 #ifdef CPP_OPENMP
 !$OMP parallel private(iomp,Beff) default(shared) reduction(+:check1,check2,check3)
 #endif
-test_torque=0.0d0
+  test_torque=0.0d0
+  dt=get_dt_LLG(timestep_int,damping)/real(N_loop)
 
-do iomp=1,N_cell
+  do iomp=1,N_cell
 
-! different integration types
-!-----------------------------------------------
-! Euler integration scheme
-!-----------------------------------------------
-      select case (integtype)
-       case (1)
+     call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp))
 
-       call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column_1(iomp),h_int,B_line_1(iomp))
+     if (i_temperature) call get_temperature_field(mode_temp(iomp)%w(1),damping,mode_magnetic(iomp,1)%w,BT_mag(iomp)%w,D_T_mag(iomp)%w,size(mode_magnetic(iomp,1)%w))
 
-       if (kt.gt.1.0d-10) call calculate_BTeff(stmtemp,kt,BT_point(iomp)%w)
+     if (i_magnetic) D_mode_mag(iomp)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp,1)%w,size(mode_magnetic(iomp,1)%w))
 
-!
-!-----------------------------------------------
-! Heun integration scheme
-!-----------------------------------------------
-       case (3)
+  enddo
 
-       call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column_1(iomp),h_int,B_line_1(iomp))
+  do iomp=1,N_cell
 
-       if (kt.gt.1.0d-10) call calculate_BTeff(stmtemp,kt,BT_point(iomp)%w)
+     all_mode_2(iomp)%w=get_integrator_field(all_mode_1(iomp)%w,D_mode(:,iomp),D_T(:,iomp),dt,mag_lattice%dim_mode)
 
-!
-!-----------------------------------------------
-! SIA and IMP integration scheme
-!-----------------------------------------------
-!       case (2)
-!       call calculate_Beff(iomp,Beff,spin1,h_int,Hamiltonian)
-!
-!        spin2(iomp)%w=(integrate(timestep_int,spin1(:,i_x,i_y,i_z,i_m),Beff,kt,damping &
-!     & ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)+ &
-!     & spinini(:,i_x,i_y,i_z,i_m))/2.0d0
+  enddo
 
-!
-!-----------------------------------------------
-! SIA and IMP integration scheme
-!-----------------------------------------------
-!       case (4)
-!       call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
+if (N_loop.ge.2) then
+  dt=multiply(dt)
+  do iomp=1,N_cell
 
-!        spinafter(:,i_x,i_y,i_z,i_m)=(integrate(timestep_int,spin(4:6,i_x,i_y,i_z,i_m),Beff,kt,damping &
-!     & ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)+ &
-!     &  spinini(:,i_x,i_y,i_z,i_m))/2.0d0
+     call calculate_Beff(Bini(:,iomp),mode_B_column_2(iomp),B_line_2(iomp))
 
-!
-!-----------------------------------------------
-! SIB without temperature and with error control
-!-----------------------------------------------
-       case (6)
-        call calculate_Beff(iomp,B_point(iomp)%w,mode_B_column_1(iomp),h_int,B_line_1(iomp))
+     if (i_magnetic) D_mode_mag(iomp)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp,2)%w,size(mode_magnetic(iomp,2)%w))
 
-!
-!-----------------------------------------------
-! other cases
-!-----------------------------------------------
-      case default
+  enddo
 
-        stop 'not implemented'
+  do iomp=1,N_cell
 
-      end select
-
-enddo
-
-
-do iomp=1,N_cell
-
-! different integration types
-!-----------------------------------------------
-! Euler integration scheme
-!-----------------------------------------------
-      select case (integtype)
-       case (1)
-
-        spin2(iomp)%w=simple(timestep_int,B_point(iomp)%w(1:3),BT_point(iomp)%w(1:3),damping,spin1(iomp)%w(1:3))
+     all_mode_2(iomp)%w=get_integrator_field(all_mode_1(iomp)%w,D_mode(:,iomp),D_T(:,iomp),dt,mag_lattice%dim_mode)
 
 ! the temperature is checked with 1 temperature step before
 !!! check temperature
-        call update_temp_measure(check1,check2,spin2(iomp)%w,B_point(iomp)%w)
-        if (norm_cross(spin2(iomp)%w,B_point(iomp)%w,1,mag_lattice%dim_mode).gt.test_torque) test_torque=norm_cross(spin2(iomp)%w,B_point(iomp)%w,1,mag_lattice%dim_mode)
-
+     call update_temp_measure(check1,check2,all_mode_2(iomp)%w,Bini(:,iomp))
+     if (norm_cross(all_mode_2(iomp)%w,Bini(:,iomp),1,mag_lattice%dim_mode).gt.test_torque) test_torque=norm_cross(all_mode_2(iomp)%w,Bini(:,iomp),1,mag_lattice%dim_mode)
 !!! end check
 
-!-----------------------------------------------
-! Heun integration scheme
-!-----------------------------------------------
-       case (3)
-
-        spin2(iomp)%w=simple(timestep_int,B_point(iomp)%w(1:3),BT_point(iomp)%w(1:3),damping,spin1(iomp)%w(1:3))
-
-
-!-----------------------------------------------
-! SIA and IMP integration scheme
-!-----------------------------------------------
-!       case (2)
-!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
-!
-!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep_int,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
-!     &   ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
-!
-!
-!-----------------------------------------------
-! SIA and IMP integration scheme
-!-----------------------------------------------
-!       case (4)
-!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
-!
-!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep_int,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
-!     & ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
-!
-!-----------------------------------------------
-! SIB without temperature
-!-----------------------------------------------
-       case (6)
-
-        spin2(iomp)%w=(integrate_SIB_NC_ohneT(timestep_int,B_point(iomp)%w,BT_point(iomp)%w,damping,spin1(iomp)%w)+spin1(iomp)%w)/2.0d0
-
-       case default
-        stop 'not implemented'
-       end select
-
-enddo
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-!     SECOND LOOP
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-do iomp=1,N_cell
-
-
-! different integration types
-!-----------------------------------------------
-! Euler integration scheme
-!-----------------------------------------------
-     select case (integtype)
-      case (1)
-
-      exit
-
-!-----------------------------------------------
-! Heun integration scheme
-!-----------------------------------------------
-      case (3)
-
-       call calculate_Beff(iomp,B,mode_B_column_2(iomp),h_int,B_line_2(iomp))
-
-       B_point(iomp)%w=(B+B_point(iomp)%w)/2.0d0
-
-!-----------------------------------------------
-! SIB without temperature
-!-----------------------------------------------
-       case (6)
-
-        call calculate_Beff(iomp,B,mode_B_column_2(iomp),h_int,B_line_2(iomp))
-
-      case default
-        stop 'not implemented'
-     end select
-
-enddo
-
-
-do iomp=1,N_cell
-
-! different integration types
-!-----------------------------------------------
-! Euler integration scheme
-!-----------------------------------------------
-     select case (integtype)
-      case (1)
-
-      exit
-
-!-----------------------------------------------
-! Heun integration scheme
-!-----------------------------------------------
-       case (3)
-
-         spin2(iomp)%w=simple(timestep_int,B_point(iomp)%w(1:3),BT_point(iomp)%w(1:3),damping,spin1(iomp)%w(1:3))
-
-!-----------------------------------------------
-! SIA and IMP integration scheme
-!-----------------------------------------------
-!       case (2)
-!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
-!
-!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep_int,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
-!     &   ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
-!
-!
-!-----------------------------------------------
-! SIA and IMP integration scheme
-!-----------------------------------------------
-!       case (4)
-!        call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
-!
-!        spinafter(:,i_x,i_y,i_z,i_m)=integrate(timestep_int,spinini(1:3,i_x,i_y,i_z,i_m),Beff,kt,damping &
-!     & ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,check,Ipol,i_x,i_y,i_z,i_m,spin)
-!
-!-----------------------------------------------
-! SIB without temperature
-!-----------------------------------------------
-       case (6)
-
-        spin2(iomp)%w=integrate_SIB_NC_ohneT(timestep_int,B_point(iomp)%w,BT_point(iomp)%w,damping,spin1(iomp)%w)
-
-       case default
-        stop 'not implemented'
-       end select
-
-
-! the temperature is checked with 1 temperature step before
-!!! check temperature
-    call update_temp_measure(check1,check2,spin2(iomp)%w,B_point(iomp)%w)
-    if (norm_cross(spin2(iomp)%w,B_point(iomp)%w,1,mag_lattice%dim_mode).gt.test_torque) test_torque=norm_cross(spin2(iomp)%w,B_point(iomp)%w,1,mag_lattice%dim_mode)
-!!! end check
-
-enddo
-
+  enddo
+endif
 
 #ifdef CPP_OPENMP
 !$OMP end parallel
@@ -547,7 +396,7 @@ if (j.eq.1) check3=test_torque
 !   call copy_lattice(spin,spinafter)
 !endif
 #else
-call copy_lattice(spin2,spin1)
+call copy_lattice(all_mode_2,all_mode_1)
 #endif
 
 ! calculate energy
@@ -560,9 +409,9 @@ do iomp=1,N_cell
     call local_energy_pointer(Et,iomp,mode_E_column(iomp),E_line(iomp))
 
     Edy=Edy+Et
-    Mx=Mx+Spin1(iomp)%w(1)
-    My=My+Spin1(iomp)%w(2)
-    Mz=Mz+Spin1(iomp)%w(3)
+    Mdy(1)=Mdy(1)+mode_magnetic(iomp,1)%w(1)
+    Mdy(2)=Mdy(2)+mode_magnetic(iomp,1)%w(2)
+    Mdy(3)=Mdy(3)+mode_magnetic(iomp,1)%w(3)
 
     dumy=sd_charge(iomp)
 
@@ -578,8 +427,7 @@ enddo
 #ifdef CPP_OPENMP
 !$OMP end parallel do
 #endif
-      Mdy=(/Mx,My,Mz/)
-      vortex=(/vx,vy,vz/)/3.0d0/dsqrt(3.0d0)
+      vortex=(/vx,vy,vz/)/3.0d0/sqrt(3.0d0)
 
 #ifdef CPP_MPI
        trans(1)=Edy
@@ -614,18 +462,18 @@ if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Ed
      &   kT/k_B,(security(i),i=1,2),H_int
 
 if ((io_simu%io_Energy_Distrib).and.((mod(j-1,gra_freq).eq.0))) then
-         call get_Energy_distrib(j/gra_freq,spin1,h_int)
+         call get_Energy_distrib(j/gra_freq,all_mode_1,h_int)
       endif
 
 if ((gra_log).and.(mod(j-1,gra_freq).eq.0)) then
-         call CreateSpinFile(j/gra_freq,spin1)
-         call WriteSpinAndCorrFile(j/gra_freq,spin1,'SpinSTM_')
+         call CreateSpinFile(j/gra_freq,all_mode_1)
+         call WriteSpinAndCorrFile(j/gra_freq,all_mode_1,'SpinSTM_')
          write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',j/gra_freq
          write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
       endif
 
 if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
-         call WriteSpinAndCorrFile(j/gra_freq,BT_point,'Stocha-field_')
+         call WriteSpinAndCorrFile(j/gra_freq,BT,'Stocha-field_')
          write(6,'(a,I10)')'wrote Spin configuration and povray file number',j/gra_freq
       endif
 
@@ -666,7 +514,7 @@ if (mod(j-1,Efreq).eq.0) write(8,'(I10,3x,3(E20.12E3,3x))') j,Edy,test_torque,av
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! update timestep
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call update_time(timestep_int,B_point,BT_point,damping)
+call update_time(timestep_int,Bini,BT,damping)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!! end of a timestep

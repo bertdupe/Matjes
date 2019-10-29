@@ -6,7 +6,6 @@ module m_randist
 
 contains
 real(kind=8) function gaussianran(kt)
-use m_dynamic
 implicit none
 real(kind=8), intent(in) :: kt
 real(kind=8) :: Choice1, Choice2
@@ -26,22 +25,21 @@ gaussianran=dsqrt(2.0d0*kT)*Choice1*dsqrt(-dlog(Choice1**2+Choice2**2)/(Choice1*
 !         Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
 end function
 
-      real(kind=8) function wiener(state)
-      use m_dynamic, only : timestep
-      use mtprng
-      implicit none
-      type(mtprng_state), intent(inout) :: state
+real(kind=8) function wiener(state)
+use mtprng
+implicit none
+type(mtprng_state), intent(inout) :: state
 !dummy
-      real(kind=8) :: Choice
+real(kind=8) :: Choice
 
 #ifdef CPP_MRG
-      Choice=mtprng_rand_real1(state)
+Choice=mtprng_rand_real1(state)
 #else
-      CALL RANDOM_NUMBER(Choice)
+CALL RANDOM_NUMBER(Choice)
 #endif
 
-      wiener=sqrt(timestep)*(Choice*2.0d0-1.0d0)
+wiener=(Choice*2.0d0-1.0d0)
 
-      end function wiener
+end function wiener
 
 end module m_randist

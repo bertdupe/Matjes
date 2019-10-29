@@ -1,8 +1,10 @@
 module m_internal_fields_commons
-use m_derived_types, only : operator_real,Coeff_Ham,point_shell_Operator,vec_point,point_shell_mode
+use m_derived_types, only : operator_real,shell_Ham,point_shell_Operator,vec_point,point_shell_mode
 use m_operator_pointer_utils
 ! coefficients of the internal magnetic field
-type(Coeff_Ham),public,protected,target,save :: B_int
+type(shell_Ham), public, protected, target, save, allocatable, dimension(:) :: B_int
+!type(shell_Ham), public, protected, target, save, allocatable, dimension(:) :: total_hamiltonian
+
 ! total effective field tensor
 type(operator_real),public,protected,save :: B_total
 
@@ -26,7 +28,7 @@ contains
 
 subroutine associate_internal_Beff(my_lattice,tableNN,indexNN)
 use m_derived_types, only : Coeff_Ham,lattice
-use m_energy_commons, only : energy,Hamiltonian
+use m_energy_commons, only : energy,total_hamiltonian
 use m_constants, only : identity
 use m_get_position
 implicit none
@@ -36,7 +38,7 @@ integer, intent(in) :: indexNN(:)
 ! internal
 !type(operator_real),save :: energy
 ! slope of the sums
-integer :: i,j,N_coeff_DMI,N_all_vois,N_all_shell,N_coeff_ani,N_coeff_Exch,l,size_energy(2)
+integer :: i,j,N_coeff_DMI,N_all_vois,N_all_shell,N_coeff_ani,N_coeff_Exch,size_energy(2)
 integer :: Nl,Nc,dim_ham
 
 Nl=energy%nline
@@ -44,62 +46,28 @@ Nc=energy%ncolumn
 
 !Hamiltonian%total_shell(i)%atom(l)%H(2,1)
 ! allocate the variables
-N_all_shell=size(Hamiltonian%total_shell)
+N_all_shell=size(total_hamiltonian)
 dim_ham=my_lattice%dim_mode
 
-allocate(B_int%total_shell(N_all_shell))
+allocate(B_int(N_all_shell))
 do i=1,N_all_shell
-   N_all_vois=size(Hamiltonian%total_shell(i)%atom)
-   allocate(B_int%total_shell(i)%atom(N_all_vois))
+   N_all_vois=size(total_hamiltonian(i)%atom)
+   allocate(B_int(i)%atom(N_all_vois))
    do j=1,N_all_vois
-      allocate(B_int%total_shell(i)%atom(j)%H(dim_ham,dim_ham))
-      B_int%total_shell(i)%atom(j)%H=0.0d0
+      allocate(B_int(i)%atom(j)%H(dim_ham,dim_ham))
+      B_int(i)%atom(j)%H=0.0d0
    enddo
 enddo
 
-N_coeff_Exch=size(Hamiltonian%exchange,3)
-allocate(B_int%exchange(dim_ham,dim_ham,N_coeff_Exch))
-B_int%exchange=-2.0d0*Hamiltonian%exchange
+do i=1,N_all_shell
 
-N_coeff_ani=size(Hamiltonian%ani,3)
-if (N_coeff_ani.eq.0) N_coeff_ani=1
-allocate(B_int%ani(dim_ham,dim_ham,N_coeff_ani))
-B_int%ani=-2.0d0*Hamiltonian%ani
+   N_all_vois=size(total_hamiltonian(i)%atom)
+   do j=1,N_all_vois
 
-N_coeff_DMI=size(Hamiltonian%DMI,3)
-allocate(B_int%DMI(dim_ham,dim_ham,N_coeff_DMI))
+      B_int(i)%atom(j)%H=-2.0d0*total_hamiltonian(i)%atom(j)%H
 
-do i=1,N_coeff_DMI
-  B_int%DMI=-2.0d0*Hamiltonian%DMI
-enddo
+   enddo
 
-! in case I want to put the magnetic field there
-allocate(B_int%Zeeman(dim_ham,dim_ham))
-B_int%Zeeman=-Hamiltonian%Zeeman
-!B_int%total(:,:,1)=B_int%total(:,:,1)+B_int%Zeeman
-!!!!!
-
-if (N_coeff_ani.ne.0) B_int%total_shell(1)%atom(1)%H=B_int%total_shell(1)%atom(1)%H+B_int%ani(:,:,1)+B_int%Zeeman
-
-do i=2,N_all_shell
-
-   if (i-1.le.N_coeff_DMI) then
-
-      if ( .not.all( abs(Hamiltonian%DMI(:,:,i-1)).lt.1.0d-8 ) ) then
-
-         do l=1,indexNN(i-1)
-
-            B_int%total_shell(i)%atom(l)%H=-2.0d0*Hamiltonian%total_shell(i)%atom(l)%H
-
-         enddo
-      endif
-   else
-
-      if (i-1.le.N_coeff_Exch) B_int%total_shell(i)%atom(1)%H=B_int%total_shell(i)%atom(1)%H+B_int%exchange(:,:,i-1)
-
-   endif
-
-   if (i.le.N_coeff_ani) B_int%total_shell(i)%atom(1)%H=B_int%total_shell(i)%atom(1)%H+B_int%ani(:,:,i)
 enddo
 
 size_energy=shape(energy%value)
@@ -112,7 +80,7 @@ B_total%line=0
 ! first nullify all pointer
 call dissociate(B_total%value,size_energy(1),size_energy(2))
 
-call associate_pointer(B_total,B_int%total_shell,my_lattice,tableNN,indexNN)
+call associate_pointer(B_total,B_int,my_lattice,tableNN,indexNN)
 
 #ifdef CPP_DEBUG
 do i=1,N_all_shell

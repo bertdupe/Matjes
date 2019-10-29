@@ -26,9 +26,10 @@ end function
 function string_plus_string_to_string(str1,str2)
 implicit none
 character(len=*), intent(in) :: str1,str2
-character(len=120) :: string_plus_string_to_string
+character(len=len_trim(str1)+len_trim(str2)) :: string_plus_string_to_string
 ! internal
 integer :: l1,l2,l_tot
+character(len=30) :: form
 
 l1=len_trim(str1)
 l2=len_trim(str2)
@@ -39,7 +40,8 @@ if (l_tot.gt.120) then
    stop
 endif
 
-write(string_plus_string_to_string,'(120a)') str1(1:l1),str2(1:l2)
+write(form,'(a,I4,a)') '(',l_tot,'a)'
+write(string_plus_string_to_string,form) str1(1:l1),str2(1:l2)
 
 end function
 
@@ -52,6 +54,7 @@ character(len=30) :: string_plus_int_to_string
 ! internal
 integer :: l1,l2,l_tot
 character(len=10) :: str2
+character(len=30) :: form
 
 l1=len_trim(str1)
 str2=int_to_str(i)
@@ -63,7 +66,8 @@ if (l_tot.gt.30) then
    stop
 endif
 
-write(string_plus_int_to_string,'(30a)') str1(1:l1),str2(1:l2)
+write(form,'(a,I4,a)') '(',l_tot,'a)'
+write(string_plus_int_to_string,form) str1(1:l1),str2(1:l2)
 
 end function
 
@@ -76,6 +80,7 @@ character(len=30) :: string_plus_int_plus_string_to_string
 ! internal
 integer :: l1,l2,l_tot,l3
 character(len=10) :: str3
+character(len=30) :: form
 
 l1=len_trim(str1)
 str3=int_to_str(i)
@@ -88,7 +93,8 @@ if (l_tot.gt.30) then
    stop
 endif
 
-write(string_plus_int_plus_string_to_string,'(30a)') str1(1:l1),str3(1:l3),str2(1:l2)
+write(form,'(a,I4,a)') '(',l_tot,'a)'
+write(string_plus_int_plus_string_to_string,form) str1(1:l1),str3(1:l3),str2(1:l2)
 
 end function
 

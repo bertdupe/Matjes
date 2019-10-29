@@ -157,7 +157,7 @@ call get_Hamiltonians('input',my_motif%atomic(1)%moment,my_lattice%dim_mode)
 !      endif
 !#endif
 
-N_Nneigh=get_number_shell(Hamiltonian)
+N_Nneigh=get_number_shell()
 
 allocate(indexNN(N_Nneigh,phase),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
@@ -256,56 +256,58 @@ if (i_usestruct) call user_def_struct(masque,pos, &
 ! hard part: setup DM interaction
 ! I send an example neighbor table to setup the DM
 
-if (Hamiltonian%i_DM) then
-   call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
+! to change
+!if (Hamiltonian%i_DM) then
+call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
 
-       i=size(Hamiltonian%DMI,3)
-       write(6,'(I4,a)') i,' DMI found'
+!   i=size(Hamiltonian%DMI,3)
+   i=1
+   write(6,'(I4,a)') i,' DMI found'
 
-       write(*,*) 'number of first nearest neighbor', sum(indexNN(1:i,1))
-       allocate(DM_vector(sum(indexNN(1:i,1)),3,phase))
+   write(*,*) 'number of first nearest neighbor', sum(indexNN(1:i,1))
+   allocate(DM_vector(sum(indexNN(1:i,1)),3,phase))
 
-       DM_vector=0.0d0
-       call setup_DM_vector(indexNN,i,my_lattice,my_motif,DM_vector)
+   DM_vector=0.0d0
+   call setup_DM_vector(indexNN,i,my_lattice,my_motif,DM_vector)
 
-       call user_info(6,time,'done',.true.)
+   call user_info(6,time,'done',.true.)
 
 ! the DM and the neighbors have to turn in the same direction. therefore the matrix of the neighbors
 ! have to be rearranged
-       call user_info(6,time,'Re-aranging the position of the DM vectors',.false.)
+    call user_info(6,time,'Re-aranging the position of the DM vectors',.false.)
 
-       if (size(my_lattice%world).eq.1) then
+    if (size(my_lattice%world).eq.1) then
 
-       elseif (size(my_lattice%world).eq.2) then
-        if (phase.eq.1) then
+    elseif (size(my_lattice%world).eq.2) then
+      if (phase.eq.1) then
          call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,1,:),indexNN(:,1),my_lattice%dim_lat,my_lattice%areal,masque(:,:,:,1))
 
-         else
+      else
          call arrange_neigh(DM_vector,tableNN(:,:,:,:,1,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
 
-        endif
-       else
-        if (phase.eq.2) then
+      endif
+    else
+      if (phase.eq.2) then
          call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,:,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
 
-        endif
-       endif
+      endif
+    endif
 
-       call user_info(6,time,'done',.true.)
-else
-       allocate(DM_vector(1,1,1))
-       DM_vector=0.0d0
-endif
+call user_info(6,time,'done',.true.)
+!else
+!       allocate(DM_vector(1,1,1))
+!       DM_vector=0.0d0
+!endif
 
-if (Hamiltonian%i_four) then
-     call user_info(6,time,'Calculating the position of the corners of the unit cell for the 4-spin',.false.)
-
-       call givemecorners(my_lattice%areal,abs(order_zaxis(my_lattice%areal)))
-
-     call user_info(6,time,'done',.true.)
-else
+!if (Hamiltonian%i_four) then
+!     call user_info(6,time,'Calculating the position of the corners of the unit cell for the 4-spin',.false.)
+!
+!       call givemecorners(my_lattice%areal,abs(order_zaxis(my_lattice%areal)))
+!
+!     call user_info(6,time,'done',.true.)
+!else
        allocate(corners(1,1))
-endif
+!endif
 
 ! setup the energy operator
 call user_info(6,time,'dealing with the z-direction',.false.)

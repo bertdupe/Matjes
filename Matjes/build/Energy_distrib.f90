@@ -16,7 +16,7 @@ type(operator_distrib) :: DMI
 ! anisotropy energy tensor
 type(operator_distrib) :: anisotropy
 ! Zeeman energy tensor
-type(operator_real) :: Zeeman
+type(operator_distrib) :: Zeeman
 
 !type(point_shell_Operator), allocatable, dimension(:) :: E_line
 !type(point_shell_mode), allocatable, dimension(:) :: mode_E_column
@@ -36,39 +36,42 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine init_Energy_distrib(my_lattice,tableNN,indexNN)
-use m_energy_commons, only : Hamiltonian
+use m_energy_commons, only : Hamiltonians
 implicit none
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
 integer, intent(in) :: indexNN(:)
 ! input
-integer :: size_ham(3),Nspin,all_size(4)
+integer :: size_ham,Nspin,all_size(4)
 ! slope variables
-integer :: i,j
+integer :: i,j,k
 
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
 
+do k=1,size(Hamiltonians)
 !!!!!!!!!!!!!!!
 !
 ! Exchange energy distribution
 !
 !!!!!!!!!!!!!!!
-size_ham=shape(Hamiltonian%exchange)
-allocate(exchange%operators(size_ham(3)))
+   if ('exchange'.eq.trim(Hamiltonians(k)%name)) then
+     size_ham=size(Hamiltonians(k)%ham)
+     allocate(exchange%operators(size_ham))
 
-call associate_shell_ham(exchange%operators,size_ham(3),Hamiltonian%exchange,my_lattice,tableNN,indexNN)
+     call associate_shell_ham(exchange%operators,size_ham,Hamiltonians(k)%ham,my_lattice,tableNN,indexNN)
 
 !!!!! taking care of the line of the spin matric and column of the energy
-allocate(exchange%E_line(Nspin,size_ham(3)),exchange%mode_E_column(Nspin,size_ham(3)))
+     allocate(exchange%E_line(Nspin,size_ham),exchange%mode_E_column(Nspin,size_ham))
 
-do i=1,size_ham(3)
-   do j=1,Nspin
-      allocate(exchange%E_line(j,i)%shell(indexNN(i)),exchange%mode_E_column(j,i)%shell(indexNN(i)))
-   enddo
-   call dissociate(exchange%E_line(:,i),indexNN(i),Nspin)
-   call dissociate(exchange%mode_E_column(:,i),indexNN(i),Nspin)
-enddo
+     do i=1,size_ham
+       do j=1,Nspin
+         allocate(exchange%E_line(j,i)%shell(indexNN(i)),exchange%mode_E_column(j,i)%shell(indexNN(i)))
+       enddo
+       call dissociate(exchange%E_line(:,i),indexNN(i),Nspin)
+       call dissociate(exchange%mode_E_column(:,i),indexNN(i),Nspin)
+     enddo
+   endif
 
 !!!!!!!!!!!!!!!
 !
@@ -76,41 +79,70 @@ enddo
 !
 !!!!!!!!!!!!!!!
 
-size_ham=shape(Hamiltonian%DMI)
-allocate(DMI%operators(size_ham(3)))
-
-call associate_shell_ham(DMI%operators(:),size_ham(3),Hamiltonian%DMI,my_lattice,tableNN,indexNN)
-
-!!!!! taking care of the line of the spin matric and column of the energy
-allocate(DMI%E_line(Nspin,size_ham(3)),DMI%mode_E_column(Nspin,size_ham(3)))
-
-do i=1,size_ham(3)
-   do j=1,Nspin
-      allocate(DMI%E_line(j,i)%shell(indexNN(i)),DMI%mode_E_column(j,i)%shell(indexNN(i)))
-   enddo
-   call dissociate(DMI%E_line(:,i),indexNN(i),Nspin)
-   call dissociate(DMI%mode_E_column(:,i),indexNN(i),Nspin)
-enddo
+!size_ham=shape(Hamiltonian%DMI)
+!allocate(DMI%operators(size_ham(3)))
+!
+!call associate_shell_ham(DMI%operators(:),size_ham(3),Hamiltonian%DMI,my_lattice,tableNN,indexNN)
+!
+!!!!!! taking care of the line of the spin matric and column of the energy
+!allocate(DMI%E_line(Nspin,size_ham(3)),DMI%mode_E_column(Nspin,size_ham(3)))
+!
+!do i=1,size_ham(3)
+!   do j=1,Nspin
+!      allocate(DMI%E_line(j,i)%shell(indexNN(i)),DMI%mode_E_column(j,i)%shell(indexNN(i)))
+!   enddo
+!   call dissociate(DMI%E_line(:,i),indexNN(i),Nspin)
+!   call dissociate(DMI%mode_E_column(:,i),indexNN(i),Nspin)
+!enddo
 
 !!!!!!!!!!!!!!!
 !
 ! anisotropy energy distribution
 !
 !!!!!!!!!!!!!!!
-allocate(anisotropy%operators(size_ham(3)))
+   if ('anisotropy'.eq.trim(Hamiltonians(k)%name)) then
+     size_ham=size(Hamiltonians(k)%ham)
+     allocate(anisotropy%operators(size_ham))
 
-call associate_shell_ham(anisotropy%operators(:),size_ham(3),Hamiltonian%ani,my_lattice,tableNN,indexNN)
+     call associate_shell_ham(anisotropy%operators(:),size_ham,Hamiltonians(k)%ham,my_lattice,tableNN,indexNN)
 
 !!!!! taking care of the line of the spin matric and column of the energy
-allocate(anisotropy%E_line(Nspin,size_ham(3)),anisotropy%mode_E_column(Nspin,size_ham(3)))
+     allocate(anisotropy%E_line(Nspin,size_ham),anisotropy%mode_E_column(Nspin,size_ham))
 
-do i=1,size_ham(3)
-   do j=1,Nspin
-      allocate(anisotropy%E_line(j,i)%shell(indexNN(i)),anisotropy%mode_E_column(j,i)%shell(indexNN(i)))
-   enddo
-   call dissociate(anisotropy%E_line(:,i),indexNN(i),Nspin)
-   call dissociate(anisotropy%mode_E_column(:,i),indexNN(i),Nspin)
-enddo
+     do i=1,size_ham
+       do j=1,Nspin
+         allocate(anisotropy%E_line(j,i)%shell(indexNN(i)),anisotropy%mode_E_column(j,i)%shell(indexNN(i)))
+       enddo
+       call dissociate(anisotropy%E_line(:,i),indexNN(i),Nspin)
+       call dissociate(anisotropy%mode_E_column(:,i),indexNN(i),Nspin)
+     enddo
+   endif
+
+!!!!!!!!!!!!!!!
+!
+! Zeeman energy distribution
+!
+!!!!!!!!!!!!!!!
+
+   if ('zeeman'.eq.trim(Hamiltonians(k)%name)) then
+     size_ham=size(Hamiltonians(k)%ham)
+     allocate(zeeman%operators(size_ham))
+
+     call associate_shell_ham(zeeman%operators(:),size_ham,Hamiltonians(k)%ham,my_lattice,tableNN,indexNN)
+
+!!!!! taking care of the line of the spin matric and column of the energy
+     allocate(zeeman%E_line(Nspin,size_ham),zeeman%mode_E_column(Nspin,size_ham))
+
+     do i=1,size_ham
+       do j=1,Nspin
+         allocate(zeeman%E_line(j,i)%shell(indexNN(i)),zeeman%mode_E_column(j,i)%shell(indexNN(i)))
+       enddo
+       call dissociate(zeeman%E_line(:,i),indexNN(i),Nspin)
+       call dissociate(zeeman%mode_E_column(:,i),indexNN(i),Nspin)
+     enddo
+   endif
+
+enddo  ! and of the do loop for the energy distrib
 
 end subroutine init_Energy_distrib
 
@@ -123,7 +155,7 @@ end subroutine init_Energy_distrib
 subroutine associate_shell_ham_1D(ham_point,size_ham,ham_target,my_lattice,tableNN,indexNN)
 implicit none
 type(operator_real),intent(inout) :: ham_point(size_ham)
-real(kind=8),target,intent(in) :: ham_target(:,:,:)
+type(Op_real),target,intent(in) :: ham_target(:)
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
 integer, intent(in) :: indexNN(:)
@@ -149,7 +181,7 @@ do i=1,size_ham
 
    call dissociate(ham_point(i),Nspin,n_atom_shell)
 
-   call associate_pointer(ham_point(i),ham_target(:,:,i),my_lattice,tableNN,indexNN(i),avant)
+!   call associate_pointer(ham_point(i),ham_target,my_lattice,tableNN,indexNN(i),avant)
 
    avant=avant+indexNN(i)
 

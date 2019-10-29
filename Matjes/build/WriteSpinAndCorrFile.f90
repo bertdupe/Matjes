@@ -9,6 +9,7 @@ use m_convert
        module procedure write_SD
        module procedure write_usernamed
        module procedure write_MC
+       module procedure write_general_2d
        module procedure write_general_5d
        module procedure write_general_4d
        module procedure write_general_end
@@ -99,6 +100,29 @@ END SUBROUTINE write_general_end
 ! ===============================================================
 
 ! ===============================================================
+! works only real matrix of rank 2
+SUBROUTINE write_general_2d(i_count,matrix,filename)
+use m_convert
+Implicit none
+real(kind=8), intent(in) :: matrix(:,:)
+integer, intent(in) :: i_count
+character(len=*), intent(in) :: filename
+!     Coordinates of the Spins
+integer :: io
+character(len=30) :: str
+
+str=convert(filename,i_count,'.dat')
+!     write Spinconfiguration in a file for STM-simulation
+
+io=open_file_write(str)
+
+call dump_config(io,matrix)
+
+call close_file(str,io)
+
+END SUBROUTINE write_general_2d
+
+! ===============================================================
 ! works only with matrices of rank 4
       SUBROUTINE write_general_4d(name_in,i_count,spin,shape_spin)
       Implicit none
@@ -112,15 +136,6 @@ END SUBROUTINE write_general_end
       Integer :: i_x,i_y,i_z,j_lat,i
 !     name of the file
       character(len=30) :: fname,toto,fcount
-
-!     In dependence on the number of files we
-!     calculate, how many temperature steps lies between
-!     to files
-!     We want badly to have a picture of Spins and Correlation
-!     at the lowest temperature. Nothing else is that important
-!     Therefore we need that add-values
-!      add_gra=mod(n_Tsteps,n_spingra)
-!      add_cor=mod(n_Tsteps,n_cor)
 
 !     write Spinconfiguration in a povray-file
       write(fname,'(I10)') i_count

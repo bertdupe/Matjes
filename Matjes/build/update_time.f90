@@ -6,7 +6,7 @@ logical :: i_update_time
 real(kind=8) :: discretization
 
 private
-public :: update_time,init_update_time
+public :: update_time,init_update_time,get_dt_LLG,multiply_2,multiply_1
 
 contains
 
@@ -38,13 +38,12 @@ end subroutine init_update_time
 ! update the time depending on the effective field
 !!!!!!!!!!!!!!!!!!!!!
 subroutine update_time(timestep,B,BT,damping)
-use m_derived_types
 use m_constants, only : hbar,pi
 use m_vector, only : norm
 implicit none
 real(kind=8), intent(inout) :: timestep
 real(kind=8), intent(in) :: damping
-type(vec_point),dimension(:),intent(in) :: B(:),BT(:)
+real(kind=8),dimension(:,:),intent(in) :: B,BT
 ! internal
 integer :: size_B,size_BT
 real(kind=8) :: max_B,dumy_B,dumy_BT,timestep_backup
@@ -53,15 +52,15 @@ integer :: i
 if (.not.i_update_time) return
 max_B=00.0d0
 dumy_BT=0.0d0
-size_B=size(B)
-size_BT=size(BT)
+size_B=size(B,2)
+size_BT=size(BT,2)
 timestep_backup=timestep
 
 if (size_B.ne.size_BT) stop 'error in update_time'
 
 do i=1,size_B
-   dumy_B=norm(B(i)%w)
-   dumy_BT=dumy_BT+norm(BT(i)%w)
+   dumy_B=norm(B(:,i))
+   dumy_BT=dumy_BT+norm(BT(:,i))
 
 !!!!!!!!!!!!!!!!!!!!!!!!
 ! this leads to too large time steps in case of laser pulses
@@ -82,5 +81,30 @@ endif
 !write(6,'(a,f8.4)') 'The new timestep is', timestep
 
 end subroutine update_time
+
+real(kind=8) function get_dt_LLG(timestep,damping)
+use m_constants, only : hbar
+implicit none
+real(kind=8) :: timestep,damping
+
+get_dt_LLG=timestep/hbar/(1.0d0+damping**2)
+
+end function
+
+real(kind=8) function multiply_1(dt)
+implicit none
+real(kind=8), intent(in) :: dt
+
+multiply_1=1.0d0*dt
+
+end function
+
+real(kind=8) function multiply_2(dt)
+implicit none
+real(kind=8), intent(in) :: dt
+
+multiply_2=2.0d0*dt
+
+end function
 
 end module m_update_time
