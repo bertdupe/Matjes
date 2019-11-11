@@ -9,7 +9,7 @@ OBJS =	zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o \
  MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o external_fields.o init_constant.o \
  create_lattice.o   fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o \
- qorienplot.o   CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o \
+ qorienplot.o   CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o av_sd.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o DeriveValue.o Relaxation.o topoplot.o \
  setup-simu.o arrange_neihg.o mapping.o indexation.o order_lattice.o user_def_struct.o qorien.o \
@@ -44,6 +44,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+shape_excitations.o: vector.o basic_types.o 
 zeeman.o: create_lattice.o symmetry_operators.o io-utils.o io_files_utils.o derived_types.o constant.o
 anisotropy_heisenberg.o: create_lattice.o symmetry_operators.o io-utils.o io_files_utils.o derived_types.o
 exchange_Heisenberg.o: create_lattice.o symmetry_operators.o io-utils.o io_files_utils.o derived_types.o
@@ -61,13 +62,13 @@ TPulse.o: constant.o io-utils.o
 init_random_config.o: derived_types.o init_random.o
 heavyside.o: constant.o basic_types.o
 rampe.o: constant.o basic_types.o 
-excitations.o: EMwave.o TPulse.o simu-parameters.o heavyside.o rampe.o derived_types.o io-utils.o io_files_utils.o
+excitations.o: shape_excitations.o EMwave.o TPulse.o simu-parameters.o heavyside.o rampe.o derived_types.o io-utils.o io_files_utils.o
 external_fields.o: create_lattice.o operator_pointer_utils.o derived_types.o get-position.o
 measure_temp.o: constant.o vector.o
 operator_pointer_utils.o: derived_types.o get-position.o
 topo_commons.o: vector.o get-position.o derived_types.o operator_pointer_utils.o
 internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
-energy_commons.o: convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
+energy_commons.o: setup_DM.o convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
 basic_types.o:
 pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o
@@ -127,7 +128,7 @@ MC_fft.o: vector.o constant.o rw_lattice.o create_lattice.o
 Table_dist.o: vector.o derived_types.o
 setup_neigh.o: rw_lattice.o create_lattice.o vector.o
 spstm.o: rw_lattice.o create_lattice.o vector.o
-setup_DM.o: vector.o derived_types.o Table_dist.o pointgrp.o
+setup_DM.o: sym_utils.o vector.o derived_types.o Table_dist.o pointgrp.o
 create_lattice.o: derived_types.o
 error.o:
 mapping.o: create_lattice.o inp_rw.o vector.o derived_types.o

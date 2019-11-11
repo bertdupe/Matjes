@@ -11,8 +11,27 @@ interface setup_DM
 end interface setup_DM
 
 private
-public :: setup_DM_vector
+public :: setup_DM_vector, get_number_DMI
 contains
+
+!
+! This is a bunch of subroutines that are absolutely horrible. The point is to calculate the DMI
+! Do not look into this unless you can not sleep at night or you wish to have a migraine
+!
+
+integer function get_number_DMI(fname)
+use m_io_files_utils
+use m_io_utils
+implicit none
+character(len=*) :: fname
+! internal variables
+integer :: io
+
+io=open_file_read(fname)
+get_number_DMI=count_variables(io,'DMI_',fname)
+call close_file(fname,io)
+
+end function
 
 subroutine setup_DM_vector(indexNN,i,my_lattice,my_motif,DM_vector)
 implicit none
@@ -116,7 +135,6 @@ call find_all_atom(pos_nonmag_atom_in_shell,R_non_mag(:,1)-R_mag(:,1),n_sym,symm
 
 ! for all magnetic atoms in the unit cell
 ! find the unique non-magnetic atom that verifies the Moriya rules
-
 l=1
 do i=1,n_at_mag_inshell
 

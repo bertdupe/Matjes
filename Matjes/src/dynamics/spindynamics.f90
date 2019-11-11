@@ -59,12 +59,12 @@ type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column
 real(kind=8) :: dum_norm,qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,stmtorquebp,check1,check2,Eold,check3,Et,dt
 real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
 real(kind=8) :: dumy(5),security(2),B(mag_lattice%dim_mode)
-real(kind=8) :: timestep_int,real_time,h_int(3),damping
+real(kind=8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
 real(kind=8) :: kt,ktini,ktfin,kt1
 real(kind=8) :: time
 integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq
 !! switch that controls the presence of magnetism, electric fields and magnetic fields
-logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield
+logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation
 ! parameter for the Heun integration scheme
 real(kind=8) :: maxh
 ! parameter for the rkky integration
@@ -264,13 +264,14 @@ Eold=100.0d0
 real_time=0.0d0
 Einitial=0.0d0
 h_int=ext_param%H_ext%value
+E_int=ext_param%E_ext%value
 said_it_once=.False.
 security=0.0d0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! part of the excitations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_excitations('input')
+call get_excitations('input',i_excitation)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! do we use the update timestep
@@ -327,7 +328,7 @@ do j=1,duration
    D_mode=0.0d0
    Mdy=0.0d0
 
-   call update_EM_fields(real_time,kt,h_int,check)
+   call update_ext_EM_fields(real_time,kt,h_int,E_int,check)
 
 #ifdef CPP_OPENMP
 !$OMP parallel private(iomp,Beff) default(shared) reduction(+:check1,check2,check3)
@@ -336,6 +337,14 @@ do j=1,duration
   dt=get_dt_LLG(timestep_int,damping)/real(N_loop)
 
   do iomp=1,N_cell
+
+     if (i_excitation) then
+        write(*,*) kt,h_int,E_int
+        if (i_Efield) call update_E_of_r(iomp,E_int,mode_Efield(iomp)%w)
+        if (i_Hfield) call update_H_of_r(iomp,H_int,mode_Hfield(iomp)%w)
+        if (i_temperature) call update_T_of_r(iomp,kt,mode_temp(iomp)%w)
+        stop 'toto'
+     endif
 
      call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp))
 

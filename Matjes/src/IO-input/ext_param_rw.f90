@@ -18,8 +18,8 @@ real(kind=8) :: kt
 
 io_input=open_file_read('input')
 
-call get_parameter(io_input,'input','H_ext',3,ext_param%h_ext%value)
-ext_param%h_ext%value=ext_param%h_ext%value*mu_B
+call get_parameter(io_input,'input','H_ext',3,ext_param%H_ext%value)
+
 call get_parameter(io_input,'input','E_ext',3,ext_param%E_ext%value)
 
 call get_parameter(io_input,'input','Tini',kt)

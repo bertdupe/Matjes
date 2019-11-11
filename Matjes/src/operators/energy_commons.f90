@@ -127,6 +127,7 @@ use m_derived_types, only : shell_Ham
 use m_vector, only : norm
 use m_io_utils
 use m_io_files_utils
+use m_setup_DM
 implicit none
 real(kind=8), intent(in) :: D(:,:,:)
 integer, intent(in) :: indexNN(:,:)
@@ -138,10 +139,10 @@ integer :: i,j,l,k
 ! position in the matrices for the DMI
 integer :: x_start,x_end,y_start,y_end
 ! old stuff
-integer :: N_tot_vec_shell,N_max_shell,N_max_nei,io_input
+integer :: N_tot_vec_shell,N_max_shell,N_max_nei,io_input,n_DMI,N_voisin_DMI
 integer :: dim_D(3)
-real(kind=8), allocatable :: ham_DMI_Nshell_local(:,:,:,:)
-real(kind=8), allocatable :: ham_EM_Nshell_local(:,:,:,:)
+type(shell_ham), allocatable, dimension(:) :: ham_DMI_Nshell_local
+type(shell_ham), allocatable, dimension(:) :: ham_EM_Nshell_local
 
 ! obtain the size of all matrices
 n_ham=size(Hamiltonians)
@@ -157,38 +158,83 @@ N_tot_vec_shell=size(indexNN(:,1),1)
 N_max_nei=maxval(indexNN(:,1),1)
 
 do i=1,n_ham
-  if ('exchange'.eq.trim(Hamiltonians(i)%name)) then
 
-    if (dim_D(1).eq.1) cycle      ! corresponds to the case when you have no DMI
+!
+! Exchange and DMI part part
+!
+
+  if ('exchange'.eq.trim(Hamiltonians(i)%name)) then
+    n_DMI=get_number_DMI('input')
     N_shell=size(Hamiltonians(i)%ham)
     n_ham_shell=sum(indexNN(1:N_shell,1))
     dim_ham=size(Hamiltonians(i)%ham(1)%op_loc,1)
 
     ! ham_DMI_Nshell_local( Hamiltonian column , Hamiltonian row , number of atom in shell i , shell i )
-    allocate(ham_DMI_Nshell_local(dim_ham,dim_ham,dim_D(1),1))
-    ham_DMI_Nshell_local=0.0d0
+
+    allocate(ham_DMI_Nshell_local(N_shell))
+
+    do j=1,size(ham_DMI_Nshell_local)
+       N_voisin_DMI=indexNN(j,1)
+       allocate(ham_DMI_Nshell_local(j)%atom(N_voisin_DMI))
+       do k=1,size(ham_DMI_Nshell_local(j)%atom)
+          allocate(ham_DMI_Nshell_local(j)%atom(k)%H(dim_ham,dim_ham))
+          ham_DMI_Nshell_local(j)%atom(k)%H=0.0d0
+       enddo
+    enddo
+
     call get_borders('magnetic',x_start,x_end,'magnetic',y_start,y_end,my_order_parameters)
 
     ! Hamiltonians(i)%ham is just the shell number. The number of atom in each shell is not taken into account here
     do j=1,size(Hamiltonians(i)%ham)
-      call convoluate_Op_SOC_vector(D(:,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_DMI_Nshell_local(:,:,:,j))
+      if (j.le.n_DMI) then
+         do k=1,size(ham_DMI_Nshell_local(j)%atom)
+            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_DMI_Nshell_local(j)%atom(k)%H(x_start:x_end,y_start:y_end))
+         enddo
+      else
+         do k=1,size(ham_DMI_Nshell_local(j)%atom)
+            ham_DMI_Nshell_local(j)%atom(k)%H=Hamiltonians(i)%ham(j)%op_loc
+         enddo
+      endif
+
     enddo
     ! The number of atom in the shell is then in ham_DMI_Nshell_local
 
   endif
 
+!
+! Magnetoelectric part
+!
   if ('magnetoelectric'.eq.trim(Hamiltonians(i)%name)) then
-    if (dim_D(1).eq.1) cycle      ! corresponds to the case when you have no DMI
+    n_DMI=get_number_EM_DMI('input')
     N_shell=size(Hamiltonians(i)%ham)
     n_ham_shell=sum(indexNN(1:N_shell,1))
     dim_ham=size(Hamiltonians(i)%ham(1)%op_loc,1)
 
-    allocate(ham_EM_Nshell_local(dim_ham,dim_ham,dim_D(1),1))
-    ham_EM_Nshell_local=0.0d0
+    allocate(ham_EM_Nshell_local(N_shell))
+
+    do j=1,size(ham_EM_Nshell_local)
+       N_voisin_DMI=indexNN(j,1)
+       allocate(ham_EM_Nshell_local(j)%atom(N_voisin_DMI))
+       do k=1,size(ham_EM_Nshell_local(j)%atom)
+          allocate(ham_EM_Nshell_local(j)%atom(k)%H(dim_ham,dim_ham))
+          ham_EM_Nshell_local(j)%atom(k)%H=0.0d0
+       enddo
+    enddo
+
     call get_borders('magnetic',x_start,x_end,'Efield',y_start,y_end,my_order_parameters)
 
+    ! Hamiltonians(i)%ham is just the shell number. The number of atom in each shell is not taken into account here
     do j=1,size(Hamiltonians(i)%ham)
-      call convoluate_Op_SOC_vector(D(:,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_EM_Nshell_local(:,:,:,j))
+      if (j.le.n_DMI) then
+         do k=1,size(ham_EM_Nshell_local(j)%atom)
+            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_EM_Nshell_local(j)%atom(k)%H(x_start:x_end,y_start:y_end))
+            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(y_start:y_end,x_start:x_end),ham_EM_Nshell_local(j)%atom(k)%H(y_start:y_end,x_start:x_end))
+         enddo
+      else
+         do k=1,size(ham_DMI_Nshell_local(j)%atom)
+            ham_EM_Nshell_local(j)%atom(k)%H=Hamiltonians(i)%ham(j)%op_loc
+         enddo
+      endif
     enddo
 
   endif
@@ -219,21 +265,18 @@ do i=1,n_ham
   if ('zeeman'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
   if ('anisotropy'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
 
-enddo
-
-do i=1,n_ham
   if ('exchange'.eq.trim(Hamiltonians(i)%name)) then
-    do j=1,N_tot_vec_shell
+    do j=1,size(ham_DMI_Nshell_local)
       do l=1,size(total_hamiltonian(j+1)%atom)
-        call add(total_hamiltonian(j+1)%atom(l)%H,ham_DMI_Nshell_local(:,:,l,j))
+        total_hamiltonian(j+1)%atom(l)%H=total_hamiltonian(j+1)%atom(l)%H+ham_DMI_Nshell_local(j)%atom(l)%H
       enddo
     enddo
   endif
 
   if ('magnetoelectric'.eq.trim(Hamiltonians(i)%name)) then
-    do j=1,N_tot_vec_shell
+    do j=1,size(ham_EM_Nshell_local)
       do l=1,size(total_hamiltonian(j+1)%atom)
-        call add(total_hamiltonian(j+1)%atom(l)%H,ham_EM_Nshell_local(:,:,l,j))
+        total_hamiltonian(j+1)%atom(l)%H=total_hamiltonian(j+1)%atom(l)%H+ham_EM_Nshell_local(j)%atom(l)%H
       enddo
     enddo
   endif
@@ -258,7 +301,7 @@ do i=1,N_max_shell+1
 !   enddo
 
 enddo
-
+stop 'toto'
 #endif
 
 end subroutine get_total_Hamiltonian
@@ -334,6 +377,7 @@ do i=1,size(total_hamiltonian)
 enddo
 
 call close_file(fname,io)
+
 
 end subroutine rw_hamiltonian
 

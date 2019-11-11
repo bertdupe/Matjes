@@ -27,12 +27,28 @@ integer :: i
 real(kind=8) :: x0,y0,R0,coeffx,coeffy,starx,stary,chi
 character(len=30) :: variable_name
 
+!!!! default variables !!!!
+NSkyAdd=1
+N_pinning=0
+!!!!
+
 variable_name=convert('NSkyAdd_',mode_name)
 call get_parameter(io,fname,variable_name,NSkyAdd)
 variable_name=convert('N_pinning_',mode_name)
 call get_parameter(io,fname,variable_name,N_pinning)
 
 allocate(tab_XSky(NSkyAdd),tab_YSky(NSkyAdd),tab_RSky(NSkyAdd),tab_coeffx(NSkyAdd),tab_coeffy(NSkyAdd),tab_starx(NSkyAdd),tab_stary(NSkyAdd),chirality(NSkyAdd))
+
+!!!! default variables !!!!
+tab_XSky=50.0d0
+tab_YSky=50.0d0
+tab_RSky=5.0d0
+tab_coeffx=1.0d0
+tab_coeffy=1.0d0
+tab_starx=1.0d0
+tab_stary=1.0d0
+chirality=-1.0d0
+!!!
 
 variable_name=convert('XSky_',mode_name)
 call get_parameter(io,fname,variable_name,NSkyAdd,tab_XSky)

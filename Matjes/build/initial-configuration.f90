@@ -65,7 +65,6 @@ call get_parameter(io,fname,mode_name,configuration)
 enddo
 call close_file(fname,io)
 
-
 end subroutine init_config
 
 

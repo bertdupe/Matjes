@@ -7,15 +7,14 @@ public :: update_heavyside
 
 contains
 
-subroutine update_heavyside(time,kt,h_int,excite,counter,check)
+subroutine update_heavyside(time,kt,h_int,E_int,excite,counter,check)
 implicit none
 real(kind=8), intent(in) :: time
 real(kind=8), intent(in) :: check(:)
 type(excitations), intent(inout) :: excite(:)
 integer, intent(inout) :: counter
-real(kind=8), intent(inout) :: kt,h_int(:)
+real(kind=8), intent(inout) :: kt,h_int(:),E_int(:)
 ! internal
-
 
 select case(excite(counter)%name)
   case('temp')
@@ -50,6 +49,22 @@ select case(excite(counter)%name)
 
      h_int=excite(counter)%start_value
      write(6,'(a,2x,a,2x,a,2x,f16.6)') 'external parameter ', excite(counter)%name, ' is now ',h_int
+  endif
+
+  case('E_ext')
+
+  if (time.eq.excite(counter)%t_start) then
+
+     excite(counter)%start_value=E_int
+
+     E_int=excite(counter)%end_value
+     write(6,'(a,2x,a,2x,a,2x,f16.6)') 'external parameter ', excite(counter)%name, ' is now ',E_int
+  endif
+
+  if (time.eq.excite(counter)%t_end) then
+
+     E_int=excite(counter)%start_value
+     write(6,'(a,2x,a,2x,a,2x,f16.6)') 'external parameter ', excite(counter)%name, ' is now ',E_int
   endif
 
   case default

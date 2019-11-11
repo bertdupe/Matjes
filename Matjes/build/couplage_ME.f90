@@ -5,9 +5,24 @@ use m_derived_types, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: ME
 
 private
-public :: get_ham_ME
+public :: get_ham_ME,get_number_EM_DMI
 
 contains
+
+
+integer function get_number_EM_DMI(fname)
+use m_io_files_utils
+use m_io_utils
+implicit none
+character(len=*) :: fname
+! internal variables
+integer :: io
+
+io=open_file_read(fname)
+get_number_EM_DMI=count_variables(io,'ME_antisym_',fname)
+call close_file(fname,io)
+
+end function get_number_EM_DMI
 
 subroutine get_ham_ME(fname,dim_ham)
 use m_io_files_utils

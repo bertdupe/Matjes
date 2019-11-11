@@ -46,6 +46,7 @@ interface get_parameter
  module procedure get_my_simu
  module procedure get_atomic
  module procedure get_excitations
+ module procedure get_shape
 end interface get_parameter
 
 interface number_nonzero_coeff
@@ -55,7 +56,7 @@ end interface number_nonzero_coeff
 
 
 private
-public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse,number_nonzero_coeff
+public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse,number_nonzero_coeff,check_last_char
 
 contains
 
@@ -432,7 +433,7 @@ end subroutine get_coeff
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine get_atomic(io,fname,var_name,natom,atomic)
-use m_basic_types, only :atom
+use m_basic_types, only : atom
 implicit none
 type(atom), intent(out) :: atomic(:)
 integer, intent(in) :: io,natom
@@ -632,7 +633,8 @@ do
    if (str(1:1) == '#' ) cycle
 
 !cccc We start to read the input
-   if ( str(1:len_string) == trim(adjustl(vname))) then
+
+   if ( str(1:len_string) == trim(adjustl(vname)) ) then
       nread=nread+1
       backspace(io)
       read(io,*) dummy, tag
@@ -905,25 +907,25 @@ end subroutine get_1D_vec_int
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine get_excitations(io,fname,vname,excite)
 implicit none
-type(excitations), intent(out) :: excite(:)
+type(excitations), intent(out) :: excite
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
-integer :: fin,len_string,nread,check,n_excite,i
+integer :: fin,len_string,nread,check,i
 character(len=100) :: str
 character(len=10) :: dummy
 logical :: dum_logic
 
 nread=0
 len_string=len(trim(adjustl(vname)))
-n_excite=size(excite)
 
-do i=1,n_excite
-   excite(i)%start_value(:)=0.0d0
-   excite(i)%end_value(:)=0.0d0
-   excite(1)%t_start=0
-   excite(1)%t_end=0
-enddo
+
+excite%start_value(:)=0.0d0
+excite%end_value(:)=0.0d0
+excite%t_start=0
+excite%t_end=0
+excite%name=fname
+
 
 rewind(io)
 do
@@ -938,24 +940,14 @@ do
    if ( str(1:len_string) == trim(adjustl(vname)) ) then
       nread=nread+1
       backspace(io)
-      read(io,*) dummy,dum_logic,excite(1)%name
-      if ((excite(1)%name.eq.'H_ext').or.(excite(1)%name.eq.'E_ext')) then
+      read(io,*) dummy,dum_logic,excite%name
+      if ((excite%name.eq.'H_ext').or.(excite%name.eq.'E_ext')) then
          backspace(io)
-         read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1:3),excite(1)%t_start,excite(1)%t_end
+         read(io,*) dummy,dum_logic,dummy,excite%start_value(1:3),excite%end_value(1:3),excite%t_start,excite%t_end
       else
          backspace(io)
-         read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1),excite(1)%t_start,excite(1)%t_end
+         read(io,*) dummy,dum_logic,dummy,excite%start_value(1),excite%end_value(1),excite%t_start,excite%t_end
       endif
-
-      do i=2,n_excite
-         if ((excite(1)%name.eq.'H_ext').or.(excite(1)%name.eq.'E_ext')) then
-            backspace(io)
-            read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1:3),excite(1)%t_start,excite(1)%t_end
-         else
-            backspace(io)
-            read(io,*) dummy,dum_logic,excite(1)%name,excite(1)%end_value(1),excite(1)%t_start,excite(1)%t_end
-         endif
-      enddo
 
    endif
 
@@ -964,6 +956,50 @@ enddo
 check=check_read(nread,vname,fname)
 
 end subroutine get_excitations
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! get the shape of the excitations for all the cycles
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine get_shape(io,fname,vname,field)
+use m_basic_types, only : shape_field
+implicit none
+type(shape_field), intent(out) :: field
+integer, intent(in) :: io
+character(len=*), intent(in) :: vname,fname
+! internal variable
+integer :: fin,len_string,nread,check,i
+character(len=100) :: str
+character(len=10) :: dummy
+logical :: dum_logic
+
+nread=0
+len_string=len(trim(adjustl(vname)))
+
+field%name='plane'
+field%center=(/0.0d0,0.0d0,0.0d0/)
+field%cutoff=0.0d0
+
+rewind(io)
+do
+   read (io,'(a)',iostat=fin) str
+   if (fin /= 0) exit
+   str= trim(adjustl(str))
+
+   if (len_trim(str)==0) cycle
+   if (str(1:1) == '#' ) cycle
+
+!cccc We start to read the input
+   if ( str(1:len_string) == trim(adjustl(vname)) ) then
+      nread=nread+1
+      backspace(io)
+      read(io,*) dummy,field%name,field%center(1:3),field%cutoff
+   endif
+
+enddo
+
+check=check_read(nread,vname,fname)
+
+end subroutine get_shape
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get the number of lines in a ASCII file

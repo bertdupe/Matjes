@@ -95,7 +95,6 @@ if (neighbor_exch_antisym.ne.0) then
 
 endif
 
-
 end subroutine get_ham_exchange
 
 end module m_exchange_heisenberg

@@ -53,7 +53,7 @@ real(kind=8) :: time
 !nb of neighbors in the superlattice
       integer :: Nei_il
 ! dummy variable
-      integer :: i,dim_lat(3),n_mag
+      integer :: i,dim_lat(3),n_mag,n_DMI
 !checking various files
       logical :: topoonly,i_exi,i_usestruct
 ! check the allocation of memory
@@ -256,19 +256,17 @@ if (i_usestruct) call user_def_struct(masque,pos, &
 ! hard part: setup DM interaction
 ! I send an example neighbor table to setup the DM
 
-! to change
-!if (Hamiltonian%i_DM) then
 call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
 
-!   i=size(Hamiltonian%DMI,3)
-   i=1
-   write(6,'(I4,a)') i,' DMI found'
+n_DMI=get_number_DMI('input')
+if (n_DMI.ne.0) then
+   write(6,'(I4,a)') n_DMI,' DMI found'
 
-   write(*,*) 'number of first nearest neighbor', sum(indexNN(1:i,1))
-   allocate(DM_vector(sum(indexNN(1:i,1)),3,phase))
+   write(*,*) 'number of first nearest neighbor', sum(indexNN(1:n_DMI,1))
+   allocate(DM_vector(sum(indexNN(1:n_DMI,1)),3,phase))
 
    DM_vector=0.0d0
-   call setup_DM_vector(indexNN,i,my_lattice,my_motif,DM_vector)
+   call setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector)
 
    call user_info(6,time,'done',.true.)
 
@@ -293,11 +291,11 @@ call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
       endif
     endif
 
-call user_info(6,time,'done',.true.)
-!else
-!       allocate(DM_vector(1,1,1))
-!       DM_vector=0.0d0
-!endif
+    call user_info(6,time,'done',.true.)
+else
+    allocate(DM_vector(1,1,1))
+    DM_vector=0.0d0
+endif
 
 !if (Hamiltonian%i_four) then
 !     call user_info(6,time,'Calculating the position of the corners of the unit cell for the 4-spin',.false.)

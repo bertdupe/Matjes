@@ -128,7 +128,6 @@ integer :: j,k,index_mode_x,index_mode_y
 shape_Op_big=shape(Op_big)
 shape_Op_small=shape(Op_small)
 
-if (shape_Op_big(2).ne.shape_Op_small(2)) call error('get_Op_in_Op_Xshell - number of shell incorrect')
 if ((shape_Op_small(1).ne.(down_left_corner_y-upper_left_corner_y+1)).or.(shape_Op_small(2).ne.(down_left_corner_y-upper_left_corner_y+1))) call error('get_Op_in_Op_Xshell - size Op incorrect')
 
 index_mode_y=upper_left_corner_y-1
@@ -139,7 +138,7 @@ do j=1,shape_Op_small(2)
 
    do k=1,shape_Op_small(1)
       index_mode_x=index_mode_x+1
-      Op_big(index_mode_x,index_mode_y)=Op_small(k,j)
+      Op_big(index_mode_x,index_mode_y)=Op_small(k,j)+Op_big(index_mode_x,index_mode_y)
    enddo
 
 enddo
@@ -190,32 +189,25 @@ end subroutine
 ! convolutate the Hamiltonian with the D vector for the DMI rules
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine convoluate_Op_2D_SOC_vector_1D(D,Op_DMI,Op_DMI_Nshell_local)
+subroutine convoluate_Op_2D_SOC_vector_1D(D,Op_DMI,H)
+use m_derived_types, only : site_Ham
 implicit none
-real(kind=8), intent(in) :: D(:,:),Op_DMI(:,:)
-real(kind=8), intent(out) :: Op_DMI_Nshell_local(:,:,:)
+real(kind=8), intent(in) :: D(:),Op_DMI(:,:)
+real(kind=8), intent(inout) :: H(:,:)
 ! internal variable
 integer :: shape_Op_dmi(2),dim_D(2),i,j
 
-shape_Op_dmi=shape(Op_DMI)
-dim_D=shape(D)
+H(1,2)=Op_DMI(1,2)*D(3)
+H(1,3)=Op_DMI(1,3)*D(2)
+H(2,3)=Op_DMI(2,3)*D(1)
 
-Op_DMI_Nshell_local=0.0d0
+H(2,1)=Op_DMI(2,1)*D(3)
+H(3,1)=Op_DMI(3,1)*D(2)
+H(3,2)=Op_DMI(3,2)*D(1)
 
-do j=1,dim_D(1)    ! loop of each atom in one shell
-  Op_DMI_Nshell_local(1,2,j)=Op_DMI(1,2)*D(j,3)
-  Op_DMI_Nshell_local(1,3,j)=Op_DMI(1,3)*D(j,2)
-  Op_DMI_Nshell_local(2,3,j)=Op_DMI(2,3)*D(j,1)
-
-  Op_DMI_Nshell_local(2,1,j)=Op_DMI(2,1)*D(j,3)
-  Op_DMI_Nshell_local(3,1,j)=Op_DMI(3,1)*D(j,2)
-  Op_DMI_Nshell_local(3,2,j)=Op_DMI(3,2)*D(j,1)
-
-  Op_DMI_Nshell_local(1,1,j)=Op_DMI(1,1)
-  Op_DMI_Nshell_local(2,2,j)=Op_DMI(2,2)
-  Op_DMI_Nshell_local(3,3,j)=Op_DMI(3,3)
-
-enddo
+H(1,1)=Op_DMI(1,1)
+H(2,2)=Op_DMI(2,2)
+H(3,3)=Op_DMI(3,3)
 
 end subroutine convoluate_Op_2D_SOC_vector_1D
 
