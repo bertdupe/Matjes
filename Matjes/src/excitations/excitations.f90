@@ -6,33 +6,25 @@ use m_heavyside
 use m_TPulse
 use m_EMwave
 use m_shape_excitations
-
-
-type, abstract, extends(excitations) :: excitattion_w_shape
-    contains
-    procedure(shape_norm), deferred :: test
-end type excitattion_w_shape
-
-interface
-     function shape_norm(R,R0,cutoff)
-       import
-       real(kind=8), intent(in) :: R(3),R0(3),cutoff
-       real(kind=8) :: shape_norm
-     end function
-end interface
+use m_get_position
+use m_convert
 
 type cycle
-    type(excitattion_w_shape), allocatable :: external_param(:)
+    type(excitations), allocatable :: external_param(:)
+    real(kind=8), allocatable :: field(:)
     integer :: counter
     character(len=30) :: name
+    procedure(shape_norm), pointer, nopass :: norm => null()
 end type cycle
+
+real(kind=8), allocatable :: position(:,:)
 
 type(cycle) :: EM_of_t
 
 logical :: i_excitations
 
 private
-public :: get_excitations,update_ext_EM_fields
+public :: get_excitations,update_ext_EM_fields,associate_excitation,update_EMT_of_r
 
 contains
 
@@ -47,7 +39,7 @@ implicit none
 character(len=*), intent(in) :: fname
 logical, intent(out) :: excitation
 !internal variable
-integer :: io_input,n_variable,i,n_excite
+integer :: io_input,n_variable,i,n_excite,N
 logical :: test
 character(len=30) :: excitations
 character(len=30) :: name_variable
@@ -120,11 +112,67 @@ select case (excitations)
 
 end select
 
-call get_shape(io_input,fname,EM_of_t%external_param(1)%name)
+call get_shape(io_input,fname,EM_of_t%external_param(1)%name,EM_of_t%norm)
 
 call close_file(fname,io_input)
 
+if ((EM_of_t%external_param(1)%name.eq.'Hfield').or.(EM_of_t%external_param(1)%name.eq.'Efield')) then
+   allocate(EM_of_t%field(3))
+else
+   allocate(EM_of_t%field(1))
+endif
+
+EM_of_t%field=0.0d0
+
+N=get_lines('positions.dat')
+allocate(position(3,N))
+position=0.0d0
+call get_position(position,'positions.dat')
+
 end subroutine get_excitations
+
+!
+! routine that associates the field to the table of pointer that should be used
+!
+subroutine associate_excitation(point,all_mode,my_order_parameters)
+use m_derived_types, only : order_parameter
+use m_basic_types, only : vec_point
+implicit none
+type(order_parameter), intent(in) :: my_order_parameters(:)
+type(vec_point), intent(in):: all_mode(:)
+type(vec_point), intent(inout):: point(:)
+! internal variables
+integer :: i,j
+
+do i=1,size(my_order_parameters)
+   if( my_order_parameters(i)%name.eq.EM_of_t%external_param(1)%name) then
+      write(6,'(2a)') 'excitations was found on  ', my_order_parameters(i)%name
+      do j=1,size(all_mode)
+         point(j)%w => all_mode(j)%w(my_order_parameters(i)%start:my_order_parameters(i)%end)
+      enddo
+   endif
+enddo
+
+write(6,'(/,a,/)') 'the pointers for the excitations has been allocated in associate_excitation'
+
+end subroutine
+
+!
+! routine that updates the the field depending on the position
+!
+subroutine update_EMT_of_r(i,mode)
+use m_basic_types, only : vec_point
+implicit none
+integer, intent(in) :: i
+real(kind=8), intent(inout) :: mode(3)
+! internal
+real(kind=8) :: r(3)
+
+r=position(:,i)
+
+mode=EM_of_t%field*EM_of_t%norm(r,shape_excitation%center,shape_excitation%cutoff)
+
+end subroutine
 
 
 
@@ -133,38 +181,52 @@ end subroutine get_excitations
 !
 ! routine that updates the external parameters
 !
-subroutine update_ext_EM_fields(time,kt,h_int,E_int,check)
+subroutine update_ext_EM_fields(time,check)
+use m_constants, only : k_b
+use m_vector, only : norm
 implicit none
 real(kind=8), intent(in) :: time
-real(kind=8), intent(inout) :: kt,h_int(:),E_int(:),check(:)
+real(kind=8), intent(inout) :: check(:)
 ! internal parameters
-integer :: size_excitations
+integer :: size_excitations,size_field
+character(len=30) :: form
+real(kind=8),allocatable :: field_ini(:)
 
 if (.not.i_excitations) return
 
 size_excitations=size(EM_of_t%external_param)
+size_field=size(EM_of_t%field)
+allocate(field_ini(size_field))
+field_ini=EM_of_t%field
 
 select case (EM_of_t%name)
   case('rampe')
 
-    if (EM_of_t%counter.le.size_excitations) call update_rampe(time,kt,h_int,EM_of_t%external_param,EM_of_t%counter,check)
+    if (EM_of_t%counter.le.size_excitations) call update_rampe(time,EM_of_t%field,EM_of_t%external_param,EM_of_t%counter)
 
   case('heavyside')
 
-    if (EM_of_t%counter.le.size_excitations) call update_heavyside(time,kt,h_int,E_int,EM_of_t%external_param,EM_of_t%counter,check)
+    if (EM_of_t%counter.le.size_excitations) call update_heavyside(time,EM_of_t%field,EM_of_t%external_param,EM_of_t%counter)
 
   case('TPulse')
 
-    if (EM_of_t%counter.le.size_excitations) call update_TPulse(time,kt)
+    if (EM_of_t%counter.le.size_excitations) call update_TPulse(time,EM_of_t%field)
 
   case('EMwave')
 
-    if (EM_of_t%counter.le.size_excitations) call update_EMwave(time,h_int)
+    if (EM_of_t%counter.le.size_excitations) call update_EMwave(time,EM_of_t%field)
 
   case default
     stop 'excitation not implemented'
 
 end select
+
+if (norm(field_ini-EM_of_t%field).gt.1.0d-5) then
+   form=convert('(a,',size_field,'f14.6/)')
+   write(6,'(/a,2x,f16.6)') 'real time',time
+   write(6,form) 'field value ',EM_of_t%field(:)
+endif
+if (abs(check(2)).gt.1.0d-8) write(6,'(a,2x,f16.6)') 'Final Temp', check(1)/check(2)/2.0d0/k_B
 
 check=0.0d0
 
@@ -203,14 +265,14 @@ do
       backspace(io)
       read(io,*) dummy,dum_logic,test
       test=trim(adjustl(test))
-      if ((test.eq.'H_ext').or.(test.eq.'E_ext').or.(test.eq.'temp')) then
+      if ((test.eq.'Bfield').or.(test.eq.'Efield').or.(test.eq.'temp')) then
          looping=.true.
          counter=counter+1
       endif
    endif
 enddo
 
-if (counter.eq.0) stop 'get_num_variables could not read H_ext or E_ext or temp'
+if (counter.eq.0) stop 'get_num_variables could not read Bfield or Efield or temp'
 
 get_num_variable=counter
 

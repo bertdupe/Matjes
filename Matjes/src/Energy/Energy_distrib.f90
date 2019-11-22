@@ -9,17 +9,8 @@ type operator_distrib
    type(point_shell_mode), allocatable, dimension(:,:) :: mode_E_column
 end type operator_distrib
 
-! Exchange energy tensor
-type(operator_distrib) :: exchange
-! DMI energy tensor
-type(operator_distrib) :: DMI
-! anisotropy energy tensor
-type(operator_distrib) :: anisotropy
-! Zeeman energy tensor
-type(operator_distrib) :: Zeeman
-
-!type(point_shell_Operator), allocatable, dimension(:) :: E_line
-!type(point_shell_mode), allocatable, dimension(:) :: mode_E_column
+! shell resolved energy tensor
+type(operator_distrib), public, protected :: energy_distrib
 
 interface associate_shell_ham
   module procedure associate_shell_ham_1D
@@ -36,7 +27,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine init_Energy_distrib(my_lattice,tableNN,indexNN)
-use m_energy_commons, only : Hamiltonians
+use m_energy_commons, only : total_hamiltonian
 implicit none
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
@@ -45,104 +36,35 @@ integer, intent(in) :: indexNN(:)
 integer :: size_ham,Nspin,all_size(4)
 ! slope variables
 integer :: i,j,k
+integer,allocatable :: int_ind(:)
 
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
+size_ham=size(total_hamiltonian(1)%atom(1)%H,1)
 
-do k=1,size(Hamiltonians)
-!!!!!!!!!!!!!!!
-!
-! Exchange energy distribution
-!
-!!!!!!!!!!!!!!!
-   if ('exchange'.eq.trim(Hamiltonians(k)%name)) then
-     size_ham=size(Hamiltonians(k)%ham)
-     allocate(exchange%operators(size_ham))
 
-     call associate_shell_ham(exchange%operators,size_ham,Hamiltonians(k)%ham,my_lattice,tableNN,indexNN)
+size_ham=size(total_hamiltonian)
+allocate(int_ind(size_ham))
+do i=1,size_ham
+   int_ind(i)=size(total_hamiltonian(i)%atom)
+enddo
 
-!!!!! taking care of the line of the spin matric and column of the energy
-     allocate(exchange%E_line(Nspin,size_ham),exchange%mode_E_column(Nspin,size_ham))
+allocate(energy_distrib%operators(size_ham))
 
-     do i=1,size_ham
-       do j=1,Nspin
-         allocate(exchange%E_line(j,i)%shell(indexNN(i)),exchange%mode_E_column(j,i)%shell(indexNN(i)))
-       enddo
-       call dissociate(exchange%E_line(:,i),indexNN(i),Nspin)
-       call dissociate(exchange%mode_E_column(:,i),indexNN(i),Nspin)
-     enddo
-   endif
-
-!!!!!!!!!!!!!!!
-!
-! DMI energy distribution
-!
-!!!!!!!!!!!!!!!
-
-!size_ham=shape(Hamiltonian%DMI)
-!allocate(DMI%operators(size_ham(3)))
-!
-!call associate_shell_ham(DMI%operators(:),size_ham(3),Hamiltonian%DMI,my_lattice,tableNN,indexNN)
-!
-!!!!!! taking care of the line of the spin matric and column of the energy
-!allocate(DMI%E_line(Nspin,size_ham(3)),DMI%mode_E_column(Nspin,size_ham(3)))
-!
-!do i=1,size_ham(3)
-!   do j=1,Nspin
-!      allocate(DMI%E_line(j,i)%shell(indexNN(i)),DMI%mode_E_column(j,i)%shell(indexNN(i)))
-!   enddo
-!   call dissociate(DMI%E_line(:,i),indexNN(i),Nspin)
-!   call dissociate(DMI%mode_E_column(:,i),indexNN(i),Nspin)
-!enddo
-
-!!!!!!!!!!!!!!!
-!
-! anisotropy energy distribution
-!
-!!!!!!!!!!!!!!!
-   if ('anisotropy'.eq.trim(Hamiltonians(k)%name)) then
-     size_ham=size(Hamiltonians(k)%ham)
-     allocate(anisotropy%operators(size_ham))
-
-     call associate_shell_ham(anisotropy%operators(:),size_ham,Hamiltonians(k)%ham,my_lattice,tableNN,indexNN)
+do j=1,size_ham
+   call associate_shell_ham(j,energy_distrib%operators(j),total_hamiltonian(j)%atom,my_lattice,tableNN,int_ind)
+enddo
 
 !!!!! taking care of the line of the spin matric and column of the energy
-     allocate(anisotropy%E_line(Nspin,size_ham),anisotropy%mode_E_column(Nspin,size_ham))
+allocate(energy_distrib%E_line(Nspin,size_ham),energy_distrib%mode_E_column(Nspin,size_ham))
 
-     do i=1,size_ham
-       do j=1,Nspin
-         allocate(anisotropy%E_line(j,i)%shell(indexNN(i)),anisotropy%mode_E_column(j,i)%shell(indexNN(i)))
-       enddo
-       call dissociate(anisotropy%E_line(:,i),indexNN(i),Nspin)
-       call dissociate(anisotropy%mode_E_column(:,i),indexNN(i),Nspin)
-     enddo
-   endif
-
-!!!!!!!!!!!!!!!
-!
-! Zeeman energy distribution
-!
-!!!!!!!!!!!!!!!
-
-   if ('zeeman'.eq.trim(Hamiltonians(k)%name)) then
-     size_ham=size(Hamiltonians(k)%ham)
-     allocate(zeeman%operators(size_ham))
-
-     call associate_shell_ham(zeeman%operators(:),size_ham,Hamiltonians(k)%ham,my_lattice,tableNN,indexNN)
-
-!!!!! taking care of the line of the spin matric and column of the energy
-     allocate(zeeman%E_line(Nspin,size_ham),zeeman%mode_E_column(Nspin,size_ham))
-
-     do i=1,size_ham
-       do j=1,Nspin
-         allocate(zeeman%E_line(j,i)%shell(indexNN(i)),zeeman%mode_E_column(j,i)%shell(indexNN(i)))
-       enddo
-       call dissociate(zeeman%E_line(:,i),indexNN(i),Nspin)
-       call dissociate(zeeman%mode_E_column(:,i),indexNN(i),Nspin)
-     enddo
-   endif
-
-enddo  ! and of the do loop for the energy distrib
+do i=1,size_ham
+   do j=1,Nspin
+      allocate(energy_distrib%E_line(j,i)%shell(int_ind(i)),energy_distrib%mode_E_column(j,i)%shell(int_ind(i)))
+   enddo
+   call dissociate(energy_distrib%E_line(:,i),int_ind(i),Nspin)
+   call dissociate(energy_distrib%mode_E_column(:,i),int_ind(i),Nspin)
+enddo
 
 end subroutine init_Energy_distrib
 
@@ -152,40 +74,43 @@ end subroutine init_Energy_distrib
 !
 !!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine associate_shell_ham_1D(ham_point,size_ham,ham_target,my_lattice,tableNN,indexNN)
+subroutine associate_shell_ham_1D(n_shell,ham_point,ham_target,my_lattice,tableNN,indexNN)
 implicit none
-type(operator_real),intent(inout) :: ham_point(size_ham)
-type(Op_real),target,intent(in) :: ham_target(:)
+type(operator_real),intent(inout) :: ham_point
+type(site_ham),target,intent(in) :: ham_target(:)
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
-integer, intent(in) :: indexNN(:)
-integer, intent(in) :: size_ham
+integer, intent(in) :: indexNN(:),n_shell
 ! internal variable
 integer :: i,avant,n_atom_shell,Nspin,all_size(4)
+integer :: N,M
 
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
+M=size(ham_target)
+n_atom_shell=indexNN(n_shell)
 
-avant=0
-do i=1,size_ham
-!! i is the shell number
-!! n_atom_shell is the number of atom in each shell
+! if the nu,ber of atom in the shell is one it means that it is the onsite term.
+if (n_atom_shell.eq.1) avant=0
 
-   n_atom_shell=indexNN(i)
+! n_shell is the shell number
+if (n_shell.eq.2) then
+  avant=0
+else
+  avant=sum(indexNN(2:n_shell-1))
+endif
 
-   allocate(ham_point(i)%value(n_atom_shell,Nspin))
-   allocate(ham_point(i)%line(n_atom_shell,Nspin))
-   ham_point(i)%nline=Nspin
-   ham_point(i)%ncolumn=Nspin
-   ham_point(i)%line=0
+if (M.ne.n_atom_shell) stop 'The Hamiltonian do not have the same size - associate_shell_ham'
 
-   call dissociate(ham_point(i),Nspin,n_atom_shell)
+allocate(ham_point%value(n_atom_shell,Nspin))
+allocate(ham_point%line(n_atom_shell,Nspin))
+ham_point%nline=Nspin
+ham_point%ncolumn=Nspin
+ham_point%line=0
 
-!   call associate_pointer(ham_point(i),ham_target,my_lattice,tableNN,indexNN(i),avant)
+call dissociate(ham_point,Nspin,n_atom_shell)
 
-   avant=avant+indexNN(i)
-
-enddo
+call associate_pointer(ham_point,ham_target,my_lattice,tableNN,n_atom_shell,avant)
 
 end subroutine associate_shell_ham_1D
 
@@ -208,34 +133,10 @@ integer :: size_line(2),i
 !
 !!!!!!!!!!!!!!!
 
-size_line=shape(exchange%E_line)
+size_line=shape(energy_distrib%E_line)
 
 do i=1,size_line(2)
-   call associate_pointer(exchange%mode_E_column(:,i),spin,exchange%E_line(:,i),exchange%operators(i))
-enddo
-
-!!!!!!!!!!!!!!!
-!
-! Associate the DMI energy distribution
-!
-!!!!!!!!!!!!!!!
-
-size_line=shape(DMI%E_line)
-
-do i=1,size_line(2)
-   call associate_pointer(DMI%mode_E_column(:,i),spin,DMI%E_line(:,i),DMI%operators(i))
-enddo
-
-!!!!!!!!!!!!!!!
-!
-! Associate the anisotropy energy distribution
-!
-!!!!!!!!!!!!!!!
-
-size_line=shape(anisotropy%E_line)
-
-do i=1,size_line(2)
-   call associate_pointer(anisotropy%mode_E_column(:,i),spin,anisotropy%E_line(:,i),anisotropy%operators(i))
+   call associate_pointer(energy_distrib%mode_E_column(:,i),spin,energy_distrib%E_line(:,i),energy_distrib%operators(i))
 enddo
 
 end subroutine get_Energy_distrib_line
@@ -261,26 +162,18 @@ integer, intent(in) :: tag
 real(kind=8), intent(in) :: h_int(:)
 ! internals
 integer :: i,N,io,j
-real(kind=8) :: E_ani,E_z,E_4,E_biq,E_dip,E_int
-real(kind=8), allocatable :: E_DM(:),E_xch(:)
-integer :: number_shell_exchange,number_shell_DMI
+real(kind=8) :: E_int
+real(kind=8), allocatable :: E_shell(:)
+integer :: number_shell
 !   name of files
 character(len=30) :: fname,rw_format
 
-number_shell_exchange=size(exchange%operators)
-number_shell_DMI=size(DMI%operators)
+number_shell=size(energy_distrib%operators)
+allocate(E_shell(number_shell))
 
-allocate(E_DM(number_shell_DMI),E_xch(number_shell_exchange))
+write(rw_format,'( "(", I4, "(2x,f20.15))" )') number_shell
 
-write(rw_format,'( "(", I4, "(2x,f20.15))" )') number_shell_DMI+number_shell_exchange+5
-
-E_DM=0.0d0
-E_xch=0.0d0
-E_ani=0.0d0
-E_z=0.0d0
-E_4=0.0d0
-E_biq=0.0d0
-E_dip=0.0d0
+E_shell=0.0d0
 N=size(spin)
 
 fname=convert('EnDistrib_',tag,'.dat')
@@ -288,24 +181,15 @@ io=open_file_write(fname)
 
 do i=1,N
 
-   E_xch=0.0d0
-   do j=1,number_shell_exchange
+   E_shell=0.0d0
+   do j=1,number_shell
 
-   call local_energy_pointer(E_int,i,exchange%mode_E_column(i,j),exchange%E_line(i,j))
-   E_xch(j)=E_xch(j)+E_int
+      call local_energy_pointer(E_int,i,energy_distrib%mode_E_column(i,j),energy_distrib%E_line(i,j))
+      E_shell(j)=E_shell(j)+E_int
+
    enddo
 
-   E_DM=0.0d0
-   do j=1,number_shell_DMI
-
-   call local_energy_pointer(E_int,i,DMI%mode_E_column(i,j),DMI%E_line(i,j))
-   E_DM(j)=E_DM(j)+E_int
-   enddo
-
-   call local_energy_pointer(E_int,i,anisotropy%mode_E_column(i,1),anisotropy%E_line(i,1))
-   E_ani=E_int
-
-   write(io,rw_format) E_DM,E_ani,E_z,E_4,E_biq,E_dip,E_xch
+   write(io,rw_format) E_shell
 enddo
 #ifdef CPP_BRUTDIP
 !          if (i_dip) E_dip=dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,my_lattice%boundary)
@@ -314,8 +198,6 @@ enddo
 #endif
 
 !          Write(70,'(8(E20.12E3,2x))') E_DM,E_ani,E_z,E_4,E_biq,E_dip
-
-Write(io,'(a)') '#1:E_DM   2:E_ani   3:E_z   4:E_4   5:E_biq   6:E_dip   7-N:E_xch   '
 
 call close_file(fname,io)
 

@@ -407,7 +407,7 @@ character(len=*), intent(in) :: var_name,fname
 real(kind=8), intent(inout) :: coeff(:)
 ! internal
 integer :: N,i,length_string
-character(len=10) :: var_name_local,integer_number
+character(len=100) :: var_name_local,integer_number
 
 N=size(coeff)
 integer_number=convert(N)
@@ -491,9 +491,9 @@ integer, intent(in) :: io
 character(len=*), intent(in) :: fname
 ! internal variable
 integer :: fin,nread,i,ntest,nvar,n_variable,check
-character(len=30) :: vname,vtest
+character(len=100) :: vname,vtest
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 logical :: success_read
 
 nread=0
@@ -577,7 +577,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
@@ -618,7 +618,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
@@ -660,7 +660,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
@@ -701,7 +701,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
@@ -742,7 +742,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
@@ -784,7 +784,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 real(kind=8) :: int_norm
 
 nread=0
@@ -873,7 +873,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
@@ -913,7 +913,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check,i
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 logical :: dum_logic
 
 nread=0
@@ -941,7 +941,7 @@ do
       nread=nread+1
       backspace(io)
       read(io,*) dummy,dum_logic,excite%name
-      if ((excite%name.eq.'H_ext').or.(excite%name.eq.'E_ext')) then
+      if ((excite%name.eq.'Bfield').or.(excite%name.eq.'Efield')) then
          backspace(io)
          read(io,*) dummy,dum_logic,dummy,excite%start_value(1:3),excite%end_value(1:3),excite%t_start,excite%t_end
       else
@@ -969,7 +969,7 @@ character(len=*), intent(in) :: vname,fname
 ! internal variable
 integer :: fin,len_string,nread,check,i
 character(len=100) :: str
-character(len=10) :: dummy
+character(len=100) :: dummy
 logical :: dum_logic
 
 nread=0

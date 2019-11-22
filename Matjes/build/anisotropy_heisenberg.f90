@@ -30,6 +30,7 @@ anisotropy%name='anisotropy'
 anisotropy%c_ham=1.0d0
 
 io_param=open_file_read(fname)
+call get_parameter(io_param,fname,'c_ani',anisotropy%c_ham)
 ! count the ME coefficients if present
 neighbor_ani=count_variables(io_param,'ani_',fname)
 if (neighbor_ani.ne.0) then

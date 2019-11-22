@@ -128,7 +128,7 @@ integer :: j,k,index_mode_x,index_mode_y
 shape_Op_big=shape(Op_big)
 shape_Op_small=shape(Op_small)
 
-if ((shape_Op_small(1).ne.(down_left_corner_y-upper_left_corner_y+1)).or.(shape_Op_small(2).ne.(down_left_corner_y-upper_left_corner_y+1))) call error('get_Op_in_Op_Xshell - size Op incorrect')
+if ((shape_Op_small(1).ne.(down_left_corner_y-upper_left_corner_y+1)).or.(shape_Op_small(2).ne.(down_left_corner_y-upper_left_corner_y+1))) call error('get_Op_in_Op - size Op incorrect')
 
 index_mode_y=upper_left_corner_y-1
 

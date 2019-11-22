@@ -238,11 +238,11 @@ end subroutine A_Opreal_shellHam1D
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_real2D(point,static_target,my_lattice,tableNN,Nvoisin,avant)
-use m_derived_types, only : lattice,operator_real,shell_Ham
+use m_derived_types, only : lattice,operator_real,site_Ham
 use m_get_position
 implicit none
 type(operator_real), intent(inout) :: point
-real(kind=8), target, intent(in) :: static_target(:,:)
+type(site_Ham), target, intent(in) :: static_target(:)
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
 integer, intent(in) :: Nvoisin
@@ -265,21 +265,28 @@ do i_m=1,shape_tableNN(6)
         Ilat=(/i_x,i_y,i_z,i_m/)
         ipos_2=get_position_ND_to_1D(Ilat,all_size)
 
+          ! terme de site
+          if (Nvoisin.eq.1) then
+            point%value(1,ipos_2)%Op_loc=>static_target(1)%H
+            point%line(1,ipos_2)=ipos_2
 
-          do i_voisin=1,Nvoisin
+          ! terme de voisins
+          else
+            do i_voisin=1,Nvoisin
 
-            v_x=tableNN(1,i_voisin+avant,i_x,i_y,i_z,i_m)
-            v_y=tableNN(2,i_voisin+avant,i_x,i_y,i_z,i_m)
-            v_z=tableNN(3,i_voisin+avant,i_x,i_y,i_z,i_m)
-            v_m=tableNN(4,i_voisin+avant,i_x,i_y,i_z,i_m)
+              v_x=tableNN(1,i_voisin+avant,i_x,i_y,i_z,i_m)
+              v_y=tableNN(2,i_voisin+avant,i_x,i_y,i_z,i_m)
+              v_z=tableNN(3,i_voisin+avant,i_x,i_y,i_z,i_m)
+              v_m=tableNN(4,i_voisin+avant,i_x,i_y,i_z,i_m)
 
-            Ilat=(/v_x,v_y,v_z,v_m/)
-            ipos_1=get_position_ND_to_1D(Ilat,all_size)
+              Ilat=(/v_x,v_y,v_z,v_m/)
+              ipos_1=get_position_ND_to_1D(Ilat,all_size)
 
-            point%value(i_voisin,ipos_2)%Op_loc=>static_target
-            point%line(i_voisin,ipos_2)=ipos_1
+              point%value(i_voisin,ipos_2)%Op_loc=>static_target(i_voisin)%H
+              point%line(i_voisin,ipos_2)=ipos_1
 
-          enddo
+            enddo
+          endif
 
       enddo
     enddo

@@ -2,7 +2,8 @@ module m_get_position
 use m_io_files_utils
   interface get_position
       module procedure get_position_lattice
-      module procedure get_position_file
+      module procedure get_position_file_4d
+      module procedure get_position_file_1d
   end interface get_position
 
 private
@@ -18,7 +19,7 @@ contains
 ! position: position of the sites in cartesian coordinates
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine get_position_file(pos,fname)
+subroutine get_position_file_4d(pos,fname)
 implicit none
 real(kind=8), intent(inout) :: pos(:,:,:,:,:)
 character(len=*), intent(in) :: fname
@@ -43,7 +44,25 @@ enddo
 
 call close_file(fname,io)
 
-end subroutine get_position_file
+end subroutine get_position_file_4d
+
+subroutine get_position_file_1d(pos,fname)
+implicit none
+real(kind=8), intent(inout) :: pos(:,:)
+character(len=*), intent(in) :: fname
+! internal variables
+integer :: i,j_lat,io
+
+! Read the configurations
+io=open_file_read(fname)
+
+do i=1,size(pos,2)
+   read(io,*) (pos(j_lat,i),j_lat=1,3)
+enddo
+
+call close_file(fname,io)
+
+end subroutine get_position_file_1d
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! subroutine that gives out the position of the of the sites

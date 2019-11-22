@@ -66,9 +66,9 @@ subroutine update_TPulse(time,kt)
 use m_constants, only : k_b
 implicit none
 real(kind=8), intent(in) :: time
-real(kind=8), intent(inout) :: kt
+real(kind=8), intent(inout) :: kt(:)
 ! internal
-real(kind=8) :: kt1
+real(kind=8) :: kt1(1)
 
 kt1=0.0d0
 

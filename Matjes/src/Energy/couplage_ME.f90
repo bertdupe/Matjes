@@ -32,7 +32,7 @@ integer, intent(in) :: dim_ham
 character(len=*), intent(in) ::fname
 ! internal
 integer :: neighbor_ME_sym,io_param,neighbor_ME_antisym,N_ME
-real(kind=8), allocatable :: ME_local_sym(:),ME_local_antisym(:)
+real(kind=8), allocatable :: ME_local_sym(:),ME_local_antisym(:),ham_DMI_local(:,:,:)
 ! magnetization
 integer :: x_start,x_end
 ! electric field
@@ -45,8 +45,9 @@ neighbor_ME_antisym=0
 ME%name='magnetoelectric'
 
 io_param=open_file_read(fname)
+call get_parameter(io_param,fname,'c_ME',ME%c_ham)
 ! count the ME coefficients if present
-neighbor_ME_sym=count_variables(io_param,'ME_sym_','input')
+neighbor_ME_sym=count_variables(io_param,'ME_sym_',fname)
 if (neighbor_ME_sym.ne.0) then
    allocate(ME_local_sym(neighbor_ME_sym))
    ME_local_sym=0.0d0
@@ -55,7 +56,7 @@ if (neighbor_ME_sym.ne.0) then
    neighbor_ME_sym=number_nonzero_coeff(ME_local_sym,'ME_sym')
 endif
 
-neighbor_ME_antisym=count_variables(io_param,'ME_antisym_','input')
+neighbor_ME_antisym=count_variables(io_param,'ME_antisym_',fname)
 if (neighbor_ME_antisym.ne.0) then
    allocate(ME_local_antisym(neighbor_ME_antisym))
    ME_local_antisym=0.0d0
@@ -82,10 +83,29 @@ enddo
 
 call get_borders('magnetic',x_start,x_end,'Efield',y_start,y_end,my_order_parameters)
 
-! get the symmetric exchange
+! get the symmetric ME effect
 do i=1,n_ME
    call get_symmetric_Op(ME%ham(i)%H,ME_local_sym(i)*ME%c_ham/2.0d0,x_start,y_start,x_end,y_end)
 enddo
+
+! get the antisymmetric ME effect
+allocate(ham_DMI_local(3,3,neighbor_ME_antisym))
+ham_DMI_local=0.0
+do i=1,neighbor_ME_antisym
+    ham_DMI_local(2,1,i)=-ME_local_antisym(i)/2.0d0*ME%c_ham
+    ham_DMI_local(3,1,i)=ME_local_antisym(i)/2.0d0*ME%c_ham
+    ham_DMI_local(3,2,i)=-ME_local_antisym(i)/2.0d0*ME%c_ham
+
+    ham_DMI_local(1,2,i)=-ham_DMI_local(2,1,i)
+    ham_DMI_local(2,3,i)=-ham_DMI_local(3,2,i)
+    ham_DMI_local(1,3,i)=-ham_DMI_local(3,1,i)
+enddo
+
+do i=1,neighbor_ME_antisym
+    call get_Op_in_Op(ME%ham(i)%H,ham_DMI_local(:,:,i),x_start,x_end,y_start,y_end)
+    call get_Op_in_Op(ME%ham(i)%H,ham_DMI_local(:,:,i),y_start,y_end,x_start,x_end)
+enddo
+
 
 end subroutine get_ham_ME
 

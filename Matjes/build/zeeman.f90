@@ -33,6 +33,7 @@ h_ext=0.0d0
 zeeman%name='zeeman'
 
 io_param=open_file_read(fname)
+call get_parameter(io_param,fname,'c_zeeman',zeeman%c_ham)
 ! count the magnetic field if present
 call get_parameter(io_param,fname,'H_ext',3,h_ext)
 

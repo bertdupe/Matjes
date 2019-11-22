@@ -48,7 +48,7 @@ real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter
 real(kind=8),allocatable,dimension(:,:) :: D_mode,D_T,Bini,BT
 type(vec_point),allocatable,dimension(:) :: all_mode_1,all_mode_2
 ! pointers specific for the modes
-type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield
+type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield,mode_excitation_field
 type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
 type(vec_point),target,allocatable,dimension(:) :: D_mode_mag,D_T_mag,B_mag,BT_mag
 type(vec_point),target,allocatable,dimension(:) :: D_mode_disp,D_T_disp,B_disp,BT_disp
@@ -272,6 +272,13 @@ security=0.0d0
 ! part of the excitations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_excitations('input',i_excitation)
+! allocate the field on which the excitation occurs
+if (i_excitation) then
+   allocate(mode_excitation_field(N_cell))
+   call dissociate(mode_excitation_field,N_cell)
+
+   call associate_excitation(mode_excitation_field,all_mode_1,my_order_parameters)
+endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! do we use the update timestep
@@ -328,7 +335,7 @@ do j=1,duration
    D_mode=0.0d0
    Mdy=0.0d0
 
-   call update_ext_EM_fields(real_time,kt,h_int,E_int,check)
+   call update_ext_EM_fields(real_time,check)
 
 #ifdef CPP_OPENMP
 !$OMP parallel private(iomp,Beff) default(shared) reduction(+:check1,check2,check3)
@@ -338,13 +345,7 @@ do j=1,duration
 
   do iomp=1,N_cell
 
-     if (i_excitation) then
-        write(*,*) kt,h_int,E_int
-        if (i_Efield) call update_E_of_r(iomp,E_int,mode_Efield(iomp)%w)
-        if (i_Hfield) call update_H_of_r(iomp,H_int,mode_Hfield(iomp)%w)
-        if (i_temperature) call update_T_of_r(iomp,kt,mode_temp(iomp)%w)
-        stop 'toto'
-     endif
+     if (i_excitation) call update_EMT_of_r(iomp,mode_excitation_field(iomp)%w)
 
      call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp))
 

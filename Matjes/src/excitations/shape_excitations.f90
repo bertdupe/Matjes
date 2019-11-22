@@ -9,10 +9,10 @@ abstract interface
   end function
 end interface
 
-type(shape_field) :: shape_excitation
+type(shape_field), public, protected :: shape_excitation
 
 private
-public :: get_shape
+public :: get_shape,shape_norm
 
 contains
 
@@ -23,8 +23,8 @@ subroutine get_shape(io,fname,name,norm)
 use m_io_utils, only : get_parameter
 implicit none
 character(len=*), intent(in) :: fname,name
-procedure(shape_norm), pointer, intent(out) :: norm
 integer, intent(in) :: io
+procedure(shape_norm), pointer, intent(out) :: norm
 ! internal
 
 call get_parameter(io,fname,'shape',shape_excitation)
@@ -39,6 +39,9 @@ select case (trim(shape_excitation%name))
 
   case('cylinder')
     norm => norm_2
+
+  case('gaussian')
+    norm => norm_3
 
   case default
      stop 'The shape is not implemented'
@@ -82,5 +85,15 @@ norm_2=0.0d0
 if (norm(R-R0).lt.cutoff) norm_2=1.0d0
 
 end function norm_2
+
+function norm_3(R,R0,cutoff)
+use m_vector, only : norm
+implicit none
+real(kind=8), intent(in) :: R(3),R0(3),cutoff
+real(kind=8) :: norm_3
+
+norm_3=exp(-(norm(R-R0)/cutoff)**2)
+
+end function norm_3
 
 end module m_shape_excitations

@@ -327,7 +327,7 @@ do i=1,size_mode/3
    end=3*i
    norm_mode=norm(mode_t(start:end))
    euler_int(start:end)=mode_t(start:end)+D_mode(start:end)*dt+sqrt(dt)*DT_mode(start:end)
-   euler(start:end)=euler_int(start:end)*norm_mode/norm(euler_int(start:end))
+   if (norm(euler_int(start:end)).gt.1.0d-8) euler(start:end)=euler_int(start:end)*norm_mode/norm(euler_int(start:end))
 enddo
 
 end function euler

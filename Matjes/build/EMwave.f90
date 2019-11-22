@@ -73,17 +73,17 @@ end subroutine get_parameter_EMwave
 !!!!!!!!!!!!!!!!!!!!!!!!!
 ! initialize parameters
 !!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine update_EMwave(time,Efield)
+subroutine update_EMwave(time,field)
 use m_io_utils
 use m_constants, only : epsilon_0
 implicit none
 real(kind=8), intent(in) :: time
-real(kind=8), intent(inout) :: Efield(:)
+real(kind=8), intent(inout) :: field(:)
 ! internal
 
-Efield=0.0d0
+field=0.0d0
 
-Efield(1)=EM_Pulse%E_0*cos(EM_Pulse%omega_l*time)*exp(((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
+field(1)=EM_Pulse%E_0*cos(EM_Pulse%omega_l*time)*exp(((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
 
 end subroutine update_EMwave
 

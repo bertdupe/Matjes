@@ -24,7 +24,7 @@ type(point_shell_Operator), intent(in) :: B_line
 ! output of the function
 real(kind=8), intent(out) :: B(:)
 ! internals
-integer :: N,i
+integer :: N,i,j
 
 !N=B_total%ncolumn
 N=size(B_line%shell)
@@ -37,13 +37,11 @@ do i=1,N
 
       B=B+matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
 
-!      if (iomp.eq.1) then
-!      write(*,*) 'shell',i
+!      write(*,*) ''
 !      write(*,*) spin%shell(i)%w
-!      write(6,'(6(f12.6,2x))') (B_line%shell(i)%Op_loc(j,:),j=1,size(B_line%shell(i)%Op_loc,1))
+!      write(6,'(9(f12.6,2x))') (B_line%shell(i)%Op_loc(:,j),j=1,size(B_line%shell(i)%Op_loc,2))
 !      write(*,*) matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
-!      write(*,*) ' '
-!      endif
+!      pause
 
 enddo
 
