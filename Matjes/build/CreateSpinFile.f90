@@ -7,13 +7,13 @@ use m_io_utils
 use m_convert
 
   interface CreateSpinFile
-       module procedure CreateSpinFile_usernamed
+       module procedure CreateSpinFile_lattice_usernamed
        module procedure CreateSpinFile_I_simple_5d
        module procedure CreateSpinFile_I_lattice
        module procedure CreateSpinFile_R_simple_5d
        module procedure CreateSpinFile_simple_4d
        module procedure CreateSpinFile_end
-       module procedure CreateSpinFile_simple_5d_usernamed
+       module procedure CreateSpinFile_2d
        module procedure CreateSpinFile_usernamed_spin
   end interface
 
@@ -25,97 +25,34 @@ contains
 ! Create files to plot with Povray
 !
 !
+
 ! ===============================================================
-subroutine CreateSpinFile_simple_5d_usernamed(fname,signature,spin,shape_spin)
-use m_constants, only : pi
+subroutine CreateSpinFile_2d(fname,signature,spin)
 Implicit none
-real(kind=8), intent(in) :: spin(:,:,:,:,:)
-integer, intent(in) :: shape_spin(:),signature
+real(kind=8), intent(in) :: spin(:,:)
+integer, intent(in) :: signature
 character(len=*), intent(in) :: fname
 !     Slope Indexes for three dim spins
-INTEGER :: i_x,i_y,i_z,i_m,i
-! coordinate of the spins
-integer :: X,Y,Z
+character(len=50) :: name
 
-!     calculating the angles
-real(kind=8) :: theta, phi
-!     colors
-real(kind=8) :: phi_color, Delta, widthc
-real(kind=8) :: Rc,Gc,Bc
-character(len=50) :: toto,fname2,fname3
+name=convert(fname,signature,'.dat')
 
-toto=trim(adjustl(fname))
-write(fname2,'(I10)') signature
-fname3=trim(adjustl(fname2))
-write(fname2,'(50a,a,50a,a)')(toto(i:i),i=1,len_trim(toto)),'_',(fname3(i:i),i=1,len_trim(fname3)),'.dat'
+call CreateSpinFile_usernamed_spin(spin,name)
 
-X=shape_spin(1)-2
-Y=shape_spin(1)-1
-Z=shape_spin(1)
-
-!     Constants used for the color definition
-      widthc=5.0d0
-      Delta =PI(2.0d0/3.0d0)
-
-      OPEN(15,FILE=fname2,status='replace')
-
-      do i_m=1,shape_spin(5)
-       Do i_z=1,shape_spin(4)
-        Do i_y=1,shape_spin(3)
-         Do i_x=1,shape_spin(2)
-
-!       Yes for these formulars it is helpfull to make a picture.
-!       The initial object is a cone with its top at
-!       coordinates (0,0,1). First turn it around the y-achse into
-!       the x-z-plane around angly, then turn it around the z-achse
-!       into the right position.
-!       Then translate it to the right r_x,r_y position.
-        if (abs(Spin(Z,i_x,i_y,i_z,i_m)).lt.1.0d0) then
-          theta=acos(Spin(Z,i_x,i_y,i_z,i_m))*180.0d0/pi(1.0d0)
-        else
-          theta=90.0d0-dsign(90.0d0,Spin(Z,i_x,i_y,i_z,i_m))
-        endif
-
-        phi=atan2(Spin(Y,i_x,i_y,i_z,i_m),Spin(X,i_x,i_y,i_z,i_m))
-
-        phi=phi*180.0d0/pi(1.0d0)
-
-!       Calcualting the color as a function of the angle in or
-!       out of the plane
-        phi_color=pi(theta/300.0d0*2.0d0)
-        Rc = widthc*(cos(phi_color+0*Delta))
-        if (Rc.lt.0.000001d0)  Rc=0.0d0
-        Gc = widthc*(cos(phi_color+1*Delta))
-        if (Gc.lt.0.000001d0)  Gc=0.0d0
-        Bc = widthc*(cos(phi_color+2*Delta))
-        if (Bc.lt.0.000001d0)  Bc=0.0d0
-
-         write(15,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',Spin(1,i_x,i_y,i_z,i_m),',',Spin(2,i_x,i_y,i_z,i_m),',',Spin(3,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
-
-         enddo
-        enddo
-       enddo
-      enddo
-
-      Close(15)
-
-      END subroutine CreateSpinFile_simple_5d_usernamed
+END subroutine CreateSpinFile_2d
 ! ===============================================================
 
 ! ===============================================================
-subroutine CreateSpinFile_usernamed_spin(fname,spin,shape_spin)
+subroutine CreateSpinFile_usernamed_spin(spin,fname)
 Implicit none
 character(len=*), intent(in) :: fname
-real(kind=8), intent(in) :: spin(:,:,:,:,:)
-integer, intent(in) :: shape_spin(:)
+real(kind=8), intent(in) :: spin(:,:)
 ! coordinate of the spins
 integer :: io
 
 io=open_file_write(trim(adjustl(fname)))
 
-call dump_spinse(io,spin,shape_spin)
+call dump_spinse(io,spin)
 
 call close_file(trim(adjustl(fname)),io)
 
@@ -123,7 +60,7 @@ END subroutine CreateSpinFile_usernamed_spin
 ! ===============================================================
 
 ! ===============================================================
-subroutine CreateSpinFile_usernamed(fname,my_lattice,my_motif)
+subroutine CreateSpinFile_lattice_usernamed(fname,my_lattice,my_motif)
 Implicit none
 character(len=*), intent(in) :: fname
 type(lattice), intent(in) :: my_lattice
@@ -153,7 +90,7 @@ call close_file(trim(adjustl(fname)),io)
 
 deallocate(position)
 
-END subroutine CreateSpinFile_usernamed
+END subroutine CreateSpinFile_lattice_usernamed
 ! ===============================================================
 
 ! ===============================================================
@@ -430,7 +367,7 @@ END subroutine CreateSpinFile_I_lattice
 subroutine get_colors(Rc,Gc,Bc,theta,phi,mode)
 use m_constants,only : pi
 implicit none
-real(kind=8),intent(inout) :: Rc,Gc,Bc,theta,phi
+real(kind=8),intent(out) :: Rc,Gc,Bc,theta,phi
 real(kind=8),intent(in) :: mode(3)
 ! internal
 real(kind=8) :: widthc,Delta,phi_color

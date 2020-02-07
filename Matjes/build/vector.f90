@@ -1,4 +1,5 @@
 module m_vector
+
    interface norm
        module procedure norm_real
        module procedure norm_int
@@ -25,22 +26,48 @@ module m_vector
        module procedure min_dist_3D
    end interface min_dist
 
+   interface calc_ang
+      module procedure calc_ang_real
+   end interface calc_ang
+
    interface calculate_damping
        module procedure damping_2V
    end interface calculate_damping
+
+public
+
 contains
+
+
+! ==============================================================
+!> Calculate angle between two 3-vectors
+real(kind=8) function calc_ang_real(n1,n2)
+implicit none
+real(kind=8), intent(in) :: n1(:), n2(:) !n1 and n2 have to be normalized
+!real(kind=8) :: calc_ang
+!internal variables
+real(kind=8) :: prod,tmp
+integer :: N
+
+N=size(n1)
+
+tmp = norm_cross(n1,n2,1,N)
+prod = dot_product(n1,n2)
+
+calc_ang_real = datan2(tmp,prod)
+end function calc_ang_real
 
 ! ==============================================================
 
-        function damping_2V(A,B)
-        ! calculates Ax(AxB)=-(A.(A.B)-B)
-        implicit none
-        real(kind=8), intent(in) :: A(3),B(3)
-        real(kind=8), dimension(3) :: damping_2V
+function damping_2V(A,B)
+! calculates Ax(AxB)=-(A.(A.B)-B)
+implicit none
+real(kind=8), intent(in) :: A(3),B(3)
+real(kind=8), dimension(3) :: damping_2V
 
-        damping_2V=-A*(A(1)*B(1)+A(2)*B(2)+A(3)*B(3))+B
+damping_2V=-A*(A(1)*B(1)+A(2)*B(2)+A(3)*B(3))+B
 
-        end function damping_2V
+end function damping_2V
 
 ! ==============================================================
 
@@ -249,6 +276,7 @@ end function norm_int
 
 
 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 ! work only for vectors of dimension 3N
@@ -261,17 +289,21 @@ real(kind=8), INTENT(IN) :: a(:), b(:)
 real(kind=8) :: cross_real(P:N)
 ! internal
 integer :: i,j
+real(kind=8) :: norm_local
 
 if (mod(N-P+1,3).ne.0) STOP 'error in norm_cross_real'
+norm_cross_real=0.0d0
 
 do i=1,(N-P+1)/3
    j=3*(i-1)+P
    cross_real(j)   =  a(j+1) * b(j+2) - a(j+2) * b(j+1)
    cross_real(j+1) =  a(j+2) * b(j)   - a(j)   * b(j+2)
    cross_real(j+2) =  a(j)   * b(j+1) - a(j+1) * b(j)
+
+   norm_cross_real=norm_cross_real+norm(cross_real(j:j+2))**2
 enddo
 
-norm_cross_real=sqrt(sum(cross_real**2))
+norm_cross_real=sqrt(norm_cross_real)
 
 END FUNCTION norm_cross_real
 
@@ -285,14 +317,17 @@ integer :: i,j
 
 if (mod(N-P+1,3).ne.0) STOP 'error in norm_cross_int'
 
+norm_cross_int=0.0d0
 do i=1,(N-P+1)/3
    j=3*(i-1)+P
    cross_real(j)   = dble( a(j+1) * b(j+2) - a(j+2) * b(j+1) )
    cross_real(j+1) = dble( a(j+2) * b(j)   - a(j)   * b(j+2) )
    cross_real(j+2) = dble( a(j)   * b(j+1) - a(j+1) * b(j)   )
+
+   norm_cross_int=norm_cross_int+norm(cross_real(j:j+2))**2
 enddo
 
-norm_cross_int=sqrt(sum(cross_real**2))
+norm_cross_int=sqrt(norm_cross_int)
 
 END FUNCTION norm_cross_int
 

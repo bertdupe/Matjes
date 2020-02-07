@@ -96,58 +96,26 @@ end subroutine dump_config_FFT
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local spinse files
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse_spin(io,spin,shape_spin)
+subroutine dump_config_spinse_spin(io,spin)
 use m_constants, only : pi
 implicit none
 integer, intent(in) :: io
-real(kind=8), intent(in) :: spin(:,:,:,:,:)
-integer, intent(in) :: shape_spin(:)
+real(kind=8), intent(in) :: spin(:,:)
 ! internale variables
-Integer :: i_x,i_y,i_z,i_m
+Integer :: i,shape_spin(2)
 real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi,phi_color
 
 !     Constants used for the color definition
 widthc=5.0d0
 Delta =PI(2.0d0/3.0d0)
+shape_spin=shape(spin)
 
-do i_m=1,shape_spin(5)
-   Do i_z=1,shape_spin(4)
-      Do i_y=1,shape_spin(3)
-         Do i_x=1,shape_spin(2)
+do i=1,shape_spin(2)
 
-!       Yes for these formulars it is helpfull to make a picture.
-!       The initial object is a cone with its top at
-!       coordinates (0,0,1). First turn it around the y-achse into
-!       the x-z-plane around angly, then turn it around the z-achse
-!       into the right position.
-!       Then translate it to the right r_x,r_y position.
-        if (abs(spin(6,i_x,i_y,i_z,i_m)).lt.1.0d0) then
-          theta=acos(spin(6,i_x,i_y,i_z,i_m))*180.0d0/pi(1.0d0)
-        else
-          theta=90.0d0-dsign(90.0d0,spin(6,i_x,i_y,i_z,i_m))
-        endif
+   call get_colors(Rc,Gc,Bc,theta,phi,spin(:,i))
 
-        phi=atan2(spin(5,i_x,i_y,i_z,i_m),spin(4,i_x,i_y,i_z,i_m))
+   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(i),',',Rc,',',Bc,',',Gc,')'
 
-        phi=phi*180.0d0/pi(1.0d0)
-
-!       Calcualting the color as a function of the angle in or
-!       out of the plane
-        phi_color=pi(theta/300.0d0*2.0d0)
-        Rc = widthc*(cos(phi_color+0*Delta))
-        if (Rc.lt.0.000001d0)  Rc=0.0d0
-        Gc = widthc*(cos(phi_color+1*Delta))
-        if (Gc.lt.0.000001d0)  Gc=0.0d0
-        Bc = widthc*(cos(phi_color+2*Delta))
-        if (Bc.lt.0.000001d0)  Bc=0.0d0
-
-         write(io,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',spin(1,i_x,i_y,i_z,i_m),',',spin(2,i_x,i_y,i_z,i_m),',',spin(3,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
-
-         enddo
-     enddo
-   enddo
 enddo
 
 end subroutine dump_config_spinse_spin

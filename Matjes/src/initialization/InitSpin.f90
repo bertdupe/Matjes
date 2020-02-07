@@ -17,8 +17,7 @@ type (simulation_parameters), intent(in) :: ext_param
 LOGICAL :: i_exi,i_init_config
 !     Absolute value of a spin
 integer, parameter  :: io=9
-integer :: dim_lat(3),nmag
-integer :: i_x,i_y,i_z,i_m
+integer :: dim_lat(3)
 real(kind=8) :: r(3,3),mu_S
 
 #ifdef CPP_MPI

@@ -41,7 +41,6 @@ type(io_parameter) :: io_simu
 ! types of the simulation (it defines what type of simulation will be run)
 type(bool_var) :: my_simu
 ! number of lattices that should be used + variables that contains all lattices
-Integer :: nlattice
 type(lattice) :: all_lattices
 ! unit parameters for the file
 integer :: io_param
@@ -91,8 +90,6 @@ type(mtprng_state) :: state
 #endif
 
 io_param=open_file_read('input')
-
-call get_parameter(io_param,'input','nlattice',nlattice)
 
 !! initialize the variables
 ! initialization of the type of simulation
@@ -185,7 +182,7 @@ n_system=all_lattices%n_system
 !    Loop for Spin dynamics
 !---------------------------------
 
-if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_simu,.False.,ext_param)
+if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_simu,ext_param)
 
 !---------------------------------
 !  Part which does Entropic Sampling
@@ -200,13 +197,14 @@ if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_s
 !---------------------------------
 !  Part which does the GNEB
 !---------------------------------
-!if (my_simu%name == 'GNEB') then
-!            write(6,'(a)') 'entering into the GNEB routine'
+if (my_simu%name == 'GNEB') then
+            write(6,'(a)') 'entering into the GNEB routine'
 !!            call init_gneb()
 !            call GNEB(i_biq,i_dm,i_four,i_dip,EA,h_ext,mag_lattice, &
 !                    & indexNN,shape_index,shape_spin,tableNN,shape_tableNN,masque,shape_masque,N_cell)
-!            !call set_gneb_defaults()
-!endif
+             call GNEB(all_lattices,motif,io_simu,ext_param)
+            !call set_gneb_defaults()
+endif
 
 !if (my_simu%name == 'minimization') then
 !            write(6,'(a)') 'entering into the minimization routine'

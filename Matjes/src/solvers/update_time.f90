@@ -72,7 +72,7 @@ enddo
 
 if (max_B.gt.1.0d-8) then
    dumy_BT=dumy_BT/real(size_BT)
-   timestep=pi(2.0d0)*hbar/(max_B/(1.0d0+damping**2)+dumy_BT*sqrt(damping/(1.0d0+damping**2)))/discretization
+   timestep=pi(2.0d0)*hbar/(max_B+dumy_BT)/discretization
 else
    stop 'error in update_time'
 endif

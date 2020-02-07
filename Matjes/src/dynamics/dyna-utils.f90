@@ -10,6 +10,7 @@ interface copy_lattice
  module procedure copy_Mat_Mat
  module procedure copy_1D_1D
  module procedure copy_1Dp_1Dp
+ module procedure copy_1Dp_1Dreal
 end interface copy_lattice
 
 interface test_size_mat
@@ -86,6 +87,26 @@ do i=1,N
 enddo
 
 end subroutine copy_1Dp_1Dp
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! copy the content of a 1D vector into a 1D vector pointer
+! This routine must be fast because it is used all the time
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine copy_1Dp_1Dreal(in,out)
+implicit none
+type(vec_point),intent(out) :: out(:)
+real(kind=8),intent(in) :: in(:,:)
+! internal variables
+integer :: i,N
+
+N=size(out)
+if (size(out(1)%w).ne.size(in(:,1))) stop 'size of matrices do not match - copy_1Dp_1D'
+
+do i=1,N
+  out(i)%w=in(:,i)
+enddo
+
+end subroutine copy_1Dp_1Dreal
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! copy the content of the pointer into the spin matrix

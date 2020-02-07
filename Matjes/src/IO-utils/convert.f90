@@ -6,6 +6,7 @@ interface convert
  module procedure string_plus_int_to_string
  module procedure string_plus_int_plus_string_to_string
  module procedure fourstring_plus_int_to_string
+ module procedure threestring_plus_int_to_string
 end interface convert
 
 private
@@ -129,6 +130,35 @@ write(fourstring_plus_int_to_string,form) str1(1:l1),str2(1:l2),str3(1:l3),str4(
 
 end function
 
+
+! merge a 3 strings and an integer into a string
+function threestring_plus_int_to_string(str1,str2,i,str3)
+implicit none
+character(len=*), intent(in) :: str1,str2,str3
+integer, intent(in) :: i
+character(len=30) :: threestring_plus_int_to_string
+! internal
+integer :: l1,l2,l_tot,l3,l4
+character(len=30) :: str4
+character(len=100) :: form
+
+l1=len_trim(str1)
+l2=len_trim(str2)
+l3=len_trim(str3)
+str4=int_to_str(i)
+l4=len_trim(str4)
+
+l_tot=l1+l2+l3+l4
+
+if (l_tot.gt.30) then
+   write(6,'(a)') 'error in the string_plus_int_to_string subroutine'
+   stop
+endif
+
+write(form,'(a,I4,a)') '(',l_tot,'a)'
+write(threestring_plus_int_to_string,form) str1(1:l1),str2(1:l2),str4(1:l4),str3(1:l3)
+
+end function
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! private part of the module

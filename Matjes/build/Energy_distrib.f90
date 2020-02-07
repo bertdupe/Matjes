@@ -150,7 +150,7 @@ end subroutine get_Energy_distrib_line
 ! Print the energy density distribution interaction and shell resolve into a file
 !
 !!!!!!!!!!!!!!!!!!!!!!!
-subroutine get_Energy_distrib(tag,spin,h_int)
+subroutine get_Energy_distrib(tag,spin)
 use m_io_files_utils
 use m_convert
 !use  m_total_energy, only : total_energy
@@ -159,7 +159,6 @@ implicit none
 ! input
 type(vec_point),intent(in) :: spin(:)
 integer, intent(in) :: tag
-real(kind=8), intent(in) :: h_int(:)
 ! internals
 integer :: i,N,io,j
 real(kind=8) :: E_int
@@ -191,13 +190,6 @@ do i=1,N
 
    write(io,rw_format) E_shell
 enddo
-#ifdef CPP_BRUTDIP
-!          if (i_dip) E_dip=dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,my_lattice%boundary)
-#else
-!          if (i_dip) E_dip=fftdip(i_x,i_y,i_z,i_m)
-#endif
-
-!          Write(70,'(8(E20.12E3,2x))') E_DM,E_ani,E_z,E_4,E_biq,E_dip
 
 call close_file(fname,io)
 

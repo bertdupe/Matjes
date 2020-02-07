@@ -1,17 +1,16 @@
-subroutine spindynamics(mag_lattice,mag_motif,io_simu,gra_topo,ext_param)
+subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param)
+use m_basic_types, only : vec_point
+use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator,point_shell_mode
 use m_fieldeff
 use m_torques, only : get_torques
 use m_lattice, only : my_order_parameters
 use m_eval_BTeff
 use m_measure_temp
-use m_topo_commons, only : get_size_Q_operator,associate_Q_operator
-use m_derived_types
+use m_topo_commons
 use m_update_time, only : update_time,get_dt_LLG,init_update_time
 use m_vector, only : cross,norm,norm_cross
-use m_sd_averages
 use m_randist
 use m_constants, only : pi,k_b,hbar
-use m_topo_sd
 use m_eval_Beff
 use m_write_spin
 use m_energyfield, only : get_Energy_distrib,get_Energy_distrib_line
@@ -25,6 +24,7 @@ use m_user_info
 use m_excitations
 use m_operator_pointer_utils
 use m_solver_commun
+use m_topo_sd
 #ifndef CPP_BRUTDIP
       use m_setup_dipole, only : mmatrix
 #endif
@@ -39,7 +39,6 @@ type(lattice), intent(inout) :: mag_lattice
 type(cell), intent(in) :: mag_motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
-logical, intent(in) :: gra_topo
 ! internal
 logical :: gra_log,io_stochafield
 integer :: i,j,l,k,h,gra_freq
@@ -70,7 +69,7 @@ real(kind=8) :: maxh
 ! parameter for the rkky integration
 integer :: N_site_comm
 ! dumy
-logical :: said_it_once,test
+logical :: said_it_once,test,gra_topo
 ! starting and ending points of the sums
       integer :: Mstop
 #ifndef CPP_MPI
@@ -139,8 +138,6 @@ call associate_pointer(all_mode_2,spinafter)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the pointers for the B-field and the energy
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!!!! test
 
 time=0.0d0
 call user_info(6,time,'associate H_line, B_line and S_line',.true.)
@@ -257,6 +254,7 @@ enddo
 gra_log=io_simu%io_Xstruct
 io_stochafield=io_simu%io_Tfield
 gra_freq=io_simu%io_frequency
+gra_topo=io_simu%io_topo
 ktini=ext_param%ktini%value
 ktfin=ext_param%ktfin%value
 kt=ktini
@@ -349,6 +347,9 @@ do j=1,duration
 
      call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp))
 
+!
+! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
+!
      if (i_temperature) call get_temperature_field(mode_temp(iomp)%w(1),damping,mode_magnetic(iomp,1)%w,BT_mag(iomp)%w,D_T_mag(iomp)%w,size(mode_magnetic(iomp,1)%w))
 
      if (i_magnetic) D_mode_mag(iomp)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp,1)%w,size(mode_magnetic(iomp,1)%w))
@@ -397,17 +398,7 @@ call MPI_REDUCE(trans(1),test_torque,1,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
 
 if (j.eq.1) check3=test_torque
 
-#ifdef CPP_MPI
-! gather to take into account the possible change of size of spinafter
-!------------------------------
-!if (i_ghost) then
-!   call rebuild_mat(spinafter,N_site_comm*4,spin)
-!else
-!   call copy_lattice(spin,spinafter)
-!endif
-#else
 call copy_lattice(all_mode_2,all_mode_1)
-#endif
 
 ! calculate energy
 
@@ -416,14 +407,14 @@ call copy_lattice(all_mode_2,all_mode_1)
 #endif
 do iomp=1,N_cell
 
-    call local_energy_pointer(Et,iomp,mode_E_column(iomp),E_line(iomp))
+    call local_energy(Et,iomp,mode_E_column(iomp),E_line(iomp))
 
     Edy=Edy+Et
     Mdy(1)=Mdy(1)+mode_magnetic(iomp,1)%w(1)
     Mdy(2)=Mdy(2)+mode_magnetic(iomp,1)%w(2)
     Mdy(3)=Mdy(3)+mode_magnetic(iomp,1)%w(3)
 
-    dumy=sd_charge(iomp)
+    dumy=get_charge(iomp)
 
     q_plus=q_plus+dumy(1)/pi(4.0d0)
     q_moins=q_moins+dumy(2)/pi(4.0d0)
@@ -437,33 +428,15 @@ enddo
 #ifdef CPP_OPENMP
 !$OMP end parallel do
 #endif
-      vortex=(/vx,vy,vz/)/3.0d0/sqrt(3.0d0)
+vortex=(/vx,vy,vz/)/3.0d0/sqrt(3.0d0)
+Edy=Edy/N_cell
+Mdy=Mdy/N_cell
 
-#ifdef CPP_MPI
-       trans(1)=Edy
-       call MPI_ALLREDUCE(trans(1),Edy,1,MPI_REAL8,MPI_SUM,MPI_COMM,ierr)
-       trans(1:3)=Mdy
-       call MPI_REDUCE(trans(1:3),Mdy,3,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
-       trans(1)=qeuler
-       call MPI_REDUCE(trans(1),qeuler,1,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
-       trans(1:3)=vortex
-       call MPI_REDUCE(trans(1:3),vortex,3,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
-       trans(1:2)=check
-       call MPI_REDUCE(trans(1:2),check,2,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
-
-      if (j.eq.1) Einitial=Edy/N_cell
-#endif
 !#ifdef CPP_MPI
 !      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0).and.(irank.eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,shape_tableNN,masque,indexNN,h_int,mag_lattice,irank,start,isize,MPI_COMM)
 !#else
 !      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,masque,indexNN,h_int,mag_lattice)
 !#endif
-
-#ifdef CPP_MPI
-       if (irank.eq.0) then
-#endif
-      Edy=Edy/N_cell
-      Mdy=Mdy/N_cell
 
 if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
@@ -472,7 +445,7 @@ if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Ed
      &   kT/k_B,(security(i),i=1,2),H_int
 
 if ((io_simu%io_Energy_Distrib).and.((mod(j-1,gra_freq).eq.0))) then
-         call get_Energy_distrib(j/gra_freq,all_mode_1,h_int)
+         call get_Energy_distrib(j/gra_freq,all_mode_1)
       endif
 
 if ((gra_log).and.(mod(j-1,gra_freq).eq.0)) then
@@ -488,12 +461,8 @@ if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
       endif
 
 if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) then
-   if (size(mag_lattice%world).eq.2) then
-        Call topocharge_sd(j/gra_freq,spinafter(:,:,:,1,:),mag_lattice)
-       endif
+        Call get_charge_map(j/gra_freq)
       endif
-
-!if ((io_simu%io_Energy_Distrib).and.(mod(j-1,gra_freq).eq.0)) call get_Energy_distrib(j/gra_freq,spin1)
 
 !if ((Ffield).and.(mod(j-1,gra_freq).eq.0)) call field_sd(j/gra_freq,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
 

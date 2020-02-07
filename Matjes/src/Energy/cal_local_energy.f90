@@ -5,11 +5,11 @@ use m_derived_types
        module procedure loc_en_MC
       end interface local_energy_MC
 
-      interface local_energy
-       module procedure local_energy_decompose
-       module procedure local_energy_av
-       module procedure local_energy_pointer
-      end interface local_energy
+interface local_energy
+   module procedure local_energy_decompose
+   module procedure local_energy_av
+   module procedure local_energy_pointer
+end interface local_energy
 
 private
 public :: local_energy_MC,local_energy,local_energy_pointer

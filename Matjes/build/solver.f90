@@ -7,8 +7,14 @@ use m_derived_types
    end interface minimization
 
 private
-public :: Euler,integrate_SIB_NC_ohneT,implicite
+public :: Euler,integrate_SIB_NC_ohneT,implicite,minimization
 contains
+
+!
+! dt comes in in units of fs
+!
+!
+!
 
 ! ----------------------------------------------
 ! SIA prediction integration scheme. Not norm conserving
@@ -216,7 +222,7 @@ real(kind=8) :: step(3),stepdamp(3),dt,ds(3)
        integer, parameter :: Zstart=1
 #endif
 
-dt=timestep/hbar/(1+damping**2)
+dt=timestep/hbar
 B_int=B
 step=cross(B,spin,1,3)
 
@@ -306,6 +312,7 @@ end function implicite
 ! Euler integration scheme
 function euler(mode_t,D_mode,DT_mode,dt,size_mode)
 use m_vector, only : cross,norm
+use m_constants, only : hbar
 implicit none
 integer, intent(in) :: size_mode
 real(kind=8), intent(in) :: mode_t(:),D_mode(:),dt,DT_mode(:)
@@ -326,7 +333,7 @@ do i=1,size_mode/3
    start=3*(i-1)+1
    end=3*i
    norm_mode=norm(mode_t(start:end))
-   euler_int(start:end)=mode_t(start:end)+D_mode(start:end)*dt+sqrt(dt)*DT_mode(start:end)
+   euler_int(start:end)=mode_t(start:end)+(D_mode(start:end)*dt+sqrt(dt)*DT_mode(start:end))/hbar
    if (norm(euler_int(start:end)).gt.1.0d-8) euler(start:end)=euler_int(start:end)*norm_mode/norm(euler_int(start:end))
 enddo
 
@@ -403,35 +410,35 @@ end function FM_resonnance
 !!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-       subroutine euler_minimization(initial,force,predicator,dt,masse,N)
-       implicit none
-       integer, intent(in) :: N
-       real(kind=8), intent(out) :: predicator(N)
-       real(kind=8), intent(in) :: force(N),initial(N)
-       real(kind=8), intent(in) :: dt,masse
+subroutine euler_minimization(initial,force,predicator,dt,masse,N)
+implicit none
+integer, intent(in) :: N
+real(kind=8), intent(out) :: predicator(N)
+real(kind=8), intent(in) :: force(N),initial(N)
+real(kind=8), intent(in) :: dt,masse
 ! dummy variable
 
-       predicator=force*dt/masse+initial
+predicator=force*dt/masse+initial
 
-       end subroutine euler_minimization
+end subroutine euler_minimization
 
-       subroutine euler_o2_minimization(spin,v_spin,force,predicator,dt,masse,N)
-       implicit none
-       integer, intent(in) :: N
-       real(kind=8), intent(out) :: predicator(N)
-       real(kind=8), intent(in) :: force(N),v_spin(N),spin(N)
-       real(kind=8), intent(in) :: dt,masse
+subroutine euler_o2_minimization(spin,v_spin,force,predicator,dt,masse,N)
+implicit none
+integer, intent(in) :: N
+real(kind=8), intent(out) :: predicator(N)
+real(kind=8), intent(in) :: force(N),v_spin(N),spin(N)
+real(kind=8), intent(in) :: dt,masse
 ! dummy variable
-       real(kind=8) :: s_dumy(N),norm
+real(kind=8) :: s_dumy(N),norm
 
-       s_dumy=0.0d0
-       predicator=0.0d0
+s_dumy=0.0d0
+predicator=0.0d0
 
-       s_dumy=force*dt**2/masse/2.0d0+v_spin*dt+spin
-       norm=sqrt(sum(s_dumy**2))
+s_dumy=force*dt**2/masse/2.0d0+v_spin*dt+spin
+norm=sqrt(sum(s_dumy**2))
 
-       predicator=s_dumy/norm
+predicator=s_dumy/norm
 
-       end subroutine euler_o2_minimization
+end subroutine euler_o2_minimization
 
-       end module m_solver
+end module m_solver

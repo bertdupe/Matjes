@@ -120,43 +120,6 @@ n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
 ! One need the dimension of the order parameter before the hamiltonians can be created
 call get_Hamiltonians('input',my_motif%atomic(1)%moment,my_lattice%dim_mode)
 
-! of ghost is there, then make the box
-!#ifdef CPP_MPI
-!      if (i_ghost) then
-!
-!       if (irank.eq.0) then
-!        write(6,'(a)') "domain decomposition parallelisation selected"
-!        write(6,'(I5,a)') n_ghost," domains split"
-!       endif
-!
-!       if (size(world).eq.1) then
-!        call box_1D(dim_lat(1),n_ghost,Periodic_log,N_Nneigh/2)
-!        N_site=(Xstop-Xstart+1)*count(my_motif%i_mom)
-!       elseif (size(world).eq.2) then
-!        call box_2D(dim_lat(1),dim_lat(2),n_ghost,Periodic_log,N_Nneigh/2)
-!        N_site=(Xstop-Xstart+1)*count(my_motif%i_mom)*(Ystop-Ystart+1)
-!       else
-!        call box_3D(dim_lat(1),dim_lat(2),dim_lat(3),n_ghost,Periodic_log)
-!        N_site=(Xstop-Xstart+1)*count(my_motif%i_mom)*(Ystop-Ystart+1)*(Zstop-Zstart+1)
-!       endif
-!
-!
-!       if (irank.eq.0) write(6,'(a)') "--------------------------"
-!       if (irank/n_ghost.eq.0) write(6,'(a,I5,3(a,2I8))') "on process ",irank," domain: X",Xstart,Xstop,", Y: ",Ystart,Ystop, ", Z: ",Zstart,Zstop
-!
-!      else
-!      Xstart=1
-!      Xstop=dim_lat(1)
-!      Ystart=1
-!      Ystop=dim_lat(2)
-!      Zstart=1
-!      Zstop=dim_lat(3)
-!      N=(/Xstop,Ystop,Zstop/)
-!      start=0
-!      irank_working=irank
-!      endif
-!#endif
-
 N_Nneigh=get_number_shell()
 
 allocate(indexNN(N_Nneigh,phase),stat=alloc_check)

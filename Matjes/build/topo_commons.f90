@@ -1,17 +1,43 @@
 module m_topo_commons
 use m_derived_types, only : operator_real,cell,lattice
 use m_basic_types, only : vec_point
-! operator that returns the topological charge
-!!type(operator_real),save :: charge
-! operator that returns the vorticity
-!!type(operator_real),save :: vorticity
-! the matrix contains for each vector the position of the neihboring vector to calculate the Q and the vorticity
+
+interface get_charge
+  module procedure :: get_charge_2D   ! take only one int argument (iomp)
+end interface
+
 type(vec_point),allocatable,protected,save,public :: Q_topo(:,:)
 
 private
-public :: get_size_Q_operator,associate_Q_operator
+public :: get_size_Q_operator,associate_Q_operator,get_charge
 
 contains
+
+!
+! function that returns the topological charge of the magnetic textures
+!
+function get_charge_2D(i)
+use m_vector, only : cross,norm,area
+Implicit none
+real(kind=8), dimension(5) :: get_charge_2D
+integer, intent(in) :: i
+! internal
+real(kind=8) :: vort(3),qtopo
+
+qtopo=0.0d0
+vort=0.0d0
+get_charge_2D=0.0d0
+
+qtopo=area(Q_topo(1,i)%w,Q_topo(2,i)%w,Q_topo(3,i)%w)+area(Q_topo(1,i)%w,Q_topo(3,i)%w,Q_topo(4,i)%w)
+
+vort=cross(Q_topo(1,i)%w,Q_topo(2,i)%w,1,3)+cross(Q_topo(2,i)%w,Q_topo(3,i)%w,1,3) &
+        +cross(Q_topo(3,i)%w,Q_topo(4,i)%w,1,3)+cross(Q_topo(4,i)%w,Q_topo(1,i)%w,1,3)
+
+if (qtopo.gt.0.0d0) get_charge_2D(1)=qtopo
+if (qtopo.lt.0.0d0) get_charge_2D(2)=qtopo
+get_charge_2D(3:5)=vort
+
+end function get_charge_2D
 
 !
 ! subroutine that associates the the topological charge operator and the different vectors

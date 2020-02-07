@@ -15,6 +15,7 @@ contains
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine langevin_bath(kt,damping,mode,BT,DT,size_mode)
+use m_constants, only : hbar
 use m_vector, only : norm,cross
 implicit none
 !logical, intent(in) :: stmtemp
@@ -26,13 +27,13 @@ real(kind=8) :: step_T(3)
 integer :: i,j
 
 do i=1,size_mode
-   BT(i)=randist(kt)
+   BT(i)=sqrt(damping*hbar)*randist(kt)
 enddo
 
 do i=1,size_mode/3
    j=3*(i-1)+1
    step_T=cross(mode(j:j+2),BT(j:j+2),1,3)
-   DT(j:j+2)=step_T(:)+damping*cross(mode(j:j+2),step_T(j:j+2),1,3)
+   DT(j:j+2)=(step_T(:)+damping*cross(mode(j:j+2),step_T(j:j+2),1,3))/(1+damping**2)
 enddo
 
 end subroutine langevin_bath
@@ -67,17 +68,22 @@ implicit none
 real(kind=8), intent(in) :: kt
 real(kind=8) :: Choice1, Choice2
 
-call RANDOM_NUMBER(Choice1)
-call RANDOM_NUMBER(Choice2)
+Choice1=10.0d0
+Choice2=10.0d0
 
-Choice1=(Choice1*2.0d0-1.0d0)/dsqrt(2.0d0)
-Choice2=(Choice2*2.0d0-1.0d0)/dsqrt(2.0d0)
+do while (Choice1**2+Choice2**2.gt.1.0d0)
+  call RANDOM_NUMBER(Choice1)
+  call RANDOM_NUMBER(Choice2)
+  Choice1=(Choice1*2.0d0-1.0d0)
+  Choice2=(Choice2*2.0d0-1.0d0)
+enddo
 
-gaussianran=sqrt(2.0d0*kT)*Choice1*sqrt(-dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
+!
+! according to the PhD of Schieback (2010) from Constanz p. 35
+!
 
-! as expressed in Mentink et al J. Phys. C 22, 176001 (2010)
-!      gaussianran=2.0d0*damping*kT/(1+damping**2)*Choice1*dsqrt(-2.0d0*dlog( &
-!         Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
+gaussianran=sqrt(2.0d0*kT)*Choice1*sqrt(-2.0d0*dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
+
 end function
 
 

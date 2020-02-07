@@ -21,39 +21,22 @@ public :: WriteSpinAndCorrFile
 contains
 
 ! ===============================================================
-! works only with matrices of rank 5 with the name given by the user
-      SUBROUTINE write_usernamed(fname,spin,shape_spin)
-      Implicit none
-      real(kind=8), intent(in) :: spin(:,:,:,:,:)
-      integer, intent(in) :: shape_spin(:)
-      character(len=*) :: fname
+! works mainly for the GNEB
+SUBROUTINE write_usernamed(spin,filename)
+Implicit none
+real(kind=8), intent(in) :: spin(:,:)
+character(len=*) :: filename
 !     Coordinates of the Spins
-      Integer :: i_x,i_y,i_z,i_m,j_lat,size_z
-      character(len=50) :: toto
+Integer :: io
+character(len=50) :: toto
 
-      size_z=shape_spin(5)
+io=open_file_write(filename)
 
-!     write Spinconfiguration in a povray-file
+call dump_config(io,spin)
 
-      toto=trim(adjustl(fname))
+call close_file(filename,io)
 
-!     write Spinconfiguration in a file for STM-simulation
-
-      OPEN(15,FILE=toto,status='unknown')
-
-      do i_z=1,shape_spin(4)
-       do i_y=1,shape_spin(3)
-        do i_x=1,shape_spin(2)
-
-        Write(15,'(7f14.8)') ((Spin(j_lat,i_x,i_y,i_z,i_m), j_lat=1,shape_spin(1)),i_m=1,size_z)
-
-        enddo
-       enddo
-      enddo
-
-      Close(15)
-
-      END SUBROUTINE write_usernamed
+END SUBROUTINE write_usernamed
 ! ===============================================================
 
 ! ===============================================================

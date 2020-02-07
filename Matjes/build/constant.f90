@@ -19,6 +19,7 @@ real(kind=8), parameter :: hbar=6.58211928d-1
 real(kind=8), parameter :: qel=1.60217657d-19
 contains
 
+! function that defines the pi constant and multiplies it
 real(kind=8) function pi(a)
 implicit none
 real(kind=8), intent(in) :: a
@@ -28,6 +29,7 @@ real(kind=8), Parameter :: pi_value=acos(-1.0d0)
 pi=a*pi_value
 end function pi
 
+! function that spits out the unit matrix
 function identity(a)
 implicit none
 real(kind=8), intent(in) :: a

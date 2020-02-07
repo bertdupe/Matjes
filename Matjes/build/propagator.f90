@@ -32,7 +32,7 @@ LLG_int=-B-damping*stepdamp
 
 call update_B(S_norm,damping,LLG_int)
 
-LLG=cross(S_norm,LLG_int,1,size_b)
+LLG=cross(S_norm,LLG_int,1,size_b)/(1+damping**2)
 
 end function LLG
 
@@ -58,6 +58,8 @@ stepdamp=cross(S_norm,B,1,size_b)
 LLG_B=-B-damping*stepdamp
 
 call update_B(S_norm,damping,LLG_B)
+
+LLG_B=LLG_B/(1+damping**2)
 
 end function LLG_B
 
