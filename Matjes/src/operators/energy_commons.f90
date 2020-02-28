@@ -42,7 +42,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine get_Hamiltonians(fname,Ms,dim_Ham)
-use m_derived_types, only : site_Ham
+use m_derived_types, only : site_Ham,simulation_parameters
 use m_io_files_utils
 use m_io_utils
 use m_constants, only : mu_B

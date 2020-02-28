@@ -90,7 +90,7 @@ Nspin=product(all_size)
 M=size(ham_target)
 n_atom_shell=indexNN(n_shell)
 
-! if the nu,ber of atom in the shell is one it means that it is the onsite term.
+! if the number of atom in the shell is one it means that it is the onsite term.
 if (n_atom_shell.eq.1) avant=0
 
 ! n_shell is the shell number

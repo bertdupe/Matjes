@@ -55,7 +55,7 @@ S_norm=spini/norm_S
 
 stepdamp=cross(S_norm,B,1,size_b)
 
-LLG_B=-B-damping*stepdamp
+LLG_B=B-damping*stepdamp
 
 call update_B(S_norm,damping,LLG_B)
 

@@ -216,11 +216,6 @@ real(kind=8), intent(in) :: timestep,B(:),spin(:),damping,BT(:)
 ! dummy
 real(kind=8) :: droite(3),denominator,B_int(3)
 real(kind=8) :: step(3),stepdamp(3),dt,ds(3)
-#ifndef CPP_MPI
-       integer, parameter :: Xstart=1
-       integer, parameter :: Ystart=1
-       integer, parameter :: Zstart=1
-#endif
 
 dt=timestep/hbar
 B_int=B
@@ -264,6 +259,7 @@ end function integrate_SIB_NC_ohneT
 ! ----------------------------------------------
 ! implicit integration scheme
 function implicite(mode_t,D_mode,DT_mode,dt,size_mode)
+use m_constants, only : hbar
 use m_vector, only : cross,norm
 implicit none
 integer, intent(in) :: size_mode
@@ -274,7 +270,7 @@ real(kind=8) :: droite(size_mode),denominator,B_int(size_mode)
 integer :: i,start
 
 implicite=0.0d0
-B_int=-D_mode*dt
+B_int=D_mode*dt/hbar
 
 do i=1,size_mode/3
   start=3*(i-1)+1
@@ -282,24 +278,24 @@ do i=1,size_mode/3
 ! 3x3 system
 ! SX=droite
 
-  droite(start:start+2)=mode_t(start:start+2)+cross(mode_t,D_mode,start,start+2)
-  denominator=(4.0d0+norm(B_int(start:start+2))**2)
+  droite(start:start+2)=mode_t(start:start+2)+cross(mode_t,D_mode,start,start+2)*dt/hbar
+  denominator=(1.0d0+norm(B_int(start:start+2))**2)
 
 ! first term
-  implicite(start)=-(-4.0d0*droite(start)+ &
-     &  (2.0d0*B_int(start+2)*droite(start+1)-2.0d0*B_int(start+1)*droite(start+2)) + &
+  implicite(start)=-(-droite(start)+ &
+     &  (-B_int(start+2)*droite(start+1)+B_int(start+1)*droite(start+2)) + &
      &  (-B_int(start)**2*droite(start)-B_int(start)*B_int(start+1)*droite(start+1)-B_int(start)*B_int(start+2)*droite(start+2))) &
      &  /denominator
 
 ! second term
-  implicite(start+1)=-(-4.0d0*droite(start+1)+ &
-     &  (-2.0d0*B_int(start+2)*droite(start)+2.0d0*B_int(start)*droite(start+2))+ &
+  implicite(start+1)=-(-droite(start+1)+ &
+     &  (B_int(start+2)*droite(start)-B_int(start)*droite(start+2))+ &
      &  (-B_int(start+1)**2*droite(start+1)-B_int(start)*B_int(start+1)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+2))) &
      &  /denominator
 
 ! third term
-  implicite(start+2)=-(-4.0d0*droite(start+2)+ &
-     &  (2.0d0*B_int(start+1)*droite(start)-2.0d0*B_int(start)*droite(start+1))+ &
+  implicite(start+2)=-(-droite(start+2)+ &
+     &  (-B_int(start+1)*droite(start)+B_int(start)*droite(start+1))+ &
      &  (-B_int(start+2)**2*droite(start+2)-B_int(start)*B_int(start+2)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+1))) &
      &  /denominator
 
@@ -319,7 +315,7 @@ real(kind=8), intent(in) :: mode_t(:),D_mode(:),dt,DT_mode(:)
 real(kind=8) :: euler(size_mode)
 !dummy
 real(kind=8) :: euler_int(size_mode)
-real(kind=8) :: norm_mode
+real(kind=8) :: norm_mode,norm_int
 integer :: i,start,end
 
 euler=mode_t
@@ -334,74 +330,11 @@ do i=1,size_mode/3
    end=3*i
    norm_mode=norm(mode_t(start:end))
    euler_int(start:end)=mode_t(start:end)+(D_mode(start:end)*dt+sqrt(dt)*DT_mode(start:end))/hbar
-   if (norm(euler_int(start:end)).gt.1.0d-8) euler(start:end)=euler_int(start:end)*norm_mode/norm(euler_int(start:end))
+   norm_int=norm(euler_int(start:end))
+   if (norm(euler_int(start:end)).gt.1.0d-8) euler(start:end)=euler_int(start:end)*norm_mode/norm_int
 enddo
 
 end function euler
-
-! ----------------------------------------------
-! ----------------------------------------------
-! Solver especially designed for the case damping=0 so E=constant
-function FM_resonnance(timestep,B,maxh,iomp,Ipol,torque_FL,adia,storque,i_torque,stmtorque,spin)
-use m_constants, only : hbar
-use m_randist
-use m_vector, only : cross
-implicit none
-real(kind=8) :: FM_resonnance(3)
-real(kind=8), intent(in) :: timestep,B(:),maxh
-type(vec_point), intent(in) :: spin(:)
-real(kind=8), intent(in) :: torque_FL,adia,storque
-real(kind=8), intent(in) :: Ipol(:)
-integer, intent(in) :: iomp
-logical, intent(in) :: i_torque,stmtorque
-!dummy
-real(kind=8) :: spinfin(size(spin)),step(size(spin)),steptor(size(spin)),stepadia(size(spin)),stepsttor(size(spin)),spini(size(spin)),stepdamp(size(spin))
-real(kind=8) :: dt,ds(size(spin)),norm_S,S_norm(size(spin)),frenet(size(spin),size(spin)),norm_dummy,B_int(size(spin))
-integer :: v_x,v_y,v_z,v_m
-integer :: X,Y,Z
-
-dt=timestep/hbar
-frenet=0.0d0
-FM_resonnance=0.0d0
-step=0.0d0
-steptor=0.0d0
-stepadia=0.0d0
-stepsttor=0.0d0
-stepdamp=0.0d0
-spini=spin(iomp)%w
-B_int=B
-
-norm_S=sqrt(sum(spini(:)**2))
-S_norm=spini/norm_S
-
-! the dmaping is 0
-
-!if (i_torque) B_int=B_int+Ipol*torque_FL
-!if (i_torque) B_int=B_int-nonadia*spin(:,v_x,v_y,v_z,v_m)
-!if (stmtorque) B_int=B_int+storque*Ipol*htor(i_x,i_y,i_z)
-
-!norm_B=norm(B_int)
-!step=cross(B,S_norm)
-
-! frenet referential
-!frenet(:,1)=S_norm
-!norm_dummy=norm(step)
-!frenet(:,2)=step/norm_dummy
-!stepdamp=cross(S_norm,step)
-!norm_dummy=norm(stepdamp)
-!frenet(:,3)=stepdamp/norm_dummy
-
-!cos_theta=dot_product(frenet(:,2),S_norm)
-
-
-ds=step
-
-spinfin=S_norm+dt*ds
-
-FM_resonnance=spinfin/sqrt(spinfin(1)**2+spinfin(2)**2+spinfin(3)**2)
-
-end function FM_resonnance
-
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

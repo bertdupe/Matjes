@@ -106,7 +106,6 @@ do i=1,neighbor_ME_antisym
     call get_Op_in_Op(ME%ham(i)%H,ham_DMI_local(:,:,i),y_start,y_end,x_start,x_end)
 enddo
 
-
 end subroutine get_ham_ME
 
 end module m_couplage_ME

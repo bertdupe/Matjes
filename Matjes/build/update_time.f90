@@ -87,7 +87,8 @@ use m_constants, only : hbar
 implicit none
 real(kind=8) :: timestep,damping
 
-get_dt_LLG=timestep/hbar/(1.0d0+damping**2)
+!get_dt_LLG=timestep/(1.0d0+damping**2)
+get_dt_LLG=timestep
 
 end function
 

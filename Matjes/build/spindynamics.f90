@@ -339,7 +339,8 @@ do j=1,duration
 !$OMP parallel private(iomp,Beff) default(shared) reduction(+:check1,check2,check3)
 #endif
   test_torque=0.0d0
-  dt=get_dt_LLG(timestep_int,damping)/real(N_loop)
+!  dt=get_dt_LLG(timestep_int,damping)/real(N_loop)
+  dt=timestep_int/real(N_loop)
 
   do iomp=1,N_cell
 

@@ -26,9 +26,15 @@ implicit none
 character(len=*) :: fname
 ! internal variables
 integer :: io
+real(kind=8) :: val
 
 io=open_file_read(fname)
 get_number_DMI=count_variables(io,'DMI_',fname)
+
+if (get_number_DMI.gt.0) then
+  call get_parameter(io,fname,'DMI_1',val)
+  if (abs(val).lt.1.0d-8) get_number_DMI=0
+endif
 call close_file(fname,io)
 
 end function
