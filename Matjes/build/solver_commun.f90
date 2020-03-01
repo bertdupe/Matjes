@@ -72,7 +72,7 @@ select case (integtype)
 
     N_loop=1
 
-    if (kt.gt.1.0d-4) get_temperature_field => langevin_bath
+    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
 
 !       if (kt.gt.1.0d-10) call calculate_BTeff(stmtemp,kt,BT_point(iomp)%w)
 
@@ -88,7 +88,7 @@ select case (integtype)
 
     N_loop=2
 
-    if (kt.gt.1.0d-4) get_temperature_field => langevin_bath
+    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
 
 !
 !-----------------------------------------------
@@ -101,7 +101,7 @@ select case (integtype)
 
     N_loop=2
 
-    if (kt.gt.1.0d-4) get_temperature_field => wiener_bath
+    if (kt.gt.1.0d-7) get_temperature_field => wiener_bath
 !
 !-----------------------------------------------
 ! SIA and IMP integration scheme
@@ -135,7 +135,7 @@ select case (integtype)
 
     N_loop=2
 
-    if (kt.gt.1.0d-4) get_temperature_field => langevin_bath
+    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
 
 !
 !-----------------------------------------------

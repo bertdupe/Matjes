@@ -52,8 +52,6 @@ if (neighbor_exch_antisym.ne.0) then
    neighbor_exch_antisym=number_nonzero_coeff(exch_local_antisym,'DMI')
 endif
 
-call close_file(fname,io_param)
-
 if ((neighbor_exch_antisym.eq.0).and.(neighbor_exch_sym.eq.0)) then
    return
   else
@@ -97,6 +95,8 @@ if (neighbor_exch_antisym.ne.0) then
   enddo
 
 endif
+
+call close_file(fname,io_param)
 
 end subroutine get_ham_exchange
 

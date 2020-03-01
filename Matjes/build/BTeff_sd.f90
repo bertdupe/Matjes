@@ -18,7 +18,6 @@ subroutine langevin_bath(kt,damping,mode,BT,DT,size_mode)
 use m_constants, only : hbar
 use m_vector, only : norm,cross
 implicit none
-!logical, intent(in) :: stmtemp
 integer, intent(in) :: size_mode
 real(kind=8), intent(in) :: kt,mode(:),damping
 real(kind=8), intent(inout) :: BT(:),DT(:)

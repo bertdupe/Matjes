@@ -377,20 +377,25 @@ if (N_loop.ge.2) then
 
      all_mode_2(iomp)%w=get_integrator_field(all_mode_1(iomp)%w,D_mode(:,iomp),D_T(:,iomp),dt,mag_lattice%dim_mode)
 
-! the temperature is checked with 1 temperature step before
-!!! check temperature
-     call update_temp_measure(check1,check2,all_mode_2(iomp)%w,Bini(:,iomp))
-     if (norm_cross(all_mode_2(iomp)%w,Bini(:,iomp),1,mag_lattice%dim_mode).gt.test_torque) test_torque=norm_cross(all_mode_2(iomp)%w,Bini(:,iomp),1,mag_lattice%dim_mode)
-!!! end check
-
   enddo
+endif
+
+!
+!!!!!! Measure the temperature if the users wish
+!
+if (i_temperature) then
+   do iomp=1,N_cell
+      call update_temp_measure(check1,check2,mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w)
+      if (norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3)
+   enddo
+   check(1)=check(1)+check1
+   check(2)=check(2)+check2
 endif
 
 #ifdef CPP_OPENMP
 !$OMP end parallel
 #endif
-check(1)=check(1)+check1
-check(2)=check(2)+check2
+
 real_time=real_time+timestep_int
 #ifdef CPP_MPI
 trans(1)=test_torque

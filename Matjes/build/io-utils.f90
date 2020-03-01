@@ -246,14 +246,17 @@ integer, intent(in) :: io
 type(lattice), intent(in) :: my_lattice
 ! internale variables
 Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
+character(len=100) :: rw_format
 
 N=shape(my_lattice%l_modes)
+
+write(rw_format,'( "(", I4, "f14.8,2x)" )') my_lattice%dim_mode
 
 do i_z=1,N(3)
   do i_y=1,N(2)
     do i_x=1,N(1)
 
-    Write(io,'(3f14.8)') ((my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(j_lat), j_lat=1,3),i_m=1,N(4))
+    Write(io,rw_format) ((my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(j_lat), j_lat=1,my_lattice%dim_mode),i_m=1,N(4))
 
     enddo
   enddo

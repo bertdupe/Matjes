@@ -206,23 +206,30 @@ enddo
 allocate(local_lattice(my_lattice%dim_mode,dim_lat(1),dim_lat(2),dim_lat(3),nmag))
 
 if (n_column.eq.my_lattice%dim_mode) then
+
   ! read only the file containing the positions and assume that the magnetic moments are written
   ! with the same order
   n_column_pos=get_cols('positions.dat')
   call get_fast_index('positions.dat',u,Ilat,N,lattice_vec,dim_lat,n_column_pos)
+
 elseif (n_column.gt.my_lattice%dim_mode+1) then
+
   ! read the init.config file and check the order of reading
   call get_col_spins(fname,Nstart,Nend,n_column,product(dim_lat)*nmag)
   ! read the init.config file and check the order of reading
   call get_fast_index(fname,u,Ilat,N,lattice_vec,dim_lat,Nstart-1)
 else
+
   stop 'stuff not coded - init_3Dmodes'
+
 endif
 
 ! Read the configurations
 io=open_file_read(fname)
 
 if (n_column.eq.my_lattice%dim_mode) then
+
+
 do i_m=1,nmag
    do i_3=1,N(3)%p
       u(3)%p=i_3
