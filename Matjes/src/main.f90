@@ -206,6 +206,16 @@ if (my_simu%name == 'GNEB') then
             !call set_gneb_defaults()
 endif
 
+!---------------------------------
+!  Part which does the tight-binding simulations
+!---------------------------------
+
+if (my_simu%name == 'tight-binding') then
+            write(6,'(a)') 'entering into the tight-binding routines'
+             call tightbinding(all_lattices,motif,io_simu,ext_param)
+endif
+
+
 !if (my_simu%name == 'minimization') then
 !            write(6,'(a)') 'entering into the minimization routine'
 !
