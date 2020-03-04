@@ -288,6 +288,8 @@ call init_update_time('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_torques('input')
 
+call init_temp_measure(check,check1,check2,check3)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! beginning of the
 do j=1,duration
@@ -311,7 +313,6 @@ do j=1,duration
       endif
 #endif
 
-   call init_temp_measure(check,check1,check2,check3)
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0

@@ -24,11 +24,7 @@
 !      if (i_four) E(4)=total_fourspin(spin,shape_spin,masque,shape_masque,my_lattice%boundary)
       if (i_dm) E(5)=total_DMenergy(spin)
 !      if (i_biq) E(6)=total_biquadratic(spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index)
-#ifdef CPP_BRUTDIP
-      if (i_dip) E(7)=total_dipole(spin,shape_spin,my_lattice%boundary)
-#else
-      if (i_dip) E(7)=total_fftdip()
-#endif
+
 !      if (i_stone) E(8)=total_stoner(spin,shape_spin,masque,shape_masque,tableNN,shape_tableNN,indexNN,shape_index)
 
       write(6,'(a)') 'Reinitialization of the total Energies'

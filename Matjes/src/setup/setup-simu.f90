@@ -22,13 +22,12 @@ use m_external_fields
 use m_excitations
 use m_io_files_utils
 use m_io_utils
+use m_dipole_energy
+
 #ifdef CPP_MPI
       use m_make_box
       use m_split_work
       use m_mpi_prop, only : isize,irank,irank_working,N,start
-#endif
-#ifndef CPP_BRUTDIP
-      use m_setup_dipole
 #endif
 
 implicit none
@@ -318,34 +317,13 @@ call user_info(6,time,'done',.true.)
 
 !deallocate(tabledist,tableNN,indexNN)
 
-!!!! part of the FFT dipole dipole interaction
-#ifndef CPP_BRUTDIP
-! prepare the demag tensor
-      if (i_dip) then
-       write(6,'(a)') "preparing spatial contribution to dipole convolution "
-       call setup_dipole(dim_lat,Periodic_log,net,count(my_motif%i_mom),size(world))
-       do k=1,dim_lat(3)*count(my_motif%i_mom)
-        do j=1,dim_lat(2)
-         do i=1,dim_lat(1)
-         mmatrix(1:3,i,j,k)=spin(4:6,i,j,k,mod(k-1,count(my_motif%i_mom))+1)*spin(7,i,j,k,1)
-         enddo
-        enddo
-       enddo
-       write(6,'(a)') 'FFT dipole dipole is set up'
-       else
-       allocate(ntensor(1,1,1,1),mmatrix(1,1,1,1),ctrans(1,1,1),rtrans(1,1,1), &
-     & hcomplex(1,1,1,1),mcomplex(1,1,1,1),hreal(1,1,1,1))
 
-       mmatrix=0.0d0
-       rtrans=0.0d0
-       hreal=0.0d0
-       ctrans=dcmplx(0.d0,0.d0)
-       mcomplex=dcmplx(0.d0,0.d0)
-       hcomplex=dcmplx(0.d0,0.d0)
-       ntensor=dcmplx(0.d0,0.d0)
-      endif
-!#endif
-#endif
+
+!
+! Check the presence of the dipole dipole
+!
+!
+call get_ham_dipole('input',my_lattice,my_motif)
 
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'

@@ -7,7 +7,7 @@ OBJS =	zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
  tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
- MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o external_fields.o init_constant.o \
+ MC_fft.o sampling.o Energy.o relaxationtype.o topocharge.o external_fields.o init_constant.o dipolar-energy.o \
  create_lattice.o   fft.o init_rand_seed.o gauge_util.o Energy_density.o coordinatesv4.o setup_neigh.o \
  qorienplot.o   CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
@@ -44,6 +44,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+dipolar-energy.o: io-utils.o io_files_utils.o basic_types.o derived_types.o get-position.o
 path.o: rotation.o vector.o constant.o mtprng.o basic_types.o
 spline.o:
 rotation.o: vector.o
@@ -73,7 +74,7 @@ measure_temp.o: constant.o vector.o
 operator_pointer_utils.o: derived_types.o get-position.o
 topo_commons.o: vector.o get-position.o derived_types.o operator_pointer_utils.o
 internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
-energy_commons.o: setup_DM.o convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
+energy_commons.o: dipolar-energy.o setup_DM.o convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
 basic_types.o:
 pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o
@@ -183,7 +184,7 @@ Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o
 
-setup-simu.o: io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o setup_neigh.o sym_utils.o Table_dist.o mtprng.o
+setup-simu.o: dipolar-energy.o io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o setup_neigh.o sym_utils.o Table_dist.o mtprng.o
 Energy.o:
 cal_local_energy.o: Energy.o
 choosespin.o: mtprng.o

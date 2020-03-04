@@ -14,7 +14,7 @@ use m_derived_types, only : operator_real,Coeff_Ham,lattice,point_shell_Operator
 ! EA: gives the easy axis
 ! all the rest are read from modules so look into the module
 private
-public :: total_Exchange,total_Zeeman,total_DMenergy,total_anisotropy,total_dipole,total_energy
+public :: total_Exchange,total_Zeeman,total_DMenergy,total_anisotropy,total_energy
 contains
 
 real(kind=8) function total_energy(N,E_column,E_line,h_int)
@@ -293,85 +293,7 @@ end function total_energy
 !
 !      end function total_fourspin
 
-! Dipole Dipole interaction
-      real(kind=8) function total_dipole(spin,shape_spin,Periodic_log)
-      use m_constants, only : pi
-      use m_vector, only : norm
-#ifdef CPP_MPI
-      use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
-#endif
-      implicit none
-! input
-      integer, intent(in) :: shape_spin(5)
-      real(kind=8), intent(in) :: spin(shape_spin(1),shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-      logical, intent(in) :: Periodic_log(3)
-! external variable
-      integer :: i_x,i_y,i_z,j_x,j_y,j_z,i_m,j_m,nmag
-! internal variable
-      real(kind=8) :: rc(3),ss
-      real(kind=8), parameter :: alpha=6.74582d-7
-#ifndef CPP_MPI
-      integer :: Xstop,Xstart,Ystop,Ystart,Zstop,Zstart
 
-      Xstop=shape_spin(2)
-      Xstart=1
-      Ystop=shape_spin(3)
-      Ystart=1
-      Zstop=shape_spin(4)
-      Zstart=1
-#endif
-
-      total_dipole=0.0d0
-      nmag=shape_spin(5)
-! the choosen spin is the spin i_s. It has nn nearest neighbours. The numbers of nearest
-! neighbours are stored in n(:). for example n(1)=4 means 4 nearest neighbours
-!!! first neighb
-
-#ifdef CPP_OPENMP
-!$OMP parallel do reduction(+:total_dipole) private(i_x,i_y,i_z,j_x,j_y,j_z,j,rc,ss,i_m,j_m) default(shared)
-#endif
-
-       do i_m=1,nmag
-        do i_z=Zstart,Zstop
-         do i_y=Ystart,Ystop
-          do i_x=Xstart,Xstop
-
-         if (spin(7,i_x,i_y,i_z,i_m).eq.0) cycle
-
-       do j_m=1,nmag
-        do j_z=1,shape_spin(4)
-         do j_y=1,shape_spin(3)
-          do j_x=1,shape_spin(2)
-
-          if (all(periodic_log)) then
-            rc=spin(1:3,j_x,j_y,j_z,j_m)-spin(1:3,i_x,i_y,i_z,i_m)
-          endif
-
-         ss=norm(rc)
-         if (ss.lt.1.0d-3) cycle
-         rc=rc/ss
-
-         total_dipole=total_dipole+(dot_product(spin(4:6,j_x,j_y,j_z,j_m),spin(4:6,i_x,i_y,i_z,i_m))-3.0d0* &
-          dot_product(rc,spin(4:6,i_x,i_y,i_z,i_m))*dot_product(rc,spin(4:6,j_x,j_y,j_z,j_m))/ss**3)* &
-          spin(7,j_x,j_y,j_z,j_m)
-
-          enddo
-         enddo
-        enddo
-       enddo
-
-          enddo
-         enddo
-        enddo
-       enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel do
-#endif
-      total_dipole=total_dipole/pi(4.0d0)*0.5d0*alpha
-
-      write(*,*) total_dipole
-
-      end function total_dipole
 
 ! total stoner energy
 !      real(kind=8) function total_stoner(spin,shape_spin,masque,shape_masque,tableNN,shape_tableNN,indexNN,shape_index)
