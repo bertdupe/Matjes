@@ -264,6 +264,7 @@ end subroutine A_vecpoint1D_vecdimn
 subroutine A_Opreal_shellHam1D(point,static_target,my_lattice,tableNN,indexNN)
 use m_derived_types, only : lattice,operator_real,shell_Ham
 use m_get_position
+use m_null
 implicit none
 type(operator_real), intent(inout) :: point
 !type(Coeff_Ham), intent(in) :: static_target
@@ -311,9 +312,14 @@ do i_m=1,shape_tableNN(6)
           Ilat=(/v_x,v_y,v_z,v_m/)
           ipos_1=get_position_ND_to_1D(Ilat,all_size)
 
-          point%line(line_index,ipos_2)=ipos_1
+          if (tableNN(5,i_voisin+avant,i_x,i_y,i_z,i_m).eq.0) then
+             point%value(line_index,ipos_2)%Op_loc=>nunull%H
+             point%line(line_index,ipos_2)=ipos_1
+          else
 
-          point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(i_voisin)%H
+             point%line(line_index,ipos_2)=ipos_1
+             point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(i_voisin)%H
+          endif
 
 !#ifdef CPP_DEBUG
 !          write(*,*) v_x,v_y,v_z,v_m
@@ -349,6 +355,7 @@ end subroutine A_Opreal_shellHam1D
 subroutine A_Opreal_real2D(point,static_target,my_lattice,tableNN,Nvoisin,avant)
 use m_derived_types, only : lattice,operator_real,site_Ham
 use m_get_position
+use m_null
 implicit none
 type(operator_real), intent(inout) :: point
 type(site_Ham), target, intent(in) :: static_target(:)
@@ -391,8 +398,15 @@ do i_m=1,shape_tableNN(6)
               Ilat=(/v_x,v_y,v_z,v_m/)
               ipos_1=get_position_ND_to_1D(Ilat,all_size)
 
-              point%value(i_voisin,ipos_2)%Op_loc=>static_target(i_voisin)%H
-              point%line(i_voisin,ipos_2)=ipos_1
+             if (tableNN(5,i_voisin+avant,i_x,i_y,i_z,i_m).eq.0) then
+                point%value(i_voisin,ipos_2)%Op_loc=>nunull%H
+                point%line(i_voisin,ipos_2)=ipos_1
+
+             else
+
+                point%line(i_voisin,ipos_2)=ipos_1
+                point%value(i_voisin,ipos_2)%Op_loc=>static_target(i_voisin)%H
+             endif
 
             enddo
           endif

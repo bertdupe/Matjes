@@ -76,7 +76,7 @@ write(6,'(a,2x,I3,2x,a)') 'I will calculate on',nthreads,'threads'
 
 do iomp=1,N_cell
 
-   call calculate_Beff(F_eff,mode_B_column(iomp),B_line(iomp))
+   call calculate_Beff(F_eff,mode_B_column(iomp),B_line(iomp),iomp)
    force(:,iomp)=calculate_damping(spin(iomp)%w,F_eff)
    call minimization(spin(iomp)%w,force(:,iomp),predicator(:,iomp),dt**2,masse*2.0d0,3)
 
@@ -108,7 +108,7 @@ ithread=omp_get_thread_num()
 
 do iomp=1,N_cell
 
-   call calculate_Beff(F_eff,mode_B_column(iomp),B_line(iomp))
+   call calculate_Beff(F_eff,mode_B_column(iomp),B_line(iomp),iomp)
    F_temp=calculate_damping(spin(iomp)%w,F_eff)
 
    call minimization(velocity(:,iomp),(force(:,iomp)+F_temp)/2.0d0,V_eff,dt,masse,3)

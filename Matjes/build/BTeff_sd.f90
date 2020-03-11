@@ -29,9 +29,6 @@ do i=1,size_mode
    BT(i)=sqrt(damping*hbar)*randist(kt)
 enddo
 
-   write(*,*) kt
-   stop
-
 do i=1,size_mode/3
    j=3*(i-1)+1
    step_T=cross(mode(j:j+2),BT(j:j+2),1,3)

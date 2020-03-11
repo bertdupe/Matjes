@@ -89,7 +89,7 @@ integer, intent(inout) :: tableNN(:,:,:)
 integer :: i_x,Xstop
 ! dummy variable
 integer :: i,l,i_Nei,avant,i_p,dim_lat(3)
-integer :: v_x
+integer :: v_x,ok
 real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
 integer, parameter ::  Xstart=1
@@ -97,7 +97,9 @@ integer, parameter ::  Xstart=1
 
 avant=0
 Xstop=size(tableNN,3)
-r=my_lattice%areal
+do i=1,3
+  r(:,i)=my_lattice%areal(i,:)
+enddo
 dim_lat=my_lattice%dim_lat
 
 do i_nei=1,nei
@@ -110,21 +112,15 @@ do i_nei=1,nei
        do i=-i_nei,i_nei,1
 
           vec=-pos(:,i_x)
+          ! suppose that the neighbour should be taken into account
+          ok=1
 
-          vec=vec+translate(i_x+i,Xstop,r(1,:))
-          v_x=periodic(i_x+i,Xstop)
+          call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
 
           vec=vec+pos(:,v_x)
-
           dist=norm(vec)
 
-          if ((dabs(d(i_nei)-dist).lt.1.0d-8).and.(l.le.indexNN(i_Nei))) then
-            tableNN(1,avant+l,i_x)=v_x
-            tableNN(2,avant+l,i_x)=1
-            tableNN(3,avant+l,i_x)=1
-            tableNN(4,avant+l,i_x)=1
-            l=l+1
-           endif
+          call associate_neighbour(tableNN(:,avant+l,i_x),v_x,1,1,1,ok,l,d(i_nei),dist)
 
        enddo
     enddo
@@ -169,7 +165,7 @@ integer :: i_x,i_y,Xstop,Ystop
 integer :: shape_tableNN(4)
 ! dummy variable
 integer :: i,j,l,i_Nei,avant,dim_lat(3)
-integer :: v_x,v_y
+integer :: v_x,v_y,ok
 real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
 integer, parameter ::  Xstart=1
@@ -187,7 +183,9 @@ shape_tableNN=shape(tableNN)
 Xstop=shape_tableNN(3)
 Ystop=shape_tableNN(4)
 dim_lat=my_lattice%dim_lat
-r=my_lattice%areal
+do i=1,3
+  r(:,i)=my_lattice%areal(i,:)
+enddo
 
 #ifdef CPP_OPENMP
 !!$OMP parallel default(shared) private(ithread)
@@ -200,27 +198,21 @@ do i_nei=1,nei
       do i_x=1,Xstop
 
          l=1
+
          do i=-i_nei,i_nei,1
             do j=-i_nei,i_nei,1
 
                vec=-pos(:,i_x,i_y)
-               vec=vec+translate(i_x+i,Xstop,r(1,:))
-               v_x=periodic(i_x+i,Xstop)
+               ! suppose that the neighbour should be taken into account
+               ok=1
 
-               vec=vec+translate(i_y+j,Ystop,r(2,:))
-               v_y=periodic(i_y+j,Ystop)
+               call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+               call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
 
                vec=vec+pos(:,v_x,v_y)
-
                dist=norm(vec)
 
-               if (dabs(d(i_nei)-dist).lt.1.0d-8) then
-                  tableNN(1,avant+l,i_x,i_y)=v_x
-                  tableNN(2,avant+l,i_x,i_y)=v_y
-                  tableNN(3,avant+l,i_x,i_y)=1
-                  tableNN(4,avant+l,i_x,i_y)=1
-                  l=l+1
-               endif
+               call associate_neighbour(tableNN(:,avant+l,i_x,i_y),v_x,v_y,1,1,ok,l,d(i_nei),dist)
 
                call check_l(l-1,indexNN(i_Nei))
 
@@ -268,7 +260,7 @@ integer, intent(inout) :: tableNN(:,:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
 integer :: i_x,i_y,i_m,Xstop,Ystop,Mstop
-integer :: v_x,v_y
+integer :: v_x,v_y,ok
 ! dummy variable
 integer :: i,j,l,i_Nei,avant,i_p,i_phase,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
@@ -281,7 +273,9 @@ avant=0
 Ystop=size(tableNN,4)
 Xstop=size(tableNN,3)
 Mstop=size(tableNN,5)
-r=my_lattice%areal
+do i=1,3
+  r(:,i)=my_lattice%areal(i,:)
+enddo
 dim_lat=my_lattice%dim_lat
 
 i_phase=1
@@ -300,23 +294,17 @@ do i_nei=1,nei
                   do i_p=1,Mstop
 
                      vec=-pos(:,i_x,i_y,i_m)
-                     vec=vec+translate(i_x+i,Xstop,r(1,:))
-                     v_x=periodic(i_x+i,Xstop)
+                     ! suppose that the neighbour should be taken into account
+                     ok=1
 
-                     vec=vec+translate(i_y+j,Ystop,r(2,:))
-                     v_y=periodic(i_y+j,Ystop)
+                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
 
                      vec=vec+pos(:,v_x,v_y,i_p)
-
                      dist=norm(vec)
 
-                     if (dabs(d(i_nei,i_phase)-dist).lt.1.0d-8) then
-                       tableNN(1,avant+l,i_x,i_y,i_m)=v_x
-                       tableNN(2,avant+l,i_x,i_y,i_m)=v_y
-                       tableNN(3,avant+l,i_x,i_y,i_m)=1
-                       tableNN(4,avant+l,i_x,i_y,i_m)=i_p
-                       l=l+1
-                     endif
+                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist)
+
                   enddo
                enddo
             enddo
@@ -346,23 +334,18 @@ do i_nei=1,Nei_il
                   do i_p=1,Mstop
 
                      vec=-pos(:,i_x,i_y,i_m)
-                     vec=vec+translate(i_x+i,Xstop,r(1,:))
-                     v_x=periodic(i_x+i,Xstop)
 
-                     vec=vec+translate(i_y+j,Ystop,r(2,:))
-                     v_y=periodic(i_y+j,Ystop)
+                     ! suppose that the neighbour should be taken into account
+                     ok=1
+
+                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
 
                      vec=vec+pos(:,v_x,v_y,i_p)
-
                      dist=norm(vec)
 
-                     if (dabs(d(i_nei,i_phase)-dist).lt.1.0d-8) then
-                       tableNN(1,avant+l,i_x,i_y,i_m)=v_x
-                       tableNN(2,avant+l,i_x,i_y,i_m)=v_y
-                       tableNN(3,avant+l,i_x,i_y,i_m)=1
-                       tableNN(4,avant+l,i_x,i_y,i_m)=i_p
-                       l=l+1
-                     endif
+                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist)
+
                   enddo
                enddo
             enddo
@@ -410,7 +393,7 @@ integer, intent(inout) :: tableNN(:,:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
 integer :: i_x,i_y,i_m,Xstop,Ystop,Mstop
-integer :: v_x,v_y,v_m
+integer :: v_x,v_y,v_m,ok
 ! dummy variable
 integer :: i,j,l,i_Nei,avant,i_p,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
@@ -424,7 +407,9 @@ Xstop=size(tableNN,3)
 Ystop=size(tableNN,4)
 Mstop=size(tableNN,5)
 dim_lat=my_lattice%dim_lat
-r=my_lattice%areal
+do i=1,3
+  r(:,i)=my_lattice%areal(i,:)
+enddo
 
 do i_nei=1,nei
 #ifdef CPP_OPENMP
@@ -440,23 +425,18 @@ do i_nei=1,nei
                   do i_p=1,Mstop
 
                      vec=-pos(:,i_x,i_y,i_m)
-                     vec=vec+translate(i_x+i,Xstop,r(1,:))
-                     v_x=periodic(i_x+i,Xstop)
 
-                     vec=vec+translate(i_y+j,Ystop,r(2,:))
-                     v_y=periodic(i_y+j,Ystop)
+                     ! suppose that the neighbour should be taken into account
+                     ok=1
+
+                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
 
                      vec=vec+pos(:,v_x,v_y,i_p)
-
                      dist=norm(vec)
 
-                     if (dabs(d(i_nei)-dist).lt.1.0d-8) then
-                       tableNN(1,avant+l,i_x,i_y,i_m)=v_x
-                       tableNN(2,avant+l,i_x,i_y,i_m)=v_y
-                       tableNN(3,avant+l,i_x,i_y,i_m)=1
-                       tableNN(4,avant+l,i_x,i_y,i_m)=i_p
-                       l=l+1
-                     endif
+                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei),dist)
+
                   enddo
                enddo
             enddo
@@ -503,7 +483,7 @@ integer :: tableNN(:,:,:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
  integer :: i_x,i_y,i_z,i_m,Xstop,Ystop,Zstop,Mstop
- integer :: v_x,v_y,v_z
+ integer :: v_x,v_y,v_z,ok
 ! dummy variable
 integer :: i,j,k,l,i_Nei,avant,i_p,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
@@ -519,7 +499,9 @@ Ystop=size(tableNN,4)
 Zstop=size(tableNN,5)
 Mstop=size(tableNN,6)
 dim_lat=my_lattice%dim_lat
-r=my_lattice%areal
+do i=1,3
+  r(:,i)=my_lattice%areal(i,:)
+enddo
 
 do i_nei=1,nei
 #ifdef CPP_OPENMP
@@ -539,26 +521,18 @@ do i_nei=1,nei
                         do i_p=1,Mstop
 
                            vec=-pos(:,i_x,i_y,i_z,i_m)
-                           vec=vec+translate(i_x+i,Xstop,r(1,:))
-                           v_x=periodic(i_x+i,Xstop)
+                           ! suppose that the neighbour should be taken into account
+                           ok=1
 
-                           vec=vec+translate(i_y+j,Ystop,r(2,:))
-                           v_y=periodic(i_y+j,Ystop)
-
-                           vec=vec+translate(i_z+k,Zstop,r(3,:))
-                           v_z=periodic(i_z+k,Zstop)
+                           call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+                           call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+                           call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%boundary(3))
 
                            vec=vec+pos(:,v_x,v_y,v_z,i_p)
-
                            dist=norm(vec)
 
-                           if ((dabs(d(i_nei)-dist).lt.1.0d-8).and.(l.le.indexNN(i_Nei))) then
-                             tableNN(1,avant+l,i_x,i_y,i_z,i_m)=v_x
-                             tableNN(2,avant+l,i_x,i_y,i_z,i_m)=v_y
-                             tableNN(3,avant+l,i_x,i_y,i_z,i_m)=v_z
-                             tableNN(4,avant+l,i_x,i_y,i_z,i_m)=i_p
-                             l=l+1
-                           endif
+                           call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei),dist)
+
                         enddo
                      enddo
                   enddo
@@ -614,7 +588,7 @@ integer :: tableNN(:,:,:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
 integer :: i_x,i_y,i_z,i_m,Xstop,Ystop,Zstop,Mstop
-integer :: v_x,v_y,v_z
+integer :: v_x,v_y,v_z,ok
 ! dummy variable
 integer :: i,j,k,l,i_Nei,avant,i_p,i_phase,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
@@ -629,7 +603,9 @@ Xstop=size(tableNN,3)
 Ystop=size(tableNN,4)
 Zstop=size(tableNN,5)
 Mstop=size(tableNN,6)
-r=my_lattice%areal
+do i=1,3
+  r(:,i)=my_lattice%areal(i,:)
+enddo
 dim_lat=my_lattice%dim_lat
 
 i_phase=1
@@ -649,23 +625,18 @@ do i_nei=1,nei
                      do i_p=1,Mstop
 
                         vec=-pos(:,i_x,i_y,i_z,i_m)
-                        vec=vec+translate(i_x+i,Xstop,r(1,:))
-                        v_x=periodic(i_x+i,Xstop)
 
-                        vec=vec+translate(i_y+j,Ystop,r(2,:))
-                        v_y=periodic(i_y+j,Ystop)
+                        ! suppose that the neighbour should be taken into account
+                        ok=1
+
+                        call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+                        call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
 
                         vec=vec+pos(:,v_x,v_y,i_z,i_p)
-
                         dist=norm(vec)
 
-                        if (dabs(d(i_nei,i_phase)-dist).lt.1.0d-8) then
-                          tableNN(1,avant+l,i_x,i_y,i_z,i_m)=v_x
-                          tableNN(2,avant+l,i_x,i_y,i_z,i_m)=v_y
-                          tableNN(3,avant+l,i_x,i_y,i_z,i_m)=i_z
-                          tableNN(4,avant+l,i_x,i_y,i_z,i_m)=i_p
-                          l=l+1
-                        endif
+                        call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist)
+
                      enddo
                   enddo
                enddo
@@ -697,23 +668,17 @@ do i_nei=1,Nei_il
                      do i_p=1,Mstop
 
                         vec=-pos(:,i_x,i_y,i_z,i_m)
-                        vec=vec+translate(i_x+i,Xstop,r(1,:))
-                        v_x=periodic(i_x+i,Xstop)
 
-                        vec=vec+translate(i_y+j,Ystop,r(2,:))
-                        v_y=periodic(i_y+j,Ystop)
+                        ! suppose that the neighbour should be taken into account
+                        ok=1
+
+                        call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+                        call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
 
                         vec=vec+pos(:,v_x,v_y,i_z,i_p)
-
                         dist=norm(vec)
 
-                        if (dabs(d(i_nei,i_phase)-dist).lt.1.0d-8) then
-                          tableNN(1,avant+l,i_x,i_y,i_z,i_m)=v_x
-                          tableNN(2,avant+l,i_x,i_y,i_z,i_m)=v_y
-                          tableNN(3,avant+l,i_x,i_y,i_z,i_m)=i_z
-                          tableNN(4,avant+l,i_x,i_y,i_z,i_m)=i_p
-                          l=l+1
-                        endif
+                        call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist)
                      enddo
                   enddo
                enddo
@@ -746,26 +711,19 @@ do i_nei=1,Nei_z
                         do i_p=1,Mstop
 
                            vec=-pos(:,i_x,i_y,i_z,i_m)
-                           vec=vec+translate(i_x+i,Xstop,r(1,:))
-                           v_x=periodic(i_x+i,Xstop)
 
-                           vec=vec+translate(i_y+j,Ystop,r(2,:))
-                           v_y=periodic(i_y+j,Ystop)
+                           ! suppose that the neighbour should be taken into account
+                           ok=1
 
-                           vec=vec+translate(i_z+k,Zstop,r(3,:))
-                           v_z=periodic(i_z+k,Zstop)
+                           call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+                           call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+                           call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%boundary(3))
 
                            vec=vec+pos(:,v_x,v_y,v_z,i_p)
-
                            dist=norm(vec)
 
-                           if (dabs(d(i_nei,i_phase)-dist).lt.1.0d-8) then
-                             tableNN(1,avant+l,i_x,i_y,i_z,i_m)=v_x
-                             tableNN(2,avant+l,i_x,i_y,i_z,i_m)=v_y
-                             tableNN(3,avant+l,i_x,i_y,i_z,i_m)=v_z
-                             tableNN(4,avant+l,i_x,i_y,i_z,i_m)=i_p
-                             l=l+1
-                           endif
+                           call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei,i_phase),dist)
+
                         enddo
                      enddo
                   enddo
@@ -801,6 +759,51 @@ enddo
 
 end subroutine mapping_3D_motif_SL
 
+
+
+
+! subroutine that associates the neighbour in the table of neighbours
+subroutine associate_neighbour(tableNN,v_x,v_y,v_z,v_m,ok,l,d_ref,d_test)
+implicit none
+integer, intent(inout) :: tableNN(5),l
+real(kind=8), intent(in) :: d_ref,d_test
+integer, intent(in) :: v_x,v_y,v_z,v_m,ok
+! internal variables
+
+if (dabs(d_ref-d_test).lt.1.0d-8) then
+   tableNN(1)=v_x
+   tableNN(2)=v_y
+   tableNN(3)=v_z
+   tableNN(4)=v_m
+   tableNN(5)=ok
+   l=l+1
+endif
+
+end subroutine associate_neighbour
+
+
+! subroutine that tests the neighbour
+subroutine test_neighbour(vec,v,ok,i_x,i,stop,r,period)
+implicit none
+real(kind=8), intent(inout) :: vec(3)
+integer, intent(out) :: v
+integer, intent(inout) :: ok
+real(kind=8), intent(in) :: r(3)
+integer, intent(in) :: i_x,i,stop
+logical, intent(in) :: period
+! internal
+integer :: test
+
+test=i_x+i
+! make a translation of r if the test>stop
+vec=vec+translate(test,stop,r)
+! use the periodic boundary conditions if necessary
+v=periodic(test,stop)
+
+if (((test.lt.1).or.(test.gt.stop)).and.(.not.period)) ok=0
+
+end subroutine test_neighbour
+
 ! translate the position of the neighbor along vector r
 function translate(i,N,r)
 implicit none
@@ -818,9 +821,7 @@ integer function periodic(i,N)
 implicit none
 integer, intent(in) :: i,N
 
-periodic=0
 periodic=mod(i-1+N,N)+1
-
 
 end function periodic
 

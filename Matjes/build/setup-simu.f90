@@ -5,7 +5,6 @@ use m_energy_commons
 use m_internal_fields_commons
 use m_fft
 use m_lattice
-use m_voisins
 use m_setup_DM
 use m_user_info
 use m_parameters
@@ -22,7 +21,8 @@ use m_external_fields
 use m_excitations
 use m_io_files_utils
 use m_io_utils
-use m_dipole_energy
+use m_dipolar_field
+use m_null
 
 #ifdef CPP_MPI
       use m_make_box
@@ -159,7 +159,7 @@ else
     tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1:phase))
 endif
 
-allocate(tableNN(4,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
+allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
 
 tableNN=0
@@ -192,22 +192,6 @@ call get_EM_external_fields(ext_param%H_ext%value,ext_param%E_ext%value,my_motif
 call initialize_external_fields(my_lattice)
 
 call user_info(6,time,'done',.false.)
-
-!-------------------------------------------------
-! take care of the periodic boundary conditions
-! to be changed
-allocate(masque(tot_N_Nneigh+1,dim_lat(1),dim_lat(2),dim_lat(3)),stat=alloc_check)
-if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate masque'
-
-if (all(my_lattice%boundary)) then
-   masque=1
-else
-   call user_info(6,time,'setting up the Hamiltonian for non-periodic systems',.false.)
-
-   call periodic(indexNN(:,1),sum(indexNN(:,1))+1,tabledist(:,1),N_Nneigh,masque,tableNN,pos,my_lattice,my_motif)
-
-   call user_info(6,time,'done',.true.)
-endif
 
 !check for the structure.xyz file for shape modification
 inquire (file='structure.xyz',exist=i_usestruct)
@@ -279,6 +263,13 @@ call user_info(6,time,'done',.true.)
 
 ! do a first FFT for the initial magnetic configuration
 !call fft(my_lattice,my_motif)
+
+
+
+!
+! get the null matrix in case no boundary conditions
+!
+call get_null_matrix(my_lattice%dim_mode)
 
 !!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!
 !!!! important part that associates the different NxN matrices with the local static operators

@@ -347,7 +347,7 @@ do j=1,duration
 
      if (i_excitation) call update_EMT_of_r(iomp,mode_excitation_field(iomp)%w)
 
-     call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp))
+     call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp),iomp)
 
 !
 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
@@ -368,7 +368,7 @@ if (N_loop.ge.2) then
   dt=multiply(dt)
   do iomp=1,N_cell
 
-     call calculate_Beff(Bini(:,iomp),mode_B_column_2(iomp),B_line_2(iomp))
+     call calculate_Beff(Bini(:,iomp),mode_B_column_2(iomp),B_line_2(iomp),iomp)
 
      if (i_magnetic) D_mode_mag(iomp)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp,2)%w,size(mode_magnetic(iomp,2)%w))
 
