@@ -180,7 +180,7 @@ qorien.o: vector.o inp_rw.o rw_lattice.o
 Energy.o: main.o rw_efield.o vector.o rw_lattice.o create_lattice.o inp_rw.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
 CalculateAverages.o: vector.o rw_lattice.o create_lattice.o topocharge_all.o
-main.o: io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: tightbinding.o io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o
