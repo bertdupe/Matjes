@@ -65,7 +65,7 @@ enddo
 !
 ! the dipole field is in T and should be converted to eV. So it is multiplied by mu_B in eV/T and mu_0 which is one in the code
 !
-B(1:3)=B(1:3)+B_int/pi(2.0d0)*alpha*Ms**2*mu_b
+B(1:3)=B(1:3)-B_int/pi(2.0d0)*alpha*Ms**2*mu_b
 
 end subroutine get_dipole_B
 
