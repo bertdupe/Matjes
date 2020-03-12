@@ -22,7 +22,7 @@ logical, public, protected :: i_dip
 !real(kind=8), Parameter :: mu_B=9.2740094980d3
 ! this constant contains 9.2740094980d-24*10^27*12.5663706144d-7=mu_b*mu_0*10^27
 ! this constant is in Tesla
-real(kind=8), Parameter :: alpha=0.0116541
+real(kind=8), Parameter :: alpha=0.0116541d0
 ! saturation magnetization
 real(kind=8), public, protected :: Ms
 
