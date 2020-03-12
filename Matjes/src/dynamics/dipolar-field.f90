@@ -12,10 +12,17 @@ real(kind=8), public, protected, allocatable, dimension(:,:,:) :: distances
 type(vec_point),public, protected, allocatable, dimension(:) :: mode_dipole
 ! logical to turn on or off the dipole
 logical, public, protected :: i_dip
-! magnetic constant in H/nm
-real(kind=8), Parameter :: mu_0=1.256637d-15
-! conversion parameter (I do not remember what it is)
-real(kind=8), parameter :: alpha=6.74582d-7
+!
+! The Tesla are in H.A.m^-2
+! magnetic constant in H/m
+!real(kind=8), Parameter :: mu_0=12.5663706144d-7
+! bohr magneton in A.m^2
+!real(kind=8), Parameter :: mu_B=9.2740094980d-24
+! to avoid going in too small numbers, we express the bohr magneton in A.m^2 * 10^27
+!real(kind=8), Parameter :: mu_B=9.2740094980d3
+! this constant contains 9.2740094980d-24*10^27*12.5663706144d-7=mu_b*mu_0*10^27
+! this constant is in Tesla
+real(kind=8), Parameter :: alpha=0.0116541
 ! saturation magnetization
 real(kind=8), public, protected :: Ms
 
@@ -25,18 +32,17 @@ public :: get_dipole_B,get_ham_dipole
 contains
 
 subroutine get_dipole_B(B,iomp)
-use m_constants, only : pi
+use m_constants, only : pi,mu_b
 use m_vector, only : norm
-use m_constants, only : mu_B
 implicit none
 integer, intent(in) :: iomp
 real(kind=8), intent(inout) :: B(:)
 ! internal
 integer :: i,N
-real(kind=8) :: rc(3),ss,B0(3),B_int(3)
+real(kind=8) :: rc(3),ss,B0,B_int(3)
 
 N=size(mode_dipole)
-B0=1.0d0/3.0d0
+B0=2.0d0/3.0d0
 B_int=0.0d0
 
 #ifdef CPP_OPENMP
@@ -45,9 +51,7 @@ B_int=0.0d0
 
 do i=1,N
 
-   if (iomp.eq.i) then
-     B_int=B_int+B0
-   else
+   if (iomp.ne.i) then
      rc=distances(:,i,iomp)
      ss=norm(rc)
      B_int=B_int+(mode_dipole(i)%w*ss**2-3.0d0*dot_product(rc,mode_dipole(i)%w)*rc)/ss**5
@@ -58,7 +62,10 @@ enddo
 !$OMP end parallel do
 #endif
 
-B(1:3)=B(1:3)+B_int/pi(2.0d0)*mu_B**2*Ms**2
+!
+! the dipole field is in T and should be converted to eV. So it is multiplied by mu_B in eV/T and mu_0 which is one in the code
+!
+B(1:3)=B(1:3)+B_int/pi(2.0d0)*alpha*Ms**2*mu_b
 
 end subroutine get_dipole_B
 
@@ -97,8 +104,6 @@ if (.not.i_dip) return
 !V=my_lattice%areal(:,1),
 Ms=motif%atomic(1)%moment
 
-
-
 allocate(distances(3,N,N))
 distances=0.0d0
 allocate(positions(3,N))
@@ -111,18 +116,22 @@ call close_file('positions.dat',io)
 do i=1,N
    do j=1,N
 
-      test=positions(:,j)-positions(:,i)
+      test=positions(:,i)-positions(:,j)
 
       do l=1,3
          if (my_lattice%boundary(l)) then
-            do k=-1,1,2
+            do k=-1,1
+
                shorter_distance=test+real(k)*my_lattice%areal(:,l)*real(my_lattice%dim_lat(l))
+
                if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
             enddo
+         else
+            test(l)=positions(l,i)-positions(l,j)
          endif
       enddo
 
-      distances(:,j,i)=positions(:,j)-positions(:,i)
+      distances(:,j,i)=test
 
    enddo
 enddo

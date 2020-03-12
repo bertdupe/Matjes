@@ -47,7 +47,6 @@ do i=1,N
 
 enddo
 
-stop
 if (i_dip) call get_dipole_B(B,iomp)
 
 #ifdef CPP_DEBUG

@@ -295,24 +295,6 @@ call init_temp_measure(check,check1,check2,check3)
 do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#ifndef CPP_BRUTDIP
-      if (i_dip) then
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_z) default(shared)
-#endif
-       do i_z=1,shape_spin(4)
-        do i_y=1,shape_spin(3)
-         do i_x=1,shape_spin(2)
-        mmatrix(:,i_x,i_y,i_z)=spin(1:3,i_x,i_y,i_z,1)
-         enddo
-        enddo
-       enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
-      endif
-#endif
-
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0
