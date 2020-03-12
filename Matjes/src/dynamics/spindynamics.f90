@@ -288,30 +288,13 @@ call init_update_time('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_torques('input')
 
+call init_temp_measure(check,check1,check2,check3)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! beginning of the
 do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#ifndef CPP_BRUTDIP
-      if (i_dip) then
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_z) default(shared)
-#endif
-       do i_z=1,shape_spin(4)
-        do i_y=1,shape_spin(3)
-         do i_x=1,shape_spin(2)
-        mmatrix(:,i_x,i_y,i_z)=spin(1:3,i_x,i_y,i_z,1)
-         enddo
-        enddo
-       enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
-      endif
-#endif
-
-   call init_temp_measure(check,check1,check2,check3)
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0
@@ -346,7 +329,7 @@ do j=1,duration
 
      if (i_excitation) call update_EMT_of_r(iomp,mode_excitation_field(iomp)%w)
 
-     call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp))
+     call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp),iomp)
 
 !
 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
@@ -367,7 +350,7 @@ if (N_loop.ge.2) then
   dt=multiply(dt)
   do iomp=1,N_cell
 
-     call calculate_Beff(Bini(:,iomp),mode_B_column_2(iomp),B_line_2(iomp))
+     call calculate_Beff(Bini(:,iomp),mode_B_column_2(iomp),B_line_2(iomp),iomp)
 
      if (i_magnetic) D_mode_mag(iomp)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp,2)%w,size(mode_magnetic(iomp,2)%w))
 
@@ -383,14 +366,12 @@ endif
 !
 !!!!!! Measure the temperature if the users wish
 !
-if (i_temperature) then
-   do iomp=1,N_cell
-      call update_temp_measure(check1,check2,mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w)
-      if (norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3)
-   enddo
-   check(1)=check(1)+check1
-   check(2)=check(2)+check2
-endif
+do iomp=1,N_cell
+   call update_temp_measure(check1,check2,mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w)
+   if (norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3)
+enddo
+check(1)=check(1)+check1
+check(2)=check(2)+check2
 
 #ifdef CPP_OPENMP
 !$OMP end parallel

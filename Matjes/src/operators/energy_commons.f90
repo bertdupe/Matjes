@@ -1,10 +1,11 @@
 module m_energy_commons
-use m_derived_types, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,operator_real,Coeff_Ham,shell_Ham,point_shell_Operator,vec_point,point_shell_mode,lattice
+use m_derived_types, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,operator_real,shell_Ham,point_shell_Operator,vec_point,point_shell_mode,lattice
 use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters
 use m_couplage_ME
 use m_exchange_heisenberg
 use m_anisotropy_heisenberg
+use m_dipole_energy
 use m_zeeman
 use m_symmetry_operators
 !
@@ -13,7 +14,6 @@ use m_symmetry_operators
 !
 ! coefficients of the Hamiltonian
 type(coeff_ham_inter_spec_pointer), allocatable, public, protected, target :: Hamiltonians(:)
-!type(Coeff_Ham),public,protected,target,save :: Hamiltonian
 ! total Hamiltonian
 type(shell_Ham), public, protected, target, save, allocatable, dimension(:) :: total_hamiltonian
 ! total energy tensor

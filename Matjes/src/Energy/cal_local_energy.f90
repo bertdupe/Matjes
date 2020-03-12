@@ -148,6 +148,8 @@ contains
 subroutine local_energy_pointer(E_int,iomp,spin,E_line)
 use m_energy_commons
 use m_external_fields, only : ext_field
+use m_dipole_energy
+use m_dipolar_field, only : i_dip
 implicit none
 ! input
 type(point_shell_mode), intent(in) :: spin
@@ -167,11 +169,7 @@ do i=1,N
 
 enddo
 
-!#ifdef CPP_BRUTDIP
-!      if (i_dip) E_int=E_int+dipole(i_x,i_y,i_z,i_m,spin,shape_spin,masque,Periodic_log)
-!#else
-!      if (i_dip) E_int=E_int+fftdip(i_x,i_y,i_z,i_m)
-!#endif
+if (i_dip) E_int=E_int+get_dipole_E(iomp)
 
 end subroutine local_energy_pointer
 

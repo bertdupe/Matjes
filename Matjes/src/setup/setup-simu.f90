@@ -5,7 +5,6 @@ use m_energy_commons
 use m_internal_fields_commons
 use m_fft
 use m_lattice
-use m_voisins
 use m_setup_DM
 use m_user_info
 use m_parameters
@@ -22,13 +21,13 @@ use m_external_fields
 use m_excitations
 use m_io_files_utils
 use m_io_utils
+use m_dipolar_field
+use m_null
+
 #ifdef CPP_MPI
       use m_make_box
       use m_split_work
       use m_mpi_prop, only : isize,irank,irank_working,N,start
-#endif
-#ifndef CPP_BRUTDIP
-      use m_setup_dipole
 #endif
 
 implicit none
@@ -160,7 +159,7 @@ else
     tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1:phase))
 endif
 
-allocate(tableNN(4,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
+allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
 
 tableNN=0
@@ -193,22 +192,6 @@ call get_EM_external_fields(ext_param%H_ext%value,ext_param%E_ext%value,my_motif
 call initialize_external_fields(my_lattice)
 
 call user_info(6,time,'done',.false.)
-
-!-------------------------------------------------
-! take care of the periodic boundary conditions
-! to be changed
-allocate(masque(tot_N_Nneigh+1,dim_lat(1),dim_lat(2),dim_lat(3)),stat=alloc_check)
-if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate masque'
-
-if (all(my_lattice%boundary)) then
-   masque=1
-else
-   call user_info(6,time,'setting up the Hamiltonian for non-periodic systems',.false.)
-
-   call periodic(indexNN(:,1),sum(indexNN(:,1))+1,tabledist(:,1),N_Nneigh,masque,tableNN,pos,my_lattice,my_motif)
-
-   call user_info(6,time,'done',.true.)
-endif
 
 !check for the structure.xyz file for shape modification
 inquire (file='structure.xyz',exist=i_usestruct)
@@ -281,6 +264,13 @@ call user_info(6,time,'done',.true.)
 ! do a first FFT for the initial magnetic configuration
 !call fft(my_lattice,my_motif)
 
+
+
+!
+! get the null matrix in case no boundary conditions
+!
+call get_null_matrix(my_lattice%dim_mode)
+
 !!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!
 !!!! important part that associates the different NxN matrices with the local static operators
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -318,34 +308,13 @@ call user_info(6,time,'done',.true.)
 
 !deallocate(tabledist,tableNN,indexNN)
 
-!!!! part of the FFT dipole dipole interaction
-#ifndef CPP_BRUTDIP
-! prepare the demag tensor
-      if (i_dip) then
-       write(6,'(a)') "preparing spatial contribution to dipole convolution "
-       call setup_dipole(dim_lat,Periodic_log,net,count(my_motif%i_mom),size(world))
-       do k=1,dim_lat(3)*count(my_motif%i_mom)
-        do j=1,dim_lat(2)
-         do i=1,dim_lat(1)
-         mmatrix(1:3,i,j,k)=spin(4:6,i,j,k,mod(k-1,count(my_motif%i_mom))+1)*spin(7,i,j,k,1)
-         enddo
-        enddo
-       enddo
-       write(6,'(a)') 'FFT dipole dipole is set up'
-       else
-       allocate(ntensor(1,1,1,1),mmatrix(1,1,1,1),ctrans(1,1,1),rtrans(1,1,1), &
-     & hcomplex(1,1,1,1),mcomplex(1,1,1,1),hreal(1,1,1,1))
 
-       mmatrix=0.0d0
-       rtrans=0.0d0
-       hreal=0.0d0
-       ctrans=dcmplx(0.d0,0.d0)
-       mcomplex=dcmplx(0.d0,0.d0)
-       hcomplex=dcmplx(0.d0,0.d0)
-       ntensor=dcmplx(0.d0,0.d0)
-      endif
-!#endif
-#endif
+
+!
+! Check the presence of the dipole dipole
+!
+!
+call get_ham_dipole('input',my_lattice,my_motif)
 
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'

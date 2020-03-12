@@ -98,7 +98,7 @@ do i_nim=1,nim
       vel(iomp,i_nim)%w = 0d0
       coo(iomp,i_nim)%w = path(:,iomp,i_nim)
 
-      call calculate_Beff(ftmp,mode_B_column(iomp,i_nim),B_line(iomp,i_nim))
+      call calculate_Beff(ftmp,mode_B_column(iomp,i_nim),B_line(iomp,i_nim),iomp)
 
       call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
 
@@ -227,7 +227,7 @@ do while ((fchk>ftol).and.(itr<=itrmax))
 
       do iomp=1,N_cell
 
-         call calculate_Beff(ftmp,mode_B_column(iomp,i_nim),B_line(iomp,i_nim))
+         call calculate_Beff(ftmp,mode_B_column(iomp,i_nim),B_line(iomp,i_nim),iomp)
 
          call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
 

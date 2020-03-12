@@ -1,4 +1,5 @@
 module m_eval_Beff
+use m_dipolar_field, only : i_dip,get_dipole_B
 
 interface calculate_Beff
     module procedure normal
@@ -15,12 +16,13 @@ contains
 !--------------------------------------------------------------
 ! for normal
 !
-subroutine normal(B,spin,B_line)
+subroutine normal(B,spin,B_line,iomp)
 use m_derived_types
 implicit none
 ! input variable
 type(point_shell_mode), intent(in) :: spin
 type(point_shell_Operator), intent(in) :: B_line
+integer, intent(in) :: iomp
 ! output of the function
 real(kind=8), intent(out) :: B(:)
 ! internals
@@ -45,9 +47,11 @@ do i=1,N
 
 enddo
 
+if (i_dip) call get_dipole_B(B,iomp)
+
 #ifdef CPP_DEBUG
-      if (iomp.eq.1) write(*,*) B
-      if (iomp.eq.1) pause
+      write(*,*) B,spin%shell(1)%w
+      pause
 #endif
 end subroutine normal
 
