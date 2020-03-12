@@ -65,7 +65,8 @@ enddo
 !
 ! the dipole field is in T and should be converted to eV. So it is multiplied by mu_B in eV/T and mu_0 which is one in the code
 !
-B(1:3)=B(1:3)-B_int/pi(2.0d0)*alpha*Ms**2*mu_b
+
+B(1:3)=B(1:3)-B_int/pi(4.0d0)*alpha*Ms**2*mu_b
 
 end subroutine get_dipole_B
 
@@ -89,7 +90,7 @@ character(len=*), intent(in) :: fname
 integer :: i,j,io,N,k,l
 real(kind=8), allocatable, dimension(:,:) :: positions
 type(vec_point), allocatable, dimension(:) :: all_mode
-real(kind=8) :: test(3),shorter_distance(3)
+real(kind=8) :: test(3),shorter_distance(3),r(3,3)
 logical :: i_test
 
 N=product(my_lattice%dim_lat)
@@ -104,14 +105,17 @@ if (.not.i_dip) return
 !V=my_lattice%areal(:,1),
 Ms=motif%atomic(1)%moment
 
+! put the lattice in the correct order for Fortran
+do i=1,3
+   r(:,i)=my_lattice%areal(i,:)
+enddo
+
 allocate(distances(3,N,N))
 distances=0.0d0
 allocate(positions(3,N))
 positions=0.0d0
 
-io=open_file_read('positions.dat')
 call get_position(positions,'positions.dat')
-call close_file('positions.dat',io)
 
 do i=1,N
    do j=1,N
@@ -122,7 +126,7 @@ do i=1,N
          if (my_lattice%boundary(l)) then
             do k=-1,1
 
-               shorter_distance=test+real(k)*my_lattice%areal(:,l)*real(my_lattice%dim_lat(l))
+               shorter_distance=test+real(k)*r(:,l)*real(my_lattice%dim_lat(l))
 
                if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
             enddo
@@ -136,6 +140,15 @@ do i=1,N
    enddo
 enddo
 
+#ifdef CPP_DEBUG
+do i=1,N
+   do j=1,i
+      write(*,*) i, j
+      write(*,*) distances(:,j,i), norm(distances(:,j,i))
+      write(*,*) distances(:,i,j), norm(distances(:,i,j))
+   enddo
+enddo
+#endif
 ! make the pointer point to the spin matrix
 allocate(mode_dipole(N),all_mode(N))
 call dissociate(mode_dipole,N)
