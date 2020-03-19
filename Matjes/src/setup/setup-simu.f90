@@ -7,7 +7,6 @@ use m_fft
 use m_lattice
 use m_setup_DM
 use m_user_info
-use m_parameters
 use m_sym_utils
 use m_table_dist
 use m_mapping
@@ -42,7 +41,7 @@ type(cell), intent(out) :: my_motif
 type (mtprng_state),intent(inout) :: state
 type(simulation_parameters),intent (inout) :: ext_param
 ! variable of the system
-real(kind=8), allocatable :: tabledist(:,:)
+real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
 integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:),masque(:,:,:,:)
 real (kind=8), allocatable :: map_vort(:,:,:,:),map_toto(:,:,:),pos(:,:,:,:,:)
 integer :: N_Nneigh,phase,tot_N_Nneigh,io,dim_ham
@@ -231,10 +230,7 @@ if (n_DMI.ne.0) then
 
       endif
     else
-      if (phase.eq.2) then
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,:,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
-
-      endif
+      write(*,*) 'not coded'
     endif
 
     call user_info(6,time,'done',.true.)
@@ -326,51 +322,4 @@ write(6,'(/,a,/)') 'the setup of the simulation is over'
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! Simulation fo the STM stuff
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!Does the input file of Tobias is there
-      inquire (file='config.dat',exist=spstmL)
-      if (spstmL) then
-      write(6,'(a)') 'The program of spmstm will be used to draw spins'
-!Does spmstm will be used without MC
-      inquire (file='input.dat',exist=spstmonly)
-      if (spstmonly) then
-      write(6,'(a)') 'The program of spmstm will be used to draw spins with & 
-     &  the configuration specified in input.dat'
-      call spstm(my_lattice,my_motif)
-      write(6,'(a)') 'STM images were done'
-      stop
-      endif
-      endif
-
-!calculate topocharge only
-      inquire (file='topoonly.dat',exist=topoonly)
-      inquire(file='SpinSTMi.dat',exist=i_exi)
-      if ((topoonly).and.(i_exi)) then
-       write(6,*) 'calculate the topological charge only with &
-     &  the configuration specified in SpinSTMi.dat'
-
-      allocate(map_vort(dim_lat(1),dim_lat(2),dim_lat(3),3))
-      allocate(map_toto(dim_lat(1),dim_lat(2),dim_lat(3)))
-      map_toto=0.0d0
-      map_vort=0.0d0
-! check for a thrid non periodic dimension inside table hexa
-      call InitSpin
-      if (size(my_lattice%world).eq.2) then
-        if (count(my_motif%i_mom).eq.1) then
-!         call topo_map(spin(4:6,:,:,1,1),map_vort(:,:,1,:),map_toto(:,:,1))
-        else
-!         call topo_map(spin(4:6,:,:,1,:),map_vort(:,:,1,:),map_toto(:,:,1))
-        endif
-      endif
-      write(6,'(3(a,f10.6,3x))') 'Q=',sum(map_toto), &
-       'Q+= ',sum(map_toto,mask=map_toto>0.0d0), &
-       'Q-= ',sum(map_toto,mask=map_toto<0.0d0)
-      deallocate(map_vort,map_toto)
-      stop
-      endif
-
-      end subroutine setup_simu
+end subroutine setup_simu

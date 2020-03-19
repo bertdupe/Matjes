@@ -10,7 +10,6 @@
 
       subroutine spstm(my_lattice)
       use m_derived_types
-      use m_parameters, only : spstmonly
       use m_vector, only : norm
       use m_constants, only : pi
       use m_sym_utils, only : order_zaxis,pos_nei
@@ -60,11 +59,12 @@
       real(kind=8) :: x_n,y_n
 ! coponent of the fields
       real(kind=8) :: fieldx,fieldy,fieldz
-      logical :: Periodic_log(3)
+      logical :: Periodic_log(3),spstmonly
 
       i_dir=.False.
       i_old=.False.
       i_user_spin=.False.
+      spstmonly=.False.
       net=my_lattice%areal
       Periodic_log=my_lattice%boundary
       dim_lat=my_lattice%dim_lat
@@ -177,7 +177,7 @@
         read(42, '(A)', iostat=stat)
         if (stat /= 0) exit
         n_atoms=n_atoms+1
-        end do 
+        end do
       close(42)
 
       if(n_atoms .eq. 0) then

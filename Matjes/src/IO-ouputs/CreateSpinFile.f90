@@ -9,11 +9,13 @@ use m_convert
   interface CreateSpinFile
        module procedure CreateSpinFile_lattice_usernamed
        module procedure CreateSpinFile_I_simple_5d
-       module procedure CreateSpinFile_I_lattice
+       module procedure CreateSpinFile_I_lattice_sint
+       module procedure CreateSpinFile_I_lattice_sreal
        module procedure CreateSpinFile_R_simple_5d
        module procedure CreateSpinFile_simple_4d
        module procedure CreateSpinFile_end
-       module procedure CreateSpinFile_2d
+       module procedure CreateSpinFile_2d_sint
+       module procedure CreateSpinFile_2d_sreal
        module procedure CreateSpinFile_usernamed_spin
   end interface
 
@@ -27,7 +29,7 @@ contains
 !
 
 ! ===============================================================
-subroutine CreateSpinFile_2d(fname,signature,spin)
+subroutine CreateSpinFile_2d_sint(fname,signature,spin)
 Implicit none
 real(kind=8), intent(in) :: spin(:,:)
 integer, intent(in) :: signature
@@ -39,7 +41,23 @@ name=convert(fname,signature,'.dat')
 
 call CreateSpinFile_usernamed_spin(spin,name)
 
-END subroutine CreateSpinFile_2d
+END subroutine CreateSpinFile_2d_sint
+! ===============================================================
+
+! ===============================================================
+subroutine CreateSpinFile_2d_sreal(fname,signature,spin)
+Implicit none
+real(kind=8), intent(in) :: spin(:,:)
+real(kind=8), intent(in) :: signature
+character(len=*), intent(in) :: fname
+!     Slope Indexes for three dim spins
+character(len=50) :: name
+
+name=convert(fname,signature,'.dat')
+
+call CreateSpinFile_usernamed_spin(spin,name)
+
+END subroutine CreateSpinFile_2d_sreal
 ! ===============================================================
 
 ! ===============================================================
@@ -259,7 +277,7 @@ END subroutine CreateSpinFile_I_simple_5d
 ! ===============================================================
 
 ! ===============================================================
-subroutine CreateSpinFile_I_lattice(signature,spin)
+subroutine CreateSpinFile_I_lattice_sint(signature,spin)
 Implicit none
 integer, intent(in) :: signature
 type(vec_point), intent(in) :: spin(:)
@@ -275,7 +293,27 @@ call dump_spinse(io,spin)
 
 call close_file(fname,io)
 
-END subroutine CreateSpinFile_I_lattice
+END subroutine CreateSpinFile_I_lattice_sint
+! ===============================================================
+
+! ===============================================================
+subroutine CreateSpinFile_I_lattice_sreal(signature,spin)
+Implicit none
+real(kind=8), intent(in) :: signature
+type(vec_point), intent(in) :: spin(:)
+! internal variables
+Integer :: io
+!   name of files
+character(len=30) :: fname
+
+fname=convert('Spinse_',signature,'.dat')
+io=open_file_write(fname)
+
+call dump_spinse(io,spin)
+
+call close_file(fname,io)
+
+END subroutine CreateSpinFile_I_lattice_sreal
 ! ===============================================================
 
 ! ===============================================================

@@ -1,7 +1,6 @@
 subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param)
 use m_basic_types, only : vec_point
 use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator,point_shell_mode
-use m_fieldeff
 use m_torques, only : get_torques
 use m_lattice, only : my_order_parameters
 use m_eval_BTeff
@@ -15,7 +14,6 @@ use m_eval_Beff
 use m_write_spin
 use m_energyfield, only : get_Energy_distrib,get_Energy_distrib_line
 use m_createspinfile
-use m_energy
 use m_local_energy
 use m_dyna_utils
 use m_energy_commons, only : get_E_line
@@ -25,15 +23,7 @@ use m_excitations
 use m_operator_pointer_utils
 use m_solver_commun
 use m_topo_sd
-#ifndef CPP_BRUTDIP
-      use m_setup_dipole, only : mmatrix
-#endif
-#ifdef CPP_MPI
-      use m_parameters, only : i_ghost
-      use m_mpi_prop, only : MPI_COMM,irank,isize,start
-      use m_reconstruct_mat
-#endif
-      implicit none
+implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
 type(cell), intent(in) :: mag_motif
@@ -41,76 +31,41 @@ type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 ! internal
 logical :: gra_log,io_stochafield
-integer :: i,j,l,k,h,gra_freq
+integer :: i,j,l,h,gra_freq
 ! lattices that are used during the calculations
 real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter
 real(kind=8),allocatable,dimension(:,:) :: D_mode,D_T,Bini,BT
 type(vec_point),allocatable,dimension(:) :: all_mode_1,all_mode_2
 ! pointers specific for the modes
 type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield,mode_excitation_field
-type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
+type(vec_point),allocatable,dimension(:,:) :: mode_magnetic,mode_disp
 type(vec_point),target,allocatable,dimension(:) :: D_mode_mag,D_T_mag,B_mag,BT_mag
 type(vec_point),target,allocatable,dimension(:) :: D_mode_disp,D_T_disp,B_disp,BT_disp
 ! lattice pf pointer that will be used in the simulation
 type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line_1,B_line_2
 type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column_1,mode_B_column_2
 ! dummys
-real(kind=8) :: dum_norm,qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,stmtorquebp,check1,check2,Eold,check3,Et,dt
+real(kind=8) :: qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,check1,check2,Eold,check3,Et,dt
 real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
-real(kind=8) :: dumy(5),security(2),B(mag_lattice%dim_mode)
+real(kind=8) :: dumy(5),security(2)
 real(kind=8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
-real(kind=8) :: kt,ktini,ktfin,kt1
+real(kind=8) :: kt,ktini,ktfin
 real(kind=8) :: time
 integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq
 !! switch that controls the presence of magnetism, electric fields and magnetic fields
-logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation
-! parameter for the Heun integration scheme
-real(kind=8) :: maxh
-! parameter for the rkky integration
-integer :: N_site_comm
+logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_displacement
 ! dumy
-logical :: said_it_once,test,gra_topo
-! starting and ending points of the sums
-      integer :: Mstop
-#ifndef CPP_MPI
-      integer, dimension(3), parameter :: start=0
-#endif
-      integer :: Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
-#ifdef CPP_MPI
-      real(kind=8) :: mpi_check(2),trans(3)
+logical :: said_it_once,gra_topo
 
-      include 'mpif.h'
 
-      trans=0.0d0
-#endif
-! VERY IMPORTANT PART THAT DEFINES THE BOUNDARIES OF THE SUM
-! starting point and ending points in the sums
-      shape_lattice=shape(mag_lattice%l_modes)
-      Xstart=start(1)+1
-      Xstop=start(1)+shape_lattice(1)
-      Ystart=start(2)+1
-      Ystop=start(2)+shape_lattice(2)
-      Zstart=start(3)+1
-      Zstop=start(3)+shape_lattice(3)
-      Mstop=shape_lattice(4)
-      N_cell=product(shape_lattice(1:3))
-
-      N_site_comm=(Xstop-Xstart+1)*(Ystop-Ystart+1)*(Zstop-Zstart+1)*shape_lattice(4)
-
-#ifdef CPP_MPI
-      if (irank.eq.0) then
-#endif
-      OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
+OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
       Write(7,'(20(a,2x))') '# 1:step','2:real_time','3:E_av','4:M', &
      &  '5:Mx','6:My','7:Mz','8:vorticity','9:vx', &
      &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T=', &
      &  '16:Tfin=','17:Ek=','18:Hx','19:Hy=','20:Hz='
 
 ! check the convergence
-      open(8,FILE='convergence.dat',action='write',form='formatted')
-#ifdef CPP_MPI
-      endif
-#endif
+open(8,FILE='convergence.dat',action='write',form='formatted')
 
 ! prepare the matrices for integration
 
@@ -242,6 +197,32 @@ do i=1,size(my_order_parameters)
    allocate(mode_Efield(N_cell))
    call dissociate(mode_Efield,N_cell)
    call associate_pointer(mode_Efield,all_mode_1,'Efield',i_Efield)
+
+   exit
+  endif
+enddo
+
+! atomic displacements
+do i=1,size(my_order_parameters)
+  if ('displacement'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_disp(N_cell,N_loop),D_mode_disp(N_cell),D_T_disp(N_cell),B_disp(N_cell),BT_disp(N_cell))
+   do j=1,N_loop
+     call dissociate(mode_magnetic(:,j),N_cell)
+     if (j.eq.1) call associate_pointer(mode_disp(:,j),all_mode_1,'displacement',i_displacement)
+     if (j.eq.2) call associate_pointer(mode_disp(:,j),all_mode_2,'displacement',i_displacement)
+   enddo
+
+   call dissociate(D_mode_disp,N_cell)
+   call associate_pointer(D_mode_disp,D_mode,'displacement',i_displacement)
+
+   call dissociate(D_T_disp,N_cell)
+   call associate_pointer(D_T_disp,D_T,'displacement',i_displacement)
+
+   call dissociate(B_disp,N_cell)
+   call associate_pointer(B_disp,Bini,'displacement',i_displacement)
+
+   call dissociate(BT_disp,N_cell)
+   call associate_pointer(BT_disp,BT,'displacement',i_displacement)
 
    exit
   endif

@@ -1,8 +1,8 @@
 module m_operator_pointer_utils
 
 interface associate_pointer
-   module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target
-   module procedure associate_mode_name,associate_mode_real2D_name,asso_lattice_to_matrix,asso_pointer_to_matrix,asso_pointer_to_lattice
+   module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target,asso_pointer_to_2Dmatrix
+   module procedure associate_mode_name,associate_mode_real2D_name,asso_lattice_to_matrix,asso_pointer_to_4Dmatrix,asso_pointer_to_lattice
 end interface associate_pointer
 
 interface dissociate
@@ -137,10 +137,10 @@ enddo
 end subroutine asso_lattice_to_matrix
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! associate the pointer to the matrix
+! associate the pointer to the matrix 4D
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine asso_pointer_to_matrix(point,matrix2)
+subroutine asso_pointer_to_4Dmatrix(point,matrix2)
 use m_get_position, only : get_position_ND_to_1D
 use m_derived_types, only : vec_point
 implicit none
@@ -171,7 +171,29 @@ do l=1,N_mat2(5)
   enddo
 enddo
 
-end subroutine asso_pointer_to_matrix
+end subroutine asso_pointer_to_4Dmatrix
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! associate the pointer to the matrix 2D
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine asso_pointer_to_2Dmatrix(point,matrix2)
+use m_derived_types, only : vec_point
+implicit none
+type(vec_point),intent(inout) :: point(:)
+real(kind=8),target,intent(in) :: matrix2(:,:)
+! internal variables
+integer :: i,N_mat2(2)
+!logical :: test
+
+! check that the dimensions are equal
+N_mat2=shape(matrix2)
+
+do i=1,N_mat2(2)
+   point(i)%w=>matrix2(:,i)
+enddo
+
+end subroutine asso_pointer_to_2Dmatrix
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! associate the pointer to lattice

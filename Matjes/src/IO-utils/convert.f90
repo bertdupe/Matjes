@@ -5,6 +5,7 @@ interface convert
  module procedure string_plus_string_to_string
  module procedure string_plus_int_to_string
  module procedure string_plus_int_plus_string_to_string
+ module procedure string_plus_real_plus_string_to_string
  module procedure fourstring_plus_int_to_string
  module procedure threestring_plus_int_to_string
 end interface convert
@@ -100,6 +101,33 @@ write(string_plus_int_plus_string_to_string,form) str1(1:l1),str3(1:l3),str2(1:l
 
 end function
 
+! merge a string and a real into a string
+function string_plus_real_plus_string_to_string(str1,x,str2)
+implicit none
+character(len=*), intent(in) :: str1,str2
+real(kind=8), intent(in) :: x
+character(len=50) :: string_plus_real_plus_string_to_string
+! internal
+integer :: l1,l2,l_tot,l3
+character(len=50) :: str3
+character(len=50) :: form
+
+l1=len_trim(str1)
+str3=real_to_str(x)
+l3=len_trim(str3)
+l2=len_trim(str2)
+l_tot=l1+l2+l3
+
+if (l_tot.gt.50) then
+   write(6,'(a)') 'error in the string_plus_int_to_string subroutine'
+   stop
+endif
+
+write(form,'(a,f10.5,a)') '(',l_tot,'a)'
+write(string_plus_real_plus_string_to_string,form) str1(1:l1),str3(1:l3),str2(1:l2)
+
+end function
+
 ! merge a 4 strings and an integer into a string
 function fourstring_plus_int_to_string(str1,str2,str3,str4,i)
 implicit none
@@ -174,6 +202,19 @@ character(len=10) :: str
 write(str,'(I10)') i
 
 int_to_str=trim(adjustl(str))
+
+end function
+
+function real_to_str(x)
+implicit none
+real(kind=8), intent(in) :: x
+character(len=10) :: real_to_str
+! internal
+character(len=10) :: str
+
+write(str,'(f10.5)') x
+
+real_to_str=trim(adjustl(str))
 
 end function
 
