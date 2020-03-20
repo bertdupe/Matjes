@@ -99,7 +99,8 @@ write(6,'(a)') '-----------------------------------------------'
 write(6,'(a)') ''
 write(6,'(a)') '-----------------------------------------------'
 
-
+call CreateSpinFile('Spinse_start.dat',all_lattices,motif)
+call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
 
 
 
@@ -196,6 +197,9 @@ endif
 !---------------------------------
 !  Part which does the PIMC
 !---------------------------------
+
+call CreateSpinFile('Spinse_end.dat',all_lattices,motif)
+call WriteSpinAndCorrFile('SpinSTM_end.dat',all_lattices)
 
 call cpu_time(computation_time)
 write(*,*) 'computation time:',computation_time,'seconds'

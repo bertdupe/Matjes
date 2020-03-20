@@ -69,8 +69,9 @@ open(8,FILE='convergence.dat',action='write',form='formatted')
 
 ! prepare the matrices for integration
 
-call rw_dyna(shape_lattice(1:3),mag_lattice,timestep_int,damping,Efreq,duration)
-
+call rw_dyna(timestep_int,damping,Efreq,duration)
+shape_lattice=shape(mag_lattice%l_modes)
+N_cell=product(shape_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! Select the propagators and the integrators
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -119,7 +120,7 @@ call user_info(6,time,'topological operators',.false.)
 
 call get_size_Q_operator(mag_lattice)
 
-call associate_Q_operator(all_mode_1,mag_lattice%boundary,shape_spin)
+call associate_Q_operator(all_mode_1,mag_lattice%boundary,shape(mag_lattice%l_modes))
 
 call user_info(6,time,'done',.true.)
 

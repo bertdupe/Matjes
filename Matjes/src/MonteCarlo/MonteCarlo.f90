@@ -62,7 +62,6 @@ real(kind=8),allocatable :: M_sum_av(:,:),vortex_av(:,:),chi_l(:,:)
 real(kind=8) :: acc,rate,tries,cone
 integer :: i
 logical :: underrel,overrel,sphere,equi,i_restart,ising,print_relax,Cor_log,Gra_log,i_magnetic,i_print_W,spstmL
-character(len=50) :: fname
 
 ! lattice pf pointer that will be used in the simulation
 type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line
@@ -70,6 +69,10 @@ type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column
 
 type(vec_point),allocatable,dimension(:) :: all_mode
 type(vec_point),allocatable,dimension(:) :: mode_magnetic
+
+! initialize the variables
+call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
+size_table=n_Tsteps
 
 #ifdef CPP_MPI
 if (i_separate) size_table=isize*nRepProc
@@ -79,10 +82,6 @@ if (irank_working.eq.0) write(6,'(/,a,I6,a,/)') "you are calculating",size_table
 size_table=n_Tsteps
 write(6,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
 #endif
-
-! initialize the variables
-call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
-size_table=n_Tsteps
 
 allocate(E_av(size_table))
 !     Errors for energy and magnetization

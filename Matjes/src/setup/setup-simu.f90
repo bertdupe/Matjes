@@ -43,23 +43,17 @@ type(simulation_parameters),intent (inout) :: ext_param
 ! variable of the system
 real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
 integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:),masque(:,:,:,:)
-real (kind=8), allocatable :: map_vort(:,:,:,:),map_toto(:,:,:),pos(:,:,:,:,:)
-integer :: N_Nneigh,phase,tot_N_Nneigh,io,dim_ham
+real (kind=8), allocatable :: pos(:,:,:,:,:)
+integer :: tot_N_Nneigh,io,dim_ham
 real(kind=8) :: time
-!nb of neighbors in the z direction
-      integer :: Nei_z
-!nb of neighbors in the superlattice
-      integer :: Nei_il
 ! dummy variable
-      integer :: i,dim_lat(3),n_mag,n_DMI
+integer :: i,dim_lat(3),n_mag,n_DMI,N_Nneigh
 !checking various files
-      logical :: topoonly,i_exi,i_usestruct
+logical :: topoonly,i_exi,i_usestruct
 ! check the allocation of memory
-      integer :: alloc_check
+integer :: alloc_check
 
 ! innitialisation of dummy
-      phase=1
-      Nei_z=0
 i_usestruct=.False.
 alloc_check=0
 time=0.0d0
@@ -83,7 +77,7 @@ call rw_motif(my_motif,my_lattice)
 call user_info(6,time,'reading the input file',.false.)
 time=0.0d0
 
-call inp_rw(io_simu,N_Nneigh,phase,Nei_z,Nei_il)
+call inp_rw(io_simu)
 
 call user_info(6,time,'Read external parameters',.false.)
 time=0.0d0
@@ -120,29 +114,16 @@ call get_Hamiltonians('input',my_motif%atomic(1)%moment,my_lattice%dim_mode)
 
 N_Nneigh=get_number_shell()
 
-allocate(indexNN(N_Nneigh,phase),stat=alloc_check)
+allocate(indexNN(N_Nneigh,1),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
-allocate(tabledist(N_Nneigh,phase),stat=alloc_check)
+allocate(tabledist(N_Nneigh,1),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate table of distance'
 indexNN=0
 tabledist=0.0d0
 
-! calculate distance of NN and table of nearest neighbors
-call user_info(6,time,'Calculating the table of distances',.false.)
+call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,indexNN,n_mag,tabledist)
 
-if ((n_mag.eq.1).and.(phase.eq.1)) then
-    call Tdist(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,tabledist(:,1))
-else
-    call Tdist(my_lattice%areal,N_Nneigh,Nei_z,Nei_il,my_lattice%world,phase,my_motif,tabledist(:,:))
-endif
-
- if (phase.eq.1) then
-    call numneigh(N_Nneigh,tabledist(:,1),my_lattice%areal,my_lattice%world,my_motif,indexNN(:,1))
- else
-    call numneigh(N_Nneigh,tabledist(:,:),my_lattice%areal,Nei_z,Nei_il,my_lattice%world,my_motif,phase,indexNN(:,:))
- endif
-
-call user_info(6,time,'done',.false.)
+call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_motif,indexNN)
 
 ! prepare the lattice
 call user_info(6,time,'initializing the spin structure',.false.)
@@ -152,11 +133,8 @@ call InitSpin(my_lattice,my_motif,state,ext_param)
 call user_info(6,time,'done',.false.)
 
 ! allocate table of neighbors and masque
-if (phase.eq.1) then
-    tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
-else
-    tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1:phase))
-endif
+tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
+
 
 allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
@@ -208,7 +186,7 @@ if (n_DMI.ne.0) then
    write(6,'(I4,a)') n_DMI,' DMI found'
 
    write(*,*) 'number of first nearest neighbor', sum(indexNN(1:n_DMI,1))
-   allocate(DM_vector(sum(indexNN(1:n_DMI,1)),3,phase))
+   allocate(DM_vector(sum(indexNN(1:n_DMI,1)),3,1))
 
    DM_vector=0.0d0
    call setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector)
@@ -222,13 +200,12 @@ if (n_DMI.ne.0) then
     if (size(my_lattice%world).eq.1) then
 
     elseif (size(my_lattice%world).eq.2) then
-      if (phase.eq.1) then
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,1,:),indexNN(:,1),my_lattice%dim_lat,my_lattice%areal,masque(:,:,:,1))
 
-      else
-         call arrange_neigh(DM_vector,tableNN(:,:,:,:,1,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
+         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,1,:),indexNN(:,1),my_lattice%dim_lat,my_lattice%areal)
 
-      endif
+!      else
+!         call arrange_neigh(DM_vector,tableNN(:,:,:,:,1,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
+
     else
       write(*,*) 'not coded'
     endif

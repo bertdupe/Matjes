@@ -71,7 +71,6 @@ if (exchange%i_exist) number_hamiltonian=number_hamiltonian+1
 call get_ham_ME(fname,dim_ham)
 if (ME%i_exist) number_hamiltonian=number_hamiltonian+1
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! put all the Hamiltonians into a big matrix
 !!!!!!!!!!!!!!!!!!!!!!!!!!

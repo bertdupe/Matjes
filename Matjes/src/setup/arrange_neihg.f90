@@ -6,7 +6,7 @@ end interface arrange_neigh
 
 contains
 
-       subroutine arrange_2D(DM_vector,tableNN,indexNN,dim_lat,net,masque)
+       subroutine arrange_2D(DM_vector,tableNN,indexNN,dim_lat,net)
        use m_sym_utils, only : pos_nei,rot_mat,order_zaxis
 #ifdef CPP_MPI
       use m_mpi_prop, only : start
@@ -18,10 +18,9 @@ contains
        ! inout variables
        real (kind=8), intent(in) :: net(3,3),DM_vector(:,:)
        integer, intent(in) :: dim_lat(3),indexNN(:)
-       integer, intent(inout) :: tableNN(:,:,:,:,:),masque(:,:,:)
+       integer, intent(inout) :: tableNN(:,:,:,:,:)
        ! internal variable
        integer :: ix,iy,save_N(size(DM_vector,1),size(tableNN,1),size(tableNN,5)),ig_x,ig_y
-       integer :: save_masque(size(DM_vector,1))
        integer :: i,i_nei,k,avant,direct,Xstop,Ystop,test
        real(kind=8) :: test_vec(3),position(3),test1,test2
 #ifndef CPP_MPI
@@ -41,7 +40,6 @@ contains
          ig_y=iy+start(2)
           do k=1,indexNN(i_nei)
           save_N(k,:,:)=tableNN(:,k+avant,ix,iy,:)
-          save_masque(k)=masque(k+avant+1,ig_x,ig_y)
           enddo
 ! find which neighbors is perpendicular to the first DM vector
           test=0
@@ -56,7 +54,6 @@ contains
 
              if ((abs(test1).lt.1.0d-8).and.(test2.gt.0.0d0)) then
               tableNN(:,i+avant,ix,iy,:)=save_N(k,:,:)
-              masque(i+avant+1,ig_x,ig_y)=save_masque(k)
               test=test+1
               exit
              endif

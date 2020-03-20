@@ -5,7 +5,7 @@ include ../make.sys
 OBJS =	null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
- tightbinding.o Beff_sd.o choosespin.o entropic.o topohall.o topocharge_local.o topocharge_all.o \
+ tightbinding.o Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
  MC_fft.o sampling.o relaxationtype.o topocharge.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
  create_lattice.o   fft.o init_rand_seed.o gauge_util.o coordinatesv4.o \
@@ -106,7 +106,6 @@ Beff_sd.o: external_fields.o internal_fields.o
 user_information.o:
 CreateSpinFile.o: get-position.o constant.o io-utils.o
 topocharge_local.o: vector.o create_lattice.o inp_rw.o rw_lattice.o
-topohall.o: vector.o constant.o create_lattice.o rw_lattice.o
 fit.o:
 user_def_struct.o: vector.o inp_rw.o create_lattice.o
 derived_types.o: basic_types.o
@@ -176,7 +175,7 @@ total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
 CalculateAverages.o: topo_commons.o vector.o rw_lattice.o create_lattice.o 
-main.o: tightbinding.o io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o topohall.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: tightbinding.o io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o

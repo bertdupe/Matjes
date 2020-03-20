@@ -28,16 +28,26 @@ integer :: i,j
 neighbor_ani=0
 anisotropy%name='anisotropy'
 anisotropy%c_ham=1.0d0
+anisotropy%N_shell=-1
 
 io_param=open_file_read(fname)
 call get_parameter(io_param,fname,'c_ani',anisotropy%c_ham)
-! count the ME coefficients if present
-neighbor_ani=count_variables(io_param,'ani_',fname)
+! count the number of anisotropy coefficients if present
+call get_parameter(io_param,fname,'N_ani',anisotropy%N_shell)
+if (anisotropy%N_shell.eq.-1) then
+   neighbor_ani=count_variables(io_param,'ani_',fname)
+else
+   neighbor_ani=anisotropy%N_shell
+endif
+
+
 if (neighbor_ani.ne.0) then
    allocate(ani_local_sym(3,neighbor_ani))
    ani_local_sym=0.0d0
 
-   call get_parameter(io_param,fname,'ani_',3,ani_local_sym(:,1))
+   do i=1,neighbor_ani
+      call get_parameter(io_param,fname,'ani_',3,ani_local_sym(:,1))
+   enddo
    neighbor_ani=number_nonzero_coeff(ani_local_sym,'anisotropy')
 endif
 

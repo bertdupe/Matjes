@@ -1,7 +1,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 ! This routine reads the input file and setup and every variables given in the inp file
 !!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine inp_rw(io_simu,N_Nneigh,phase,Nei_z,Nei_il)
+subroutine inp_rw(io_simu)
 use m_constants
 use m_derived_types
 use m_io_utils
@@ -9,8 +9,6 @@ use m_io_files_utils
 implicit none
 !ccccccccccccccccccccccccccccccccccccccccccc
 !In/out variable
-real(kind=8), intent(inout) :: phase
-integer, intent(inout) :: Nei_z,Nei_il,N_Nneigh
 type(io_parameter), intent(inout) :: io_simu
 ! internal variables
 integer  :: io_input,gra_freq
@@ -38,9 +36,6 @@ call get_parameter(io_input,'input','SPSTM-image',io_simu%io_spstmL)
 call get_parameter(io_input,'input','Energy_Distrib',io_simu%io_Energy_Distrib)
 call get_parameter(io_input,'input','Angle_Distrib',io_simu%io_Angle_Distrib)
 call get_parameter(io_input,'input','Field_Distrib',io_simu%io_Field_Distrib)
-
-! Hamiltonian variable
-call get_parameter(io_input,'input','N_shell',N_Nneigh)
 
 call close_file('input',io_input)
 

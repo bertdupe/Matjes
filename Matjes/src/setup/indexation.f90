@@ -3,8 +3,32 @@ interface numneigh
    module procedure numneigh_simple
    module procedure numneigh_SL
 end interface numneigh
+
+private
+public :: get_num_neighbors
 contains
 
+subroutine get_num_neighbors(N_Nneigh,d,r,world,my_motif,indexNN)
+use m_derived_types, only : cell
+implicit none
+type(cell), intent(in) :: my_motif
+integer, intent(in) :: N_Nneigh,world(:)
+real(kind=8), intent(in) :: d(:,:),r(:,:)
+integer, intent(inout) :: indexNN(:,:)
+! internal variables
+integer :: phase,Nei_z,Nei_il
+
+phase=1
+Nei_z=0
+Nei_il=0
+
+if (phase.eq.1) then
+   call numneigh(N_Nneigh,d(:,1),r,world,my_motif,indexNN(:,1))
+else
+   call numneigh(N_Nneigh,d(:,:),r,Nei_z,Nei_il,world,my_motif,phase,indexNN)
+endif
+
+end subroutine get_num_neighbors
 ! calculates the number of neighbours stored in indexNN
 
 subroutine numneigh_simple(k,rad,r,world,motif,indexNN)
