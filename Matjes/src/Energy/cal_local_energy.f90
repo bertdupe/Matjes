@@ -6,7 +6,7 @@ interface local_energy
 end interface local_energy
 
 private
-public :: local_energy
+public :: local_energy,local_energy_pointer_EDestrib
 
 contains
 
@@ -36,5 +36,29 @@ enddo
 if (i_dip) E_int=E_int+get_dipole_E(iomp)
 
 end subroutine local_energy_pointer
+
+subroutine local_energy_pointer_EDestrib(E_int,iomp,spin,E_line)
+use m_energy_commons
+use m_dipole_energy
+implicit none
+! input
+type(point_shell_mode), intent(in) :: spin
+type(point_shell_Operator), intent(in) :: E_line
+integer, intent(in) :: iomp
+! ouput
+real(kind=8), intent(out) :: E_int
+! internal
+integer :: i,N
+
+N=size(spin%shell)
+E_int=0.0d0
+
+do i=1,N
+
+   E_int=E_int+dot_product( spin%shell(1)%w , matmul(E_line%shell(i)%Op_loc,spin%shell(i)%w) )
+
+enddo
+
+end subroutine local_energy_pointer_EDestrib
 
 end module m_local_energy

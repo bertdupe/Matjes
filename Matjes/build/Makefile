@@ -8,7 +8,7 @@ OBJS =	null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o coup
  tightbinding.o Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
  MC_fft.o sampling.o relaxationtype.o topocharge.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
- create_lattice.o   fft.o init_rand_seed.o gauge_util.o coordinatesv4.o \
+ create_lattice.o forces.o  fft.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o \
@@ -44,6 +44,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+derivative.o: basic_types.o operator_pointer_utils.o io-utils.o io_files_utils.o
 rw_MC.o: constant.o io-utils.o io_files_utils.o
 null.o: derived_types.o
 dipolar-field.o: derived_types.o get-position.o io-utils.o io_files_utils.o basic_types.o vector.o
@@ -127,7 +128,7 @@ sampling.o: vector.o
 InitSpin.o: get-random.o initial-configuration.o IO-modes.o get-position.o create_lattice.o derived_types.o rw_lattice.o order_lattice.o mtprng.o
 createSpinFile.o: rw_lattice.o constant.o inp_rw.o
 computeDM.o: main.o
-#field_sd.o: rw_lattice.o create_lattice.o
+forces.o: derivative.o
 rw_lattice.o: vector.o derived_types.o create_lattice.o constant.o
 MC_fft.o: vector.o constant.o rw_lattice.o create_lattice.o
 Table_dist.o: vector.o derived_types.o
@@ -170,7 +171,7 @@ solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_d
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
 setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o
-spindynamics.o: solver_commun.o info-dynamics.o torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
+spindynamics.o: forces.o solver_commun.o info-dynamics.o torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
 total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
@@ -180,6 +181,6 @@ Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o
 
-setup-simu.o: null.o dipolar-energy.o io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o sym_utils.o Table_dist.o mtprng.o
+setup-simu.o: derivative.o null.o dipolar-energy.o io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o topocharge.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o sym_utils.o Table_dist.o mtprng.o
 cal_local_energy.o:
 choosespin.o: mtprng.o

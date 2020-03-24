@@ -7,7 +7,7 @@ end interface associate_pointer
 
 interface dissociate
    module procedure dissociate_OpReal_2D,diss_point_shell_Operator_1D,diss_point_shell_mode_1D,dissociate_basicOpReal_2D
-   module procedure diss_point_shell_1D_Operator_1D,diss_point_shell_1D_mode_1D,diss_vec_point_1D
+   module procedure diss_point_shell_1D_Operator_1D,diss_point_shell_1D_mode_1D,diss_vec_point_1D,dissociate_vecpoint_2D
 end interface dissociate
 
 private
@@ -496,6 +496,24 @@ do j=1,M
 enddo
 
 end subroutine dissociate_basicOpReal_2D
+
+subroutine dissociate_vecpoint_2D(matrix,N,M)
+use m_basic_types, only : vec_point
+implicit none
+integer, intent(in) :: N,M
+type(vec_point), intent(out) :: matrix(N,M)
+! internal
+integer :: i,j
+
+do j=1,M
+   do i=1,N
+
+   nullify(matrix(i,j)%w)
+
+   enddo
+enddo
+
+end subroutine dissociate_vecpoint_2D
 
 !!!!!!!!!!!!!!!!!
 !

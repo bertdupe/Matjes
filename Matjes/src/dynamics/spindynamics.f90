@@ -23,6 +23,8 @@ use m_excitations
 use m_operator_pointer_utils
 use m_solver_commun
 use m_topo_sd
+use  m_derivative
+use m_forces
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -208,7 +210,7 @@ do i=1,size(my_order_parameters)
   if ('displacement'.eq.trim(my_order_parameters(i)%name)) then
    allocate(mode_disp(N_cell,N_loop),D_mode_disp(N_cell),D_T_disp(N_cell),B_disp(N_cell),BT_disp(N_cell))
    do j=1,N_loop
-     call dissociate(mode_magnetic(:,j),N_cell)
+     call dissociate(mode_disp(:,j),N_cell)
      if (j.eq.1) call associate_pointer(mode_disp(:,j),all_mode_1,'displacement',i_displacement)
      if (j.eq.2) call associate_pointer(mode_disp(:,j),all_mode_2,'displacement',i_displacement)
    enddo
@@ -229,6 +231,7 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
+if (io_simu%io_Force) call get_derivative(mode_magnetic(:,1),mag_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -429,11 +432,9 @@ if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
          write(6,'(a,I10)')'wrote Spin configuration and povray file number',j/gra_freq
       endif
 
-if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) then
-        Call get_charge_map(j/gra_freq)
-      endif
+if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) Call get_charge_map(j/gra_freq)
 
-!if ((Ffield).and.(mod(j-1,gra_freq).eq.0)) call field_sd(j/gra_freq,spin,shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_int,mag_lattice)
+if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,mode_B_column_1,B_line_1,mag_lattice%dim_mode,mag_lattice%areal)
 
 ! security in case of energy increase in SD and check for convergence
 if (((damping*(Edy-Eold).gt.1.0d-10).or.(damping*(Edy-Einitial).gt.1.0d-10)).and.(kt.lt.1.0d-10).and.(.not.said_it_once)) then

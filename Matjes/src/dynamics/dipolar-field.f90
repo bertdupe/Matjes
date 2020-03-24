@@ -46,7 +46,7 @@ B0=2.0d0/3.0d0
 B_int=0.0d0
 
 #ifdef CPP_OPENMP
-!$OMP parallel do reduction(+:B) private(i,j,rc,ss) default(shared)
+!$OMP parallel do reduction(+:B_int) private(i,rc,ss) default(shared)
 #endif
 
 do i=1,N
@@ -87,7 +87,7 @@ type(cell), intent(in) :: motif
 type(lattice), intent(in) :: my_lattice
 character(len=*), intent(in) :: fname
 ! internal
-integer :: i,j,io,N,k,l
+integer :: i,j,io,N,k,l,m
 real(kind=8), allocatable, dimension(:,:) :: positions
 type(vec_point), allocatable, dimension(:) :: all_mode
 real(kind=8) :: test(3),shorter_distance(3),r(3,3)
@@ -117,28 +117,42 @@ positions=0.0d0
 
 call get_position(positions,'positions.dat')
 
+#ifdef CPP_OPENMP
+!$OMP parallel do private(shorter_distance,test) default(shared)
+#endif
+
 do i=1,N
    do j=1,N
 
       test=positions(:,i)-positions(:,j)
 
-      do l=1,3
-         if (my_lattice%boundary(l)) then
-            do k=-1,1
+      do k=-1,1
+        do l=-1,1
+          do m=-1,1
 
-               shorter_distance=test+real(k)*r(:,l)*real(my_lattice%dim_lat(l))
+!    direction 1
+            if (my_lattice%boundary(1)) shorter_distance=test+real(k)*r(:,1)*real(my_lattice%dim_lat(1))
 
-               if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
-            enddo
-         else
-            test(l)=positions(l,i)-positions(l,j)
-         endif
+!     direction 2
+            if (my_lattice%boundary(2)) shorter_distance=test+real(l)*r(:,2)*real(my_lattice%dim_lat(2))
+
+!      direction 3
+            if (my_lattice%boundary(3)) shorter_distance=test+real(m)*r(:,3)*real(my_lattice%dim_lat(3))
+
+            if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
+
+          enddo
+        enddo
       enddo
 
       distances(:,j,i)=test
 
    enddo
 enddo
+
+#ifdef CPP_OPENMP
+!$OMP end parallel do
+#endif
 
 #ifdef CPP_DEBUG
 do i=1,N

@@ -154,8 +154,7 @@ end subroutine get_Energy_distrib_line
 subroutine get_Energy_distrib(tag,spin)
 use m_io_files_utils
 use m_convert
-!use  m_total_energy, only : total_energy
-use m_local_energy, only : local_energy
+use m_local_energy, only : local_energy_pointer_EDestrib
 use m_dipole_energy
 use m_dipolar_field, only : i_dip
 implicit none
@@ -173,7 +172,7 @@ character(len=30) :: fname,rw_format
 number_shell=size(energy_distrib%operators)
 allocate(E_shell(number_shell))
 
-write(rw_format,'( "(", I4, "(2x,f20.15))" )') number_shell+1
+write(rw_format,'( "(", I4, "(2x,E20.12E3))" )') number_shell+1
 
 E_shell=0.0d0
 E_dip=0.0d0
@@ -188,14 +187,14 @@ do i=1,N
 
    do j=1,number_shell
 
-      call local_energy(E_int,i,energy_distrib%mode_E_column(i,j),energy_distrib%E_line(i,j))
+      call local_energy_pointer_EDestrib(E_int,i,energy_distrib%mode_E_column(i,j),energy_distrib%E_line(i,j))
       E_shell(j)=E_shell(j)+E_int
 
    enddo
 
    if (i_dip) E_dip=get_dipole_E(i)
 
-   write(io,rw_format) E_shell,E_dip
+   write(io,rw_format) (E_shell(j),j=1,number_shell),E_dip
 enddo
 
 call close_file(fname,io)

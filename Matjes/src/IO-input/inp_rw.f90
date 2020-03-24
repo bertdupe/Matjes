@@ -11,7 +11,7 @@ implicit none
 !In/out variable
 type(io_parameter), intent(inout) :: io_simu
 ! internal variables
-integer  :: io_input,gra_freq
+integer  :: io_input
 ! local variables
 !ccccccccccccccccccccccccccccccccccccccccccc
 
@@ -36,6 +36,7 @@ call get_parameter(io_input,'input','SPSTM-image',io_simu%io_spstmL)
 call get_parameter(io_input,'input','Energy_Distrib',io_simu%io_Energy_Distrib)
 call get_parameter(io_input,'input','Angle_Distrib',io_simu%io_Angle_Distrib)
 call get_parameter(io_input,'input','Field_Distrib',io_simu%io_Field_Distrib)
+call get_parameter(io_input,'input','Forces',io_simu%io_Force)
 
 call close_file('input',io_input)
 

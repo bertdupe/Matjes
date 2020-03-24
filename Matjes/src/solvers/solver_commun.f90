@@ -106,17 +106,6 @@ select case (integtype)
 !-----------------------------------------------
 ! SIA and IMP integration scheme
 !-----------------------------------------------
-!       case (2)
-!       call calculate_Beff(iomp,Beff,spin1,h_int,Hamiltonian)
-!
-!        spin2(iomp)%w=(integrate(timestep_int,spin1(:,i_x,i_y,i_z,i_m),Beff,kt,damping &
-!     & ,stmtemp,i_torque,stmtorque,torque_FL,torque_AFL,adia,nonadia,storque,maxh,Ipol,i_x,i_y,i_z,i_m,spin)+ &
-!     & spinini(:,i_x,i_y,i_z,i_m))/2.0d0
-
-!
-!-----------------------------------------------
-! SIA and IMP integration scheme
-!-----------------------------------------------
 !       case (4)
 !       call calculate_Beff(i_x,i_y,i_z,i_m,Beff,spin,shape_spin,mag_lattice,h_int,Hamiltonian)
 

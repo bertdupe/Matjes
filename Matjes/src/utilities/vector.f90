@@ -6,6 +6,7 @@ module m_vector
    end interface norm
 
    interface cross
+       module procedure cross_real_simple
        module procedure cross_real
        module procedure cross_int
    end interface cross
@@ -335,6 +336,18 @@ END FUNCTION norm_cross_int
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+FUNCTION cross_real_simple(a, b)
+implicit none
+real(kind=8), INTENT(IN) :: a(:), b(:)
+real(kind=8) :: cross_real_simple(3)
+! internal
+
+cross_real_simple(1) = a(2) * b(3) - a(3) * b(2)
+cross_real_simple(2) = a(3) * b(1) - a(1) * b(3)
+cross_real_simple(3) = a(1) * b(2) - a(2) * b(1)
+
+END FUNCTION cross_real_simple
+
 FUNCTION cross_real(a, b, P, N)
 implicit none
 integer, intent(in) :: N,P
@@ -347,9 +360,9 @@ if (mod(N-P+1,3).ne.0) STOP 'error in cross_real'
 
 do i=1,(N-P+1)/3
    j=3*(i-1)+P
-   cross_real(j)   = dble( a(j+1) * b(j+2) - a(j+2) * b(j+1) )
-   cross_real(j+1) = dble( a(j+2) * b(j)   - a(j)   * b(j+2) )
-   cross_real(j+2) = dble( a(j)   * b(j+1) - a(j+1) * b(j)   )
+   cross_real(j)   = a(j+1) * b(j+2) - a(j+2) * b(j+1)
+   cross_real(j+1) = a(j+2) * b(j)   - a(j)   * b(j+2)
+   cross_real(j+2) = a(j)   * b(j+1) - a(j+1) * b(j)
 enddo
 
 END FUNCTION cross_real

@@ -46,6 +46,8 @@ type io_parameter
      logical :: io_Energy_Distrib
 ! field density distribution
      logical :: io_Field_Distrib
+! force field density distribution
+     logical :: io_Force=.false.
 end type io_parameter
 
 ! mpi variable

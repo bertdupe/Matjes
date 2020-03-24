@@ -34,16 +34,7 @@ B=0.0d0
 
 do i=1,N
 
-! the test takes more or less 10^-4s. Same time as the matmul
-!   if (.not.associated(B_total%value(i,iomp)%Op_loc)) cycle
-
       B=B+matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
-
-!      write(*,*) ''
-!      write(*,*) spin%shell(i)%w
-!      write(6,'(9(f12.6,2x))') (B_line%shell(i)%Op_loc(:,j),j=1,size(B_line%shell(i)%Op_loc,2))
-!      write(*,*) matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
-!      pause
 
 enddo
 

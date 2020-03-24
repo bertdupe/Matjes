@@ -1,85 +1,67 @@
-#le chat mange la souris
+#tests de la dynamique
 simulation magnet-dynamics
-nlattice 1
-H_ext   0.0   0.0   0.25
-n_Tsteps 1
-Tini 36.0d0
-Tfin 36.0d0
-J_1 1.5d-3 
+H_ext 0.0 0.0 0.0
+E_ext 0.0 0.0 0.0
+Tini 0.0d0
+Tfin 0.0d0
+J_1 12.1d-3
+#magnetoelectric coupling
+ME_sym_1 0.0d-3
+ME_antisym_1 0.0d-3
 #     Biquadratic Spin exchange constant
 J_B 0.0
 #     long range dipolar interaction
-ani_1 0.0d-3 0.0d-3 -0.46d-3
+ani_1 0.0d-3 0.0d-3 -0.015d-3
 #     four spin interaction
 K_1 0.0
 #  DM interaction
-DM_1   0.6d-3
+DMI_1  -0.2d-3
 #DM-vector 1.0 1.0 1.0
-# steps on which you make the average
-Total_MC_Steps 0
-# T_relax is multiplied by 1000
-T_relax 0
-T_auto 0
-Cor_log .F.
 gra_topo .F.
 Periodic_log .T. .T. .F.
 gra_fft .F.
-qnx 40
-qny 40
-gra_log .T.
+gra_log .F.
 gra_freq 100
-cone 3.14
-#sampling
-sampling sphere
-relaxation normal
-dispersion .F.
 #writting deleting
 CalTheta .F.
-CalEnergy .F.
-ghost .F.
+Energy_Distrib .T.
 
 # parameters of the lattice
 Nsize 100 100 1
-alat 1.0 1.0 1.0
+alat 1.00 1.0 1.0
 lattice
- 1.0 0.0 0.0
- 0.0 1.0 0.0
- 0.0 0.0 1.0
-#0.5 -0.86602540378 0.0
-#0.5 0.86602540378 0.0
+0.5 -0.86602540378 0.0
+0.5 0.86602540378 0.0
+0.0 0.0 1.0
+#1.0 0.0 0.0
+#0.0 1.0 0.0
 #0.0 0.0 1.0
 motif 2 atoms
 Fe 0.0 0.0 0.0 1.0
-Ir 0.5 0.5 -0.7 0.0
+Ir 0.33333333 0.666666666 -0.5 0.0
 
 #input for the dynamic
-integration 3  (0: FM resonnance 1: simple integration 2:SIA  3: Heun 4:SIB) 
-timestep 3.0  (fs)
-duration 5000  (nb of iteration)
-damping 0.30
+integration 2  (1: simple integration 2:Heun  3: SIB ) 
+timestep 0.0001  (fs)
+duration 1  (in units of dt)
+damping 0.0
 resolution 500 500
-torque 0.0
-Ipol 0.0 0.0 1.0
+torque 0.0000
+damptorque 0.0
+Ipol 0.0 0.0 0.0
 adia 0.0
 nonadia 0.0
 stmtorque .F. 1.0 1.0 0.0
-step .F. 1000 2000
-rampe .F. temp 10.0 10 100
-Hsweep .F. 0.0 0.0 -10.0 1000 1500 0.0 0.0 0.0
 Ffield .F
 STMtemp .F.
 Efreq 10
-#TPulse .T.
-#T0 200 
-#alpha 1.4
-#t_start 10000
-#t_cut_pulse 10300
-#I_exp 560
-#I_over_x 71574331
-#t_exp 213
-#t_frac -1130
-#expo 1.63
-#sigma 96177.8
+dipdip .T.
 
-update_time .true.
+# update time
+update_time .false.
 discretization 15
+
+#heavyside_1 T Efield 0.0 0.0 20.0 0.0 0.0 0.0 1 600      !field initial_value(3) end_value(3) t_start t_end
+#shape plane 0.0 0.0 0.0 0.0               ! shape center cutoff 
+
+write_ham .true.
