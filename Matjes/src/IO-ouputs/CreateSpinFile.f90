@@ -173,7 +173,7 @@ END subroutine CreateSpinFile_end
       real(kind=8) :: phi_color, Delta, widthc
       real(kind=8) :: Rc,Gc,Bc
 !   name of files
-      character(len=30) :: fname,toto
+      character(len=50) :: fname,toto
 
      X=shape_spin(1)-3
      Y=shape_spin(1)-2
@@ -247,7 +247,7 @@ real(kind=8) :: Rc,Gc,Bc
 ! position
 real(kind=8) :: pos(3)
 !   name of files
-character(len=30) :: fname,toto
+character(len=50) :: fname,toto
 
 write(fname,'(I10)') signature
 toto=trim(adjustl(fname))
@@ -284,7 +284,7 @@ type(vec_point), intent(in) :: spin(:)
 ! internal variables
 Integer :: io
 !   name of files
-character(len=30) :: fname
+character(len=50) :: fname
 
 fname=convert('Spinse_',signature,'.dat')
 io=open_file_write(fname)
@@ -304,7 +304,7 @@ type(vec_point), intent(in) :: spin(:)
 ! internal variables
 Integer :: io
 !   name of files
-character(len=30) :: fname
+character(len=50) :: fname
 
 fname=convert('Spinse_',signature,'.dat')
 io=open_file_write(fname)

@@ -7,8 +7,8 @@ OBJS =	null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o coup
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
  tightbinding.o Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
- MC_fft.o sampling.o relaxationtype.o topocharge.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
- create_lattice.o forces.o  fft.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
+ sampling.o relaxationtype.o topocharge.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
+ create_lattice.o forces.o fftw.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o \
@@ -23,7 +23,7 @@ Matjes: $(OBJS)
 	$(LD) -o $@ $^ $(LDFLAGS) $(LIBRARIES)
 
 %.o: %.f90
-	$(FC) -cpp $(CPPS) -c $< $(FFLAGS) -o $@
+	$(FC) -cpp $(CPPS) -c $< $(FFLAGS) $(INCLUDES) -o $@
 	
 %.o: %.F90
 	$(FC) -cpp $(CPPS) -c $< $(FFLAGS) $(INCLUDES) -o $@
@@ -47,7 +47,7 @@ clean:
 derivative.o: basic_types.o operator_pointer_utils.o io-utils.o io_files_utils.o
 rw_MC.o: constant.o io-utils.o io_files_utils.o
 null.o: derived_types.o
-dipolar-field.o: derived_types.o get-position.o io-utils.o io_files_utils.o basic_types.o vector.o
+dipolar-field.o: fftw.o derived_types.o get-position.o io-utils.o io_files_utils.o basic_types.o vector.o
 dipolar-energy.o: dipolar-field.o
 path.o: rotation.o vector.o constant.o mtprng.o basic_types.o
 spline.o:
@@ -118,7 +118,7 @@ WriteSpinAndCorrFile.o: CreateSpinFile.o rw_lattice.o create_lattice.o constant.
 init_rand_seed.o: main.o
 MakeLattice.o: main.o
 relaxationtype.o:
-fft.o: kmesh.o rw_lattice.o create_lattice.o vector.o constant.o
+fftw.o: kmesh.o vector.o constant.o io-utils.o derived_types.o
 randist.o: rw_dyna.o mtprng.o
 rw_dyna.o: main.o
 DM_vector.o: main.o
@@ -130,7 +130,6 @@ createSpinFile.o: rw_lattice.o constant.o inp_rw.o
 computeDM.o: main.o
 forces.o: derivative.o
 rw_lattice.o: vector.o derived_types.o create_lattice.o constant.o
-MC_fft.o: vector.o constant.o rw_lattice.o create_lattice.o
 Table_dist.o: vector.o derived_types.o
 spstm.o: rw_lattice.o create_lattice.o vector.o
 setup_DM.o: sym_utils.o vector.o derived_types.o Table_dist.o pointgrp.o
@@ -176,7 +175,7 @@ total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 topocharge.o: rw_lattice.o create_lattice.o vector.o create_lattice.o inp_rw.o
 CalculateAverages.o: topo_commons.o vector.o rw_lattice.o create_lattice.o 
-main.o: tightbinding.o io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o fft.o qorien.o topocharge.o vector.o Correlation.o constant.o MC_fft.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: tightbinding.o io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o qorien.o topocharge.o vector.o Correlation.o constant.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o

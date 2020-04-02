@@ -23,8 +23,9 @@ use m_excitations
 use m_operator_pointer_utils
 use m_solver_commun
 use m_topo_sd
-use  m_derivative
+use m_derivative
 use m_forces
+use m_fftw, only : calculate_fft
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -435,6 +436,8 @@ if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
 if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) Call get_charge_map(j/gra_freq)
 
 if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,mode_B_column_1,B_line_1,mag_lattice%dim_mode,mag_lattice%areal)
+
+if (io_simu%io_fft_Xstruct) call calculate_fft(all_mode_1,-1.0d0,mag_lattice%dim_mode,mag_lattice%astar,mag_lattice%dim_lat)
 
 ! security in case of energy increase in SD and check for convergence
 if (((damping*(Edy-Eold).gt.1.0d-10).or.(damping*(Edy-Einitial).gt.1.0d-10)).and.(kt.lt.1.0d-10).and.(.not.said_it_once)) then

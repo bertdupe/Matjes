@@ -11,7 +11,7 @@ type(lattice), intent(out) :: my_lattice
 integer :: j,dimension(3),io
 integer :: N_site
 logical :: Periodic_log(3)
-real (kind=8) :: a(3),ss,net(3,3),kv0(3,3)
+real (kind=8) :: a(3),ss,net(3,3),kv0(3,3),volume
 
 write(6,'(a)') 'reading the lattice parameters in the input file'
 io=open_file_read('input')
@@ -51,9 +51,10 @@ my_lattice%boundary=Periodic_log
 
 ! build up the reciprocal lattice vectors
 
-kv0(1,:) = pi(2.0d0)*cross(net(2,:),net(3,:),1,3)/dot_product(net(1,:),cross(net(2,:),net(3,:),1,3))
-kv0(2,:) = pi(2.0d0)*cross(net(3,:),net(1,:),1,3)/dot_product(net(1,:),cross(net(2,:),net(3,:),1,3))
-kv0(3,:) = pi(2.0d0)*cross(net(1,:),net(2,:),1,3)/dot_product(net(1,:),cross(net(2,:),net(3,:),1,3))
+volume=dot_product(net(1,:),cross(net(2,:),net(3,:),1,3))
+kv0(1,:) = pi(2.0d0)*cross(net(2,:),net(3,:),1,3)/volume
+kv0(2,:) = pi(2.0d0)*cross(net(3,:),net(1,:),1,3)/volume
+kv0(3,:) = pi(2.0d0)*cross(net(1,:),net(2,:),1,3)/volume
 
 my_lattice%astar=kv0
 

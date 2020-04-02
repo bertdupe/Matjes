@@ -8,24 +8,15 @@ use m_init_variables
 use mtprng
 use m_derived_types
 use m_lattice
+use m_write_spin
+use m_createspinfile
 
 ! old code
-      use m_write_spin
-      use m_createspinfile
-      use m_Corre
-      use m_constants
       use m_vector, only : norm
       use m_average_MC
-      use m_topoplot
-      use m_qorien
-      use m_fft
       use m_user_info
       use m_check_restart
-!      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,cone,gra_topo &
-!     & ,Total_MC_Steps,n_thousand,T_auto,gra_fft,CalEnergy,Gra_log,T_relax,spstmL &
-!     & ,i_separate,i_average,i_ghost,i_optTset,i_topohall,print_relax,gra_freq &
-!     & ,i_qorien,i_print_W,equi,overrel,sphere,underrel,N_temp,T_relax_temp,n_ghost &
-!     & ,nRepProc
+
 #ifdef CPP_MPI
       use m_randperm
       use m_make_box

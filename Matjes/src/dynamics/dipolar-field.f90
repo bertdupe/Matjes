@@ -1,5 +1,6 @@
 module m_dipolar_field
 use m_derived_types, only : vec_point
+use m_fftw
 
 !
 ! contains all the routines to calculate the dipolar field
@@ -7,7 +8,7 @@ use m_derived_types, only : vec_point
 !
 
 ! matrix that contains all the distances between the spins
-real(kind=8), public, protected, allocatable, dimension(:,:,:) :: distances
+real(kind=8), public, protected, allocatable, dimension(:,:) :: distances
 ! pointer that points to the spins of interests
 type(vec_point),public, protected, allocatable, dimension(:) :: mode_dipole
 ! logical to turn on or off the dipole
@@ -31,6 +32,101 @@ public :: get_dipole_B,get_ham_dipole
 
 contains
 
+!
+! if you want to calculate the Dipole Dipole with the internal FFTW libraries and the Ewald sum
+!
+#ifdef CPP_SUM
+subroutine get_dipole_B(B,iomp)
+use m_constants, only : pi,mu_b
+use m_vector, only : norm
+implicit none
+integer, intent(in) :: iomp
+real(kind=8), intent(inout) :: B(:)
+! internal
+integer :: i,N
+real(kind=8) :: rc(3),ss,B0,B_int(3),r0(3)
+
+N=size(mode_dipole)
+B0=2.0d0/3.0d0
+B_int=0.0d0
+r0=distances(:,iomp)
+
+#ifdef CPP_OPENMP
+!$OMP parallel do reduction(+:B_int) private(i,rc,ss) default(shared)
+#endif
+
+do i=1,N
+
+   if (iomp.ne.i) then
+     rc=distances(:,i)-r0
+     ss=norm(rc)
+     B_int=B_int+(mode_dipole(i)%w*ss**2-3.0d0*dot_product(rc,mode_dipole(i)%w)*rc)/ss**5
+   endif
+
+enddo
+#ifdef CPP_OPENMP
+!$OMP end parallel do
+#endif
+
+!
+! the dipole field is in T and should be converted to eV. So it is multiplied by mu_B in eV/T and mu_0 which is one in the code
+!
+
+B(1:3)=B(1:3)-B_int/pi(4.0d0)*alpha*Ms**2*mu_b
+
+end subroutine get_dipole_B
+#endif
+
+!
+! if you want to calculate the Dipole Dipole with the internal FFT
+!
+#ifdef CPP_BRUTDIP
+subroutine get_dipole_B(B,iomp)
+use m_constants, only : pi,mu_b
+use m_vector, only : norm
+implicit none
+integer, intent(in) :: iomp
+real(kind=8), intent(inout) :: B(:)
+! internal
+integer :: i,N
+real(kind=8) :: rc(3),ss,B0,B_int(3),r0(3)
+
+N=size(mode_dipole)
+B0=2.0d0/3.0d0
+B_int=0.0d0
+r0=distances(:,iomp)
+
+#ifdef CPP_OPENMP
+!$OMP parallel do reduction(+:B_int) private(i,rc,ss) default(shared)
+#endif
+
+do i=1,N
+
+   if (iomp.ne.i) then
+     rc=distances(:,i)-r0
+     ss=norm(rc)
+     B_int=B_int+(mode_dipole(i)%w*ss**2-3.0d0*dot_product(rc,mode_dipole(i)%w)*rc)/ss**5
+   endif
+
+enddo
+#ifdef CPP_OPENMP
+!$OMP end parallel do
+#endif
+
+!
+! the dipole field is in T and should be converted to eV. So it is multiplied by mu_B in eV/T and mu_0 which is one in the code
+!
+
+B(1:3)=B(1:3)-B_int/pi(4.0d0)*alpha*Ms**2*mu_b
+
+end subroutine get_dipole_B
+#endif
+
+
+!
+! if you want to calculate the Dipole Dipole with the double sum
+!
+#ifdef CPP_SUM
 subroutine get_dipole_B(B,iomp)
 use m_constants, only : pi,mu_b
 use m_vector, only : norm
@@ -69,7 +165,7 @@ enddo
 B(1:3)=B(1:3)-B_int/pi(4.0d0)*alpha*Ms**2*mu_b
 
 end subroutine get_dipole_B
-
+#endif
 
 !
 ! check if we should calculate the dipole dipole interaction
@@ -79,7 +175,6 @@ use m_io_files_utils
 use m_io_utils
 use m_derived_types, only : cell,lattice
 use m_get_position
-use m_vector, only : norm
 use m_operator_pointer_utils
 use m_constants, only : mu_B
 implicit none
@@ -110,59 +205,25 @@ do i=1,3
    r(:,i)=my_lattice%areal(i,:)
 enddo
 
-allocate(distances(3,N,N))
+allocate(distances(3,N))
 distances=0.0d0
 allocate(positions(3,N))
 positions=0.0d0
 
 call get_position(positions,'positions.dat')
 
-#ifdef CPP_OPENMP
-!$OMP parallel do private(shorter_distance,test) default(shared)
+!
+! prepare the dipolar matrix (the matrix of the r to calculate the 1/r)
+!
+
+call calculate_distances(distances,positions,r,my_lattice%dim_lat,my_lattice%boundary)
+
+#ifdef CPP_BRUTDIP
+call get_k_mesh('input',my_lattice)
+call calculate_FFT(distances,-1.0d0,my_lattice%dim_lat,my_lattice%astar)
+deallocate(distances)
 #endif
 
-do i=1,N
-   do j=1,N
-
-      test=positions(:,i)-positions(:,j)
-
-      do k=-1,1
-        do l=-1,1
-          do m=-1,1
-
-!    direction 1
-            if (my_lattice%boundary(1)) shorter_distance=test+real(k)*r(:,1)*real(my_lattice%dim_lat(1))
-
-!     direction 2
-            if (my_lattice%boundary(2)) shorter_distance=test+real(l)*r(:,2)*real(my_lattice%dim_lat(2))
-
-!      direction 3
-            if (my_lattice%boundary(3)) shorter_distance=test+real(m)*r(:,3)*real(my_lattice%dim_lat(3))
-
-            if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
-
-          enddo
-        enddo
-      enddo
-
-      distances(:,j,i)=test
-
-   enddo
-enddo
-
-#ifdef CPP_OPENMP
-!$OMP end parallel do
-#endif
-
-#ifdef CPP_DEBUG
-do i=1,N
-   do j=1,i
-      write(*,*) i, j
-      write(*,*) distances(:,j,i), norm(distances(:,j,i))
-      write(*,*) distances(:,i,j), norm(distances(:,i,j))
-   enddo
-enddo
-#endif
 ! make the pointer point to the spin matrix
 allocate(mode_dipole(N),all_mode(N))
 call dissociate(mode_dipole,N)
@@ -175,5 +236,65 @@ call associate_pointer(mode_dipole,all_mode,'magnetic',i_test)
 call dissociate(all_mode,N)
 
 end subroutine get_ham_dipole
+
+
+
+
+
+
+!
+! calculate the dipolar matrix (the matrix of the r to calculate the 1/r)
+!
+
+subroutine calculate_distances(dist,pos,r,dim_lat,boundary)
+use m_vector, only : norm
+implicit none
+real(kind=8), intent(inout) :: dist(:,:)
+real(kind=8), intent(in) :: pos(:,:),r(:,:)
+integer, intent(in) :: dim_lat(:)
+logical, intent(in) :: boundary(:)
+! internal
+integer :: i,k,l,m,N
+real(kind=8) :: shorter_distance(3),test(3),N1,N2,N3
+
+N1=real(dim_lat(1))
+N2=real(dim_lat(2))
+N3=real(dim_lat(3))
+N=product(dim_lat)
+#ifdef CPP_OPENMP
+!$OMP parallel do private(shorter_distance,test) default(shared)
+#endif
+
+do i=1,N
+
+  test=pos(:,i)
+
+  do k=-1,1
+    do l=-1,1
+      do m=-1,1
+
+!    direction 1
+        if (boundary(1)) shorter_distance=test+real(k)*r(:,1)*N1
+
+!     direction 2
+        if (boundary(2)) shorter_distance=shorter_distance+real(l)*r(:,2)*N2
+
+!      direction 3
+        if (boundary(3)) shorter_distance=shorter_distance+real(m)*r(:,3)*N3
+
+        if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
+
+      enddo
+    enddo
+  enddo
+
+  dist(:,i)=test
+
+enddo
+#ifdef CPP_OPENMP
+!$OMP end parallel do
+#endif
+end subroutine calculate_distances
+
 
 end module m_dipolar_field

@@ -4,11 +4,14 @@ FC=gfortran
 
 CC=gcc
 
-#FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
+FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
 
 #FFLAGS= -O0 -g -fcheck=all -Wall -Werror -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
 
-FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
 
-CPPS= -DCPP_MRG -DCPP_BRUTDIP -DCPP_SUM
+#INCLUDES=-I/usr/local/include
+#LIBRARIES= -L/usr/local/lib/ -lfftw3
 
+CPPS= -DCPP_MRG -DCPP_BRUTDIP
+#CPPS= -DCPP_MRG -CPP_FFTW

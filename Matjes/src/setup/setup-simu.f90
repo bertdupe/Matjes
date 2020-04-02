@@ -3,7 +3,7 @@ use m_derived_types
 use m_energyfield, only : init_Energy_distrib
 use m_energy_commons
 use m_internal_fields_commons
-use m_fft
+use m_fftw
 use m_lattice
 use m_setup_DM
 use m_user_info
@@ -294,6 +294,8 @@ if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'
 #else
 write(6,'(/,a,/)') 'the setup of the simulation is over'
 #endif
+
+if (io_simu%io_fft_Xstruct) call get_k_mesh('input',my_lattice)
 
 !!!!!!!!!!!!!! end of the setup
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
