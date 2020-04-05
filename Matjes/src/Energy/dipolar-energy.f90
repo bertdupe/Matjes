@@ -19,9 +19,9 @@ implicit none
 ! input
 integer, intent(in) :: iomp
 ! internal variable
-integer :: i,j,N
+integer :: N
 ! internal variable
-real(kind=8) :: rc(3),ss,B(3)
+real(kind=8) :: B(3)
 
 get_dipole_E=0.0d0
 B=0.0d0

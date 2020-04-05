@@ -88,7 +88,7 @@ integer, intent(inout) :: tableNN(:,:,:)
 ! 3D coordinate ix,iy,iz of 1d coordinate k
 integer :: i_x,Xstop
 ! dummy variable
-integer :: i,l,i_Nei,avant,i_p,dim_lat(3)
+integer :: i,l,i_Nei,avant,dim_lat(3)
 integer :: v_x,ok
 real (kind=8) :: vec(3),dist,r(3,3)
 #ifndef CPP_MPI
@@ -393,7 +393,7 @@ integer, intent(inout) :: tableNN(:,:,:,:,:)
 ! external blas
 ! 3D coordinate ix,iy,iz of 1d coordinate k
 integer :: i_x,i_y,i_m,Xstop,Ystop,Mstop
-integer :: v_x,v_y,v_m,ok
+integer :: v_x,v_y,ok
 ! dummy variable
 integer :: i,j,l,i_Nei,avant,i_p,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)

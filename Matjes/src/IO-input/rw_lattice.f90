@@ -8,7 +8,7 @@ implicit none
 ! out
 type(lattice), intent(out) :: my_lattice
 ! dummy variable
-integer :: j,dimension(3),io
+integer :: j,dimension(3),io,i
 integer :: N_site
 logical :: Periodic_log(3)
 real (kind=8) :: a(3),ss,net(3,3),kv0(3,3),volume
@@ -57,5 +57,17 @@ kv0(2,:) = pi(2.0d0)*cross(net(3,:),net(1,:),1,3)/volume
 kv0(3,:) = pi(2.0d0)*cross(net(1,:),net(2,:),1,3)/volume
 
 my_lattice%astar=kv0
+
+write(6,'(a)') 'real space lattice vectors (in nm)'
+do i=1,3
+  write(6,'(3(3f12.6,2x))') (net(i,j),j=1,3)
+enddo
+write(6,'(a)') ''
+
+write(6,'(a)') 'reciprocal space lattice vectors (in nm-1)'
+do i=1,3
+  write(6,'(3(3f12.6,2x))') (kv0(i,j),j=1,3)
+enddo
+write(6,'(a)') ''
 
 end subroutine rw_lattice

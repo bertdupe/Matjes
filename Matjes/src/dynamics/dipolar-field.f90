@@ -5,7 +5,9 @@ use m_fftw
 !
 ! contains all the routines to calculate the dipolar field
 !
-!
+
+! matrix that contains the FFT of the modes
+complex(kind=16), allocatable :: FFT_mode(:,:)
 
 ! matrix that contains all the distances between the spins
 real(kind=8), public, protected, allocatable, dimension(:,:) :: distances
@@ -13,6 +15,16 @@ real(kind=8), public, protected, allocatable, dimension(:,:) :: distances
 type(vec_point),public, protected, allocatable, dimension(:) :: mode_dipole
 ! logical to turn on or off the dipole
 logical, public, protected :: i_dip
+
+
+
+!
+! In case of the Ewald sum
+!
+integer :: N_shell_Ewald=10
+
+
+!
 !
 ! The Tesla are in H.A.m^-2
 ! magnetic constant in H/m
@@ -28,7 +40,7 @@ real(kind=8), Parameter :: alpha=0.0116541d0
 real(kind=8), public, protected :: Ms
 
 private
-public :: get_dipole_B,get_ham_dipole
+public :: get_dipole_B,get_ham_dipole,prepare_FFT_dipole,calculate_FFT_modes
 
 contains
 
@@ -77,6 +89,77 @@ B(1:3)=B(1:3)-B_int/pi(4.0d0)*alpha*Ms**2*mu_b
 end subroutine get_dipole_B
 #endif
 
+
+
+
+
+
+
+
+
+
+
+!
+! just check if the FFT dipole should be calculated
+!
+subroutine prepare_FFT_dipole(N)
+implicit none
+integer, intent(in) :: N
+! internal
+logical :: check_dipole
+integer :: N_k,dim_mode
+
+check_dipole=.false.
+#ifdef CPP_BRUTDIP
+check_dipole=i_dip
+#endif
+#ifdef CPP_FFTW
+check_dipole=i_dip
+#endif
+if (.not.check_dipole) return
+
+dim_mode=size(mode_dipole(1)%w)
+N_k=product(N_kpoint)
+allocate(FFT_mode(dim_mode,N_k))
+FFT_mode=0.0d0
+
+end subroutine
+
+!
+! just check if the FFT dipole should be calculated
+!
+subroutine calculate_FFT_modes(iteration)
+implicit none
+integer, intent(in) :: iteration
+! internal
+logical :: check_dipole
+integer :: dim_mode
+
+check_dipole=.false.
+#ifdef CPP_BRUTDIP
+check_dipole=i_dip
+#endif
+#ifdef CPP_FFTW
+check_dipole=i_dip
+#endif
+
+if (.not.check_dipole) return
+
+write(6,'(a,2x,I10)') 'calculation of the FFT of the modes for the interation',iteration
+!
+! calculate the FFT of the modes. FFT comes out
+!
+dim_mode=size(mode_dipole(1)%w)
+call calculate_fft(mode_dipole,distances,-1.0d0,dim_mode,FFT_mode)
+
+write(6,'(a)') 'done'
+
+end subroutine
+
+
+
+
+
 !
 ! if you want to calculate the Dipole Dipole with the internal FFT
 !
@@ -88,25 +171,22 @@ implicit none
 integer, intent(in) :: iomp
 real(kind=8), intent(inout) :: B(:)
 ! internal
-integer :: i,N
-real(kind=8) :: rc(3),ss,B0,B_int(3),r0(3)
+integer :: i,N_k
+real(kind=8) :: phase
+complex(kind=16) :: D_int(3,3),B_int(3)
 
-N=size(mode_dipole)
-B0=2.0d0/3.0d0
+N_k=product(N_kpoint)
+
 B_int=0.0d0
-r0=distances(:,iomp)
-
 #ifdef CPP_OPENMP
 !$OMP parallel do reduction(+:B_int) private(i,rc,ss) default(shared)
 #endif
 
-do i=1,N
+do i=1,N_k
 
-   if (iomp.ne.i) then
-     rc=distances(:,i)-r0
-     ss=norm(rc)
-     B_int=B_int+(mode_dipole(i)%w*ss**2-3.0d0*dot_product(rc,mode_dipole(i)%w)*rc)/ss**5
-   endif
+    phase=dot_product(distances(:,iomp),kmesh(:,i))
+    D_int=FFT_pos_D(:,:,i)*complex(cos(phase),sin(phase))
+    B_int=B_int+matmul(FFT_mode(:,i),D_int)
 
 enddo
 #ifdef CPP_OPENMP
@@ -116,17 +196,26 @@ enddo
 !
 ! the dipole field is in T and should be converted to eV. So it is multiplied by mu_B in eV/T and mu_0 which is one in the code
 !
-
-B(1:3)=B(1:3)-B_int/pi(4.0d0)*alpha*Ms**2*mu_b
+do i=1,3
+   B(i)=B(i)-real(B_int(i))/pi(4.0d0)*alpha*Ms**2*mu_b
+enddo
 
 end subroutine get_dipole_B
+
 #endif
+
+
+
+
+
+
+
 
 
 !
 ! if you want to calculate the Dipole Dipole with the double sum
 !
-#ifdef CPP_SUM
+#ifdef CPP_FFTW
 subroutine get_dipole_B(B,iomp)
 use m_constants, only : pi,mu_b
 use m_vector, only : norm
@@ -182,10 +271,10 @@ type(cell), intent(in) :: motif
 type(lattice), intent(in) :: my_lattice
 character(len=*), intent(in) :: fname
 ! internal
-integer :: i,j,io,N,k,l,m
+integer :: i,io,N
 real(kind=8), allocatable, dimension(:,:) :: positions
 type(vec_point), allocatable, dimension(:) :: all_mode
-real(kind=8) :: test(3),shorter_distance(3),r(3,3)
+real(kind=8) :: r(3,3)
 logical :: i_test
 
 N=product(my_lattice%dim_lat)
@@ -218,11 +307,15 @@ call get_position(positions,'positions.dat')
 
 call calculate_distances(distances,positions,r,my_lattice%dim_lat,my_lattice%boundary)
 
+!
+!
 #ifdef CPP_BRUTDIP
 call get_k_mesh('input',my_lattice)
-call calculate_FFT(distances,-1.0d0,my_lattice%dim_lat,my_lattice%astar)
-deallocate(distances)
+call calculate_FFT_Dr(distances,-1.0d0,my_lattice%dim_lat)
+
 #endif
+!
+!
 
 ! make the pointer point to the spin matrix
 allocate(mode_dipole(N),all_mode(N))
@@ -236,65 +329,6 @@ call associate_pointer(mode_dipole,all_mode,'magnetic',i_test)
 call dissociate(all_mode,N)
 
 end subroutine get_ham_dipole
-
-
-
-
-
-
-!
-! calculate the dipolar matrix (the matrix of the r to calculate the 1/r)
-!
-
-subroutine calculate_distances(dist,pos,r,dim_lat,boundary)
-use m_vector, only : norm
-implicit none
-real(kind=8), intent(inout) :: dist(:,:)
-real(kind=8), intent(in) :: pos(:,:),r(:,:)
-integer, intent(in) :: dim_lat(:)
-logical, intent(in) :: boundary(:)
-! internal
-integer :: i,k,l,m,N
-real(kind=8) :: shorter_distance(3),test(3),N1,N2,N3
-
-N1=real(dim_lat(1))
-N2=real(dim_lat(2))
-N3=real(dim_lat(3))
-N=product(dim_lat)
-#ifdef CPP_OPENMP
-!$OMP parallel do private(shorter_distance,test) default(shared)
-#endif
-
-do i=1,N
-
-  test=pos(:,i)
-
-  do k=-1,1
-    do l=-1,1
-      do m=-1,1
-
-!    direction 1
-        if (boundary(1)) shorter_distance=test+real(k)*r(:,1)*N1
-
-!     direction 2
-        if (boundary(2)) shorter_distance=shorter_distance+real(l)*r(:,2)*N2
-
-!      direction 3
-        if (boundary(3)) shorter_distance=shorter_distance+real(m)*r(:,3)*N3
-
-        if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
-
-      enddo
-    enddo
-  enddo
-
-  dist(:,i)=test
-
-enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel do
-#endif
-end subroutine calculate_distances
 
 
 end module m_dipolar_field

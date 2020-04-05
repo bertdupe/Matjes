@@ -26,6 +26,8 @@ use m_topo_sd
 use m_derivative
 use m_forces
 use m_fftw, only : calculate_fft
+use m_plot_FFT
+use m_dipolar_field, only : prepare_FFT_dipole,calculate_FFT_modes
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -253,6 +255,11 @@ said_it_once=.False.
 security=0.0d0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! prepare the dipole dipole FFT
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+call prepare_FFT_dipole(N_cell)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! part of the excitations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_excitations('input',i_excitation)
@@ -303,6 +310,8 @@ do j=1,duration
    Mdy=0.0d0
 
    call update_ext_EM_fields(real_time,check)
+
+   call calculate_FFT_modes(j)
 
 #ifdef CPP_OPENMP
 !$OMP parallel private(iomp,Beff) default(shared) reduction(+:check1,check2,check3)
@@ -437,7 +446,7 @@ if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) Call get_charge_map(j/gra_freq)
 
 if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,mode_B_column_1,B_line_1,mag_lattice%dim_mode,mag_lattice%areal)
 
-if (io_simu%io_fft_Xstruct) call calculate_fft(all_mode_1,-1.0d0,mag_lattice%dim_mode,mag_lattice%astar,mag_lattice%dim_lat)
+if ((io_simu%io_fft_Xstruct).and.(mod(j-1,gra_freq).eq.0)) call plot_fft(all_mode_1,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
 
 ! security in case of energy increase in SD and check for convergence
 if (((damping*(Edy-Eold).gt.1.0d-10).or.(damping*(Edy-Einitial).gt.1.0d-10)).and.(kt.lt.1.0d-10).and.(.not.said_it_once)) then

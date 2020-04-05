@@ -19,15 +19,12 @@ real(kind=8), intent(in) :: Ms
 integer, intent(in) :: dim_ham
 character(len=*), intent(in) ::fname
 ! internal
-integer :: io_param,N_ani
-real(kind=8), allocatable :: ani_local_sym(:,:),ham_local(:,:,:)
+integer :: io_param
 real(kind=8) :: h_ext(3)
 ! anisotropy
 integer :: x_start,x_end
 ! electric field
 integer :: y_start,y_end
-! slope
-integer :: i,j
 
 h_ext=0.0d0
 zeeman%name='zeeman'

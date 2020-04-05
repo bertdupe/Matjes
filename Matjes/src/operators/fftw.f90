@@ -1,30 +1,26 @@
 module m_fftw
 
 !
-! kmesh
+! kmesh in internal units
 !
-integer :: N_kpoint(3)
-real(kind=8), allocatable :: kmesh(:,:)
+integer, protected, public :: N_kpoint(3)
+real(kind=8), protected, public, allocatable :: kmesh(:,:)
 
 !
 ! FFT of the dipolar martix D(r)
 !
-complex(kind=16), allocatable :: FFT_pos_D(:,:,:)
+complex(kind=16), allocatable, protected, public :: FFT_pos_D(:,:,:)
 
 interface calculate_fft
   module procedure calculate_fft_vec_point,calculate_FFT_matrix
 end interface
 
 interface get_FFT
-  module procedure get_FFT_vec_point,get_FFT_matrix
-end interface
-
-interface plot
-  module procedure plot_2D,plot_3D
+  module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix
 end interface
 
 private
-public :: get_k_mesh,calculate_fft
+public :: get_k_mesh,calculate_fft,calculate_FFT_Dr
 contains
 
 #ifdef CPP_FFTW
@@ -103,107 +99,102 @@ enddo
 end subroutine fft_depol_c2r
 #endif
 
-
-
-
 !
 ! calculate the Fourrier transform of a field of pointers
 !
 
-subroutine calculate_fft_vec_point(field,sense,dim_mode,astar,N)
+subroutine calculate_fft_vec_point(field,pos,sense,dim_mode,FFT)
 use m_derived_types, only : vec_point
-use m_get_position
 implicit none
+complex(kind=16), intent(inout) :: FFT(:,:)
 type(vec_point), intent(in) :: field(:)
 real(kind=8), intent(in) :: sense       ! should be + or - one
-real(kind=8), intent(in) :: astar(3,3)
+real(kind=8), intent(in) :: pos(:,:)
 integer, intent(in) :: dim_mode
-! internal
-integer :: i,Nsize,j,k,io_out,N_k,N(3)
-complex(kind=16), allocatable :: FFT(:,:)
-real(kind=8), allocatable :: pos(:,:)
-real(kind=8) :: kvec(3)
-
-kvec=0.0d0
+!! internal
+integer :: i,Nsize,N_k
 
 Nsize=size(field)
 N_k=size(kmesh,2)
-allocate(FFT(dim_mode,N_k),pos(3,Nsize))
 FFT=0.0d0
-pos=0.0d0
-call get_position(pos,'positions.dat')
 
 do i=1,N_k
-  kvec=matmul(kmesh(:,i),astar)
 
-  FFT(:,i)=get_FFT(kvec,sense,pos,field,Nsize,dim_mode,N)/real(N_k)
+  FFT(:,i)=get_FFT(kmesh(:,i),sense,pos,field,Nsize,dim_mode)
 
 enddo
-
-call plot('FFT.dat',FFT)
 
 end subroutine
 
 !
-! calculate the Fourrier transform of a matrix of reals
+! calculate the Fourrier transform of a field of reals
 !
 
-subroutine calculate_fft_matrix(field,sense,dim_lat,astar)
+subroutine calculate_fft_matrix(field,pos,sense,FFT)
+use m_derived_types, only : vec_point
+use m_get_position
+implicit none
+real(kind=8), intent(in) :: field(:,:),pos(:,:)
+real(kind=8), intent(in) :: sense       ! should be + or - one
+complex(kind=16), intent(inout) :: FFT(:,:)
+! internal
+integer :: i,N_k,N(2)
+
+N=shape(field)
+N_k=size(kmesh,2)
+
+do i=1,N_k
+
+  FFT(:,i)=get_FFT(field,sense,kmesh(:,i),pos,N(1))
+
+enddo
+
+end subroutine
+
+
+
+
+
+
+
+
+
+!
+! calculate the Fourrier transform of the D(r) matrix
+!
+
+subroutine calculate_FFT_Dr(pos,sense,dim_lat)
 use m_vector, only : norm
 implicit none
-real(kind=8), intent(inout) :: field(:,:)
 real(kind=8), intent(in) :: sense       ! should be + or - one
-real(kind=8), intent(in) :: astar(:,:)
+real(kind=8), intent(in) :: pos(:,:)
 integer, intent(in) :: dim_lat(:)
 ! internal
-integer :: Nx,Ny,Nz,Nksize,i,j,k,l,Nkx,Nky,Nkz
-complex(kind=16), allocatable :: FFT(:,:,:,:,:)
-real(kind=8), allocatable :: pos(:,:,:,:,:),real_dist(:,:,:,:)
-real(kind=8) :: r(3),kvec(3)
-
-Nx=dim_lat(1)
-Ny=dim_lat(2)
-Nz=dim_lat(3)
+integer :: Nksize,Nsize,i
+real(kind=8) :: r(3),norm_int
+real(kind=8), allocatable :: pos_D(:,:,:)
 
 Nksize=product(N_kpoint)
-Nkx=N_kpoint(1)
-Nky=N_kpoint(2)
-Nkz=N_kpoint(3)
-allocate(FFT(3,3,Nkx,Nky,Nkz),pos(3,3,Nx,Ny,Nz),FFT_pos_D(3,3,Nksize),real_dist(3,Nx,Ny,Nz))
-FFT=0.0d0
-pos=0.0d0
+Nsize=product(dim_lat)
+allocate(FFT_pos_D(3,3,Nksize),pos_D(3,3,Nsize))
 FFT_pos_D=0.0d0
-real_dist=0.0d0
 
-real_dist=reshape(field,(/3,Nx,Ny,Nz/))
+do i=1,Nsize
 
-do i=1,Nz
-  do j=1,Ny
-    do k=1,Nx
-      r=real_dist(:,k,j,i)
-      pos(:,1,k,j,i)=(/ r(1)**2 - sum(r**2)/3 , r(1)*r(2) , r(1)*r(3) /)
-      pos(:,2,k,j,i)=(/ r(1)*r(2) , r(2)**2 - sum(r**2)/3 , r(2)*r(3) /)
-      pos(:,3,k,j,i)=(/ r(1)*r(3) , r(2)*r(3) , r(3)**2 - sum(r**2)/3 /)
-    enddo
-  enddo
+   r=pos(:,i)
+   norm_int=norm(r)
+
+   if (norm_int.gt.1.0d-8) then
+      pos_D(:,1,i)=(/ r(1)**2 - sum(r**2)/3 , r(1)*r(2) , r(1)*r(3) /)/norm_int**5
+      pos_D(:,2,i)=(/ r(1)*r(2) , r(2)**2 - sum(r**2)/3 , r(2)*r(3) /)/norm_int**5
+      pos_D(:,3,i)=(/ r(1)*r(3) , r(2)*r(3) , r(3)**2 - sum(r**2)/3 /)/norm_int**5
+   endif
+
 enddo
 
-l=0
-do i=1,N_kpoint(3)
-  do j=1,N_kpoint(2)
-    do k=1,N_kpoint(1)
-      l=l+1
-      kvec=matmul(kmesh(:,l),astar)
-      FFT(:,:,k,j,i)=get_FFT(pos,sense,kvec,real_dist)
-    enddo
-  enddo
+do i=1,Nksize
+      FFT_pos_D(:,:,i)=get_FFT(pos_D,sense,kmesh(:,i),pos,Nsize)
 enddo
-
-FFT_pos_D=reshape(FFT,(/3,3,Nksize/))
-
-call plot('FFT.dat',FFT_pos_D)
-
-stop
 
 end subroutine
 
@@ -218,78 +209,98 @@ end subroutine
 ! function that calculate the FFT of a matrix of vec_point for one component
 !
 
-function get_FFT_vec_point(kvec,sense,pos,field,Nsize,dim_mode,N)
+function get_FFT_vec_point(kvec,sense,pos,field,Nsize,dim_mode)
 use m_derived_types, only : vec_point
 implicit none
-integer, intent(in) :: Nsize,dim_mode,N(:)
+integer, intent(in) :: Nsize,dim_mode
 real(kind=8), intent(in) :: kvec(:),pos(:,:),sense
 type(vec_point), intent(in) :: field(:)
 complex(kind=16) :: get_FFT_vec_point(dim_mode)
 ! internal
-real(kind=8) :: alpha,r(3),Nx,Ny,Nz
+real(kind=8) :: phase,r(3)
 integer :: k,j
 
 get_FFT_vec_point=0.0d0
-Nx=real(N(1))
-Ny=real(N(2))
-Nz=real(N(3))
 
 do j=1,Nsize
-    r(1)=pos(1,j)/Nx
-    r(2)=pos(2,j)/Ny
-    r(3)=pos(3,j)/Nz
-    alpha=dot_product(kvec,r)
+    r=pos(:,j)
+    phase=dot_product(kvec,r)
 
   do k=1,dim_mode
 
-    get_FFT_vec_point(k)=get_FFT_vec_point(k)+complex(field(j)%w(k)*cos(sense*alpha),field(j)%w(k)*sin(sense*alpha))
+    get_FFT_vec_point(k)=get_FFT_vec_point(k)+complex(field(j)%w(k)*cos(sense*phase),field(j)%w(k)*sin(sense*phase))
 
   enddo
+
 enddo
 
+get_FFT_vec_point=get_FFT_vec_point/real(Nsize)
+
 end function get_FFT_vec_point
+
+!
+! function that calculate the FFT of the D(r) matrix of real for one component
+!
+
+function get_FFT_Dr_matrix(pos_D,sense,kvec,real_dist,Nsize)
+implicit none
+integer, intent(in) :: Nsize
+real(kind=8), intent(in) :: pos_D(:,:,:),sense,kvec(:),real_dist(:,:)
+complex(kind=16) :: get_FFT_Dr_matrix(3,3)
+! internal
+integer :: i,l,m
+real(kind=8) :: phase,r(3)
+
+get_FFT_Dr_matrix=0.0d0
+
+do i=1,Nsize
+
+   r=real_dist(:,i)
+   phase=dot_product(kvec,r)
+
+   do l=1,3
+      do m=1,3
+         get_FFT_Dr_matrix(m,l)=get_FFT_Dr_matrix(m,l)+complex(pos_D(m,l,i)*cos(sense*phase),pos_D(m,l,i)*sin(sense*phase))
+      enddo
+   enddo
+
+enddo
+
+get_FFT_Dr_matrix=get_FFT_Dr_matrix/real(Nsize)
+
+end function get_FFT_Dr_matrix
 
 !
 ! function that calculate the FFT of a matrix of real for one component
 !
 
-function get_FFT_matrix(pos,sense,kvec,real_dist)
+function get_FFT_matrix(field,sense,kvec,real_dist,dim_mode)
 implicit none
-real(kind=8), intent(in) :: pos(:,:,:,:,:),sense,kvec(:),real_dist(:,:,:,:)
-complex(kind=16) :: get_FFT_matrix(3,3)
+real(kind=8), intent(in) :: field(:,:),sense,kvec(:),real_dist(:,:)
+integer, intent(in) :: dim_mode
+complex(kind=16) :: get_FFT_matrix(dim_mode)
 ! internal
-integer :: shape_pos(5),i,j,k,Nx,Ny,Nz,l,m,Nsize
+integer :: shape_pos(2),i,l
 real(kind=8) :: alpha,r(3)
 
-shape_pos=shape(pos)
-Nx=shape_pos(3)
-Ny=shape_pos(4)
-Nz=shape_pos(5)
+shape_pos=shape(field)
+
 get_FFT_matrix=0.0d0
-Nsize=product(shape_pos(3:5))
 
-do i=1,Nz
-  do j=1,Ny
-    do k=1,Nx
+do i=1,shape_pos(2)
 
-      r=real_dist(:,k,j,i)
-      alpha=dot_product(kvec,r)
+   r=real_dist(:,i)
+   alpha=dot_product(kvec,r)
 
-        do l=1,3
-          do m=1,3
-            get_FFT_matrix(m,l)=get_FFT_matrix(m,l)+complex(pos(m,l,k,j,i)*cos(sense*alpha),pos(m,l,k,j,i)*sin(sense*alpha))
-          enddo
-        enddo
+   do l=1,shape_pos(1)
+      get_FFT_matrix(l)=get_FFT_matrix(l)+complex(field(l,i)*cos(sense*alpha),field(l,i)*sin(sense*alpha))
+   enddo
 
-    enddo
-  enddo
 enddo
 
-get_FFT_matrix=get_FFT_matrix/real(Nsize)
+get_FFT_matrix=get_FFT_matrix/real(shape_pos(2))
 
 end function get_FFT_matrix
-
-
 
 
 
@@ -309,7 +320,7 @@ implicit none
 character(len=*), intent(in) :: fname
 type(lattice), intent(in) :: my_lattice
 ! internal stuff
-integer :: io_input
+integer :: io_input,test
 integer :: Nkpoint,i,iomp
 logical :: i_plot,i_file
 
@@ -321,7 +332,14 @@ call get_parameter(io_input,fname,'write_kmesh',i_plot)
 call close_file(fname,io_input)
 
 Nkpoint=product(N_kpoint)
-allocate(kmesh(3,Nkpoint))
+
+!
+! check if the variable kmesh is allocated
+!
+
+allocate(kmesh(3,Nkpoint),stat=test)
+if (test.ne.0) return
+
 kmesh=0.0d0
 
 i_file=.false.
@@ -336,57 +354,14 @@ else
   call get_kmesh(N_kpoint,kmesh,i_plot)
 endif
 
+!
+! convert the kmesh in internal units
+!
+
+do iomp=1,Nkpoint
+    kmesh(:,iomp)=matmul(kmesh(:,iomp),my_lattice%astar)
+enddo
+
 end subroutine get_k_mesh
-
-
-
-
-!
-! plot the FFT
-!
-
-subroutine plot_2D(fname,FFT)
-use m_io_utils
-use m_io_files_utils
-use m_convert
-implicit none
-character(len=*), intent(in) :: fname
-complex(kind=16), intent(in) :: FFT(:,:)
-! internal
-integer :: io_out,shape_FFT(2),i,k
-character(len=50) :: form
-
-shape_FFT=shape(FFT)
-form=convert('(',2*shape_FFT(1),'(f16.8,2x))')
-io_out=open_file_write(fname)
-
-do i=1,shape_FFT(2)
-  write(io_out,form) (FFT(k,i),k=1,shape_FFT(1))
-enddo
-
-call close_file(fname,io_out)
-end subroutine plot_2D
-
-subroutine plot_3D(fname,FFT)
-use m_io_utils
-use m_io_files_utils
-use m_convert
-implicit none
-character(len=*), intent(in) :: fname
-complex(kind=16), intent(in) :: FFT(:,:,:)
-! internal
-integer :: io_out,shape_FFT(3),i,k,l
-character(len=50) :: form
-
-shape_FFT=shape(FFT)
-form=convert('(',2*shape_FFT(1)*shape_FFT(2),'(f16.8,2x))')
-io_out=open_file_write(fname)
-
-do i=1,shape_FFT(3)
-  write(io_out,form) ((FFT(k,l,i),k=1,shape_FFT(1)),l=1,shape_FFT(2))
-enddo
-
-call close_file(fname,io_out)
-end subroutine plot_3D
 
 end module m_fftw

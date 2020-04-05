@@ -103,7 +103,7 @@ integer, intent(in) :: io
 real(kind=8), intent(in) :: spin(:,:)
 ! internale variables
 Integer :: i,shape_spin(2)
-real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi,phi_color
+real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi
 
 !     Constants used for the color definition
 widthc=5.0d0
@@ -882,7 +882,7 @@ type(excitations), intent(inout) :: excite
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
-integer :: fin,len_string,nread,check,i
+integer :: fin,len_string,nread,check
 character(len=100) :: str
 character(len=100) :: dummy
 logical :: dum_logic
@@ -938,10 +938,9 @@ type(shape_field), intent(inout) :: field
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
-integer :: fin,len_string,nread,check,i
+integer :: fin,len_string,nread,check
 character(len=100) :: str
 character(len=100) :: dummy
-logical :: dum_logic
 
 nread=0
 len_string=len(trim(adjustl(vname)))

@@ -44,12 +44,12 @@ type(simulation_parameters),intent (inout) :: ext_param
 real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
 integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:),masque(:,:,:,:)
 real (kind=8), allocatable :: pos(:,:,:,:,:)
-integer :: tot_N_Nneigh,io,dim_ham
+integer :: tot_N_Nneigh,io
 real(kind=8) :: time
 ! dummy variable
-integer :: i,dim_lat(3),n_mag,n_DMI,N_Nneigh
+integer :: dim_lat(3),n_mag,n_DMI,N_Nneigh
 !checking various files
-logical :: topoonly,i_exi,i_usestruct
+logical :: i_usestruct
 ! check the allocation of memory
 integer :: alloc_check
 

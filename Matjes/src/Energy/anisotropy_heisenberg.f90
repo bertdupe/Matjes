@@ -16,14 +16,14 @@ implicit none
 integer, intent(in) :: dim_ham
 character(len=*), intent(in) ::fname
 ! internal
-integer :: neighbor_ani,io_param,N_ani
+integer :: neighbor_ani,io_param
 real(kind=8), allocatable :: ani_local_sym(:,:),ham_local(:,:,:)
 ! anisotropy
 integer :: x_start,x_end
 ! electric field
 integer :: y_start,y_end
 ! slope
-integer :: i,j
+integer :: i
 
 neighbor_ani=0
 anisotropy%name='anisotropy'
