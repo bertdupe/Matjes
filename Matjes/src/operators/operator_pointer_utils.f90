@@ -23,14 +23,13 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine associate_mode_real2D_name(point,static_target,name,i_name)
 use m_derived_types, only : vec_point
-use m_lattice, only : my_order_parameters
 implicit none
 type(vec_point), intent(inout) :: point(:)
 logical, intent(inout) :: i_name
 real(kind=8), target, intent(in) :: static_target(:,:)
 character(len=*), intent(in) :: name
 ! internal
-integer :: i,size_point,size_target,N_orders,N_order_found,istart,iend
+integer :: i,size_point,size_target,N_order_found,istart,iend
 integer, allocatable :: position_found(:,:)
 
 size_point=size(point)
@@ -69,7 +68,6 @@ end subroutine associate_mode_real2D_name
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine associate_mode_name(point,static_target,name,i_name)
 use m_derived_types, only : vec_point
-use m_lattice, only : my_order_parameters
 implicit none
 type(vec_point), intent(inout) :: point(:)
 logical, intent(inout) :: i_name

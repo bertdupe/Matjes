@@ -19,7 +19,7 @@ implicit none
 ! input
 integer, intent(in) :: iomp
 ! internal variable
-integer :: N
+
 ! internal variable
 real(kind=8) :: B(3)
 

@@ -182,6 +182,7 @@ if (i_usestruct) call user_def_struct(masque,pos, &
 call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
 
 n_DMI=get_number_DMI('input')
+
 if (n_DMI.ne.0) then
    write(6,'(I4,a)') n_DMI,' DMI found'
 
@@ -197,18 +198,7 @@ if (n_DMI.ne.0) then
 ! have to be rearranged
     call user_info(6,time,'Re-aranging the position of the DM vectors',.false.)
 
-    if (size(my_lattice%world).eq.1) then
-
-    elseif (size(my_lattice%world).eq.2) then
-
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,1,:),indexNN(:,1),my_lattice%dim_lat,my_lattice%areal)
-
-!      else
-!         call arrange_neigh(DM_vector,tableNN(:,:,:,:,1,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
-
-    else
-      write(*,*) 'not coded'
-    endif
+    call arrange_neigh(DM_vector,tableNN,indexNN,my_lattice%dim_lat,my_lattice%areal)
 
     call user_info(6,time,'done',.true.)
 else

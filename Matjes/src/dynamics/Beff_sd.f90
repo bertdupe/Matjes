@@ -35,6 +35,9 @@ B=0.0d0
 do i=1,N
 
       B=B+matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
+!      write(*,*) B_line%shell(i)%Op_loc
+!      write(*,*) spin%shell(i)%w
+!      write(*,*) matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
 
 enddo
 

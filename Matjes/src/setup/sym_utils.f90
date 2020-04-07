@@ -1,9 +1,11 @@
       module m_sym_utils
+
       integer, allocatable :: corners(:,:)
       interface rot_mat
        module procedure rot_mat_I
        module procedure rot_mat_R
       end interface rot_mat
+
       interface pos_nei
        module procedure pos_nei_2D
        module procedure pos_nei_3D_SL
@@ -11,6 +13,7 @@
        module procedure pos_nei_2D_user
        module procedure pos_between2at_2D
       end interface pos_nei
+
       contains
 !calculate the order of the z axis
       integer function order_zaxis(r)

@@ -195,7 +195,6 @@ implicit none
 real(kind=8), intent(in) :: D(:),Op_DMI(:,:)
 real(kind=8), intent(inout) :: H(:,:)
 ! internal variable
-integer :: shape_Op_dmi(2),dim_D(2),i,j
 
 H(1,2)=Op_DMI(1,2)*D(3)
 H(1,3)=Op_DMI(1,3)*D(2)
@@ -279,7 +278,7 @@ character(len=*), intent(in) :: name_int,name_ext
 type(order_parameter), intent(in) :: my_order_parameters(:)
 integer, intent(out) :: x_start,x_end,y_start,y_end
 ! internal
-integer :: i,n_mode_int,n_mode_ext
+integer :: n_mode_int,n_mode_ext
 integer, allocatable :: positions_int(:,:), positions_ext(:,:)
 
 n_mode_int=find_n_mode(name_int,my_order_parameters)

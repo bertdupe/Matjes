@@ -290,7 +290,6 @@ real(kind=8), INTENT(IN) :: a(:), b(:)
 real(kind=8) :: cross_real(P:N)
 ! internal
 integer :: i,j
-real(kind=8) :: norm_local
 
 if (mod(N-P+1,3).ne.0) STOP 'error in norm_cross_real'
 norm_cross_real=0.0d0

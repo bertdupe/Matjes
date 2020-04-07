@@ -21,14 +21,16 @@ contains
 subroutine get_table_of_distance(r,N_Nneigh,world,my_motif,indexNN,n_mag,d)
 use m_user_info
 use m_derived_types, only : cell
+use m_convert
 implicit none
 real(kind=8), intent(in) :: r(:,:)
 type(cell), intent(in) :: my_motif
 integer, intent(in) :: N_Nneigh,world(:),indexNN(:,:),n_mag
 real(kind=8), intent(inout) :: d(:,:)
 ! internal variable
-integer :: Nei_z,Nei_il,phase
+integer :: Nei_z,Nei_il,phase,i,shape_table(2),j
 real(kind=8) :: time
+character(len=50) :: form
 
 Nei_z=0
 Nei_il=0
@@ -45,6 +47,15 @@ else
 endif
 
 call user_info(6,time,'done',.false.)
+
+shape_table=shape(d)
+form=convert('(',shape_table(1),'(2x,f10.6))')
+write(6,'(a)') ''
+write(6,'(a)') 'table of distances'
+do i=1,shape_table(2)
+   write(6,form) (d(j,i),j=1,shape_table(1))
+enddo
+write(6,'(a)') ''
 
 end subroutine
 !-----------------------------------------

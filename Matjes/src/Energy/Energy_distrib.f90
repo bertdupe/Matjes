@@ -187,7 +187,7 @@ do i=1,N
 
    do j=1,number_shell
 
-      call local_energy_pointer_EDestrib(E_int,i,energy_distrib%mode_E_column(i,j),energy_distrib%E_line(i,j))
+      call local_energy_pointer_EDestrib(E_int,i,energy_distrib%mode_E_column(i,j),energy_distrib%E_line(i,j),energy_distrib%mode_E_column(i,1)%shell(1)%w)
       E_shell(j)=E_shell(j)+E_int
 
    enddo

@@ -6,7 +6,7 @@ use m_lattice, only : my_order_parameters
 use m_eval_BTeff
 use m_measure_temp
 use m_topo_commons
-use m_update_time, only : update_time,get_dt_LLG,init_update_time
+use m_update_time
 use m_vector, only : cross,norm,norm_cross
 use m_randist
 use m_constants, only : pi,k_b,hbar
@@ -28,6 +28,8 @@ use m_forces
 use m_fftw, only : calculate_fft
 use m_plot_FFT
 use m_dipolar_field, only : prepare_FFT_dipole,calculate_FFT_modes
+use m_solver_order
+use m_io_files_utils
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -36,19 +38,22 @@ type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 ! internal
 logical :: gra_log,io_stochafield
-integer :: i,j,l,h,gra_freq
+integer :: i,j,l,h,gra_freq,i_loop,i_dt
 ! lattices that are used during the calculations
-real(kind=8),allocatable,dimension(:,:,:,:,:) :: spinafter
-real(kind=8),allocatable,dimension(:,:) :: D_mode,D_T,Bini,BT
-type(vec_point),allocatable,dimension(:) :: all_mode_1,all_mode_2
+real(kind=8),allocatable,dimension(:,:,:,:,:,:) :: spinafter
+real(kind=8),allocatable,dimension(:,:) :: D_T,Bini,BT
+real(kind=8),allocatable,dimension(:,:,:) :: D_mode
+real(kind=8),allocatable,dimension(:) :: D_mode_int
+type(vec_point),allocatable,dimension(:) :: all_mode,all_mode_1,all_mode_2
 ! pointers specific for the modes
-type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield,mode_excitation_field
-type(vec_point),allocatable,dimension(:,:) :: mode_magnetic,mode_disp
-type(vec_point),target,allocatable,dimension(:) :: D_mode_mag,D_T_mag,B_mag,BT_mag
-type(vec_point),target,allocatable,dimension(:) :: D_mode_disp,D_T_disp,B_disp,BT_disp
+type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield,mode_excitation_field,mode_magnetic,mode_disp
+type(vec_point),target,allocatable,dimension(:) :: D_T_mag,B_mag,BT_mag
+type(vec_point),target,allocatable,dimension(:,:) :: D_mode_mag
+type(vec_point),target,allocatable,dimension(:) :: D_T_disp,B_disp,BT_disp
+type(vec_point),target,allocatable,dimension(:,:) :: D_mode_disp
 ! lattice pf pointer that will be used in the simulation
-type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line_1,B_line_2
-type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column_1,mode_B_column_2
+type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line
+type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column
 ! dummys
 real(kind=8) :: qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,check1,check2,Eold,check3,Et,dt
 real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
@@ -57,6 +62,7 @@ real(kind=8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
 real(kind=8) :: kt,ktini,ktfin
 real(kind=8) :: time
 integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq
+!integer :: io_test
 !! switch that controls the presence of magnetism, electric fields and magnetic fields
 logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_displacement
 ! dumy
@@ -87,14 +93,15 @@ call select_propagator(ext_param%ktini%value,N_loop)
 !!!! Allocate the matrix of after spin and the pointers associated to it
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-allocate(all_mode_1(N_cell),all_mode_2(N_cell))
-allocate(spinafter(mag_lattice%dim_mode,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4)))
+allocate(all_mode(N_cell),all_mode_1(N_cell),all_mode_2(N_cell))
+allocate(spinafter(mag_lattice%dim_mode,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4),2))
 
 shape_spin=shape_lattice
 spinafter=0.0d0
 
-call associate_pointer(all_mode_1,mag_lattice)
-call associate_pointer(all_mode_2,spinafter)
+call associate_pointer(all_mode,mag_lattice)
+call associate_pointer(all_mode_1,spinafter(:,:,:,:,:,1))
+call associate_pointer(all_mode_2,spinafter(:,:,:,:,:,2))
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the pointers for the B-field and the energy
@@ -103,13 +110,11 @@ call associate_pointer(all_mode_2,spinafter)
 time=0.0d0
 call user_info(6,time,'associate H_line, B_line and S_line',.true.)
 
-allocate(E_line(N_cell),B_line_1(N_cell),B_line_2(N_cell))
-allocate(mode_E_column(N_cell),mode_B_column_1(N_cell),mode_B_column_2(N_cell))
+allocate(E_line(N_cell),B_line(N_cell))
+allocate(mode_E_column(N_cell),mode_B_column(N_cell))
 
-call get_E_line(E_line,mode_E_column,all_mode_1)
-
-call get_B_line(B_line_1,mode_B_column_1,all_mode_1)
-call get_B_line(B_line_2,mode_B_column_2,all_mode_2)
+call get_E_line(E_line,mode_E_column,all_mode)
+call get_B_line(B_line,mode_B_column,all_mode_1)
 
 if (io_simu%io_Energy_Distrib) then
    write(6,'(a)') 'setting up energy distribution'
@@ -132,9 +137,10 @@ call user_info(6,time,'done',.true.)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the element of integrations and associate the pointers to them
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-allocate(D_mode(mag_lattice%dim_mode,N_cell),D_T(mag_lattice%dim_mode,N_cell))
+allocate(D_mode(mag_lattice%dim_mode,N_cell,N_loop),D_T(mag_lattice%dim_mode,N_cell),D_mode_int(mag_lattice%dim_mode))
 D_mode=0.0d0
 D_T=0.0d0
+D_mode_int=0.0d0
 
 allocate(Bini(mag_lattice%dim_mode,N_cell),BT(mag_lattice%dim_mode,N_cell))
 Bini=0.0d0
@@ -152,15 +158,14 @@ i_Hfield=.false.
 ! magnetization
 do i=1,size(my_order_parameters)
   if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
-   allocate(mode_magnetic(N_cell,N_loop),D_mode_mag(N_cell),D_T_mag(N_cell),B_mag(N_cell),BT_mag(N_cell))
-   do j=1,N_loop
-     call dissociate(mode_magnetic(:,j),N_cell)
-     if (j.eq.1) call associate_pointer(mode_magnetic(:,j),all_mode_1,'magnetic',i_magnetic)
-     if (j.eq.2) call associate_pointer(mode_magnetic(:,j),all_mode_2,'magnetic',i_magnetic)
-   enddo
+   allocate(mode_magnetic(N_cell),D_mode_mag(N_cell,N_loop),D_T_mag(N_cell),B_mag(N_cell),BT_mag(N_cell))
+   call dissociate(mode_magnetic,N_cell)
+   call associate_pointer(mode_magnetic,all_mode_1,'magnetic',i_magnetic)
 
-   call dissociate(D_mode_mag,N_cell)
-   call associate_pointer(D_mode_mag,D_mode,'magnetic',i_magnetic)
+   do j=1,N_loop
+      call dissociate(D_mode_mag(:,j),N_cell)
+      call associate_pointer(D_mode_mag(:,j),D_mode(:,:,j),'magnetic',i_magnetic)
+   enddo
 
    call dissociate(D_T_mag,N_cell)
    call associate_pointer(D_T_mag,D_T,'magnetic',i_magnetic)
@@ -211,15 +216,13 @@ enddo
 ! atomic displacements
 do i=1,size(my_order_parameters)
   if ('displacement'.eq.trim(my_order_parameters(i)%name)) then
-   allocate(mode_disp(N_cell,N_loop),D_mode_disp(N_cell),D_T_disp(N_cell),B_disp(N_cell),BT_disp(N_cell))
-   do j=1,N_loop
-     call dissociate(mode_disp(:,j),N_cell)
-     if (j.eq.1) call associate_pointer(mode_disp(:,j),all_mode_1,'displacement',i_displacement)
-     if (j.eq.2) call associate_pointer(mode_disp(:,j),all_mode_2,'displacement',i_displacement)
-   enddo
+   allocate(mode_disp(N_cell),D_mode_disp(N_cell,N_loop),D_T_disp(N_cell),B_disp(N_cell),BT_disp(N_cell))
+   call associate_pointer(mode_disp,all_mode_1,'displacement',i_displacement)
 
-   call dissociate(D_mode_disp,N_cell)
-   call associate_pointer(D_mode_disp,D_mode,'displacement',i_displacement)
+   do j=1,N_loop
+     call dissociate(D_mode_disp(:,j),N_cell)
+     call associate_pointer(D_mode_disp(:,j),D_mode(:,:,j),'displacement',i_displacement)
+   enddo
 
    call dissociate(D_T_disp,N_cell)
    call associate_pointer(D_T_disp,D_T,'displacement',i_displacement)
@@ -234,7 +237,7 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-if (io_simu%io_Force) call get_derivative(mode_magnetic(:,1),mag_lattice)
+if (io_simu%io_Force) call get_derivative(mode_magnetic,mag_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -253,6 +256,19 @@ h_int=ext_param%H_ext%value
 E_int=ext_param%E_ext%value
 said_it_once=.False.
 security=0.0d0
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! initialize the simulation
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+call copy_lattice(all_mode,all_mode_1)
+
+Edy=0.0d0
+do iomp=1,N_cell
+    call local_energy(Et,iomp,mode_E_column(iomp),E_line(iomp))
+    Edy=Edy+Et
+enddo
+write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! prepare the dipole dipole FFT
@@ -309,6 +325,8 @@ do j=1,duration
    D_mode=0.0d0
    Mdy=0.0d0
 
+   dt=timestep_int
+
    call update_ext_EM_fields(real_time,check)
 
    call calculate_FFT_modes(j)
@@ -317,53 +335,61 @@ do j=1,duration
 !$OMP parallel private(iomp,Beff) default(shared) reduction(+:check1,check2,check3)
 #endif
   test_torque=0.0d0
-!  dt=get_dt_LLG(timestep_int,damping)/real(N_loop)
-  dt=timestep_int/real(N_loop)
 
-  do iomp=1,N_cell
+!
+! loop over the integration order
+!
 
-     if (i_excitation) call update_EMT_of_r(iomp,mode_excitation_field(iomp)%w)
+  do i_loop=1,N_loop
 
-     call calculate_Beff(Bini(:,iomp),mode_B_column_1(iomp),B_line_1(iomp),iomp)
+!
+! loop that get all the fields
+!
+    do iomp=1,N_cell
+
+      if (i_excitation) call update_EMT_of_r(iomp,mode_excitation_field(iomp)%w)
+
+      call calculate_Beff(Bini(:,iomp),mode_B_column(iomp),B_line(iomp),iomp)
 
 !
 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
 !
-     if (i_temperature) call get_temperature_field(mode_temp(iomp)%w(1),damping,mode_magnetic(iomp,1)%w,BT_mag(iomp)%w,D_T_mag(iomp)%w,size(mode_magnetic(iomp,1)%w))
+      if (i_temperature) call get_temperature_field(mode_temp(iomp)%w(1),damping,mode_magnetic(iomp)%w,BT_mag(iomp)%w,D_T_mag(iomp)%w,size(mode_magnetic(iomp)%w))
 
-     if (i_magnetic) D_mode_mag(iomp)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp,1)%w,size(mode_magnetic(iomp,1)%w))
+      if (i_magnetic) D_mode_mag(iomp,i_loop)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp)%w,size(mode_magnetic(iomp)%w))
 
-  enddo
+    enddo
 
-  do iomp=1,N_cell
+!
+! loop that carry out the integration
+!
 
-     all_mode_2(iomp)%w=get_integrator_field(all_mode_1(iomp)%w,D_mode(:,iomp),D_T(:,iomp),dt,mag_lattice%dim_mode)
+    do iomp=1,N_cell
 
-  enddo
+       call get_D_mode(D_mode(:,iomp,:),i_loop,N_loop,D_mode_int)
 
-if (N_loop.ge.2) then
-  dt=multiply(dt)
-  do iomp=1,N_cell
+       all_mode_2(iomp)%w=get_integrator_field(all_mode(iomp)%w,D_mode_int,D_T(:,iomp),dt,mag_lattice%dim_mode)
 
-     call calculate_Beff(Bini(:,iomp),mode_B_column_2(iomp),B_line_2(iomp),iomp)
+    enddo
 
-     if (i_magnetic) D_mode_mag(iomp)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp,2)%w,size(mode_magnetic(iomp,2)%w))
-
-  enddo
-
-  do iomp=1,N_cell
-
-     all_mode_2(iomp)%w=get_integrator_field(all_mode_1(iomp)%w,D_mode(:,iomp),D_T(:,iomp),dt,mag_lattice%dim_mode)
+!!!!!!!!!!!!!!! copy the final configuration from spinafter(:,2) in spinafter(:,1)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    call copy_lattice(all_mode_2,all_mode_1)
 
   enddo
-endif
+
+!!!!!!!!!!!!!!! copy the final configuration in my_lattice
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   call copy_lattice(all_mode_2,all_mode)
+
 
 !
 !!!!!! Measure the temperature if the users wish
 !
 do iomp=1,N_cell
-   call update_temp_measure(check1,check2,mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w)
-   if (norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp,N_loop)%w,B_mag(iomp)%w,1,3)
+   call update_temp_measure(check1,check2,mode_magnetic(iomp)%w,B_mag(iomp)%w)
+   if (norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3)
 enddo
 check(1)=check(1)+check1
 check(2)=check(2)+check2
@@ -380,8 +406,6 @@ call MPI_REDUCE(trans(1),test_torque,1,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
 
 if (j.eq.1) check3=test_torque
 
-call copy_lattice(all_mode_2,all_mode_1)
-
 ! calculate energy
 
 #ifdef CPP_OPENMP
@@ -392,9 +416,10 @@ do iomp=1,N_cell
     call local_energy(Et,iomp,mode_E_column(iomp),E_line(iomp))
 
     Edy=Edy+Et
-    Mdy(1)=Mdy(1)+mode_magnetic(iomp,1)%w(1)
-    Mdy(2)=Mdy(2)+mode_magnetic(iomp,1)%w(2)
-    Mdy(3)=Mdy(3)+mode_magnetic(iomp,1)%w(3)
+
+    Mdy(1)=Mdy(1)+mode_magnetic(iomp)%w(1)
+    Mdy(2)=Mdy(2)+mode_magnetic(iomp)%w(2)
+    Mdy(3)=Mdy(3)+mode_magnetic(iomp)%w(3)
 
     dumy=get_charge(iomp)
 
@@ -411,8 +436,8 @@ enddo
 !$OMP end parallel do
 #endif
 vortex=(/vx,vy,vz/)/3.0d0/sqrt(3.0d0)
-Edy=Edy/N_cell
-Mdy=Mdy/N_cell
+Edy=Edy/real(N_cell)
+Mdy=Mdy/real(N_cell)
 
 !#ifdef CPP_MPI
 !      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0).and.(irank.eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,shape_tableNN,masque,indexNN,h_int,mag_lattice,irank,start,isize,MPI_COMM)
@@ -427,12 +452,12 @@ if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Ed
      &   kT/k_B,(security(i),i=1,2),H_int
 
 if ((io_simu%io_Energy_Distrib).and.((mod(j-1,gra_freq).eq.0))) then
-         call get_Energy_distrib(j/gra_freq,all_mode_1)
+         call get_Energy_distrib(j/gra_freq+1,all_mode)
       endif
 
 if ((gra_log).and.(mod(j-1,gra_freq).eq.0)) then
-         call CreateSpinFile(j/gra_freq,all_mode_1)
-         call WriteSpinAndCorrFile(j/gra_freq,all_mode_1,'SpinSTM_')
+         call CreateSpinFile(j/gra_freq,all_mode)
+         call WriteSpinAndCorrFile(j/gra_freq,all_mode,'SpinSTM_')
          write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',j/gra_freq
          write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
       endif
@@ -444,9 +469,9 @@ if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
 
 if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) Call get_charge_map(j/gra_freq)
 
-if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,mode_B_column_1,B_line_1,mag_lattice%dim_mode,mag_lattice%areal)
+if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,mode_B_column,B_line,mag_lattice%dim_mode,mag_lattice%areal)
 
-if ((io_simu%io_fft_Xstruct).and.(mod(j-1,gra_freq).eq.0)) call plot_fft(all_mode_1,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
+if ((io_simu%io_fft_Xstruct).and.(mod(j-1,gra_freq).eq.0)) call plot_fft(all_mode,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
 
 ! security in case of energy increase in SD and check for convergence
 if (((damping*(Edy-Eold).gt.1.0d-10).or.(damping*(Edy-Einitial).gt.1.0d-10)).and.(kt.lt.1.0d-10).and.(.not.said_it_once)) then
@@ -480,6 +505,7 @@ call update_time(timestep_int,Bini,BT,damping)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!! end of a timestep
 enddo
+
 !!!!!!!!!!!!!!! end of a timestep
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -488,7 +514,6 @@ enddo
 #endif
       close(7)
       close(8)
-
 #ifdef CPP_MPI
       endif
 #endif

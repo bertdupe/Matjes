@@ -95,6 +95,10 @@ euler=mode_t
 do i=1,size_mode/3
    start=3*(i-1)+1
    end=3*i
+
+   norm_mode=norm(D_mode(start:end))
+   if (norm_mode.lt.1.0d-8) cycle
+
    norm_mode=norm(mode_t(start:end))
    euler_int(start:end)=mode_t(start:end)+(D_mode(start:end)*dt+sqrt(dt)*DT_mode(start:end))/hbar
    norm_int=norm(euler_int(start:end))
