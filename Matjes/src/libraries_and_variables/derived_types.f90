@@ -46,6 +46,8 @@ type io_parameter
      logical :: io_Energy_Distrib
 ! field density distribution
      logical :: io_Field_Distrib
+! force field density distribution
+     logical :: io_Force=.false.
 end type io_parameter
 
 ! mpi variable
@@ -80,6 +82,7 @@ end type point_shell_mode
 
 type coeff_ham_inter_spec
      real(kind=8) :: c_ham=-1.0d0
+     integer :: N_shell
      character(len=30) :: name=''
      logical :: i_exist=.false.
      type(site_Ham), allocatable, dimension(:) :: ham

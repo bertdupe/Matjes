@@ -3,11 +3,10 @@ use m_derived_types
 use m_energyfield, only : init_Energy_distrib
 use m_energy_commons
 use m_internal_fields_commons
-use m_fft
+use m_fftw
 use m_lattice
 use m_setup_DM
 use m_user_info
-use m_parameters
 use m_sym_utils
 use m_table_dist
 use m_mapping
@@ -42,25 +41,19 @@ type(cell), intent(out) :: my_motif
 type (mtprng_state),intent(inout) :: state
 type(simulation_parameters),intent (inout) :: ext_param
 ! variable of the system
-real(kind=8), allocatable :: tabledist(:,:)
+real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
 integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:),masque(:,:,:,:)
-real (kind=8), allocatable :: map_vort(:,:,:,:),map_toto(:,:,:),pos(:,:,:,:,:)
-integer :: N_Nneigh,phase,tot_N_Nneigh,io,dim_ham
+real (kind=8), allocatable :: pos(:,:,:,:,:)
+integer :: tot_N_Nneigh,io
 real(kind=8) :: time
-!nb of neighbors in the z direction
-      integer :: Nei_z
-!nb of neighbors in the superlattice
-      integer :: Nei_il
 ! dummy variable
-      integer :: i,dim_lat(3),n_mag,n_DMI
+integer :: dim_lat(3),n_mag,n_DMI,N_Nneigh
 !checking various files
-      logical :: topoonly,i_exi,i_usestruct
+logical :: i_usestruct
 ! check the allocation of memory
-      integer :: alloc_check
+integer :: alloc_check
 
 ! innitialisation of dummy
-      phase=1
-      Nei_z=0
 i_usestruct=.False.
 alloc_check=0
 time=0.0d0
@@ -84,7 +77,7 @@ call rw_motif(my_motif,my_lattice)
 call user_info(6,time,'reading the input file',.false.)
 time=0.0d0
 
-call inp_rw(io_simu,N_Nneigh,phase,Nei_z,Nei_il)
+call inp_rw(io_simu)
 
 call user_info(6,time,'Read external parameters',.false.)
 time=0.0d0
@@ -121,29 +114,16 @@ call get_Hamiltonians('input',my_motif%atomic(1)%moment,my_lattice%dim_mode)
 
 N_Nneigh=get_number_shell()
 
-allocate(indexNN(N_Nneigh,phase),stat=alloc_check)
+allocate(indexNN(N_Nneigh,1),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
-allocate(tabledist(N_Nneigh,phase),stat=alloc_check)
+allocate(tabledist(N_Nneigh,1),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate table of distance'
 indexNN=0
 tabledist=0.0d0
 
-! calculate distance of NN and table of nearest neighbors
-call user_info(6,time,'Calculating the table of distances',.false.)
+call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,indexNN,n_mag,tabledist)
 
-if ((n_mag.eq.1).and.(phase.eq.1)) then
-    call Tdist(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,tabledist(:,1))
-else
-    call Tdist(my_lattice%areal,N_Nneigh,Nei_z,Nei_il,my_lattice%world,phase,my_motif,tabledist(:,:))
-endif
-
- if (phase.eq.1) then
-    call numneigh(N_Nneigh,tabledist(:,1),my_lattice%areal,my_lattice%world,my_motif,indexNN(:,1))
- else
-    call numneigh(N_Nneigh,tabledist(:,:),my_lattice%areal,Nei_z,Nei_il,my_lattice%world,my_motif,phase,indexNN(:,:))
- endif
-
-call user_info(6,time,'done',.false.)
+call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_motif,indexNN)
 
 ! prepare the lattice
 call user_info(6,time,'initializing the spin structure',.false.)
@@ -153,11 +133,8 @@ call InitSpin(my_lattice,my_motif,state,ext_param)
 call user_info(6,time,'done',.false.)
 
 ! allocate table of neighbors and masque
-if (phase.eq.1) then
-    tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
-else
-    tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1:phase))
-endif
+tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
+
 
 allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
@@ -205,11 +182,12 @@ if (i_usestruct) call user_def_struct(masque,pos, &
 call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
 
 n_DMI=get_number_DMI('input')
+
 if (n_DMI.ne.0) then
    write(6,'(I4,a)') n_DMI,' DMI found'
 
    write(*,*) 'number of first nearest neighbor', sum(indexNN(1:n_DMI,1))
-   allocate(DM_vector(sum(indexNN(1:n_DMI,1)),3,phase))
+   allocate(DM_vector(sum(indexNN(1:n_DMI,1)),3,1))
 
    DM_vector=0.0d0
    call setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector)
@@ -220,22 +198,7 @@ if (n_DMI.ne.0) then
 ! have to be rearranged
     call user_info(6,time,'Re-aranging the position of the DM vectors',.false.)
 
-    if (size(my_lattice%world).eq.1) then
-
-    elseif (size(my_lattice%world).eq.2) then
-      if (phase.eq.1) then
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,1,:),indexNN(:,1),my_lattice%dim_lat,my_lattice%areal,masque(:,:,:,1))
-
-      else
-         call arrange_neigh(DM_vector,tableNN(:,:,:,:,1,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
-
-      endif
-    else
-      if (phase.eq.2) then
-         call arrange_neigh(DM_vector(:,:,1),tableNN(:,:,:,:,:,:),indexNN(:,:),my_lattice%dim_lat,my_lattice%areal,masque)
-
-      endif
-    endif
+    call arrange_neigh(DM_vector,tableNN,indexNN,my_lattice%dim_lat,my_lattice%areal)
 
     call user_info(6,time,'done',.true.)
 else
@@ -322,55 +285,10 @@ if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'
 write(6,'(/,a,/)') 'the setup of the simulation is over'
 #endif
 
+if (io_simu%io_fft_Xstruct) call get_k_mesh('input',my_lattice)
+
 !!!!!!!!!!!!!! end of the setup
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! Simulation fo the STM stuff
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!Does the input file of Tobias is there
-      inquire (file='config.dat',exist=spstmL)
-      if (spstmL) then
-      write(6,'(a)') 'The program of spmstm will be used to draw spins'
-!Does spmstm will be used without MC
-      inquire (file='input.dat',exist=spstmonly)
-      if (spstmonly) then
-      write(6,'(a)') 'The program of spmstm will be used to draw spins with & 
-     &  the configuration specified in input.dat'
-      call spstm(my_lattice,my_motif)
-      write(6,'(a)') 'STM images were done'
-      stop
-      endif
-      endif
-
-!calculate topocharge only
-      inquire (file='topoonly.dat',exist=topoonly)
-      inquire(file='SpinSTMi.dat',exist=i_exi)
-      if ((topoonly).and.(i_exi)) then
-       write(6,*) 'calculate the topological charge only with &
-     &  the configuration specified in SpinSTMi.dat'
-
-      allocate(map_vort(dim_lat(1),dim_lat(2),dim_lat(3),3))
-      allocate(map_toto(dim_lat(1),dim_lat(2),dim_lat(3)))
-      map_toto=0.0d0
-      map_vort=0.0d0
-! check for a thrid non periodic dimension inside table hexa
-      call InitSpin
-      if (size(my_lattice%world).eq.2) then
-        if (count(my_motif%i_mom).eq.1) then
-!         call topo_map(spin(4:6,:,:,1,1),map_vort(:,:,1,:),map_toto(:,:,1))
-        else
-!         call topo_map(spin(4:6,:,:,1,:),map_vort(:,:,1,:),map_toto(:,:,1))
-        endif
-      endif
-      write(6,'(3(a,f10.6,3x))') 'Q=',sum(map_toto), &
-       'Q+= ',sum(map_toto,mask=map_toto>0.0d0), &
-       'Q-= ',sum(map_toto,mask=map_toto<0.0d0)
-      deallocate(map_vort,map_toto)
-      stop
-      endif
-
-      end subroutine setup_simu
+end subroutine setup_simu

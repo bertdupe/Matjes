@@ -8,24 +8,15 @@ use m_init_variables
 use mtprng
 use m_derived_types
 use m_lattice
+use m_write_spin
+use m_createspinfile
 
 ! old code
-      use m_write_spin
-      use m_createspinfile
-      use m_Corre
-      use m_constants
       use m_vector, only : norm
       use m_average_MC
-      use m_topoplot
-      use m_qorien
-      use m_fft
       use m_user_info
       use m_check_restart
-!      use m_parameters, only : n_Tsteps,n_sizerelax,i_qorien,CalTheta,Cor_log,cone,gra_topo &
-!     & ,Total_MC_Steps,n_thousand,T_auto,gra_fft,CalEnergy,Gra_log,T_relax,spstmL &
-!     & ,i_separate,i_average,i_ghost,i_optTset,i_topohall,print_relax,gra_freq &
-!     & ,i_qorien,i_print_W,equi,overrel,sphere,underrel,N_temp,T_relax_temp,n_ghost &
-!     & ,nRepProc
+
 #ifdef CPP_MPI
       use m_randperm
       use m_make_box
@@ -56,27 +47,7 @@ type(mtprng_state) :: state
 ! the computation time
       real(kind=8) :: computation_time
 
-#ifdef CPP_MPI
-      integer :: ierr
-      logical :: i_check
-
-      include 'mpif.h'
-
-      CALL MPI_INIT(ierr)
-      call mpi_comm_group(MPI_COMM_WORLD,all_world,ierr)
-      call mpi_comm_create(MPI_COMM_WORLD,all_world,MPI_COMM,ierr)
-      call MPI_COMM_RANK(MPI_COMM, irank, ierr)
-      CALL MPI_COMM_SIZE(MPI_COMM,isize,ierr)
-      if (isize.lt.12) write(6,'(a,2x,I6,2x,a)')'MPI task',irank,'has started...'
-      if (irank.eq.0) call welcome(isize)
-#endif
-
-! welcome message
-#ifdef CPP_MPI
-  if (irank.eq.0) call welcome()
-#else
   call welcome()
-#endif
 
 ! initialize the random number generator
 #ifdef CPP_MRG
@@ -107,30 +78,20 @@ call close_file('input',io_param)
 !call setup_lattice(my_simu,all_lattices,io_simu)
 
 
-! read the input
+! read the input and prepare the lattices, the Hamitlonian and all this mess
 call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param,state)
 
 ! number of cell in the simulation
 N_cell=size(all_lattices%l_modes)
 n_system=all_lattices%n_system
 
-#ifdef CPP_MPI
-      if (irank_working.eq.0) write(6,'(I6,a)') N_cell, ' unit cells'
-#else
-      write(6,'(I6,a)') N_cell, ' unit cells'
-#endif
+write(6,'(I6,a)') N_cell, ' unit cells'
+write(6,'(a)') '-----------------------------------------------'
+write(6,'(a)') ''
+write(6,'(a)') '-----------------------------------------------'
 
-#ifdef CPP_MPI
-    if (irank_working.eq.0) then
-#endif
-     write(6,'(a)') '-----------------------------------------------'
-     write(6,'(a)') ''
-     write(6,'(a)') '-----------------------------------------------'
-#ifdef CPP_MPI
-    endif
-#endif
-
-
+call CreateSpinFile('Spinse_start.dat',all_lattices,motif)
+call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
 
 
 
@@ -168,14 +129,7 @@ n_system=all_lattices%n_system
 !  Part which does a normal MC with the metropolis algorithm
 !---------------------------------
 
-!if (my_simu%name == 'metropolis') call MonteCarlo(all_lattices,mag_motif,io_simu,gra_topo,ext_param)
-!   call MonteCarlo(N_cell,n_thousand,n_sizerelax, &
-!            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
-!            &    i_qorien,i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,i_ghost, &
-!            &    gra_topo,CalEnergy,CalTheta,Gra_log,spstmL,gra_fft, &
-!            &    i_separate,i_average,i_topohall,print_relax,Cor_log, &
-!            &    n_Tsteps,cone,Total_MC_Steps,T_auto,EA,T_relax,kTfin,kTini,h_ext, &
-!            &    n_ghost,nRepProc,mag_lattice)
+if (my_simu%name == 'metropolis') call MonteCarlo(all_lattices,motif,io_simu,ext_param)
 
 !---------------------------------
 !  Part which does the Spin dynamics
@@ -187,11 +141,7 @@ if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_s
 !---------------------------------
 !  Part which does Entropic Sampling
 !---------------------------------
-!if (my_simu%name == 'entropics') call entropic(N_cell,n_system, &
-!            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index, &
-!            &    i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,sphere,overrel,underrel,i_ghost, &
-!            &    spstmL,gra_fft,cone,EA,T_relax,h_ext,n_ghost, &
-!            &    kTfin,kTini,n_Tsteps,mag_lattice)
+if (my_simu%name == 'entropics') call entropic(all_lattices,motif,io_simu,ext_param)
 
 
 !---------------------------------
@@ -200,8 +150,6 @@ if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_s
 if (my_simu%name == 'GNEB') then
             write(6,'(a)') 'entering into the GNEB routine'
 !!            call init_gneb()
-!            call GNEB(i_biq,i_dm,i_four,i_dip,EA,h_ext,mag_lattice, &
-!                    & indexNN,shape_index,shape_spin,tableNN,shape_tableNN,masque,shape_masque,N_cell)
              call GNEB(all_lattices,motif,io_simu,ext_param)
             !call set_gneb_defaults()
 endif
@@ -241,20 +189,11 @@ endif
 !  Part which does the PIMC
 !---------------------------------
 
-#ifndef CPP_MPI
-! write the last spin structure
-        call WriteSpinAndCorrFile(all_lattices)
+call CreateSpinFile('Spinse_end.dat',all_lattices,motif)
+call WriteSpinAndCorrFile('SpinSTM_end.dat',all_lattices)
 
-        call CreateSpinFile(all_lattices,motif)
-#endif
+call cpu_time(computation_time)
+write(*,*) 'computation time:',computation_time,'seconds'
+Write(*,*) 'The program has reached the end.'
 
-        call cpu_time(computation_time)
-        write(*,*) 'computation time:',computation_time,'seconds'
-
-#ifdef CPP_MPI
-        if (irank_working.eq.0) Write(*,*) 'The program has reached the end.'
-        call MPI_FINALIZE(ierr)
-#else
-        Write(*,*) 'The program has reached the end.'
-#endif
     END

@@ -6,7 +6,7 @@ logical :: i_update_time
 real(kind=8) :: discretization
 
 private
-public :: update_time,init_update_time,get_dt_LLG,multiply_2,multiply_1
+public :: update_time,init_update_time
 
 contains
 
@@ -81,31 +81,5 @@ endif
 !write(6,'(a,f8.4)') 'The new timestep is', timestep
 
 end subroutine update_time
-
-real(kind=8) function get_dt_LLG(timestep,damping)
-use m_constants, only : hbar
-implicit none
-real(kind=8) :: timestep,damping
-
-!get_dt_LLG=timestep/(1.0d0+damping**2)
-get_dt_LLG=timestep
-
-end function
-
-real(kind=8) function multiply_1(dt)
-implicit none
-real(kind=8), intent(in) :: dt
-
-multiply_1=1.0d0*dt
-
-end function
-
-real(kind=8) function multiply_2(dt)
-implicit none
-real(kind=8), intent(in) :: dt
-
-multiply_2=2.0d0*dt
-
-end function
 
 end module m_update_time

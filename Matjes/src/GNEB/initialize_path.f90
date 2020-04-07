@@ -1,8 +1,6 @@
 module m_initialize_path
 use m_gneb_parameters
 use m_io_gneb
-use m_fieldeff
-use m_energy
 use m_derived_types
 use m_energy_commons, only : get_E_line
 use m_internal_fields_commons, only : get_B_line

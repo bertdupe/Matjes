@@ -4,6 +4,7 @@ use m_basic_types, only : vec_point
 
 interface get_charge
   module procedure :: get_charge_2D   ! take only one int argument (iomp)
+  module procedure :: get_all_charge
 end interface
 
 type(vec_point),allocatable,protected,save,public :: Q_topo(:,:)
@@ -12,6 +13,24 @@ private
 public :: get_size_Q_operator,associate_Q_operator,get_charge
 
 contains
+
+!
+! function that returns the integral of the topological charge of the magnetic textures
+!
+function get_all_charge()
+Implicit none
+real(kind=8), dimension(5) :: get_all_charge
+! internal
+integer :: i,N
+
+get_all_charge=0.0d0
+N=size(Q_topo,2)
+
+do i=1,N
+   get_all_charge=get_all_charge+get_charge(i)
+enddo
+
+end function get_all_charge
 
 !
 ! function that returns the topological charge of the magnetic textures

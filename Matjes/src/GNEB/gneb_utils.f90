@@ -7,8 +7,6 @@ use m_local_energy
 use m_createspinfile
 use m_derived_types
 use m_gneb_parameters, only : do_norm_rx,en_zero
-use m_fieldeff
-use m_energy
 use m_eval_Beff
 use m_energy_commons, only : get_E_line
 use m_internal_fields_commons, only : get_B_line
@@ -19,6 +17,7 @@ use m_spline
 use m_io_gneb
 use m_projection
 use m_tangent
+use m_local_energy
 
 contains
 
@@ -102,7 +101,7 @@ do i_nim=1,nim
 
       call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
 
-      call local_energy_pointer(E_int,iomp,mode_E_column(iomp,i_nim),E_line(iomp,i_nim))
+      call local_energy(E_int,iomp,mode_E_column(iomp,i_nim),E_line(iomp,i_nim))
 
       u(i_nim) = u(i_nim) + E_int
 
@@ -231,7 +230,7 @@ do while ((fchk>ftol).and.(itr<=itrmax))
 
          call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
 
-         call local_energy_pointer(E_int,iomp,mode_E_column(iomp,i_nim),E_line(iomp,i_nim))
+         call local_energy(E_int,iomp,mode_E_column(iomp,i_nim),E_line(iomp,i_nim))
 
          u(i_nim) = u(i_nim) + E_int
 

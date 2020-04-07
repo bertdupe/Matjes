@@ -7,8 +7,65 @@ use m_io_files_utils
   end interface get_position
 
 private
-public :: get_position,get_position_ND_to_1D
+public :: get_position,get_position_ND_to_1D,calculate_distances
 contains
+
+!
+! calculate the shorter between 2 points on the lattice (the matrix of the r to calculate the 1/r)
+!
+
+subroutine calculate_distances(dist,pos,r,dim_lat,boundary)
+use m_vector, only : norm
+implicit none
+real(kind=8), intent(inout) :: dist(:,:)
+real(kind=8), intent(in) :: pos(:,:),r(:,:)
+integer, intent(in) :: dim_lat(:)
+logical, intent(in) :: boundary(:)
+! internal
+integer :: i,k,l,m,N
+real(kind=8) :: shorter_distance(3),test(3),N1,N2,N3
+
+N1=real(dim_lat(1))
+N2=real(dim_lat(2))
+N3=real(dim_lat(3))
+N=product(dim_lat)
+#ifdef CPP_OPENMP
+!$OMP parallel do private(shorter_distance,test) default(shared)
+#endif
+
+do i=1,N
+
+  test=pos(:,i)
+
+  do k=-1,1
+    do l=-1,1
+      do m=-1,1
+
+!    direction 1
+        if (boundary(1)) shorter_distance=test+real(k)*r(:,1)*N1
+
+!     direction 2
+        if (boundary(2)) shorter_distance=shorter_distance+real(l)*r(:,2)*N2
+
+!      direction 3
+        if (boundary(3)) shorter_distance=shorter_distance+real(m)*r(:,3)*N3
+
+        if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
+
+      enddo
+    enddo
+  enddo
+
+  dist(:,i)=test
+
+enddo
+#ifdef CPP_OPENMP
+!$OMP end parallel do
+#endif
+end subroutine calculate_distances
+
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! subroutine that reads the position from file

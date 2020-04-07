@@ -1,13 +1,13 @@
 module m_operator_pointer_utils
 
 interface associate_pointer
-   module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target
-   module procedure associate_mode_name,associate_mode_real2D_name,asso_lattice_to_matrix,asso_pointer_to_matrix,asso_pointer_to_lattice
+   module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target,asso_pointer_to_2Dmatrix
+   module procedure associate_mode_name,associate_mode_real2D_name,asso_lattice_to_matrix,asso_pointer_to_4Dmatrix,asso_pointer_to_lattice
 end interface associate_pointer
 
 interface dissociate
    module procedure dissociate_OpReal_2D,diss_point_shell_Operator_1D,diss_point_shell_mode_1D,dissociate_basicOpReal_2D
-   module procedure diss_point_shell_1D_Operator_1D,diss_point_shell_1D_mode_1D,diss_vec_point_1D
+   module procedure diss_point_shell_1D_Operator_1D,diss_point_shell_1D_mode_1D,diss_vec_point_1D,dissociate_vecpoint_2D
 end interface dissociate
 
 private
@@ -23,14 +23,13 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine associate_mode_real2D_name(point,static_target,name,i_name)
 use m_derived_types, only : vec_point
-use m_lattice, only : my_order_parameters
 implicit none
 type(vec_point), intent(inout) :: point(:)
 logical, intent(inout) :: i_name
 real(kind=8), target, intent(in) :: static_target(:,:)
 character(len=*), intent(in) :: name
 ! internal
-integer :: i,size_point,size_target,N_orders,N_order_found,istart,iend
+integer :: i,size_point,size_target,N_order_found,istart,iend
 integer, allocatable :: position_found(:,:)
 
 size_point=size(point)
@@ -69,7 +68,6 @@ end subroutine associate_mode_real2D_name
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine associate_mode_name(point,static_target,name,i_name)
 use m_derived_types, only : vec_point
-use m_lattice, only : my_order_parameters
 implicit none
 type(vec_point), intent(inout) :: point(:)
 logical, intent(inout) :: i_name
@@ -137,10 +135,10 @@ enddo
 end subroutine asso_lattice_to_matrix
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! associate the pointer to the matrix
+! associate the pointer to the matrix 4D
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine asso_pointer_to_matrix(point,matrix2)
+subroutine asso_pointer_to_4Dmatrix(point,matrix2)
 use m_get_position, only : get_position_ND_to_1D
 use m_derived_types, only : vec_point
 implicit none
@@ -171,7 +169,29 @@ do l=1,N_mat2(5)
   enddo
 enddo
 
-end subroutine asso_pointer_to_matrix
+end subroutine asso_pointer_to_4Dmatrix
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! associate the pointer to the matrix 2D
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine asso_pointer_to_2Dmatrix(point,matrix2)
+use m_derived_types, only : vec_point
+implicit none
+type(vec_point),intent(inout) :: point(:)
+real(kind=8),target,intent(in) :: matrix2(:,:)
+! internal variables
+integer :: i,N_mat2(2)
+!logical :: test
+
+! check that the dimensions are equal
+N_mat2=shape(matrix2)
+
+do i=1,N_mat2(2)
+   point(i)%w=>matrix2(:,i)
+enddo
+
+end subroutine asso_pointer_to_2Dmatrix
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! associate the pointer to lattice
@@ -474,6 +494,24 @@ do j=1,M
 enddo
 
 end subroutine dissociate_basicOpReal_2D
+
+subroutine dissociate_vecpoint_2D(matrix,N,M)
+use m_basic_types, only : vec_point
+implicit none
+integer, intent(in) :: N,M
+type(vec_point), intent(out) :: matrix(N,M)
+! internal
+integer :: i,j
+
+do j=1,M
+   do i=1,N
+
+   nullify(matrix(i,j)%w)
+
+   enddo
+enddo
+
+end subroutine dissociate_vecpoint_2D
 
 !!!!!!!!!!!!!!!!!
 !

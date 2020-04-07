@@ -29,11 +29,20 @@ c_DMI=-1.0d0
 neighbor_exch_sym=0
 neighbor_exch_antisym=0
 exchange%name='exchange'
+exchange%N_shell=-1
 
 io_param=open_file_read(fname)
 call get_parameter(io_param,fname,'c_Jij',exchange%c_ham)
 ! count the exchange coefficients if present
-neighbor_exch_sym=count_variables(io_param,'J_',fname)
+! count the number of anisotropy coefficients if present
+call get_parameter(io_param,fname,'N_exchange',exchange%N_shell)
+if (exchange%N_shell.eq.-1) then
+   neighbor_exch_sym=count_variables(io_param,'J_',fname)
+else
+   neighbor_exch_sym=exchange%N_shell
+endif
+
+
 if (neighbor_exch_sym.ne.0) then
    allocate(exch_local_sym(neighbor_exch_sym))
    exch_local_sym=0.0d0
@@ -59,6 +68,12 @@ if ((neighbor_exch_antisym.eq.0).and.(neighbor_exch_sym.eq.0)) then
 endif
 
 N_exch=max(neighbor_exch_sym,neighbor_exch_antisym)
+
+!
+! if no exchange is present just return
+!
+if (N_exch.eq.0) return
+
 
 allocate(exchange%ham(N_exch))
 do i=1,N_exch

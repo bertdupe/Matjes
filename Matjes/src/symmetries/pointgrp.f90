@@ -21,11 +21,12 @@ contains
 ! function:   get_symop      get all possible symmetry operations
 !             look_translation    find the equivalent position in the unit cell
 !
-subroutine get_group(areal,my_motif,periodic)
+subroutine get_group(areal,my_motif,periodic,dim_lat)
 implicit none
 real(kind=8), intent(in) :: areal(3,3)
 type (cell), intent(in) :: my_motif
 logical, intent(in) :: periodic(:)
+integer, intent(in) :: dim_lat(:)
 ! internal variables
 integer :: number_sym,sym_index(64),io_sym
 real(kind=8) :: time
@@ -37,11 +38,11 @@ call user_info(6,time,'calculating the symmetry operations',.false.)
 number_sym=0
 sym_index=0
 
-call get_latt_sym(areal,number_sym,sym_index,periodic)
+call get_latt_sym(areal,number_sym,sym_index)
 
 write(6,'(/,a,I2,a,/)') 'The lattice has  ',number_sym,'  symmetrie operations'
 
-call get_pt_sym(areal,number_sym,sym_index,my_motif)
+call get_pt_sym(areal,number_sym,sym_index,my_motif,periodic,dim_lat)
 
 io_sym=open_file_write('symmetries.out')
 
@@ -50,6 +51,8 @@ call write_symmetries(io_sym,number_sym,sym_index(1:number_sym))
 call close_file('symmetries.out',io_sym)
 
 call user_info(6,time,'done',.true.)
+
+call write_symmetries(6,number_sym,sym_index)
 
 end subroutine get_group
 
@@ -60,11 +63,10 @@ end subroutine get_group
 ! find the linear combination so that (P.R-R) must be 0
 ! Continue until there are no symmetry operation left
 !
-subroutine get_latt_sym(areal,number_sym,sym_index,periodic)
+subroutine get_latt_sym(areal,number_sym,sym_index)
 implicit none
 real(kind=8), intent(in) :: areal(3,3)
 integer, intent(inout) :: number_sym,sym_index(:)
-logical, intent(in) :: periodic(:)
 ! internal
 type(symop) :: all_sym_op(64)
 integer :: i,j
@@ -84,7 +86,8 @@ do i=1,64
 !
       rtest=matmul(all_sym_op(i)%mat,transpose(areal))
 
-      if ((.not.periodic(3)).and.(rtest(3,3).ne.areal(3,3))) cycle
+
+!      if ((.not.periodic(3)).and.(rtest(3,3).ne.areal(3,3))) cycle
 
 !
 ! I have to take the transpose of rtest to have it written in lign again
@@ -92,7 +95,7 @@ do i=1,64
       areal_rot=transpose(rtest)
 
       do j=1,3
-         found(j)=look_translation(areal_rot(j,:),areal)
+         found(j)=look_translation(areal_rot(j,:),areal,(/.true.,.true.,.true./),(/2,2,2/))
       enddo
 
       if (all(found)) then
@@ -102,16 +105,21 @@ do i=1,64
 
 enddo
 
-#ifdef CPP_DEBUG
+write(6,'(a)') ''
+write(6,'(a,I4,a)') 'number of lattice symmetries found  ', number_sym, '/64'
 do j=1,number_sym
-   write(6,*) all_sym_op(sym_index(j))%name
+   write(6,'(a)') all_sym_op(sym_index(j))%name
    do i=1,3
       write(6,'(3f8.3)') all_sym_op(sym_index(j))%mat(i,:)
    enddo
 enddo
-#endif
+write(6,'(a)') ''
 
 end subroutine get_latt_sym
+
+
+
+
 
 ! find the symmetry of each atomic position in the unit cell compatible with the lattice symmetry
 ! Take the lattice vectors R(3,3) with basis vector ordered in lines
@@ -122,13 +130,15 @@ end subroutine get_latt_sym
 ! find the linear combination so that (P.(R.rho)-R) must be 0
 ! Continue until there are no symmetry operation left
 !
-subroutine get_pt_sym(areal,number_sym,sym_index,my_motif)
+subroutine get_pt_sym(areal,number_sym,sym_index,my_motif,periodic,dim_lat)
 implicit none
 real(kind=8), intent(in) :: areal(3,3)
+integer, intent(in) :: dim_lat(:)
+logical, intent(in) :: periodic(:)
 integer, intent(inout) :: number_sym,sym_index(:)
 type(cell), intent(in) :: my_motif
 !internal
-integer :: natom,i,j,i_sim,n_sym,new_index(64),io_sym
+integer :: natom,i,j,i_sim,n_sym,new_index(64),io_sym,k
 type(symop) :: all_sym_op(64)
 real(kind=8) :: test_vec(3),pos(3)
 logical :: found
@@ -143,7 +153,7 @@ write(6,'(I4,a)') natom, ' atoms found in the unit cell'
 do i=1,natom
    if (norm(my_motif%atomic(i)%position).lt.1.0d-8) then
       write(6,'(a,I4,a)') 'atom ',i,' has the position (0,0,0)'
-      write(6,'(a)') 'lattice symmetry unchanged'
+      write(6,'(a)') 'no non-symorphic translation'
       cycle
    endif
 
@@ -153,16 +163,30 @@ do i=1,natom
 ! position in cartesian coordinate
 ! the basis vectors have the fomat (line, column)
 ! take the transpose before making the product
+
       pos=matmul(transpose(areal),my_motif%atomic(i)%position)
       test_vec=matmul(all_sym_op(i_sim)%mat,pos)
 
-      found=look_translation(test_vec,areal,pos)
+      found=look_translation(test_vec,areal,periodic,dim_lat,pos)
 
       if (.not.found) then
          sym_index(j)=0
       endif
 
    enddo
+
+!
+! reorder the symmetries
+!
+   j=0
+   do k=1,number_sym
+     if (sym_index(k).eq.0) cycle
+     j=j+1
+     new_index(j)=sym_index(k)
+   enddo
+   number_sym=j
+   sym_index=new_index
+
 enddo
 
 j=0
@@ -183,11 +207,12 @@ end subroutine get_pt_sym
 !
 ! find the R(3) lattice vectors so that P.R-R=0
 !
-function look_translation(areal_rot,areal,translation)
+function look_translation(areal_rot,areal,periodic,dim_lat,translation)
 implicit none
 real(kind=8), intent(in) :: areal_rot(3),areal(3,3)
 real(kind=8), intent(in), optional :: translation(3)
-logical :: look_translation
+integer, intent(in) :: dim_lat(:)
+logical :: look_translation,periodic(:)
 !internal
 integer :: u,v,w
 real(kind=8) :: test_vec(3),eps(3)
@@ -203,7 +228,12 @@ do u=-2,2,1
    do v=-2,2,1
       do w=-2,2,1
 
-         test_vec=areal_rot-eps+real(u)*areal(1,:)+real(v)*areal(2,:)+real(w)*areal(3,:)
+         test_vec=areal_rot-eps
+         if ((periodic(1)).and.(dim_lat(1).ne.1)) test_vec=test_vec+real(u)*areal(1,:)
+
+         if ((periodic(2)).and.(dim_lat(2).ne.1)) test_vec=test_vec+real(v)*areal(2,:)
+
+         if ((periodic(3)).and.(dim_lat(3).ne.1)) test_vec=test_vec+real(w)*areal(3,:)
 
 !
 ! be very carefull here! If the positions are not given with enough precision, the symetries will not be found
@@ -219,6 +249,9 @@ do u=-2,2,1
 enddo
 
 end function look_translation
+
+
+
 
 !
 ! subroutine that write down the symmetry operations that were found
@@ -243,6 +276,11 @@ do i=1,number_sym
 enddo
 
 end subroutine write_symmetries
+
+
+
+
+
 
 !
 ! read the number of symetry operations
@@ -290,6 +328,12 @@ enddo
 call close_file('symmetries.out',io_sym)
 
 end subroutine
+
+
+
+
+
+
 
 subroutine get_symop(rotmat)
 ! **********************************************

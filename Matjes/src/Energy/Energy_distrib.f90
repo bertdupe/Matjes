@@ -1,6 +1,7 @@
 module m_energyfield
 use m_derived_types
 use m_operator_pointer_utils
+use m_local_energy
 
 ! new type for the density distribution
 type operator_distrib
@@ -35,7 +36,7 @@ integer, intent(in) :: indexNN(:)
 ! input
 integer :: size_ham,Nspin,all_size(4)
 ! slope variables
-integer :: i,j,k
+integer :: i,j
 integer,allocatable :: int_ind(:)
 
 all_size=shape(my_lattice%l_modes)
@@ -82,8 +83,8 @@ type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
 integer, intent(in) :: indexNN(:),n_shell
 ! internal variable
-integer :: i,avant,n_atom_shell,Nspin,all_size(4)
-integer :: N,M
+integer :: avant,n_atom_shell,Nspin,all_size(4)
+integer :: M
 
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
@@ -153,8 +154,7 @@ end subroutine get_Energy_distrib_line
 subroutine get_Energy_distrib(tag,spin)
 use m_io_files_utils
 use m_convert
-!use  m_total_energy, only : total_energy
-use m_local_energy, only : local_energy_pointer
+use m_local_energy, only : local_energy_pointer_EDestrib
 use m_dipole_energy
 use m_dipolar_field, only : i_dip
 implicit none
@@ -172,7 +172,7 @@ character(len=30) :: fname,rw_format
 number_shell=size(energy_distrib%operators)
 allocate(E_shell(number_shell))
 
-write(rw_format,'( "(", I4, "(2x,f20.15))" )') number_shell+1
+write(rw_format,'( "(", I4, "(2x,E20.12E3))" )') number_shell+1
 
 E_shell=0.0d0
 E_dip=0.0d0
@@ -187,14 +187,14 @@ do i=1,N
 
    do j=1,number_shell
 
-      call local_energy_pointer(E_int,i,energy_distrib%mode_E_column(i,j),energy_distrib%E_line(i,j))
+      call local_energy_pointer_EDestrib(E_int,i,energy_distrib%mode_E_column(i,j),energy_distrib%E_line(i,j),energy_distrib%mode_E_column(i,1)%shell(1)%w)
       E_shell(j)=E_shell(j)+E_int
 
    enddo
 
    if (i_dip) E_dip=get_dipole_E(i)
 
-   write(io,rw_format) E_shell,E_dip
+   write(io,rw_format) (E_shell(j),j=1,number_shell),E_dip
 enddo
 
 call close_file(fname,io)

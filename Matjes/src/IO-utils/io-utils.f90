@@ -103,7 +103,7 @@ integer, intent(in) :: io
 real(kind=8), intent(in) :: spin(:,:)
 ! internale variables
 Integer :: i,shape_spin(2)
-real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi,phi_color
+real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi
 
 !     Constants used for the color definition
 widthc=5.0d0
@@ -406,7 +406,7 @@ end subroutine get_coeff
 subroutine get_atomic(io,fname,var_name,natom,atomic)
 use m_basic_types, only : atom
 implicit none
-type(atom), intent(out) :: atomic(:)
+type(atom), intent(inout) :: atomic(:)
 integer, intent(in) :: io,natom
 character(len=*), intent(in) :: var_name,fname
 ! internal variable
@@ -542,7 +542,7 @@ end subroutine get_my_simu
 subroutine get_character(io,fname,vname,string)
 use m_vector
 implicit none
-character(len=*), intent(out) :: string
+character(len=*), intent(inout) :: string
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
@@ -583,7 +583,7 @@ end subroutine get_character
 subroutine get_bool(io,fname,vname,tag)
 use m_vector
 implicit none
-logical, intent(out) :: tag
+logical, intent(inout) :: tag
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
@@ -625,7 +625,7 @@ end subroutine get_bool
 subroutine get_real(io,fname,vname,number)
 use m_vector
 implicit none
-real(kind=8), intent(out) :: number
+real(kind=8), intent(inout) :: number
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
@@ -666,7 +666,7 @@ end subroutine get_real
 subroutine get_int(io,fname,vname,number)
 use m_vector
 implicit none
-integer, intent(out) :: number
+integer, intent(inout) :: number
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
@@ -707,7 +707,7 @@ end subroutine get_int
 subroutine get_1D_vec_bool(io,fname,vname,N,vec)
 use m_vector
 implicit none
-logical, intent(out) :: vec(:)
+logical, intent(inout) :: vec(:)
 integer, intent(in) :: io,N
 character(len=*), intent(in) :: vname,fname
 ! internal variable
@@ -748,7 +748,7 @@ end subroutine get_1D_vec_bool
 subroutine get_1D_vec_real(io,fname,vname,N,vec,vec_norm)
 use m_vector
 implicit none
-real(kind=8), intent(out) :: vec(:)
+real(kind=8), intent(inout) :: vec(:)
 real(kind=8),optional, intent(in) :: vec_norm
 integer, intent(in) :: io,N
 character(len=*), intent(in) :: vname,fname
@@ -797,7 +797,7 @@ end subroutine get_1D_vec_real
 subroutine get_2D_vec_real(io,fname,vname,N,M,vec)
 use m_vector
 implicit none
-real(kind=8), intent(out) :: vec(:,:)
+real(kind=8), intent(inout) :: vec(:,:)
 integer, intent(in) :: io,N,M
 character(len=*), intent(in) :: vname,fname
 ! internal variable
@@ -838,7 +838,7 @@ end subroutine get_2D_vec_real
 subroutine get_1D_vec_int(io,fname,vname,N,vec)
 use m_vector
 implicit none
-integer, intent(out) :: vec(:)
+integer, intent(inout) :: vec(:)
 integer, intent(in) :: io,N
 character(len=*), intent(in) :: vname,fname
 ! internal variable
@@ -878,11 +878,11 @@ end subroutine get_1D_vec_int
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine get_excitations(io,fname,vname,excite)
 implicit none
-type(excitations), intent(out) :: excite
+type(excitations), intent(inout) :: excite
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
-integer :: fin,len_string,nread,check,i
+integer :: fin,len_string,nread,check
 character(len=100) :: str
 character(len=100) :: dummy
 logical :: dum_logic
@@ -934,14 +934,13 @@ end subroutine get_excitations
 subroutine get_shape(io,fname,vname,field)
 use m_basic_types, only : shape_field
 implicit none
-type(shape_field), intent(out) :: field
+type(shape_field), intent(inout) :: field
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
 ! internal variable
-integer :: fin,len_string,nread,check,i
+integer :: fin,len_string,nread,check
 character(len=100) :: str
 character(len=100) :: dummy
-logical :: dum_logic
 
 nread=0
 len_string=len(trim(adjustl(vname)))
