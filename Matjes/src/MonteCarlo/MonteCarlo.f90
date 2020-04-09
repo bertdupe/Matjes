@@ -19,7 +19,6 @@ use m_operator_pointer_utils
 
       use m_Corre
       use m_check_restart
-      use m_topocharge
       use m_qorien
       use m_check_restart
       use m_average_MC

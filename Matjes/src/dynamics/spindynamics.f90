@@ -30,6 +30,7 @@ use m_plot_FFT
 use m_dipolar_field, only : prepare_FFT_dipole,calculate_FFT_modes
 use m_solver_order
 use m_io_files_utils
+use m_tracker
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -297,6 +298,11 @@ call init_update_time('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_torques('input')
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! check if a magnetic texture should be tracked
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if (io_simu%io_tracker) call init_tracking(mag_lattice%dim_lat)
+
 call init_temp_measure(check,check1,check2,check3)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -446,6 +452,15 @@ Mdy=Mdy/real(N_cell)
 !#endif
 
 if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
+
+!
+! update pattern recognition
+!
+
+if (io_simu%io_tracker) then
+!  call update_tracking(j)
+  if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,mode_E_column,E_line)
+endif
 
 if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
      &   norm(Mdy),Mdy,norm(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &

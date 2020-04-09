@@ -21,33 +21,35 @@ end type lattice
 
 ! parameters for printing in and out
 type io_parameter
-     logical :: io_dispersion,io_qorien
+     logical :: io_dispersion
 ! Go in the spmstm program of Tobias
-     logical :: io_spstmL, io_spstmonly
+     logical :: io_spstmL
 ! plot the spin structure (or the order parameter structure)
-     logical :: io_Xstruct
+     logical :: io_Xstruct=.false.
 ! plot the stochastic field
-     logical :: io_Tfield
+     logical :: io_Tfield=.false.
 ! frequency for writting the plotting data (magnetization density and so one)
      integer :: io_frequency
 ! plot the fourrier tranform of the spin structure (or the order parameter structure)
-     logical :: io_fft_Xstruct
+     logical :: io_fft_Xstruct=.false.
 ! plot the topological charge density distribution
-     logical :: io_topo
+     logical :: io_topo=.false.
 ! plot the emergent magnetic field
-     logical :: io_topohall
+     logical :: io_topohall=.false.
 ! plot the warnings or not
-     logical :: io_warning
+     logical :: io_warning=.false.
 ! frequency of writting of the data in convergence.dat and EM.dat
      integer :: io_writing
 ! theta and phi distribution
-     logical :: io_Angle_Distrib
+     logical :: io_Angle_Distrib=.false.
 ! energy density distribution
-     logical :: io_Energy_Distrib
+     logical :: io_Energy_Distrib=.false.
 ! field density distribution
-     logical :: io_Field_Distrib
+     logical :: io_Field_Distrib=.false.
 ! force field density distribution
      logical :: io_Force=.false.
+! Track singularities in a vector field
+     logical :: io_tracker=.false.
 end type io_parameter
 
 ! mpi variable
