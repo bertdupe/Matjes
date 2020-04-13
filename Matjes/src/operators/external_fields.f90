@@ -19,7 +19,7 @@ implicit none
 real(kind=8), intent(in) :: h_ext(:),E_ext(:)
 type(cell), intent(in) :: my_motif
 ! interenal variable
-integer :: dim_H, dim_E,dim_EM
+integer :: dim_H, dim_E,dim_EM,avant
 integer :: n_atom,n_mag,i,j
 real(kind=8) :: dumy
 
@@ -60,11 +60,16 @@ do i=1,n_mag
    if (abs(my_motif%atomic(i)%moment).lt.1.0d-8) cycle
 
    j=(i-1)*n_mag+1
+   avant=0
+
    dumy=sqrt(sum(h_ext**2))
-   if (dumy.gt.1.0d-8) EM_external%w(j:j+2)=h_ext*my_motif%atomic(i)%moment
+   if (dumy.gt.1.0d-8) then
+     EM_external%w(j:j+2)=h_ext*my_motif%atomic(i)%moment
+     avant=3
+   endif
 
    dumy=sqrt(sum(E_ext**2))
-   if (dumy.gt.1.0d-8) EM_external%w(j+3:j+5)=E_ext
+   if (dumy.gt.1.0d-8) EM_external%w(j+avant:j+avant+2)=E_ext
 
 enddo
 

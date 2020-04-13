@@ -1,7 +1,7 @@
 module m_exchange_heisenberg
 use m_symmetry_operators
 use m_lattice, only : my_order_parameters
-use m_derived_types, only : coeff_ham_inter_spec
+use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: exchange
 
 private

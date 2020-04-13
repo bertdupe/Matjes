@@ -5,11 +5,23 @@ use m_derived_types, only : lattice
 
 type(vec_point), allocatable :: derivative(:,:,:)
 
+interface get_derivative
+  module procedure get_derivative_int,get_derivative_out
+end interface
+
+interface calculate_derivative
+  module procedure calculate_derivative_vector_field,calculate_derivative_scalar_field
+end interface
+
 private
 public :: get_derivative,calculate_derivative
 contains
 
-subroutine get_derivative(field,mag_lattice)
+
+!
+! prepare the derivative in the module
+!
+subroutine get_derivative_int(field,mag_lattice)
 use m_operator_pointer_utils
 use m_io_files_utils
 use m_io_utils
@@ -48,9 +60,50 @@ do i=1,N_cell
    enddo
 enddo
 
-end subroutine get_derivative
+end subroutine get_derivative_int
 
-subroutine calculate_derivative(DF,iomp)
+
+!
+! prepare the derivative and send it out of the module
+!
+
+subroutine get_derivative_out(field,mag_lattice,derivat_point)
+implicit none
+real(kind=8), target, intent(in) :: field(:,:)
+type(lattice), intent(in) :: mag_lattice
+type(vec_point), intent(inout) :: derivat_point(:,:,:)
+! internal
+integer, allocatable :: pos(:,:,:)
+integer :: N_cell,i,dim_lat(4),N_world,j,k,location,shape_D(3),N_vois
+logical :: periodic(3)
+
+dim_lat=shape(mag_lattice%l_modes)
+periodic=mag_lattice%boundary
+N_world=size(mag_lattice%world)
+shape_D=shape(derivat_point)
+N_cell=shape_D(3)
+N_vois=shape_D(1)
+
+allocate(pos(N_vois,3,N_cell))
+pos=0
+call get_voisin(pos,dim_lat,periodic)
+
+do i=1,N_cell
+   do j=1,N_world
+      do k=1,N_vois
+        location=pos(k,j,i)
+        derivat_point(k,j,i)%w=>field(:,location)
+      enddo
+   enddo
+enddo
+
+end subroutine get_derivative_out
+
+!
+! derivative of a vector field
+!
+!
+subroutine calculate_derivative_vector_field(DF,iomp)
 use m_vector, only : cross,norm
 implicit none
 integer, intent(in) :: iomp
@@ -77,12 +130,36 @@ do i=1,shape_field(2)
 
    enddo
 
-   DF(:,i)=DF(:,i)/real(shape_field(1))
-
+   DF(:,i)=DF(:,i)/real(shape_field(1)-1)
 enddo
 
-end subroutine calculate_derivative
+end subroutine calculate_derivative_vector_field
 
+!
+! derivative of a scalar field
+!
+!
+subroutine calculate_derivative_scalar_field(DF,field,n_dim,n_vois)
+implicit none
+integer, intent(in) :: n_dim,n_vois
+type(vec_point), intent(in) :: field(:,:)
+real(kind=8), intent(inout) :: DF(:)
+! internal
+integer :: i,j
+
+DF=0.0d0
+
+do i=1,n_dim
+  do j=1,n_vois-1
+
+     DF=DF+field(j+1,i)%w-field(j,i)%w
+
+   enddo
+
+   DF=DF/real(n_vois-1)
+enddo
+
+end subroutine calculate_derivative_scalar_field
 
 
 

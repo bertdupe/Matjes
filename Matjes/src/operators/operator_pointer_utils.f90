@@ -282,12 +282,12 @@ end subroutine A_vecpoint1D_vecdimn
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_shellHam1D(point,static_target,my_lattice,tableNN,indexNN)
-use m_derived_types, only : lattice,operator_real,shell_Ham
+use m_derived_types, only : lattice,operator_real
+use m_Hamiltonian_variables, only : shell_Ham
 use m_get_position
 use m_null
 implicit none
 type(operator_real), intent(inout) :: point
-!type(Coeff_Ham), intent(in) :: static_target
 type(shell_Ham), target, intent(in) :: static_target(:)
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
@@ -314,7 +314,7 @@ do i_m=1,shape_tableNN(6)
 
         ! anisotropy
 
-        point%value(line_index,ipos_2)%Op_loc=>static_target(1)%atom(1)%H
+        point%value(line_index,ipos_2)%Op_loc=>static_target(1)%atom(1)%Op_loc
         point%line(line_index,ipos_2)=ipos_2
 
         avant=0
@@ -338,7 +338,7 @@ do i_m=1,shape_tableNN(6)
           else
 
              point%line(line_index,ipos_2)=ipos_1
-             point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(i_voisin)%H
+             point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(i_voisin)%Op_loc
           endif
 
 !#ifdef CPP_DEBUG
@@ -373,7 +373,8 @@ end subroutine A_Opreal_shellHam1D
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_real2D(point,static_target,my_lattice,tableNN,Nvoisin,avant)
-use m_derived_types, only : lattice,operator_real,site_Ham
+use m_derived_types, only : lattice,operator_real
+use m_Hamiltonian_variables, only : site_Ham
 use m_get_position
 use m_null
 implicit none
@@ -443,7 +444,9 @@ end subroutine A_Opreal_real2D
 ! associate each non-zero elements in the columns of the operator to the good lines in the local modes
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine associate_line_target(line,mode,column,target)
-use m_derived_types, only : operator_real,vec_point,point_shell_Operator,point_shell_mode
+use m_basic_types, only : vec_point
+use m_derived_types, only : operator_real,point_shell_Operator
+use m_modes_variables, only : point_shell_mode
 implicit none
 type(vec_point),target,intent(in) :: mode(:)
 type(operator_real),target,intent(in) :: target
@@ -585,7 +588,7 @@ end subroutine diss_point_shell_1D_Operator_1D
 !
 !!!!!!!!!!!!!!!!!
 subroutine diss_point_shell_mode_1D(matrix,M,N)
-use m_derived_types, only : point_shell_mode
+use m_modes_variables, only : point_shell_mode
 implicit none
 type(point_shell_mode), intent(inout) :: matrix(:)
 ! internal
@@ -606,7 +609,7 @@ end subroutine diss_point_shell_mode_1D
 !
 !!!!!!!!!!!!!!!!!
 subroutine diss_point_shell_1D_mode_1D(matrix,M,N)
-use m_derived_types, only : point_shell_mode
+use m_modes_variables, only : point_shell_mode
 implicit none
 type(point_shell_mode), intent(inout) :: matrix(:)
 integer, intent(in) :: M(:),N

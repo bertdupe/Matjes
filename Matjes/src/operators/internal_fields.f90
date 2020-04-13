@@ -1,5 +1,8 @@
 module m_internal_fields_commons
-use m_derived_types, only : operator_real,shell_Ham,point_shell_Operator,vec_point,point_shell_mode
+use m_basic_types, only : vec_point
+use m_derived_types, only : operator_real,point_shell_Operator
+use m_Hamiltonian_variables, only : shell_Ham
+use m_modes_variables, only : point_shell_mode
 use m_operator_pointer_utils
 ! coefficients of the internal magnetic field
 type(shell_Ham), public, protected, target, save, allocatable, dimension(:) :: B_int
@@ -27,7 +30,8 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine associate_internal_Beff(my_lattice,tableNN,indexNN)
-use m_derived_types, only : Coeff_Ham,lattice
+use m_derived_types, only : lattice
+use m_Hamiltonian_variables, only : Coeff_Ham
 use m_energy_commons, only : energy,total_hamiltonian
 use m_constants, only : identity
 use m_get_position
@@ -53,9 +57,10 @@ allocate(B_int(N_all_shell))
 do i=1,N_all_shell
    N_all_vois=size(total_hamiltonian(i)%atom)
    allocate(B_int(i)%atom(N_all_vois))
+   B_int(i)%num=N_all_vois
    do j=1,N_all_vois
-      allocate(B_int(i)%atom(j)%H(dim_ham,dim_ham))
-      B_int(i)%atom(j)%H=0.0d0
+      allocate(B_int(i)%atom(j)%Op_loc(dim_ham,dim_ham))
+      B_int(i)%atom(j)%Op_loc=0.0d0
    enddo
 enddo
 
@@ -64,7 +69,7 @@ do i=1,N_all_shell
    N_all_vois=size(total_hamiltonian(i)%atom)
    do j=1,N_all_vois
 
-      B_int(i)%atom(j)%H=-2.0d0*total_hamiltonian(i)%atom(j)%H
+      B_int(i)%atom(j)%Op_loc=-2.0d0*total_hamiltonian(i)%atom(j)%Op_loc
 
    enddo
 
@@ -100,7 +105,6 @@ enddo
 end subroutine associate_internal_Beff
 
 subroutine get_B_line(B_line,mode_B_column,spin)
-use m_derived_types, only : point_shell_Operator,point_shell_mode,vec_point
 use m_operator_pointer_utils
 implicit none
 type(point_shell_Operator), intent(inout) :: B_line(:)

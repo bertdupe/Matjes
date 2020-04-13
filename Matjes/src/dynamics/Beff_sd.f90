@@ -17,7 +17,8 @@ contains
 ! for normal
 !
 subroutine normal(B,spin,B_line,iomp)
-use m_derived_types
+use m_derived_types, only : point_shell_Operator
+use m_modes_variables, only : point_shell_mode
 implicit none
 ! input variable
 type(point_shell_mode), intent(in) :: spin

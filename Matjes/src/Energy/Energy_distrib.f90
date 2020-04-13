@@ -1,5 +1,7 @@
 module m_energyfield
-use m_derived_types
+use m_basic_types, only : vec_point, site_ham
+use m_derived_types, only : operator_real,point_shell_Operator,lattice
+use m_modes_variables, only : point_shell_mode
 use m_operator_pointer_utils
 use m_local_energy
 
@@ -41,7 +43,7 @@ integer,allocatable :: int_ind(:)
 
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
-size_ham=size(total_hamiltonian(1)%atom(1)%H,1)
+size_ham=size(total_hamiltonian(1)%atom(1)%Op_loc,1)
 
 
 size_ham=size(total_hamiltonian)

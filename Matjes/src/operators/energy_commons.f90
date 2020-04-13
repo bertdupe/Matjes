@@ -1,5 +1,8 @@
 module m_energy_commons
-use m_derived_types, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,operator_real,shell_Ham,point_shell_Operator,vec_point,point_shell_mode,lattice
+use m_basic_types, only : vec_point
+use m_modes_variables, only : point_shell_mode
+use m_derived_types, only : operator_real,point_shell_Operator,lattice
+use m_Hamiltonian_variables, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,shell_Ham
 use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters
 use m_couplage_ME
@@ -42,7 +45,8 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine get_Hamiltonians(fname,Ms,dim_Ham)
-use m_derived_types, only : site_Ham,simulation_parameters
+use m_derived_types, only : simulation_parameters
+use m_basic_types, only : site_Ham
 use m_io_files_utils
 use m_io_utils
 use m_constants, only : mu_B
@@ -123,7 +127,7 @@ end subroutine get_Hamiltonians
 ! subroutines that prepare the total Hamiltonian
 !
 subroutine get_total_Hamiltonian(D,indexNN)
-use m_derived_types, only : shell_Ham
+use m_Hamiltonian_variables, only : shell_Ham
 use m_vector, only : norm
 use m_io_utils
 use m_io_files_utils
@@ -176,9 +180,10 @@ do i=1,n_ham
     do j=1,size(ham_DMI_Nshell_local)
        N_voisin_DMI=indexNN(j,1)
        allocate(ham_DMI_Nshell_local(j)%atom(N_voisin_DMI))
+       ham_DMI_Nshell_local(j)%num=N_voisin_DMI
        do k=1,size(ham_DMI_Nshell_local(j)%atom)
-          allocate(ham_DMI_Nshell_local(j)%atom(k)%H(dim_ham,dim_ham))
-          ham_DMI_Nshell_local(j)%atom(k)%H=0.0d0
+          allocate(ham_DMI_Nshell_local(j)%atom(k)%Op_loc(dim_ham,dim_ham))
+          ham_DMI_Nshell_local(j)%atom(k)%Op_loc=0.0d0
        enddo
     enddo
 
@@ -188,11 +193,11 @@ do i=1,n_ham
     do j=1,size(Hamiltonians(i)%ham)
       if (j.le.n_DMI) then
          do k=1,size(ham_DMI_Nshell_local(j)%atom)
-            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_DMI_Nshell_local(j)%atom(k)%H(x_start:x_end,y_start:y_end))
+            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_DMI_Nshell_local(j)%atom(k)%Op_loc(x_start:x_end,y_start:y_end))
          enddo
       else
-         do k=1,size(ham_DMI_Nshell_local(j)%atom)
-            ham_DMI_Nshell_local(j)%atom(k)%H=Hamiltonians(i)%ham(j)%op_loc
+         do k=1,ham_DMI_Nshell_local(j)%num
+            ham_DMI_Nshell_local(j)%atom(k)%op_loc=Hamiltonians(i)%ham(j)%op_loc
          enddo
       endif
 
@@ -215,9 +220,10 @@ do i=1,n_ham
     do j=1,size(ham_EM_Nshell_local)
        N_voisin_DMI=indexNN(j,1)
        allocate(ham_EM_Nshell_local(j)%atom(N_voisin_DMI))
+       ham_EM_Nshell_local(j)%num=N_voisin_DMI
        do k=1,size(ham_EM_Nshell_local(j)%atom)
-          allocate(ham_EM_Nshell_local(j)%atom(k)%H(dim_ham,dim_ham))
-          ham_EM_Nshell_local(j)%atom(k)%H=0.0d0
+          allocate(ham_EM_Nshell_local(j)%atom(k)%Op_loc(dim_ham,dim_ham))
+          ham_EM_Nshell_local(j)%atom(k)%Op_loc=0.0d0
        enddo
     enddo
 
@@ -227,12 +233,12 @@ do i=1,n_ham
     do j=1,size(Hamiltonians(i)%ham)
       if (j.le.n_DMI) then
          do k=1,size(ham_EM_Nshell_local(j)%atom)
-            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_EM_Nshell_local(j)%atom(k)%H(x_start:x_end,y_start:y_end))
-            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(y_start:y_end,x_start:x_end),ham_EM_Nshell_local(j)%atom(k)%H(y_start:y_end,x_start:x_end))
+            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_EM_Nshell_local(j)%atom(k)%Op_loc(x_start:x_end,y_start:y_end))
+            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(y_start:y_end,x_start:x_end),ham_EM_Nshell_local(j)%atom(k)%Op_loc(y_start:y_end,x_start:x_end))
          enddo
       else
          do k=1,size(ham_DMI_Nshell_local(j)%atom)
-            ham_EM_Nshell_local(j)%atom(k)%H=Hamiltonians(i)%ham(j)%op_loc
+            ham_EM_Nshell_local(j)%atom(k)%Op_loc=Hamiltonians(i)%ham(j)%op_loc
          enddo
       endif
     enddo
@@ -244,15 +250,17 @@ enddo
 
 allocate(total_hamiltonian(N_tot_vec_shell+1))
 allocate(total_hamiltonian(1)%atom(1))
-allocate(total_hamiltonian(1)%atom(1)%H(dim_ham,dim_ham))
-total_hamiltonian(1)%atom(1)%H=0.0d0
+allocate(total_hamiltonian(1)%atom(1)%Op_loc(dim_ham,dim_ham))
+total_hamiltonian(1)%num=1
+total_hamiltonian(1)%atom(1)%Op_loc=0.0d0
 
 do i=1,N_tot_vec_shell
    N_atom_shell=indexNN(i,1)
    allocate(total_hamiltonian(i+1)%atom(N_atom_shell))
+   total_hamiltonian(i+1)%num=N_atom_shell
    do j=1,N_atom_shell
-      allocate(total_hamiltonian(i+1)%atom(j)%H(dim_ham,dim_ham))
-      total_hamiltonian(i+1)%atom(j)%H=0.0d0
+      allocate(total_hamiltonian(i+1)%atom(j)%Op_loc(dim_ham,dim_ham))
+      total_hamiltonian(i+1)%atom(j)%Op_loc=0.0d0
    enddo
 enddo
 
@@ -262,13 +270,13 @@ enddo
 
 do i=1,n_ham
 
-  if ('zeeman'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
-  if ('anisotropy'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
+  if ('zeeman'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian(1)%atom(1)%Op_loc,Hamiltonians(i)%ham(1)%Op_loc)
+  if ('anisotropy'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian(1)%atom(1)%Op_loc,Hamiltonians(i)%ham(1)%Op_loc)
 
   if ('exchange'.eq.trim(Hamiltonians(i)%name)) then
     do j=1,size(ham_DMI_Nshell_local)
       do l=1,size(total_hamiltonian(j+1)%atom)
-        total_hamiltonian(j+1)%atom(l)%H=total_hamiltonian(j+1)%atom(l)%H+ham_DMI_Nshell_local(j)%atom(l)%H
+        total_hamiltonian(j+1)%atom(l)%Op_loc=total_hamiltonian(j+1)%atom(l)%Op_loc+ham_DMI_Nshell_local(j)%atom(l)%Op_loc
       enddo
     enddo
   endif
@@ -276,7 +284,7 @@ do i=1,n_ham
   if ('magnetoelectric'.eq.trim(Hamiltonians(i)%name)) then
     do j=1,size(ham_EM_Nshell_local)
       do l=1,size(total_hamiltonian(j+1)%atom)
-        total_hamiltonian(j+1)%atom(l)%H=total_hamiltonian(j+1)%atom(l)%H+ham_EM_Nshell_local(j)%atom(l)%H
+        total_hamiltonian(j+1)%atom(l)%Op_loc=total_hamiltonian(j+1)%atom(l)%Op_loc+ham_EM_Nshell_local(j)%atom(l)%Op_loc
       enddo
     enddo
   endif
@@ -292,7 +300,7 @@ do i=1,N_max_shell+1
    write(*,*) 'shell', i
 
    do j=1,size(total_hamiltonian(i)%atom)
-      write(6,*) (total_hamiltonian(i)%atom(j)%H(:,k),k=1,dim_ham)
+      write(6,*) (total_hamiltonian(i)%atom(j)%Op_loc(:,k),k=1,dim_ham)
    enddo
 
 !do i=1,size(Hamiltonians)
@@ -366,10 +374,10 @@ io=open_file_write(fname)
 do i=1,size(total_hamiltonian)
    write(io,'(a,2x,I4)') 'shell',i
    do j=1,size(total_hamiltonian(i)%atom)
-      dim_ham=size(total_hamiltonian(i)%atom(j)%H,2)
+      dim_ham=size(total_hamiltonian(i)%atom(j)%Op_loc,2)
       format=convert('(',dim_ham,'(E12.6,2x))')
 
-      write(io,format) (total_hamiltonian(i)%atom(j)%H(:,k),k=1,dim_ham)
+      write(io,format) (total_hamiltonian(i)%atom(j)%Op_loc(:,k),k=1,dim_ham)
 
       write(io,'(a)') ''
    enddo

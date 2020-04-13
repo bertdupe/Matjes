@@ -4,7 +4,8 @@ contains
 
 subroutine forces(tag,field,B_line,N_dim,r)
 use m_eval_Beff
-use m_derived_types
+use m_derived_types, only : point_shell_Operator
+use m_modes_variables, only : point_shell_mode
 use m_derivative, only : calculate_derivative
 use m_io_files_utils
 use m_convert

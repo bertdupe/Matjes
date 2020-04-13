@@ -1,5 +1,7 @@
 module m_total_energy
-use m_derived_types, only : operator_real,Coeff_Ham,lattice,point_shell_Operator,point_shell_mode
+use m_derived_types, only : operator_real,lattice,point_shell_Operator
+use m_Hamiltonian_variables, only : Coeff_Ham
+use m_modes_variables, only : point_shell_mode
 
 !
 ! this module contains the routines that calculate the total energy for all the energy terms

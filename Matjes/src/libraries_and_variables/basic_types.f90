@@ -1,5 +1,10 @@
 module m_basic_types
 
+! Hamiltonian variables
+type site_Ham
+     real(kind=8), dimension(:,:), allocatable :: H
+end type site_Ham
+
 !!!!
 !Operator of the simulations
 !!!!

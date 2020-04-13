@@ -1,7 +1,7 @@
 module m_couplage_ME
 use m_symmetry_operators
 use m_lattice, only : my_order_parameters
-use m_derived_types, only : coeff_ham_inter_spec
+use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: ME
 
 private
@@ -103,7 +103,7 @@ enddo
 
 do i=1,neighbor_ME_antisym
     call get_Op_in_Op(ME%ham(i)%H,ham_DMI_local(:,:,i),x_start,x_end,y_start,y_end)
-    call get_Op_in_Op(ME%ham(i)%H,ham_DMI_local(:,:,i),y_start,y_end,x_start,x_end)
+    call get_Op_in_Op(ME%ham(i)%H,-ham_DMI_local(:,:,i),y_start,y_end,x_start,x_end)
 enddo
 
 end subroutine get_ham_ME

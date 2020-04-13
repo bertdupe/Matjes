@@ -14,11 +14,13 @@ contains
 
 
 subroutine minimize(spin,mode_B_column,B_line,mode_E_column,E_line,io_simu)
-use m_derived_types
+use m_derived_types, only : point_shell_Operator, io_parameter
+use m_modes_variables, only : point_shell_mode
+use m_basic_types, only : vec_point
 use m_write_spin
 use m_createspinfile
 use m_solver, only : minimization
-use m_vector, only : norm_cross,norm,calculate_damping
+use m_vector, only : norm_cross,norm, calculate_damping
 use m_dyna_utils, only : copy_lattice
 use m_eval_Beff
 use m_local_energy

@@ -1,5 +1,6 @@
 module m_local_energy
-use m_derived_types
+use m_derived_types, only : point_shell_Operator
+use m_modes_variables, only : point_shell_mode
 
 interface local_energy
    module procedure local_energy_pointer
@@ -22,7 +23,7 @@ integer, intent(in) :: iomp
 ! ouput
 real(kind=8), intent(out) :: E_int
 ! internal
-integer :: i,N
+integer :: i,N,j
 
 N=size(spin%shell)
 E_int=0.0d0
@@ -31,8 +32,16 @@ do i=1,N
 
    E_int=E_int+dot_product( spin%shell(1)%w , matmul(E_line%shell(i)%Op_loc,spin%shell(i)%w) )
 
+   write(*,*) spin%shell(1)%w
+   do j=1,9
+   write(*,*) E_line%shell(i)%Op_loc(:,j)
+   enddo
+   write(*,*) spin%shell(i)%w
+   write(*,*) ''
+
 enddo
 
+pause
 if (i_dip) E_int=E_int+get_dipole_E(iomp)
 
 end subroutine local_energy_pointer

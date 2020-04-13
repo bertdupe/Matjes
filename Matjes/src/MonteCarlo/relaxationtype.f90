@@ -1,5 +1,6 @@
 module m_relaxtyp
-use m_derived_types
+use m_derived_types, only : point_shell_Operator
+use m_modes_variables, only : point_shell_mode
 use m_eval_Beff
 
 contains

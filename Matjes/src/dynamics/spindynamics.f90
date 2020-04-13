@@ -301,7 +301,7 @@ call get_torques('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! check if a magnetic texture should be tracked
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-if (io_simu%io_tracker) call init_tracking(mag_lattice%dim_lat)
+if (io_simu%io_tracker) call init_tracking(mag_lattice)
 
 call init_temp_measure(check,check1,check2,check3)
 
@@ -467,7 +467,7 @@ if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Ed
      &   kT/k_B,(security(i),i=1,2),H_int
 
 if ((io_simu%io_Energy_Distrib).and.((mod(j-1,gra_freq).eq.0))) then
-         call get_Energy_distrib(j/gra_freq+1,all_mode)
+         call get_Energy_distrib(j/gra_freq,all_mode)
       endif
 
 if ((gra_log).and.(mod(j-1,gra_freq).eq.0)) then
