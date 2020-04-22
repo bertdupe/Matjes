@@ -40,7 +40,7 @@ end type Coeff_Ham
 
 type coeff_ham_inter_spec
      real(kind=8) :: c_ham=-1.0d0
-     integer :: N_shell
+     integer :: N_shell,order
      character(len=30) :: name=''
      logical :: i_exist=.false.
      type(site_Ham), allocatable, dimension(:) :: ham
@@ -48,6 +48,8 @@ end type coeff_ham_inter_spec
 
 type coeff_ham_inter_spec_pointer
      character(len=30) :: name=''
+     integer :: order
+     logical :: onsite=.false.
      type(Op_real), allocatable :: ham(:)
 end type coeff_ham_inter_spec_pointer
 
@@ -56,17 +58,20 @@ end type coeff_ham_inter_spec_pointer
 ! number of Hamiltonian in one shell
 !
 type shell_Ham
-     type(Op_real), dimension(:), allocatable :: atom
-     integer :: num
+     type(site_Ham), dimension(:), allocatable :: atom
+     ! size of the Hamiltonian of order N
+     integer :: line,column
 end type
+
+type shell_Ham_order_N
+     type(shell_Ham), dimension(:), allocatable :: order
+     ! number of order in the Hamiltonian
+     integer, allocatable,dimension(:) :: num
+end type shell_Ham_order_N
 
 type H_vois
-     type(shell_Ham), dimension(:), allocatable :: shell_num
-     integer, dimension(:), allocatable :: num
-end type
-
-type order
-     type(H_vois), dimension(:), allocatable :: order_ham
+     type(shell_Ham_order_N), dimension(:), allocatable :: shell_num
+     ! number of bounds/shell
      integer, dimension(:), allocatable :: num
 end type
 

@@ -16,8 +16,12 @@ interface convoluate_Op_SOC_vector
    module procedure convoluate_Op_2D_SOC_vector_1D
 end interface
 
+interface convoluate_Op_sym
+   module procedure convoluate_Op_sym_file
+end interface
+
 private
-public :: get_diagonal_Op,get_symmetric_Op,get_Op_in_Op,convoluate_Op_SOC_vector,get_borders
+public :: get_diagonal_Op,get_symmetric_Op,get_Op_in_Op,convoluate_Op_SOC_vector,get_borders,convoluate_Op_sym
 
 contains
 
@@ -243,6 +247,64 @@ do j=1,down_corner_x-upper_corner_x+1
 enddo
 
 end subroutine
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! convolute a matrix with the k-symmetry operator from file
+! This will not work with 2 atoms in one unit cell
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine convoluate_Op_sym_file(k,H_in,H_out,x_start,x_end,y_start,y_end)
+use m_basic_types, only : symop
+use m_grp_sym
+use m_matrix
+implicit none
+integer, intent(in) :: k,x_start,x_end,y_start,y_end
+real(kind=8), intent(in) :: H_in(:,:)
+real(kind=8), intent(inout) :: H_out(:,:)
+! internal
+integer :: i,j,shape_H(2)
+real(kind=8) :: H_in_local(3,3),H_dum(3,3)
+type(symop), allocatable :: symmetries(:), invert_symmetries(:)
+integer :: n_sym
+
+H_out=0.0d0
+
+n_sym=get_num_sym_file()
+allocate(symmetries(n_sym),invert_symmetries(n_sym))
+call read_symmetries(n_sym,symmetries)
+
+do i=1,n_sym
+  invert_symmetries(i)%name=symmetries(i)%name
+  call invert(symmetries(i)%mat,invert_symmetries(i)%mat,3)
+enddo
+
+shape_H=shape(H_in)
+
+j=0
+do i=1,shape_H(2)/shape_H(1)
+
+  ! fill the matrix 3x3 defined by the position of the order parameters
+  H_in_local=H_in(y_start:y_end,j+x_start:j+x_end)
+  H_dum=matmul(H_in_local,invert_symmetries(k)%mat)
+  H_out(y_start:y_end,j+x_start:j+x_end)=matmul(symmetries(k)%mat,H_dum)
+
+  ! fill by chunk of dim_ham since the symmetry operations do not apply on the order parameters
+  j=j+shape_H(1)
+enddo
+
+end subroutine convoluate_Op_sym_file
+
+
+
+
+
+
+
+
+
 
 
 

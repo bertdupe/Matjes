@@ -5,11 +5,10 @@ use m_path
 use m_write_spin
 use m_local_energy
 use m_createspinfile
-use m_derived_types
+use m_basic_types, only : vec_point, vec
+use m_derived_types, only : io_parameter,lattice
 use m_gneb_parameters, only : do_norm_rx,en_zero
 use m_eval_Beff
-use m_energy_commons, only : get_E_line
-use m_internal_fields_commons, only : get_B_line
 use m_rotation, only : rotation_axis
 use m_operator_pointer_utils
 use m_energyfield
@@ -43,13 +42,10 @@ real(kind=8), allocatable :: ang(:,:)
 real(kind=8) :: fchk,ftmp(3),veltmp(3),u0,u(nim),fpp(nim)
 real(kind=8) :: pathlen(nim)
 real(kind=8) :: fv,fd,fp,E_int,norm_local
-integer :: i,imax
+integer :: i,imax,dim_mode
 logical :: found
 !!!!!!!!!!! allocate the pointers to find the path
 type(vec_point),allocatable,dimension(:,:) :: all_mode_path
-! lattice pf pointer that will be used in the simulation
-type(point_shell_Operator), allocatable, dimension(:,:) :: E_line,B_line
-type(point_shell_mode), allocatable, dimension(:,:) :: mode_E_column,mode_B_column
 !!!!!!!!!!!!!!!
 
 ! initialize all pointers
@@ -63,19 +59,6 @@ enddo
 !!!! allocate the pointers for the B-field and the energy
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-allocate(E_line(N_cell,nim),B_line(N_cell,nim))
-allocate(mode_E_column(N_cell,nim),mode_B_column(N_cell,nim))
-
-do i_nim=1,nim
-   call get_E_line(E_line(:,i_nim),mode_E_column(:,i_nim),all_mode_path(:,i_nim))
-   call get_B_line(B_line(:,i_nim),mode_B_column(:,i_nim),all_mode_path(:,i_nim))
-enddo
-
-if (io_simu%io_Energy_Distrib) then
-   write(6,'(a)') 'setting up energy distribution'
-   call get_Energy_distrib_line(all_mode_path(:,1))
-endif
-
 
 
 allocate(vel(N_cell,nim),fxyz1(N_cell,nim),fxyz2(N_cell,nim),ax(N_cell,nim),coo(N_cell,nim))
@@ -86,7 +69,7 @@ allocate(tau_i(N_cell),tau(N_cell))
 
 fchk=1d0+ftol
 itr=1
-
+dim_mode=my_lattice%dim_mode
 call the_path(nim,path,pathlen)
    
 do i_nim=1,nim
@@ -97,11 +80,11 @@ do i_nim=1,nim
       vel(iomp,i_nim)%w = 0d0
       coo(iomp,i_nim)%w = path(:,iomp,i_nim)
 
-      call calculate_Beff(ftmp,mode_B_column(iomp,i_nim),B_line(iomp,i_nim),iomp)
+      call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim),dim_mode)
 
       call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
 
-      call local_energy(E_int,iomp,mode_E_column(iomp,i_nim),E_line(iomp,i_nim))
+      call local_energy(E_int,iomp,all_mode_path(:,i_nim),dim_mode)
 
       u(i_nim) = u(i_nim) + E_int
 
@@ -226,11 +209,11 @@ do while ((fchk>ftol).and.(itr<=itrmax))
 
       do iomp=1,N_cell
 
-         call calculate_Beff(ftmp,mode_B_column(iomp,i_nim),B_line(iomp,i_nim),iomp)
+         call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim),dim_mode)
 
          call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
 
-         call local_energy(E_int,iomp,mode_E_column(iomp,i_nim),E_line(iomp,i_nim))
+         call local_energy(E_int,iomp,all_mode_path(:,i_nim),dim_mode)
 
          u(i_nim) = u(i_nim) + E_int
 

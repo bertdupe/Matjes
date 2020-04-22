@@ -80,6 +80,11 @@ type operator_real
     integer, allocatable :: line(:,:)
 end type operator_real
 
+type operator_real_order_N
+    type(Op_real_order_N), allocatable, dimension(:,:) :: value
+    integer :: nline,ncolumn
+    integer, allocatable :: line(:,:)
+end type operator_real_order_N
 ! old Hamiltonian type
 
 type point_shell_Operator

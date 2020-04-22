@@ -13,6 +13,11 @@ type Op_real
      real(kind=8), pointer :: Op_loc(:,:)
 end type Op_real
 
+type Op_real_order_N
+     type(Op_real), allocatable :: order_op(:)
+     integer :: num
+end type Op_real_order_N
+
 type Op_Im
      complex(kind=16), pointer :: Op_loc(:,:)
 end type Op_Im

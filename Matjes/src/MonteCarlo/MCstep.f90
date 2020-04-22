@@ -1,8 +1,9 @@
 !
 ! ===============================================================
 !
-SUBROUTINE MCstep(mode,B_line,mode_B_column,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+SUBROUTINE MCstep(mode,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 use m_derived_types, only : lattice
+use m_basic_types, only : vec_point
 use m_sampling
 use m_choose_spin
 use m_relaxtyp
@@ -21,8 +22,6 @@ type(vec_point), intent(inout) :: mode(:)
 logical, intent(in) :: equi,overrel,sphere,underrel,ising
 real(kind=8), intent(in) :: kt
 integer, intent(in) :: N_spin
-type(point_shell_Operator), allocatable, dimension(:) :: B_line
-type(point_shell_mode), allocatable, dimension(:) :: mode_B_column
 real(kind=8), intent(inout) :: E_total,Magnetization(3),E(8),acc,rate,cone,nb
 ! internal variable
 type(mtprng_state) :: state
@@ -96,9 +95,9 @@ endif
 ! different relaxation process
 !---------------------------------
 if (underrel) then
-   S_new=underrelax(mode_B_column,B_line,iomp)
+   S_new=underrelax(iomp,mode)
 elseif (overrel) then
-   S_new=overrelax(mode_B_column,B_line,iomp)
+   S_new=overrelax(iomp,mode)
 endif
 
 if (ising) S_new=-mode(iomp)%w

@@ -13,9 +13,8 @@ contains
 
 
 
-subroutine minimize(spin,mode_B_column,B_line,mode_E_column,E_line,io_simu)
-use m_derived_types, only : point_shell_Operator, io_parameter
-use m_modes_variables, only : point_shell_mode
+subroutine minimize(spin,io_simu)
+use m_derived_types, only : io_parameter
 use m_basic_types, only : vec_point
 use m_write_spin
 use m_createspinfile
@@ -30,20 +29,15 @@ use m_local_energy
 implicit none
 type(io_parameter), intent(in) :: io_simu
 type(vec_point), intent(inout) :: spin(:)
-type(point_shell_Operator), intent(in), dimension(:) :: B_line,E_line
-type(point_shell_mode), intent(in), dimension(:) :: mode_B_column,mode_E_column
 ! dummy variable
 real(kind=8),allocatable, dimension(:,:) :: velocity,predicator,force
-!real(kind=8) :: velocity(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-!real(kind=8) :: predicator(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-!real(kind=8) :: force(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
 
 ! internal
 real(kind=8) :: F_eff(3),V_eff(3),dumy,force_norm,Energy,vmax,vtest,F_temp(3),Eint,test_torque,max_torque
 ! the computation time
 integer :: i_min,N_cell,gra_freq
 logical :: gra_log
-integer :: iomp
+integer :: iomp,dim_mode
 #ifdef CPP_OPENMP
 integer :: nthreads,ithread
 #endif
@@ -66,6 +60,7 @@ test_torque=0.0d0
 max_torque=10.0d0
 vmax=0.0d0
 vtest=0.0d0
+dim_mode=size(spin(1)%w)
 
 #ifdef CPP_OPENMP
 nthreads=omp_get_num_procs()
@@ -78,7 +73,7 @@ write(6,'(a,2x,I3,2x,a)') 'I will calculate on',nthreads,'threads'
 
 do iomp=1,N_cell
 
-   call calculate_Beff(F_eff,mode_B_column(iomp),B_line(iomp),iomp)
+   call calculate_Beff(F_eff,iomp,spin,dim_mode)
    force(:,iomp)=calculate_damping(spin(iomp)%w,F_eff)
    call minimization(spin(iomp)%w,force(:,iomp),predicator(:,iomp),dt**2,masse*2.0d0,3)
 
@@ -110,7 +105,7 @@ ithread=omp_get_thread_num()
 
 do iomp=1,N_cell
 
-   call calculate_Beff(F_eff,mode_B_column(iomp),B_line(iomp),iomp)
+   call calculate_Beff(F_eff,iomp,spin,dim_mode)
    F_temp=calculate_damping(spin(iomp)%w,F_eff)
 
    call minimization(velocity(:,iomp),(force(:,iomp)+F_temp)/2.0d0,V_eff,dt,masse,3)
@@ -166,13 +161,14 @@ enddo
 call copy_lattice(predicator,spin)
 Energy=0.0d0
 
+dim_mode=size(spin(1)%w)
 #ifdef CPP_OPENMP
 !$OMP do private(iomp) reduction(+:Energy) collapse(1)
 #endif
 
 do iomp=1,N_cell
 
-   call local_energy(Eint,iomp,mode_E_column(iomp),E_line(iomp))
+   call local_energy(Eint,iomp,spin,dim_mode)
    Energy=Energy+Eint
 
 enddo

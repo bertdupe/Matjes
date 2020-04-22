@@ -41,14 +41,15 @@ end function
 ! Calculate the possible DM candidates
 !
 
-subroutine setup_DM_vector(indexNN,i,my_lattice,my_motif,DM_vector)
+subroutine setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector,tabledist)
 implicit none
-integer, intent(in) :: indexNN(:,:),i
-type (cell), intent(in) :: my_motif
-type (lattice), intent(in) :: my_lattice
+integer, intent(in) :: indexNN(:,:),n_DMI
+type(cell), intent(in) :: my_motif
+type(lattice), intent(in) :: my_lattice
+real(kind=8), intent(in) :: tabledist(:,:)
 real(kind=8), intent(inout) :: DM_vector(:,:,:)
 ! internal
-integer :: phase,n_sym,atom_all_shells,k,j
+integer :: phase,n_sym,atom_all_shells,k,j,i
 logical :: inquire_file
 type(symop), allocatable :: symmetries(:)
 
@@ -64,13 +65,17 @@ n_sym=get_num_sym_file()
 allocate(symmetries(n_sym))
 call read_symmetries(n_sym,symmetries)
 
-atom_all_shells=sum(indexNN(1:i,1))
-DM_vector=get_DM_vectors(atom_all_shells,my_lattice%areal,my_motif,n_sym,symmetries)
+j=1
+do i=1,n_DMI
+  atom_all_shells=indexNN(i,1)
+  DM_vector(j:j+atom_all_shells-1,:,:)=get_DM_vectors(i,atom_all_shells,my_lattice%areal,my_motif,n_sym,symmetries,tabledist(i,1),my_lattice%boundary)
+  j=j+atom_all_shells
+enddo
 
 write(6,'(a)') ''
 write(6,'(a,2x,I4,2x,a)') 'find', atom_all_shells ,'DM vectors'
 do j=1,phase
-   do k=1,atom_all_shells
+   do k=1,size(DM_vector,1)
       write(6,'(3(f8.5,2x))') DM_vector(k,:,j)
    enddo
 enddo
@@ -83,18 +88,19 @@ end subroutine setup_DM_vector
 !
 ! Calculate all the DMI in the unit cell
 !
-function get_DM_vectors(atom_all_shells,areal,my_motif,n_sym,symmetries)
+function get_DM_vectors(shell_number,atom_all_shells,areal,my_motif,n_sym,symmetries,distance,periodic)
 implicit none
-integer, intent(in) :: atom_all_shells,n_sym
-real(kind=8), intent(in) :: areal(:,:)
+integer, intent(in) :: atom_all_shells,n_sym,shell_number
+real(kind=8), intent(in) :: areal(:,:),distance
 type(cell), intent(in) :: my_motif
 type(symop), intent(in) :: symmetries(:)
 real(kind=8) :: get_DM_vectors(atom_all_shells,3,1)
+logical, intent(in) :: periodic(:)
 ! internal
-integer :: i,natom,n_at_mag,n_at_nonmag,j,k,l
+integer :: i,natom,n_at_mag,n_at_nonmag,j,k,l,n
 integer :: n_at_nonmag_incell,n_at_mag_inshell
 real(kind=8) :: R1(3),R2(3),DMV(3),test,test_pos_A(3),test_pos_B(3),dumy
-real(kind=8),allocatable :: R_mag(:,:),R_non_mag(:,:)
+real(kind=8),allocatable :: R_mag(:,:,:),R_non_mag(:,:,:)
 real(kind=8),allocatable :: pos_mag_atom_in_shell(:,:),pos_nonmag_atom_in_shell(:,:)
 logical :: if_present,exists
 
@@ -105,38 +111,39 @@ n_at_mag=count(my_motif%i_mom(:),1)
 n_at_nonmag=natom-n_at_mag
 get_DM_vectors=0.0d0
 
-allocate(R_mag(3,n_at_mag),R_non_mag(3,n_at_nonmag))
-j=0
-k=0
-do i=1,natom
-   if (abs(my_motif%atomic(i)%moment).gt.1.0d-8) then
-      j=j+1
-      R_mag(:,j)=matmul(transpose(areal),my_motif%atomic(i)%position(:))
-   else
-      k=k+1
-      R_non_mag(:,k)=matmul(transpose(areal),my_motif%atomic(i)%position(:))
-   endif
+!
+! find atom in the shell 0
+!
+allocate(R_mag(3,n_at_mag,2),R_non_mag(3,n_at_nonmag,2))
+R_mag=0.0d0
+R_non_mag=0.0d0
+call find_mag_and_nonmag_atoms(0,my_motif,areal,0.0d0,periodic,R_mag(:,:,1),R_non_mag(:,:,1))
 
-enddo
+call find_mag_and_nonmag_atoms(shell_number,my_motif,areal,distance,periodic,R_mag(:,:,2),R_non_mag(:,:,2))
 
 ! find all magnetic atoms in the unit cell
 ! the number of directions for the different atoms are put in pos_mag_atom_in_shell
 ! for that apply symmetry operations
 n_at_mag_inshell=0
-do i=1,n_at_mag
-  n_at_mag_inshell=n_at_mag_inshell+find_all_equivalent_atom(R_mag(:,i)+areal(1,:),n_sym,symmetries)
+do j=1,n_at_mag
+  do i=1,n_at_mag
+    n_at_mag_inshell=n_at_mag_inshell+find_all_equivalent_atom(R_mag(:,i,2)-R_mag(:,j,1),n_sym,symmetries)
+  enddo
 enddo
 allocate(pos_mag_atom_in_shell(3,n_at_mag_inshell))
-call find_all_atom(pos_mag_atom_in_shell,R_mag,transpose(areal),n_sym,symmetries,areal)
+call find_all_atom(pos_mag_atom_in_shell,R_mag(:,:,2),R_mag(:,:,1),n_sym,symmetries,areal)
 
 ! find all equivalent non magnetic atoms
 ! for that apply symmetry operations
 n_at_nonmag_incell=0
-do i=1,n_at_nonmag
-  n_at_nonmag_incell=n_at_nonmag_incell+find_all_equivalent_atom(R_non_mag(:,i)-R_mag(:,1),n_sym,symmetries)
+do j=1,n_at_mag
+  do i=1,n_at_nonmag
+    n_at_nonmag_incell=n_at_nonmag_incell+find_all_equivalent_atom(R_non_mag(:,i,2)-R_mag(:,j,2),n_sym,symmetries)
+  enddo
 enddo
+
 allocate(pos_nonmag_atom_in_shell(3,n_at_nonmag_incell))
-call find_all_atom(pos_nonmag_atom_in_shell,R_non_mag,-R_mag,n_sym,symmetries,areal)
+call find_all_atom(pos_nonmag_atom_in_shell,R_non_mag(:,:,2),R_mag(:,:,2),n_sym,symmetries,areal)
 
 ! for all magnetic atoms in the unit cell
 ! find the unique non-magnetic atom that verifies the Moriya rules
@@ -167,12 +174,6 @@ if (exists) then
    enddo
 endif
 
-#ifdef CPP_DEBUG
-do i=1,atom_all_shells
-   write(*,*) get_DM_vectors(i,:,1)
-enddo
-#endif
-
 end function get_DM_vectors
 
 
@@ -186,6 +187,58 @@ end function get_DM_vectors
 
 
 
+
+
+
+
+
+subroutine find_mag_and_nonmag_atoms(shell_number,my_motif,areal,distance,periodic,R_mag,R_non_mag)
+implicit none
+integer, intent(in) :: shell_number
+real(kind=8), intent(in) :: areal(:,:),distance
+type(cell), intent(in) :: my_motif
+logical, intent(in) :: periodic(:)
+real(kind=8), intent(inout) :: R_mag(:,:),R_non_mag(:,:)
+! internal
+integer :: i,j,k,natom,i1,i2,i3
+real(kind=8) :: test(3)
+
+natom=size(my_motif%atomic)
+
+!
+! find a set a coordinates to bring the atoms in the shell number shell_number
+!
+i=0
+j=0
+k=0
+do i1=0,shell_number
+  do i2=0,shell_number
+    do i3=0,shell_number
+       if (periodic(1)) i=i1
+       if (periodic(2)) j=i2
+       if (periodic(3)) k=i3
+       test=matmul(transpose(areal),real((/i,j,k/)))
+       if (abs( norm(test) -distance).lt.1.0d-8) exit
+     enddo
+     if (abs( norm(test) -distance).lt.1.0d-8) exit
+  enddo
+  if (abs( norm(test) -distance).lt.1.0d-8) exit
+enddo
+
+j=0
+k=0
+do i=1,natom
+   if (abs(my_motif%atomic(i)%moment).gt.1.0d-8) then
+      j=j+1
+      R_mag(:,j)=matmul(transpose(areal),real((/i1,i2,i3/)))+my_motif%atomic(i)%position(:)
+   else
+      k=k+1
+      R_non_mag(:,k)=matmul(transpose(areal),real((/i1,i2,i3/)))+my_motif%atomic(i)%position(:)
+   endif
+
+enddo
+
+end subroutine find_mag_and_nonmag_atoms
 !
 ! function that finds ne number of equivalent atoms in the unit cell
 !
@@ -234,37 +287,39 @@ end function find_all_equivalent_atom
 ! calculate the position of all the atoms which at a distance R_1 of one atom.
 !
 
-subroutine find_all_atom(pos_atom_in_shell,R,Rtrans,n_sym,symmetries,areal)
+subroutine find_all_atom(pos_atom_in_shell,R,Ref,n_sym,symmetries,areal)
 implicit none
 real(kind=8), intent(inout) :: pos_atom_in_shell(:,:)
-real(kind=8), intent(in) :: R(:,:),areal(:,:),Rtrans(:,:)
+real(kind=8), intent(in) :: R(:,:),Ref(:,:),areal(:,:)
 integer, intent(in) :: n_sym
 type(symop), intent(in) :: symmetries(:)
 ! internal
 real(kind=8) :: test_pos(3)
-integer :: j,l,k,i
+integer :: j,l,k,i,n
 logical :: if_present
 
 j=2
-pos_atom_in_shell(:,1)=R(:,1)+Rtrans(:,1)
+pos_atom_in_shell(:,1)=R(:,1)-Ref(:,1)
 
-do i=1,size(R,2)
+do n=1,size(Ref,2)
+  do i=1,size(R,2)
 
-  do k=1,n_sym
+    do k=1,n_sym
 
-    test_pos=matmul(symmetries(k)%mat,R(:,i)+Rtrans(:,1))
+      test_pos=matmul(symmetries(k)%mat,R(:,i)-Ref(:,n))
 
-    if_present=.false.
-    do l=1,j-1
-      if (norm(pos_atom_in_shell(:,l)-test_pos).lt.1.0d-8) if_present=.true.
+      if_present=.false.
+      do l=1,j-1
+        if (norm(pos_atom_in_shell(:,l)-test_pos).lt.1.0d-8) if_present=.true.
+      enddo
+
+      if (.not.(if_present)) then
+        pos_atom_in_shell(:,j)=test_pos
+        j=j+1
+      endif
+
+      if ((j-1).gt.size(pos_atom_in_shell,2)) stop 'error in setup_DM - find_all_atom'
     enddo
-
-    if (.not.(if_present)) then
-      pos_atom_in_shell(:,j)=test_pos
-      j=j+1
-    endif
-
-    if ((j-1).gt.size(pos_atom_in_shell,2)) stop 'error in setup_DM - find_all_atom'
   enddo
 enddo
 

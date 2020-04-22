@@ -5,11 +5,11 @@
 subroutine montecarlo(my_lattice,motif,io_simu,ext_param)
 use m_constants, only : k_b,pi
 use m_vector, only : norm
-use m_derived_types
+use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator
+use m_modes_variables, only : point_shell_mode
+use m_basic_types, only : vec_point
 use m_rw_MC
 use m_lattice, only : my_order_parameters
-use m_energy_commons, only : get_E_line
-use m_internal_fields_commons, only : get_B_line
 use m_local_energy
 use m_total_energy
 use m_topo_commons
@@ -61,10 +61,6 @@ real(kind=8),allocatable :: M_sum_av(:,:),vortex_av(:,:),chi_l(:,:)
 real(kind=8) :: acc,rate,tries,cone
 integer :: i
 logical :: underrel,overrel,sphere,equi,i_restart,ising,print_relax,Cor_log,Gra_log,i_magnetic,i_print_W,spstmL
-
-! lattice pf pointer that will be used in the simulation
-type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line
-type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column
 
 type(vec_point),allocatable,dimension(:) :: all_mode
 type(vec_point),allocatable,dimension(:) :: mode_magnetic
@@ -124,16 +120,11 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-allocate(E_line(N_cell),B_line(N_cell))
-allocate(mode_E_column(N_cell),mode_B_column(N_cell))
-call get_E_line(E_line,mode_E_column,all_mode)
-call get_B_line(B_line,mode_B_column,all_mode)
-
 !ktini=ext_param%ktini%value
 !ktfin=ext_param%ktfin%value
 ! initializing the variables above
 
-E_total=total_energy(N_cell,mode_E_column,E_line)
+E_total=total_energy(N_cell,all_mode)
 
 dumy=get_charge()
 qeulerp=dumy(1)
@@ -178,7 +169,7 @@ Do n_kT=1,n_Tsteps
 
 kt=kt_all(n_kT)
 
-call Relaxation(mode_magnetic,B_line,mode_B_column,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
+call Relaxation(mode_magnetic,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
 
 !       Monte Carlo steps, calculate the values
 
@@ -188,11 +179,11 @@ call Relaxation(mode_magnetic,B_line,mode_B_column,N_cell,n_sizerelax,n_thousand
 
       Do i_relax=1,T_auto*N_cell
 
-         Call MCstep(mode_magnetic,B_line,mode_B_column,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+         Call MCstep(mode_magnetic,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
       End do
 
-      Call MCstep(mode_magnetic,B_line,mode_B_column,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+      Call MCstep(mode_magnetic,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
 ! Calculate the topological charge and the vorticity
       dumy=get_charge()

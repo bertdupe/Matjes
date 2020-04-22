@@ -1,5 +1,6 @@
 module m_eval_Beff
 use m_dipolar_field, only : i_dip,get_dipole_B
+use m_internal_fields_commons, only : B_total
 
 interface calculate_Beff
     module procedure normal
@@ -16,38 +17,36 @@ contains
 !--------------------------------------------------------------
 ! for normal
 !
-subroutine normal(B,spin,B_line,iomp)
-use m_derived_types, only : point_shell_Operator
+subroutine normal(B,iomp,spin,dim_mode)
+use m_basic_types, only : vec_point
 use m_modes_variables, only : point_shell_mode
+use m_matrix, only : reduce
 implicit none
 ! input variable
-type(point_shell_mode), intent(in) :: spin
-type(point_shell_Operator), intent(in) :: B_line
-integer, intent(in) :: iomp
+type(vec_point), intent(in) :: spin(:)
+integer, intent(in) :: iomp,dim_mode
 ! output of the function
 real(kind=8), intent(out) :: B(:)
 ! internals
 integer :: N,i,j
+real(kind=8) :: S_int(dim_mode)
 
 !N=B_total%ncolumn
-N=size(B_line%shell)
+N=size(B_total%line(:,iomp))
 B=0.0d0
 
 do i=1,N
 
-      B=B+matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
-!      write(*,*) B_line%shell(i)%Op_loc
-!      write(*,*) spin%shell(i)%w
-!      write(*,*) matmul(B_line%shell(i)%Op_loc,spin%shell(i)%w)
+   j=B_total%line(i,iomp)
+
+   call reduce(B_total%value(i,iomp),size(B_total%value(i,iomp)%order_op),S_int,spin(iomp)%w,spin(j)%w,dim_mode)
+
+   B=B+S_int
 
 enddo
 
 if (i_dip) call get_dipole_B(B,iomp)
 
-#ifdef CPP_DEBUG
-      write(*,*) B,spin%shell(1)%w
-      pause
-#endif
 end subroutine normal
 
 end module m_eval_Beff
