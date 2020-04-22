@@ -1,7 +1,7 @@
 module m_exchange_heisenberg
 use m_symmetry_operators
 use m_lattice, only : my_order_parameters
-use m_derived_types, only : coeff_ham_inter_spec
+use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: exchange
 
 private
@@ -12,6 +12,7 @@ contains
 subroutine get_ham_exchange(fname,dim_ham)
 use m_io_files_utils
 use m_io_utils
+use m_convert
 implicit none
 integer, intent(in) :: dim_ham
 character(len=*), intent(in) ::fname
@@ -24,12 +25,14 @@ integer :: x_start,x_end
 integer :: y_start,y_end
 ! slope
 integer :: i,j
+character(len=50) :: form
 
 c_DMI=-1.0d0
 neighbor_exch_sym=0
 neighbor_exch_antisym=0
 exchange%name='exchange'
 exchange%N_shell=-1
+exchange%order=2
 
 io_param=open_file_read(fname)
 call get_parameter(io_param,fname,'c_Jij',exchange%c_ham)
@@ -112,6 +115,17 @@ if (neighbor_exch_antisym.ne.0) then
 endif
 
 call close_file(fname,io_param)
+
+form=convert('(',dim_ham,'(f12.8,2x))')
+write(6,'(a)') ''
+write(6,'(a)') 'Exchange tensor of order 2'
+do i=1,N_exch
+  write(6,'(a,I3)') 'Shell', i
+  do j=1,dim_ham
+    write(6,form) exchange%ham(i)%H(:,j)
+  enddo
+enddo
+write(6,'(a)') ''
 
 end subroutine get_ham_exchange
 

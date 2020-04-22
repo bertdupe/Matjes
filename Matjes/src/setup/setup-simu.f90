@@ -190,7 +190,7 @@ if (n_DMI.ne.0) then
    allocate(DM_vector(sum(indexNN(1:n_DMI,1)),3,1))
 
    DM_vector=0.0d0
-   call setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector)
+   call setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector,tabledist)
 
    call user_info(6,time,'done',.true.)
 
@@ -198,7 +198,7 @@ if (n_DMI.ne.0) then
 ! have to be rearranged
     call user_info(6,time,'Re-aranging the position of the DM vectors',.false.)
 
-    call arrange_neigh(DM_vector,tableNN,indexNN,my_lattice%dim_lat,my_lattice%areal)
+    call arrange_neigh(DM_vector,tableNN,indexNN,my_lattice%dim_lat,my_lattice%areal,n_DMI)
 
     call user_info(6,time,'done',.true.)
 else

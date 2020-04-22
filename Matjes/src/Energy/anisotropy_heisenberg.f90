@@ -1,7 +1,7 @@
 module m_anisotropy_heisenberg
 use m_symmetry_operators
 use m_lattice, only : my_order_parameters
-use m_derived_types, only : coeff_ham_inter_spec
+use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: anisotropy
 
 private
@@ -12,6 +12,7 @@ contains
 subroutine get_ham_anisotropy(fname,dim_ham)
 use m_io_files_utils
 use m_io_utils
+use m_convert
 implicit none
 integer, intent(in) :: dim_ham
 character(len=*), intent(in) ::fname
@@ -24,11 +25,13 @@ integer :: x_start,x_end
 integer :: y_start,y_end
 ! slope
 integer :: i
+character(len=50) :: form
 
 neighbor_ani=0
 anisotropy%name='anisotropy'
 anisotropy%c_ham=1.0d0
 anisotropy%N_shell=-1
+anisotropy%order=2
 
 io_param=open_file_read(fname)
 call get_parameter(io_param,fname,'c_ani',anisotropy%c_ham)
@@ -75,6 +78,14 @@ call get_diagonal_Op(ham_local,ani_local_sym,anisotropy%c_ham,x_start,x_end)
 do i=1,neighbor_ani
    anisotropy%ham(i)%h=ham_local(:,:,i)
 enddo
+
+form=convert('(',dim_ham,'(f12.8,2x))')
+write(6,'(a)') ''
+write(6,'(a)') 'Anisotropy tensor of order 2'
+do i=1,dim_ham
+    write(6,form) anisotropy%ham(1)%H(:,i)
+enddo
+write(6,'(a)') ''
 
 end subroutine get_ham_anisotropy
 

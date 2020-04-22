@@ -21,33 +21,35 @@ end type lattice
 
 ! parameters for printing in and out
 type io_parameter
-     logical :: io_dispersion,io_qorien
+     logical :: io_dispersion
 ! Go in the spmstm program of Tobias
-     logical :: io_spstmL, io_spstmonly
+     logical :: io_spstmL
 ! plot the spin structure (or the order parameter structure)
-     logical :: io_Xstruct
+     logical :: io_Xstruct=.false.
 ! plot the stochastic field
-     logical :: io_Tfield
+     logical :: io_Tfield=.false.
 ! frequency for writting the plotting data (magnetization density and so one)
      integer :: io_frequency
 ! plot the fourrier tranform of the spin structure (or the order parameter structure)
-     logical :: io_fft_Xstruct
+     logical :: io_fft_Xstruct=.false.
 ! plot the topological charge density distribution
-     logical :: io_topo
+     logical :: io_topo=.false.
 ! plot the emergent magnetic field
-     logical :: io_topohall
+     logical :: io_topohall=.false.
 ! plot the warnings or not
-     logical :: io_warning
+     logical :: io_warning=.false.
 ! frequency of writting of the data in convergence.dat and EM.dat
      integer :: io_writing
 ! theta and phi distribution
-     logical :: io_Angle_Distrib
+     logical :: io_Angle_Distrib=.false.
 ! energy density distribution
-     logical :: io_Energy_Distrib
+     logical :: io_Energy_Distrib=.false.
 ! field density distribution
-     logical :: io_Field_Distrib
+     logical :: io_Field_Distrib=.false.
 ! force field density distribution
      logical :: io_Force=.false.
+! Track singularities in a vector field
+     logical :: io_tracker=.false.
 end type io_parameter
 
 ! mpi variable
@@ -58,73 +60,6 @@ type parallel_variables
 ! for temperature parallelization
      logical :: i_separate,i_average,i_paratemp
 end type parallel_variables
-
-! Hamiltonian variables
-type site_Ham
-     real(kind=8), dimension(:,:), allocatable :: H
-end type site_Ham
-
-type shell_Ham
-     type(site_Ham), dimension(:), allocatable :: atom
-end type
-
-type point_shell_Operator
-     type(Op_real), allocatable, dimension(:) :: shell
-end type point_shell_Operator
-
-type point_shell_mode
-     type(vec_point), allocatable, dimension(:) :: shell
-end type point_shell_mode
-
-!!!!!!!!
-! Hamiltonian type
-!!!!!!!!
-
-type coeff_ham_inter_spec
-     real(kind=8) :: c_ham=-1.0d0
-     integer :: N_shell
-     character(len=30) :: name=''
-     logical :: i_exist=.false.
-     type(site_Ham), allocatable, dimension(:) :: ham
-end type coeff_ham_inter_spec
-
-type coeff_ham_inter_spec_pointer
-     character(len=30) :: name=''
-     type(Op_real), allocatable :: ham(:)
-end type coeff_ham_inter_spec_pointer
-
-! Hamiltonian coefficients
-! to be deleted
-type Coeff_Ham
-     real(kind=8) :: c_Ji=-1.0d0
-     real(kind=8) :: c_DM=-1.0d0
-     real(kind=8) :: c_JB=-1.0d0
-     real(kind=8) :: c_Ki=-1.0d0
-     real(kind=8) :: c_ani=1.0d0
-! Exchange interaction
-     real(kind=8), allocatable, dimension(:,:,:) :: exchange
-! DMI interaction
-     real(kind=8), allocatable, dimension(:,:,:) :: DMI
-! magnetocrystalline interaction
-     real(kind=8), allocatable, dimension(:,:,:) :: ani
-! magnetocrystalline interaction
-     real(kind=8), allocatable, dimension(:,:) :: Zeeman
-! total Hamiltonian
-     type(shell_Ham), allocatable, dimension(:) :: total_shell
-! stoner parameter
-     real(kind=8) :: Ist=0.0d0
-! biquadratic interaction
-     real(kind=8) :: Biq=0.0d0
-! 4-spin interaction
-     real(kind=8) :: fours=0.0d0
-! presence or absence of interactions
-     logical :: i_DM=.false.
-     logical :: i_four=.false.
-     logical :: i_biq=.false.
-     logical :: i_dip=.false.
-     logical :: i_exch=.false.
-     logical :: i_ani=.false.
-end type Coeff_Ham
 
 !!!!!!!!
 ! simulation parameters
@@ -144,6 +79,17 @@ type operator_real
     integer :: nline,ncolumn
     integer, allocatable :: line(:,:)
 end type operator_real
+
+type operator_real_order_N
+    type(Op_real_order_N), allocatable, dimension(:,:) :: value
+    integer :: nline,ncolumn
+    integer, allocatable :: line(:,:)
+end type operator_real_order_N
+! old Hamiltonian type
+
+type point_shell_Operator
+     type(Op_real), allocatable, dimension(:) :: shell
+end type point_shell_Operator
 
 !!!!!!!!!
 ! order parameter type

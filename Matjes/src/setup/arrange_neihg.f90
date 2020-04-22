@@ -5,7 +5,7 @@ public :: arrange_neigh
 
 contains
 
-subroutine arrange_neigh(DM_vector,tableNN,indexNN,dim_lat,net)
+subroutine arrange_neigh(DM_vector,tableNN,indexNN,dim_lat,net,n_DMI)
 use m_sym_utils, only : pos_nei,rot_mat,order_zaxis
 ! The goal is to organize the neighbours in the same direction as the
 ! DM vectors
@@ -13,7 +13,7 @@ use m_sym_utils, only : pos_nei,rot_mat,order_zaxis
 implicit none
 ! inout variables
 real (kind=8), intent(in) :: net(3,3),DM_vector(:,:,:)
-integer, intent(in) :: dim_lat(3),indexNN(:,:)
+integer, intent(in) :: dim_lat(3),indexNN(:,:),n_DMI
 integer, intent(inout) :: tableNN(:,:,:,:,:,:)
 ! internal variable
 ! slopoes
@@ -32,7 +32,7 @@ shape_index=shape(indexNN)
 
 direct=sign(1,order_zaxis(net))
 
-do i_nei=1,shape_index(1)
+do i_nei=1,n_DMI
   do im=1,shape_tableNN(6)
     do iz=1,shape_tableNN(5)
       do iy=1,shape_tableNN(4)

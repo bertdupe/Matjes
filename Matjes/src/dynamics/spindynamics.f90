@@ -1,6 +1,7 @@
 subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param)
 use m_basic_types, only : vec_point
-use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator,point_shell_mode
+use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator
+use m_modes_variables, only : point_shell_mode
 use m_torques, only : get_torques
 use m_lattice, only : my_order_parameters
 use m_eval_BTeff
@@ -12,12 +13,10 @@ use m_randist
 use m_constants, only : pi,k_b,hbar
 use m_eval_Beff
 use m_write_spin
-use m_energyfield, only : get_Energy_distrib,get_Energy_distrib_line
+use m_energyfield, only : get_Energy_distrib
 use m_createspinfile
 use m_local_energy
 use m_dyna_utils
-use m_energy_commons, only : get_E_line
-use m_internal_fields_commons, only : get_B_line
 use m_user_info
 use m_excitations
 use m_operator_pointer_utils
@@ -30,6 +29,7 @@ use m_plot_FFT
 use m_dipolar_field, only : prepare_FFT_dipole,calculate_FFT_modes
 use m_solver_order
 use m_io_files_utils
+use m_tracker
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -51,9 +51,6 @@ type(vec_point),target,allocatable,dimension(:) :: D_T_mag,B_mag,BT_mag
 type(vec_point),target,allocatable,dimension(:,:) :: D_mode_mag
 type(vec_point),target,allocatable,dimension(:) :: D_T_disp,B_disp,BT_disp
 type(vec_point),target,allocatable,dimension(:,:) :: D_mode_disp
-! lattice pf pointer that will be used in the simulation
-type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line
-type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column
 ! dummys
 real(kind=8) :: qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,check1,check2,Eold,check3,Et,dt
 real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
@@ -61,7 +58,7 @@ real(kind=8) :: dumy(5),security(2)
 real(kind=8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
 real(kind=8) :: kt,ktini,ktfin
 real(kind=8) :: time
-integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq
+integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq,dimension_mode
 !integer :: io_test
 !! switch that controls the presence of magnetism, electric fields and magnetic fields
 logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_displacement
@@ -102,26 +99,6 @@ spinafter=0.0d0
 call associate_pointer(all_mode,mag_lattice)
 call associate_pointer(all_mode_1,spinafter(:,:,:,:,:,1))
 call associate_pointer(all_mode_2,spinafter(:,:,:,:,:,2))
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! allocate the pointers for the B-field and the energy
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-time=0.0d0
-call user_info(6,time,'associate H_line, B_line and S_line',.true.)
-
-allocate(E_line(N_cell),B_line(N_cell))
-allocate(mode_E_column(N_cell),mode_B_column(N_cell))
-
-call get_E_line(E_line,mode_E_column,all_mode)
-call get_B_line(B_line,mode_B_column,all_mode_1)
-
-if (io_simu%io_Energy_Distrib) then
-   write(6,'(a)') 'setting up energy distribution'
-   call get_Energy_distrib_line(all_mode_1)
-endif
-
-call user_info(6,time,'done - ready to start calculations',.true.)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! associate pointer for the topological charge, vorticity calculations
@@ -263,8 +240,9 @@ security=0.0d0
 call copy_lattice(all_mode,all_mode_1)
 
 Edy=0.0d0
+dimension_mode=size(all_mode(1)%w)
 do iomp=1,N_cell
-    call local_energy(Et,iomp,mode_E_column(iomp),E_line(iomp))
+    call local_energy(Et,iomp,all_mode,dimension_mode)
     Edy=Edy+Et
 enddo
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
@@ -296,6 +274,11 @@ call init_update_time('input')
 ! initialize the difference torques
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_torques('input')
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! check if a magnetic texture should be tracked
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if (io_simu%io_tracker) call init_tracking(mag_lattice)
 
 call init_temp_measure(check,check1,check2,check3)
 
@@ -349,7 +332,7 @@ do j=1,duration
 
       if (i_excitation) call update_EMT_of_r(iomp,mode_excitation_field(iomp)%w)
 
-      call calculate_Beff(Bini(:,iomp),mode_B_column(iomp),B_line(iomp),iomp)
+      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
 
 !
 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
@@ -408,12 +391,13 @@ if (j.eq.1) check3=test_torque
 
 ! calculate energy
 
+dimension_mode=size(all_mode(1)%w)
 #ifdef CPP_OPENMP
 !$OMP parallel do private(iomp) default(shared) reduction(+:Edy,Mx,My,Mz,qeuler,vx,vy,vz)
 #endif
 do iomp=1,N_cell
 
-    call local_energy(Et,iomp,mode_E_column(iomp),E_line(iomp))
+    call local_energy(Et,iomp,all_mode_1,dimension_mode)
 
     Edy=Edy+Et
 
@@ -447,12 +431,21 @@ Mdy=Mdy/real(N_cell)
 
 if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
+!
+! update pattern recognition
+!
+
+if (io_simu%io_tracker) then
+!  call update_tracking(j)
+  if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,all_mode_1)
+endif
+
 if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
      &   norm(Mdy),Mdy,norm(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
      &   kT/k_B,(security(i),i=1,2),H_int
 
 if ((io_simu%io_Energy_Distrib).and.((mod(j-1,gra_freq).eq.0))) then
-         call get_Energy_distrib(j/gra_freq+1,all_mode)
+         call get_Energy_distrib(j/gra_freq,all_mode)
       endif
 
 if ((gra_log).and.(mod(j-1,gra_freq).eq.0)) then
@@ -469,7 +462,7 @@ if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
 
 if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) Call get_charge_map(j/gra_freq)
 
-if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,mode_B_column,B_line,mag_lattice%dim_mode,mag_lattice%areal)
+if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,all_mode_1,mag_lattice%dim_mode,mag_lattice%areal)
 
 if ((io_simu%io_fft_Xstruct).and.(mod(j-1,gra_freq).eq.0)) call plot_fft(all_mode,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
 

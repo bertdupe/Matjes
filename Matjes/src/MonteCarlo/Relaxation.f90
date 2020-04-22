@@ -6,7 +6,9 @@ use m_Corre
 use m_constants, only : k_b
 use m_topocharge_all
 use m_store_relaxation
-use m_derived_types, only : vec_point,point_shell_Operator,point_shell_mode
+use m_derived_types, only : point_shell_Operator
+use m_basic_types, only : vec_point
+use m_modes_variables, only : point_shell_mode
 use m_topo_commons
 use m_io_utils
 use m_io_files_utils

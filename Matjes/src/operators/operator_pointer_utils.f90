@@ -3,6 +3,7 @@ module m_operator_pointer_utils
 interface associate_pointer
    module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target,asso_pointer_to_2Dmatrix
    module procedure associate_mode_name,associate_mode_real2D_name,asso_lattice_to_matrix,asso_pointer_to_4Dmatrix,asso_pointer_to_lattice
+   module procedure A_Opreal_OrderN_shellHam1D
 end interface associate_pointer
 
 interface dissociate
@@ -74,7 +75,7 @@ logical, intent(inout) :: i_name
 type(vec_point), intent(in) :: static_target(:)
 character(len=*), intent(in) :: name
 ! internal
-integer :: i,size_point,size_target,N_orders,N_order_found,istart,iend
+integer :: i,size_point,size_target,N_order_found,istart,iend
 integer, allocatable :: position_found(:,:)
 
 size_point=size(point)
@@ -278,16 +279,16 @@ end subroutine A_vecpoint1D_vecdimn
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 ! routine that associates a (:,:) pointer to a Hamiltonian matrix
-! typical assocication for the Hamiltonian
+! typical assocication for the Hamiltonian of order 2 or all operators of order 2
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_shellHam1D(point,static_target,my_lattice,tableNN,indexNN)
-use m_derived_types, only : lattice,operator_real,shell_Ham
+use m_derived_types, only : lattice,operator_real
+use m_Hamiltonian_variables, only : shell_Ham
 use m_get_position
 use m_null
 implicit none
 type(operator_real), intent(inout) :: point
-!type(Coeff_Ham), intent(in) :: static_target
 type(shell_Ham), target, intent(in) :: static_target(:)
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
@@ -341,19 +342,6 @@ do i_m=1,shape_tableNN(6)
              point%value(line_index,ipos_2)%Op_loc=>static_target(i_shell+1)%atom(i_voisin)%H
           endif
 
-!#ifdef CPP_DEBUG
-!          write(*,*) v_x,v_y,v_z,v_m
-!          write(*,*) i_x,i_y,i_z,i_m
-!          write(*,*) ipos_1,ipos_2,line_index
-!          write(*,*) static_target(i_shell+1)%atom(i_voisin)%H(1,:)
-!          write(*,*) static_target(i_shell+1)%atom(i_voisin)%H(2,:)
-!          write(*,*) static_target(i_shell+1)%atom(i_voisin)%H(3,:)
-!          write(*,*) point%value(line_index,ipos_2)%Op_loc(1,:)
-!          write(*,*) point%value(line_index,ipos_2)%Op_loc(2,:)
-!          write(*,*) point%value(line_index,ipos_2)%Op_loc(3,:)
-!          pause
-!#endif
-
           enddo
           avant=avant+size(static_target(i_shell+1)%atom)
 
@@ -368,30 +356,121 @@ end subroutine A_Opreal_shellHam1D
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
+! routine that associates a (:,:) pointer to a Hamiltonian matrix
+! typical assocication for the Hamiltonian of order N or all operators of order N
+! this is useful if you have magnetoelectric effect or any 3 or more sites Hamiltonian
+! associate_pointer(energy,total_hamiltonian,my_lattice,tableNN,indexNN)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine A_Opreal_OrderN_shellHam1D(point,static_target,my_lattice,tableNN,indexNN)
+use m_derived_types, only : lattice,operator_real_order_N
+use m_Hamiltonian_variables, only : H_vois
+use m_get_position
+use m_null
+implicit none
+type(operator_real_order_N), intent(inout) :: point
+type(H_vois), target, intent(in) :: static_target
+type(lattice), intent(in) :: my_lattice
+integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
+integer, intent(in) :: indexNN(:)
+! internal
+integer :: i_x,i_y,i_z,i_m,ipos_1,ipos_2,v_x,v_y,v_z,v_m,i_voisin,i_shell,i_order,N_voisin
+integer :: Nspin,all_size(4),shape_tableNN(6),avant,Ilat(4),line_index
+integer :: N_shell,N_order
+
+all_size=shape(my_lattice%l_modes)
+Nspin=product(all_size)
+shape_tableNN=shape(tableNN)
+N_shell=size(static_target%num)
+
+do i_m=1,shape_tableNN(6)
+  do i_z=1,shape_tableNN(5)
+    do i_y=1,shape_tableNN(4)
+      do i_x=1,shape_tableNN(3)
+
+        Ilat=(/i_x,i_y,i_z,i_m/)
+        ipos_2=get_position_ND_to_1D(Ilat,all_size)
+
+        line_index=1
+
+        ! anisotropy
+
+        allocate(point%value(line_index,ipos_2)%order_op(1))
+        point%value(line_index,ipos_2)%order_op(1)%Op_loc=>static_target%shell_num(1)%order(1)%atom(1)%H
+        point%value(line_index,ipos_2)%num=1
+        point%line(line_index,ipos_2)=ipos_2
+
+        avant=0
+
+        do i_shell=2,N_shell
+
+          N_order=size(static_target%shell_num(i_shell)%num)
+          N_voisin=static_target%num(i_shell)
+          point%value(line_index,ipos_2)%num=N_order
+
+          do i_voisin=1,N_voisin
+
+            line_index=line_index+1
+            allocate(point%value(line_index,ipos_2)%order_op(N_order))
+
+            v_x=tableNN(1,i_voisin+avant,i_x,i_y,i_z,i_m)
+            v_y=tableNN(2,i_voisin+avant,i_x,i_y,i_z,i_m)
+            v_z=tableNN(3,i_voisin+avant,i_x,i_y,i_z,i_m)
+            v_m=tableNN(4,i_voisin+avant,i_x,i_y,i_z,i_m)
+
+            Ilat=(/v_x,v_y,v_z,v_m/)
+            ipos_1=get_position_ND_to_1D(Ilat,all_size)
+
+            point%line(line_index,ipos_2)=ipos_1
+
+            do i_order=1,N_order
+
+              if (tableNN(5,i_voisin+avant,i_x,i_y,i_z,i_m).eq.0) then
+                point%value(line_index,ipos_2)%order_op(i_order)%Op_loc=>nunull%H
+              else
+                point%value(line_index,ipos_2)%order_op(i_order)%Op_loc=>static_target%shell_num(i_shell)%order(i_order)%atom(i_voisin)%H
+              endif
+
+            enddo
+
+          enddo
+          avant=avant+N_voisin
+
+        enddo
+      enddo
+    enddo
+  enddo
+enddo
+
+end subroutine A_Opreal_OrderN_shellHam1D
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
 ! routine that associates a (:,:) pointer to a 2D matrix of reals
 ! typical assocication for the shell decomposition of the Hamiltonian
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_real2D(point,static_target,my_lattice,tableNN,Nvoisin,avant)
-use m_derived_types, only : lattice,operator_real,site_Ham
+use m_derived_types, only : lattice,operator_real_order_N
+use m_Hamiltonian_variables, only : shell_Ham_order_N
 use m_get_position
 use m_null
 implicit none
-type(operator_real), intent(inout) :: point
-type(site_Ham), target, intent(in) :: static_target(:)
+type(operator_real_order_N), intent(inout) :: point
+type(shell_Ham_order_N), target, intent(in) :: static_target
 type(lattice), intent(in) :: my_lattice
 integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
 integer, intent(in) :: Nvoisin
 integer, intent(in) :: avant
 ! internal
-integer :: i_x,i_y,i_z,i_m,ipos_1,ipos_2,v_x,v_y,v_z,v_m,i_voisin
+integer :: i_x,i_y,i_z,i_m,ipos_1,ipos_2,v_x,v_y,v_z,v_m,i_voisin,N_order,i_order
 integer :: Nspin,all_size(4),shape_tableNN(6),Ilat(4)
-integer :: N_shell
 
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
 shape_tableNN=shape(tableNN)
-N_shell=size(static_target)
+N_order=size(static_target%order)
 
 do i_m=1,shape_tableNN(6)
   do i_z=1,shape_tableNN(5)
@@ -403,12 +482,18 @@ do i_m=1,shape_tableNN(6)
 
           ! terme de site
           if (Nvoisin.eq.1) then
-            point%value(1,ipos_2)%Op_loc=>static_target(1)%H
+            allocate(point%value(1,ipos_2)%order_op(1))
+            point%value(1,ipos_2)%order_op(1)%Op_loc=>static_target%order(1)%atom(1)%H
+            point%value(1,ipos_2)%num=2
             point%line(1,ipos_2)=ipos_2
 
           ! terme de voisins
           else
+
             do i_voisin=1,Nvoisin
+
+              allocate(point%value(i_voisin,ipos_2)%order_op(N_order))
+              point%value(i_voisin,ipos_2)%num=N_order
 
               v_x=tableNN(1,i_voisin+avant,i_x,i_y,i_z,i_m)
               v_y=tableNN(2,i_voisin+avant,i_x,i_y,i_z,i_m)
@@ -418,15 +503,16 @@ do i_m=1,shape_tableNN(6)
               Ilat=(/v_x,v_y,v_z,v_m/)
               ipos_1=get_position_ND_to_1D(Ilat,all_size)
 
-             if (tableNN(5,i_voisin+avant,i_x,i_y,i_z,i_m).eq.0) then
-                point%value(i_voisin,ipos_2)%Op_loc=>nunull%H
-                point%line(i_voisin,ipos_2)=ipos_1
+              point%line(i_voisin,ipos_2)=ipos_1
 
-             else
+              do i_order=1,N_order
+                if (tableNN(5,i_voisin+avant,i_x,i_y,i_z,i_m).eq.0) then
+                  point%value(i_voisin,ipos_2)%order_op(i_order)%Op_loc=>nunull%H
+                else
+                  point%value(i_voisin,ipos_2)%order_op(i_order)%Op_loc=>static_target%order(i_order)%atom(i_voisin)%H
+                endif
+              enddo
 
-                point%line(i_voisin,ipos_2)=ipos_1
-                point%value(i_voisin,ipos_2)%Op_loc=>static_target(i_voisin)%H
-             endif
 
             enddo
           endif
@@ -438,12 +524,20 @@ enddo
 
 end subroutine A_Opreal_real2D
 
+
+
+
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! optimize the calculation time
 ! associate each non-zero elements in the columns of the operator to the good lines in the local modes
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine associate_line_target(line,mode,column,target)
-use m_derived_types, only : operator_real,vec_point,point_shell_Operator,point_shell_mode
+use m_basic_types, only : vec_point
+use m_derived_types, only : operator_real,point_shell_Operator
+use m_modes_variables, only : point_shell_mode
 implicit none
 type(vec_point),target,intent(in) :: mode(:)
 type(operator_real),target,intent(in) :: target
@@ -585,7 +679,7 @@ end subroutine diss_point_shell_1D_Operator_1D
 !
 !!!!!!!!!!!!!!!!!
 subroutine diss_point_shell_mode_1D(matrix,M,N)
-use m_derived_types, only : point_shell_mode
+use m_modes_variables, only : point_shell_mode
 implicit none
 type(point_shell_mode), intent(inout) :: matrix(:)
 ! internal
@@ -606,7 +700,7 @@ end subroutine diss_point_shell_mode_1D
 !
 !!!!!!!!!!!!!!!!!
 subroutine diss_point_shell_1D_mode_1D(matrix,M,N)
-use m_derived_types, only : point_shell_mode
+use m_modes_variables, only : point_shell_mode
 implicit none
 type(point_shell_mode), intent(inout) :: matrix(:)
 integer, intent(in) :: M(:),N

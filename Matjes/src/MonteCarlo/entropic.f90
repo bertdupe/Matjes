@@ -11,8 +11,6 @@ use m_relaxtyp
 use m_sampling
 use m_derived_types
 use m_lattice, only : my_order_parameters
-use m_energy_commons, only : get_E_line
-use m_internal_fields_commons, only : get_B_line
 use m_local_energy
 use m_total_energy
 use m_operator_pointer_utils
@@ -43,12 +41,8 @@ real(kind=8) :: lnf,lng_new,lng_old,delta_lng,flatness,mean_histo
 ! thermodynamical quantitites
 real(kind=8),allocatable :: energy(:),Z(:),temperatures(:),free_E(:),entropy(:),energy_sq(:),heat_cap(:)
 real(kind=8) :: kT,DProb,DE
-integer :: i_T,N_spin,n_Tsteps
+integer :: i_T,N_spin,n_Tsteps,dim_mode
 logical :: sphere,equi,ising,i_magnetic,underrel,overrel
-
-! lattice pf pointer that will be used in the simulation
-type(point_shell_Operator), allocatable, dimension(:) :: E_line,B_line
-type(point_shell_mode), allocatable, dimension(:) :: mode_E_column,mode_B_column
 
 type(vec_point),allocatable,dimension(:) :: all_mode
 type(vec_point),allocatable,dimension(:) :: mode_magnetic
@@ -93,6 +87,7 @@ flatness=0.9d0
 i_exit=.False.
 kTfin=1.0d0
 kTini=1.0d0
+dim_mode=size(all_mode(i)%w)
 
 allocate(all_mode(N_spin))
 call associate_pointer(all_mode,my_lattice)
@@ -106,13 +101,9 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-allocate(E_line(N_spin),B_line(N_spin))
-allocate(mode_E_column(N_spin),mode_B_column(N_spin))
-call get_E_line(E_line,mode_E_column,all_mode)
-call get_B_line(B_line,mode_B_column,all_mode)
 
 ! initializing the variables above
-E_total=total_energy(N_spin,mode_E_column,E_line)
+E_total=total_energy(N_spin,all_mode)
 
 
 write(6,'(a)') "in entropic sampling subroutine"
@@ -157,20 +148,20 @@ do i_loop=1,n_loop
 ! different relaxation process
 !---------------------------------
       if (underrel) then
-         S_new=underrelax(mode_B_column,B_line,iomp)
+         S_new=underrelax(iomp,mode_magnetic)
       elseif (overrel) then
-         S_new=overrelax(mode_B_column,B_line,iomp)
+         S_new=overrelax(iomp,mode_magnetic)
       endif
 
       if (ising) S_new=-mode_magnetic(iomp)%w
 
 ! calculate the energy before and after
 
-      call local_energy(E_old,iomp,mode_E_column(iomp),E_line(iomp))
+      call local_energy(E_old,iomp,all_mode,dim_mode)
 
       mode_magnetic(iomp)%w=S_new
 
-      call local_energy(E_new,iomp,mode_E_column(iomp),E_line(iomp))
+      call local_energy(E_new,iomp,all_mode,dim_mode)
 
       mode_magnetic(iomp)%w=S_old
       E_test=E_total+E_new-E_old

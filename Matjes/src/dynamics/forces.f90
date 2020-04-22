@@ -2,9 +2,10 @@ module m_forces
 
 contains
 
-subroutine forces(tag,field,B_line,N_dim,r)
+subroutine forces(tag,field,N_dim,r)
 use m_eval_Beff
-use m_derived_types
+use m_basic_types, only : vec_point
+use m_modes_variables, only : point_shell_mode
 use m_derivative, only : calculate_derivative
 use m_io_files_utils
 use m_convert
@@ -19,15 +20,14 @@ implicit none
 
 integer, intent(in) :: tag,N_dim
 real(kind=8), intent(in) :: r(:,:)
-type(point_shell_mode), intent(in) :: field(:)
-type(point_shell_Operator), intent(in) :: B_line(:)
+type(vec_point), intent(in) :: field(:)
 ! internals
 character(len=50) :: fname
 !povray stuff
 real(kind=8) :: force(3),dmdr(3,3),B(N_dim),dmdr_int(3,3),volume
 integer :: iomp,N_cell,i,io_file
 
-N_cell=size(B_line)
+N_cell=size(field)
 force=cross(r(1,:),r(2,:))
 volume=dot_product(force,r(3,:))
 
@@ -39,7 +39,7 @@ do iomp=1,N_cell
    dmdr=0.0d0
    dmdr_int=0.0d0
    B=0.0d0
-   call calculate_Beff(B,field(iomp),B_line(iomp),iomp)
+   call calculate_Beff(B,iomp,field,N_dim)
    call calculate_derivative(dmdr_int,iomp)
 !
 ! dmdr_int(:,1) is the derivative along the first unit vector

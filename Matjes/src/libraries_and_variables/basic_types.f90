@@ -1,5 +1,10 @@
 module m_basic_types
 
+! Hamiltonian variables
+type site_Ham
+     real(kind=8), dimension(:,:), allocatable :: H
+end type site_Ham
+
 !!!!
 !Operator of the simulations
 !!!!
@@ -7,6 +12,11 @@ module m_basic_types
 type Op_real
      real(kind=8), pointer :: Op_loc(:,:)
 end type Op_real
+
+type Op_real_order_N
+     type(Op_real), allocatable :: order_op(:)
+     integer :: num
+end type Op_real_order_N
 
 type Op_Im
      complex(kind=16), pointer :: Op_loc(:,:)

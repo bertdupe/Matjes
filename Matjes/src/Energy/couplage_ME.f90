@@ -1,7 +1,8 @@
 module m_couplage_ME
 use m_symmetry_operators
 use m_lattice, only : my_order_parameters
-use m_derived_types, only : coeff_ham_inter_spec
+use m_Hamiltonian_variables, only : coeff_ham_inter_spec
+use m_convert
 type(coeff_ham_inter_spec), target, public, protected :: ME
 
 private
@@ -32,21 +33,25 @@ integer, intent(in) :: dim_ham
 character(len=*), intent(in) ::fname
 ! internal
 integer :: neighbor_ME_sym,io_param,neighbor_ME_antisym,N_ME
-real(kind=8), allocatable :: ME_local_sym(:),ME_local_antisym(:),ham_DMI_local(:,:,:)
+real(kind=8), allocatable :: ME_local_sym(:),ME_local_antisym(:)
 ! magnetization
 integer :: x_start,x_end
 ! electric field
 integer :: y_start,y_end
 ! slope
-integer :: i
+integer :: i,j
+character(len=50) :: form
 
 neighbor_ME_sym=0
 neighbor_ME_antisym=0
 ME%name='magnetoelectric'
+ME%order=3
 
 io_param=open_file_read(fname)
 call get_parameter(io_param,fname,'c_ME',ME%c_ham)
+!
 ! count the ME coefficients if present
+!
 neighbor_ME_sym=count_variables(io_param,'ME_sym_',fname)
 if (neighbor_ME_sym.ne.0) then
    allocate(ME_local_sym(neighbor_ME_sym))
@@ -71,13 +76,14 @@ if ((neighbor_ME_antisym.eq.0).and.(neighbor_ME_sym.eq.0)) then
    return
   else
    ME%i_exist=.true.
+   write(6,'(a)') 'WARNING!!!! ME coupling found. You need E_ext different from 0'
 endif
 
 N_ME=max(neighbor_ME_sym,neighbor_ME_antisym)
 
 allocate(ME%ham(N_ME))
 do i=1,N_ME
-   allocate(ME%ham(i)%H(dim_ham,dim_ham))
+   allocate(ME%ham(i)%H(dim_ham,dim_ham**2))
    ME%ham(i)%H=0.0d0
 enddo
 
@@ -85,25 +91,41 @@ call get_borders('magnetic',x_start,x_end,'Efield',y_start,y_end,my_order_parame
 
 ! get the symmetric ME effect
 do i=1,n_ME
-   call get_symmetric_Op(ME%ham(i)%H,ME_local_sym(i)*ME%c_ham/2.0d0,x_start,y_start,x_end,y_end)
+  ! get diagonal terms
+  ME%ham(i)%H(y_start,x_start)=ME_local_sym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+1,x_start+dim_ham+1)=ME_local_sym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+2,x_start+2*(dim_ham+1))=ME_local_sym(i)*ME%c_ham
+
+  ! get the of diagonal terms
+  ME%ham(i)%H(y_start,x_start+1)=ME_local_antisym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+1,x_start+1)=ME_local_antisym(i)*ME%c_ham
+
+  ME%ham(i)%H(y_start,x_start+2)=-ME_local_antisym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+2,x_start+2)=-ME_local_antisym(i)*ME%c_ham
+
+  ME%ham(i)%H(y_start,x_start+dim_ham)=-ME_local_antisym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+1,x_start+dim_ham)=-ME_local_antisym(i)*ME%c_ham
+
+  ME%ham(i)%H(y_start+1,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+2,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
+
+  ME%ham(i)%H(y_start,x_start+2*dim_ham)=ME_local_antisym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+2,x_start+2*dim_ham)=ME_local_antisym(i)*ME%c_ham
+
+  ME%ham(i)%H(y_start+1,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
+  ME%ham(i)%H(y_start+2,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
 enddo
 
-! get the antisymmetric ME effect
-allocate(ham_DMI_local(3,3,neighbor_ME_antisym))
-ham_DMI_local=0.0
-do i=1,neighbor_ME_antisym
-    ham_DMI_local(2,1,i)=-ME_local_antisym(i)/2.0d0*ME%c_ham
-    ham_DMI_local(3,1,i)=ME_local_antisym(i)/2.0d0*ME%c_ham
-    ham_DMI_local(3,2,i)=-ME_local_antisym(i)/2.0d0*ME%c_ham
+form=convert('(',dim_ham,'(f12.8,2x))')
 
-    ham_DMI_local(1,2,i)=-ham_DMI_local(2,1,i)
-    ham_DMI_local(2,3,i)=-ham_DMI_local(3,2,i)
-    ham_DMI_local(1,3,i)=-ham_DMI_local(3,1,i)
-enddo
-
-do i=1,neighbor_ME_antisym
-    call get_Op_in_Op(ME%ham(i)%H,ham_DMI_local(:,:,i),x_start,x_end,y_start,y_end)
-    call get_Op_in_Op(ME%ham(i)%H,ham_DMI_local(:,:,i),y_start,y_end,x_start,x_end)
+write(6,'(a)') ''
+write(6,'(a)') 'Magnetoelectric Hamiltonian of order 3'
+do i=1,N_ME
+  write(6,'(a,I3)') 'Shell  ',i
+  do j=1,dim_ham**2
+    write(6,form) ME%ham(i)%H(:,j)
+  enddo
+  write(6,'(a)') ''
 enddo
 
 end subroutine get_ham_ME

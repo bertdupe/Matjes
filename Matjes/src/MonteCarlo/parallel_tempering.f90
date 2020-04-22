@@ -8,10 +8,9 @@ use m_paratemp
 use m_store_relaxation
 use m_check_restart
 use m_createspinfile
-use m_derived_types
+use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters
+use m_basic_types, only : vec_point
 use m_lattice, only : my_order_parameters
-use m_energy_commons, only : get_E_line
-use m_internal_fields_commons, only : get_B_line
 use m_local_energy
 use m_total_energy
 use m_topo_commons
@@ -86,10 +85,6 @@ integer :: i,istart,istop,io_EM,io_Trange,N_cell,n_sizerelax,N_temp,n_thousand,n
 logical :: Cor_log,gra_log,equi,i_magnetic,i_optTset,i_print_W,i_restart,ising,overrel,sphere,print_relax,underrel
 real(kind=8) :: dumy(5)
 
-! lattice pf pointer that will be used in the simulation
-type(point_shell_Operator), allocatable, dimension(:,:) :: E_line,B_line
-type(point_shell_mode), allocatable, dimension(:,:) :: mode_E_column,mode_B_column
-
 type(vec_point),allocatable,dimension(:,:) :: all_mode
 type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
 
@@ -145,13 +140,6 @@ do i=1,size(my_order_parameters)
       call associate_pointer(mode_magnetic(:,i_image),all_mode(:,i_image),'magnetic',i_magnetic)
    enddo
   endif
-enddo
-
-allocate(E_line(N_cell,size_table),B_line(N_cell,size_table))
-allocate(mode_E_column(N_cell,size_table),mode_B_column(N_cell,size_table))
-do i=1,size_table
-   call get_E_line(E_line(:,i),mode_E_column(:,i),all_mode(:,i))
-   call get_B_line(B_line(:,i),mode_B_column(:,i),all_mode(:,i))
 enddo
 
 
@@ -368,16 +356,16 @@ do j_optset=1,N_temp
 ! load the actual temperature into kT
          kt=kt_updated(i_temp)
 ! initializing the variables above
-         E_total=total_energy(N_cell,mode_E_column(:,i_image),E_line(:,i_image))
+         E_total=total_energy(N_cell,mode_magnetic(:,i_image))
 
          Call CalculateAverages(mode_magnetic(:,i_image),qeulerp,qeulerm,vortex,magnetization)
 
             Do i_MC=1,autocor_steps*N_cell
-                Call MCStep(mode_magnetic(:,i_image),B_line(:,i_image),mode_B_column(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+                Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
             enddo
 
 ! In case T_relax set to zero at least one MCstep is done
-            Call MCStep(mode_magnetic(:,i_image),B_line(:,i_image),mode_B_column(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+            Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
 ! calculate the topocharge
             dumy=get_charge()
