@@ -1,6 +1,12 @@
 module m_Hamiltonian_variables
 use m_basic_types
 
+type shell_Ham
+     type(site_Ham), dimension(:), allocatable :: atom
+     ! size of the Hamiltonian of order N
+     integer :: line,column
+end type
+
 ! Hamiltonian coefficients
 ! to be deleted
 type Coeff_Ham
@@ -57,11 +63,6 @@ end type coeff_ham_inter_spec_pointer
 !
 ! number of Hamiltonian in one shell
 !
-type shell_Ham
-     type(site_Ham), dimension(:), allocatable :: atom
-     ! size of the Hamiltonian of order N
-     integer :: line,column
-end type
 
 type shell_Ham_order_N
      type(shell_Ham), dimension(:), allocatable :: order
