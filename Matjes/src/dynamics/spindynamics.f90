@@ -65,6 +65,7 @@ logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_disp
 ! dumy
 logical :: said_it_once,gra_topo
 
+time=0.0d0
 
 OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
       Write(7,'(20(a,2x))') '# 1:step','2:real_time','3:E_av','4:M', &
