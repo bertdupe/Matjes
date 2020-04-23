@@ -42,7 +42,6 @@ integer,allocatable :: int_ind(:)
 all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
 
-
 size_ham=size(total_hamiltonian%num)
 allocate(int_ind(size_ham))
 do i=1,size_ham
@@ -68,7 +67,7 @@ end subroutine init_Energy_distrib
 ! subroutine that associates the Hamiltonians for each shells
 !
 !!!!!!!!!!!!!!!!!!!!!!!
-!call associate_shell_ham(j,energy_distrib%operators(j),total_hamiltonian(j)%atom,my_lattice,tableNN,int_ind)
+
 subroutine associate_shell_ham_1D(n_shell,ham_point,ham_target,my_lattice,tableNN,indexNN)
 implicit none
 type(operator_real_order_N),intent(inout) :: ham_point
@@ -90,7 +89,7 @@ if (n_atom_shell.eq.1) avant=0
 if (n_shell.eq.2) then
   avant=0
 else
-  avant=sum(indexNN(2:n_shell-1))
+avant=sum(indexNN(2:n_shell-1))
 endif
 
 allocate(ham_point%value(n_atom_shell,Nspin))
@@ -125,7 +124,7 @@ integer, intent(in) :: iomp,i_shell,dim_mode
 ! ouput
 real(kind=8), intent(out) :: E_int
 ! internal
-integer :: i,N,j
+integer :: i,N,j,k
 real(kind=8) :: S_int(dim_mode)
 
 N=size(energy_distrib%operators(i_shell)%line(:,iomp))
@@ -163,7 +162,7 @@ implicit none
 type(vec_point),intent(in) :: spin(:)
 integer, intent(in) :: tag
 ! internals
-integer :: i,N,io,j
+integer :: iomp,N,io,i_shell
 real(kind=8) :: E_int,E_dip
 real(kind=8), allocatable :: E_shell(:)
 integer :: number_shell,dim_mode
@@ -183,20 +182,20 @@ dim_mode=size(spin(1)%w)
 fname=convert('EnDistrib_',tag,'.dat')
 io=open_file_write(fname)
 
-do i=1,N
+do iomp=1,N
 
    E_shell=0.0d0
 
-   do j=1,number_shell
+   do i_shell=1,number_shell
 
-      call local_energy_pointer_EDestrib(E_int,i,j,spin,dim_mode)
-      E_shell(j)=E_shell(j)+E_int
+      call local_energy_pointer_EDestrib(E_int,iomp,i_shell,spin,dim_mode)
+      E_shell(i_shell)=E_shell(i_shell)+E_int
 
    enddo
 
-   if (i_dip) E_dip=get_dipole_E(i)
+   if (i_dip) E_dip=get_dipole_E(iomp)
 
-   write(io,rw_format) (E_shell(j),j=1,number_shell),E_dip
+   write(io,rw_format) (E_shell(i_shell),i_shell=1,number_shell),E_dip
 enddo
 
 call close_file(fname,io)
