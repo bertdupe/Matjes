@@ -265,7 +265,7 @@ call user_info(6,time,'done',.true.)
 
 !c Calculation of the dispertion in the full BZ
 ! this is here because we have the table of distances
-if (dispersion) call fullBZ(tabledist,N_Nneigh,Nei_z,phase)
+!!!if (dispersion) call fullBZ(tabledist,N_Nneigh,Nei_z,phase)
 
 !deallocate(tabledist,tableNN,indexNN)
 
