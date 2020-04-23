@@ -193,7 +193,7 @@ If (R0.gt. 0.0d0) then
 
         dist=distance(position(1:2,i_x,i_y,i_z,i_m),x0,y0,dim_lat,net)
 
-          If (dist.lt.(2.0d0*R0)) then
+          If (dist.lt.(1.4d0*R0)) then
 
              Theta = pi(1.0d0)-Asin( tanh( 2*(dist-cen)/widt ))- &
                                Asin( tanh( 2*(dist+cen)/widt ))

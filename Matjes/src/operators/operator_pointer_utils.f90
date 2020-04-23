@@ -104,6 +104,10 @@ do i=1,size_point
    point(i)%w=>static_target(i)%w(istart:iend)
 enddo
 
+write(6,'(a)') ''
+write(6,'(3a,2x,2I4)') 'Mode  ', name, '  found from column ', istart,iend
+write(6,'(a)') ''
+
 end subroutine associate_mode_name
 
 
@@ -471,6 +475,7 @@ all_size=shape(my_lattice%l_modes)
 Nspin=product(all_size)
 shape_tableNN=shape(tableNN)
 N_order=size(static_target%order)
+
 
 do i_m=1,shape_tableNN(6)
   do i_z=1,shape_tableNN(5)

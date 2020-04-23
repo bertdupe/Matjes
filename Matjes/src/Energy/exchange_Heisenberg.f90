@@ -99,9 +99,9 @@ if (neighbor_exch_antisym.ne.0) then
   allocate(ham_DMI_local(3,3,neighbor_exch_antisym))
   ham_DMI_local=0.0d0
   do i=1,neighbor_exch_antisym
-    ham_DMI_local(2,1,i)=-exch_local_antisym(i)*c_DMI
-    ham_DMI_local(3,1,i)=exch_local_antisym(i)*c_DMI
-    ham_DMI_local(3,2,i)=-exch_local_antisym(i)*c_DMI
+    ham_DMI_local(2,1,i)=exch_local_antisym(i)*c_DMI
+    ham_DMI_local(3,1,i)=-exch_local_antisym(i)*c_DMI
+    ham_DMI_local(3,2,i)=exch_local_antisym(i)*c_DMI
 
     ham_DMI_local(1,2,i)=-ham_DMI_local(2,1,i)
     ham_DMI_local(2,3,i)=-ham_DMI_local(3,2,i)

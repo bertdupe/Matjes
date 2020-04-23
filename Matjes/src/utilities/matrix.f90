@@ -28,7 +28,7 @@ subroutine reduce_real(matrix_in,mode_out,mode,n)
 implicit none
 integer, intent(in) :: n
 real(kind=8), intent(in) :: matrix_in(:,:),mode(:)
-real(kind=8), intent(out) :: mode_out(:)
+real(kind=8), intent(inout) :: mode_out(:)
 ! internal functions
 integer :: i,shape_in(2),j,k,test,ncolumn,nline
 real(kind=8) :: matrix_int(n,n**3),S_int(n)
@@ -45,13 +45,14 @@ test=nline/ncolumn
 do while (test.ne.0)
 
   do i=1,nline
+    if (sum( abs( matrix_int(:,i) ) ).lt.1.0d-8) cycle
     j=mod(i-1,ncolumn)+1
     k=(i-1)/ncolumn+1
     matrix_int(j,k)=dot_product( matrix_int(:,i) , S_int )
   enddo
 
-  test=nline/ncolumn
   nline=test
+  test=nline/ncolumn
 enddo
 
 mode_out=matrix_int(:,1)
@@ -87,6 +88,7 @@ do while (test.ne.0)
   S_int=mode(:,i_loop)
 
   do i=1,nline
+    if (sum( abs( matrix_int(:,i) ) ).lt.1.0d-8) cycle
     j=mod(i-1,ncolumn)+1
     k=(i-1)/ncolumn+1
     matrix_int(j,k)=dot_product( matrix_int(:,i) , S_int )
@@ -111,7 +113,7 @@ implicit none
 integer, intent(in) :: dim_ham,n_order
 real(kind=8), intent(in) :: mode_1(:),mode_2(:)
 type(Op_real_order_N), intent(in) :: matrix_in
-real(kind=8), intent(out) :: mode_out(:)
+real(kind=8), intent(inout) :: mode_out(:)
 ! internal functions
 integer :: i
 real(kind=8) :: big_mode(dim_ham,n_order)

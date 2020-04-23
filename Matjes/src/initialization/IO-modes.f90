@@ -177,12 +177,13 @@ end subroutine get_col_spins
 
 subroutine init_3Dmodes(fname,my_lattice,motif)
 use m_io_utils
+use m_get_position
 implicit none
 type (lattice), intent(inout) :: my_lattice
 type (cell), intent(in) :: motif
 character(len=*), intent(in) :: fname
 ! internal variables
-integer :: dim_lat(3),n_column,io,nmag,n_column_pos
+integer :: dim_lat(3),n_column,io,nmag,n_column_pos,io_pos
 ! pointer variable for internal use
 type(int_pointer) :: u(3),N(3)
 ! slope variables
@@ -220,7 +221,8 @@ elseif (n_column.gt.my_lattice%dim_mode+1) then
   call get_fast_index(fname,u,Ilat,N,lattice_vec,dim_lat,Nstart-1)
 else
 
-  stop 'stuff not coded - init_3Dmodes'
+  write(6,'(a)') 'WARNING - user defined format - I hope wou what you are doing'
+  write(6,'(a)') 'check IO-modes line 268 for more information'
 
 endif
 
@@ -264,7 +266,30 @@ enddo
 deallocate(dumy)
 
 else
-  stop 'stuff not coded - init_3Dmodes'
+!
+! format to change by hand
+!
+!io_pos=open_file_read('positions.dat')
+allocate(dumy(7))
+local_lattice(4:5,:,:,:,:)=0.0d0
+local_lattice(6,:,:,:,:)=20.0d0
+local_lattice(1:2,:,:,:,:)=0.0d0
+local_lattice(3,:,:,:,:)=1.0d0
+do i_m=1,nmag
+   do i_x=1,500
+      do i_y=1,500
+         do i_z=1,1
+           if ((i_x.le.100).and.(i_y.le.100)) then
+             read(io,*) (dumy(i),i=1,3),(local_lattice(j_lat,i_x,i_y,i_z,i_m),j_lat=1,3),dumy(1)
+           else
+             read(io,*) (dumy(i),i=1,7)
+           endif
+
+         enddo
+      enddo
+   enddo
+enddo
+deallocate(dumy)
 endif
 
 call close_file(fname,io)
