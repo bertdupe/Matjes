@@ -144,7 +144,6 @@ real(kind=8), intent(in) :: D(:,:,:)
 integer, intent(in) :: indexNN(:,:)
 ! internal variables
 integer :: n_ham,N_shell,dim_ham,n_ham_shell,N_atom_shell,n_order,i_order
-integer, allocatable :: size_hams(:)
 !slopes
 integer :: i,j,l,k
 ! position in the matrices for the DMI
@@ -153,8 +152,7 @@ integer :: x_start,x_end,y_start,y_end
 integer, allocatable :: order(:),shell_order_max(:,:)
 integer :: max_order
 ! old stuff
-integer :: N_tot_vec_shell,N_max_shell,N_max_nei,io_input,n_DMI,N_voisin_DMI
-integer :: dim_D(3)
+integer :: io_input,n_DMI,N_voisin_DMI
 type(shell_ham), allocatable, dimension(:) :: ham_DMI_Nshell_local
 type(shell_ham), allocatable, dimension(:) :: ham_EM_Nshell_local
 character(len=50) :: form
