@@ -291,10 +291,8 @@ sym_mat=0.0d0
 ! first put ones on the diagonals
 !
 do i=1,shape_H(1)
-  sym_mat(i,i)=1.0d0
+  sym_mat(i,i)=symmetries(k)%mat( mod(i-1,3)+1 , mod(i-1,3)+1 )
 enddo
-
-sym_mat(y_start:y_end,y_start:y_end)=symmetries(k)%mat
 
 test_out=0.0d0
 do i=1,shape_H(1)
