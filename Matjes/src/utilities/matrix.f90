@@ -96,6 +96,7 @@ do while (test.ne.0)
 
   nline=test
   test=nline/ncolumn
+
 enddo
 
 mode_out=matrix_int(:,1)
