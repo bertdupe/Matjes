@@ -290,7 +290,7 @@ sym_mat=0.0d0
 !
 ! first put ones on the diagonals
 !
-do i=1,9
+do i=1,shape_H(1)
   sym_mat(i,i)=1.0d0
 enddo
 
