@@ -290,8 +290,8 @@ sym_mat=0.0d0
 !
 ! first put ones on the diagonals
 !
-do i=1,shape_H(1)
-  sym_mat(i,i)=symmetries(k)%mat( mod(i-1,3)+1 , mod(i-1,3)+1 )
+do i=1,shape_H(1)/3
+  sym_mat( 3*(i-1)+1 : 3*i ,3*(i-1)+1 : 3*i )=symmetries(k)%mat
 enddo
 
 test_out=0.0d0
