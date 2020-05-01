@@ -281,13 +281,12 @@ call get_torques('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if (io_simu%io_tracker) call init_tracking(mag_lattice)
 
-call init_temp_measure(check,check1,check2,check3)
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! beginning of the
 do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   call init_temp_measure(check,check1,check2,check3)
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0
@@ -345,6 +344,10 @@ do j=1,duration
     enddo
 
 !
+! check the Butcher's table for the new dt
+! if dt is 0 in the Butcher's table do not carry out integration
+    dt=get_dt_mode(timestep_int,i_loop)
+!
 ! loop that carry out the integration
 !
 
@@ -358,7 +361,7 @@ do j=1,duration
 
 !!!!!!!!!!!!!!! copy the final configuration from spinafter(:,2) in spinafter(:,1)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    call copy_lattice(all_mode_2,all_mode_1)
+   call copy_lattice(all_mode_2,all_mode_1)
 
   enddo
 

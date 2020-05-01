@@ -69,7 +69,7 @@ select case (integtype)
 
     if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
 
-!       if (kt.gt.1.0d-10) call calculate_BTeff(stmtemp,kt,BT_point(iomp)%w)
+    call get_butcher_explicit(N_loop)
 
 !
 !-----------------------------------------------
@@ -84,17 +84,23 @@ select case (integtype)
 
     if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
 
+    call get_butcher_explicit(N_loop)
+
 !
 !-----------------------------------------------
 ! SIB(implicit solver)
 !-----------------------------------------------
   case (3)
+    stop 'Does not work so far'
     get_propagator_field => LLG_B
     get_integrator_field => implicite
 
     N_loop=2
 
     if (kt.gt.1.0d-7) get_temperature_field => wiener_bath
+
+    call get_parameter(io,'input','N_order',N_loop)
+    call get_butcher_implicit(N_loop)
 !
 !-----------------------------------------------
 ! Runge Kutta order N integration scheme
@@ -106,17 +112,21 @@ select case (integtype)
     N_loop=4
     call get_parameter(io,'input','N_order',N_loop)
 
+    call get_butcher_explicit(N_loop)
+
 !
 !-----------------------------------------------
 ! SIB without temperature and with error control
 !-----------------------------------------------
-  case (6)
-    get_propagator_field => LLG_B
-    get_integrator_field => implicite
-
-    N_loop=2
-
-    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
+!  case (6)
+!    get_propagator_field => LLG_B
+!    get_integrator_field => implicite
+!
+!    N_loop=2
+!
+!    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
+!
+!    call get_butcher_explicit(N_loop)
 
 !
 !-----------------------------------------------
@@ -129,8 +139,6 @@ select case (integtype)
 end select
 
 call close_file('input',io)
-
-call get_butcher(N_loop)
 
 end subroutine select_propagator
 

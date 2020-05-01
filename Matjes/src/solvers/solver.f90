@@ -33,10 +33,6 @@ integer :: i,start
 implicite=0.0d0
 B_int=D_mode*dt/hbar
 
-write(*,*) mode_t(:)
-write(*,*) D_mode
-write(*,*) DT_mode
-
 do i=1,size_mode/3
   start=3*(i-1)+1
 
@@ -48,25 +44,23 @@ do i=1,size_mode/3
 
 ! first term
   implicite(start)=-(-droite(start)+ &
-     &  (-B_int(start+2)*droite(start+1)+B_int(start+1)*droite(start+2)) + &
+     &  (B_int(start+2)*droite(start+1)-B_int(start+1)*droite(start+2)) + &
      &  (-B_int(start)**2*droite(start)-B_int(start)*B_int(start+1)*droite(start+1)-B_int(start)*B_int(start+2)*droite(start+2))) &
      &  /denominator
 
 ! second term
   implicite(start+1)=-(-droite(start+1)+ &
-     &  (B_int(start+2)*droite(start)-B_int(start)*droite(start+2))+ &
+     &  (-B_int(start+2)*droite(start)+B_int(start)*droite(start+2))+ &
      &  (-B_int(start+1)**2*droite(start+1)-B_int(start)*B_int(start+1)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+2))) &
      &  /denominator
 
 ! third term
   implicite(start+2)=-(-droite(start+2)+ &
-     &  (-B_int(start+1)*droite(start)+B_int(start)*droite(start+1))+ &
+     &  (B_int(start+1)*droite(start)-B_int(start)*droite(start+1))+ &
      &  (-B_int(start+2)**2*droite(start+2)-B_int(start)*B_int(start+2)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+1))) &
      &  /denominator
 
 enddo
-write(*,*) 'spin', implicite(start:start+2),sqrt(sum(implicite(start:start+2)**2))
-
 
 end function implicite
 
