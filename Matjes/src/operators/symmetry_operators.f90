@@ -17,7 +17,7 @@ interface convoluate_Op_SOC_vector
 end interface
 
 interface convoluate_Op_sym
-   module procedure convoluate_Op_sym_file
+   module procedure convoluate_Op_sym_file,convoluate_Op_sym_bond
 end interface
 
 private
@@ -256,13 +256,14 @@ end subroutine
 ! This will not work with 2 atoms in one unit cell
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine convoluate_Op_sym_file(k,H_in,H_out,x_start,x_end,y_start,y_end)
+subroutine convoluate_Op_sym_file(k,H_in,H_out,x_start,x_end,y_start,y_end,file)
 use m_basic_types, only : symop
 use m_grp_sym
 use m_matrix
 implicit none
 integer, intent(in) :: k,x_start,x_end,y_start,y_end
 real(kind=8), intent(in) :: H_in(:,:)
+character(len=*), intent(in) :: file
 real(kind=8), intent(inout) :: H_out(:,:)
 ! internal
 integer :: i,j,shape_H(2),l,m,n,o
@@ -317,7 +318,62 @@ H_out=reshape(test_out,(/shape_H(1),shape_H(2)/))
 
 end subroutine convoluate_Op_sym_file
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! convolute a matrix with the rotation operator for the k-bond
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine convoluate_Op_sym_bond(i_shell,i_bond,H_in,H_out,x_start,x_end,y_start,y_end)
+use m_basic_types, only : symop
+use m_arrange_neigh, only : get_rotation
+implicit none
+integer, intent(in) :: i_bond,x_start,x_end,y_start,y_end,i_shell
+real(kind=8), intent(in) :: H_in(:,:)
+real(kind=8), intent(inout) :: H_out(:,:)
+! internal
+integer :: i,j,shape_H(2),l,m,n,o
+real(kind=8) :: H_in_local(3,3),H_dum(3,3)
+real(kind=8), allocatable :: test(:,:,:),test_out(:,:,:),sym_mat(:,:)
+integer :: n_sym
 
+H_out=0.0d0
+H_dum=0.0d0
+call get_rotation(i_shell,i_bond,H_dum)
+
+shape_H=shape(H_in)
+allocate(test(shape_H(1),shape_H(1),shape_H(1)),test_out(shape_H(1),shape_H(1),shape_H(1)),sym_mat(shape_H(1),shape_H(1)))
+test=reshape(H_in,(/shape_H(1),shape_H(1),shape_H(1)/))
+
+sym_mat=0.0d0
+!
+! first put ones on the diagonals
+!
+do i=1,shape_H(1)/3
+  sym_mat( 3*(i-1)+1 : 3*i ,3*(i-1)+1 : 3*i )=H_dum
+enddo
+
+test_out=0.0d0
+do i=1,shape_H(1)
+  do j=1,shape_H(1)
+    do o=1,shape_H(1)
+
+    do l=1,shape_H(1)
+      do m=1,shape_H(1)
+        do n=1,shape_H(1)
+
+     test_out(i,j,o)=test_out(i,j,o)+sym_mat(i,l)*sym_mat(j,m)*sym_mat(o,n)*test(l,m,n)
+
+        enddo
+      enddo
+    enddo
+
+    enddo
+  enddo
+enddo
+
+H_out=reshape(test_out,(/shape_H(1),shape_H(2)/))
+
+end subroutine convoluate_Op_sym_bond
 
 
 

@@ -312,7 +312,7 @@ do i=1,n_ham
     ! Hamiltonians(i)%ham is just the shell number. The number of atom in each shell is not taken into account here
     do j=1,size(Hamiltonians(i)%ham)
       do k=1,size(ham_EM_Nshell_local(j)%atom)
-        call convoluate_Op_sym(k,Hamiltonians(i)%ham(j)%op_loc,ham_EM_Nshell_local(j)%atom(k)%H,x_start,x_end,y_start,y_end)
+        call convoluate_Op_sym(j,k,Hamiltonians(i)%ham(j)%op_loc,ham_EM_Nshell_local(j)%atom(k)%H,x_start,x_end,y_start,y_end)
       enddo
     enddo
 

@@ -2,7 +2,7 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
+OBJS = matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
@@ -13,7 +13,7 @@ OBJS = matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o plot_FFT.o \
- setup-simu.o arrange_neihg.o mapping.o indexation.o order_lattice.o user_def_struct.o qorien.o path.o \
+ setup-simu.o arrange_neihg.o mapping.o indexation.o order_lattice.o qorien.o path.o \
  stdtypes.o Energy_distrib.o error.o setup_zdir.o rw_efield.o energy_commons.o excitations.o rotation.o projection.o spline.o \
  rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o torques.o tangent.o gneb.o io-gneb.o gneb_utils.o gneb_parameters.o initialize_path.o \
  initialize_temperature.o cal_local_energy.o user_information.o parallel_tempering.o paratemp.o  mpi_prop.o \
@@ -45,6 +45,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+matrix_power.o:
 matrix.o: basic_types.o
 Hamiltonian_variables.o: basic_types.o
 modes_variables.o: basic_types.o
@@ -69,7 +70,7 @@ couplage_ME.o: create_lattice.o io-utils.o io_files_utils.o symmetry_operators.o
 propagator.o: BTeff_sd.o io-utils.o io_files_utils.o constant.o vector.o torques.o
 solver_commun.o: solver_order.o update_time.o propagator.o Beff_sd.o solver.o derived_types.o info-dynamics.o
 init_constant.o:
-symmetry_operators.o: basic_types.o matrix.o pointgrp.o derived_types.o
+symmetry_operators.o: arrange_neihg.o basic_types.o matrix.o pointgrp.o derived_types.o
 info-dynamics.o:
 torques.o: derived_types.o vector.o io-utils.o io_files_utils.o
 EMwave.o: constant.o vector.o io-utils.o io_files_utils.o
@@ -115,7 +116,6 @@ user_information.o:
 CreateSpinFile.o: get-position.o constant.o io-utils.o
 topocharge_local.o: vector.o create_lattice.o inp_rw.o rw_lattice.o
 fit.o:
-user_def_struct.o: vector.o inp_rw.o create_lattice.o
 derived_types.o: basic_types.o
 rw_zdir.o:
 vector.o:
@@ -142,9 +142,8 @@ spstm.o: rw_lattice.o create_lattice.o vector.o
 setup_DM.o: sym_utils.o vector.o derived_types.o Table_dist.o pointgrp.o
 create_lattice.o: derived_types.o
 error.o:
-mapping.o: create_lattice.o inp_rw.o vector.o derived_types.o
+mapping.o: rotation.o create_lattice.o inp_rw.o vector.o derived_types.o
 indexation.o: derived_types.o vector.o
-#dispBZ.o: inp_rw.o constant.o rw_lattice.o vector.o create_lattice.o constant.o sym_utils.o
 order_lattice.o: derived_types.o
 pathImc.o:
 qorienplot.o: rw_lattice.o inp_rw.o constant.o create_lattice.o
@@ -170,7 +169,7 @@ paratemp.o: fit.o mtprng.o constant.o inp_rw.o
 initialize_temperature.o:
 cal_local_energy.o: Energy_distrib.o energy_commons.o external_fields.o
 
-arrange_neihg.o: create_lattice.o inp_rw.o sym_utils.o constant.o
+arrange_neihg.o: rotation.o matrix_power.o create_lattice.o inp_rw.o sym_utils.o constant.o
 MCstep.o: choosespin.o cal_local_energy.o main.o create_lattice.o inp_rw.o rw_lattice.o  sampling.o relaxationtype.o mtprng.o
 solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
@@ -185,6 +184,6 @@ Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o
 
-setup-simu.o: derivative.o null.o dipolar-energy.o io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o user_def_struct.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o sym_utils.o Table_dist.o mtprng.o
+setup-simu.o: derivative.o null.o dipolar-energy.o io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o sym_utils.o Table_dist.o mtprng.o
 cal_local_energy.o:
 choosespin.o: mtprng.o
