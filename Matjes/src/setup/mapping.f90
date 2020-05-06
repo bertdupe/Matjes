@@ -1,5 +1,6 @@
 module m_mapping
 use m_get_position
+use m_arrange_neigh, only : get_map,fill_map
 
 interface mapping_geometry
     module procedure mapping_1D
@@ -14,49 +15,53 @@ private
 public :: mapping
 contains
 
-subroutine mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice,pos)
+subroutine mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice)
 use m_derived_types, only : lattice,cell
 implicit none
 integer, intent(inout) :: tableNN(:,:,:,:,:,:)
 type(lattice), intent(in) :: my_lattice
 type(cell), intent(in) :: my_motif
-real(kind=8), intent(in) :: tabledist(:,:),pos(:,:,:,:,:)
+real(kind=8), intent(in) :: tabledist(:,:)
 integer, intent(in) :: N_Nneigh,indexNN(:,:)
 ! internal
-integer :: phase,Nei_il,Nei_z,shape_tabdist(2)
+integer :: phase,Nei_il,Nei_z,shape_tabdist(2),i,j
 
 shape_tabdist=shape(tabledist)
 phase=1
+!
+! take care of the mapping
+!
+call get_map(indexNN)
 
 if (shape_tabdist(2).gt.1) phase=2
 
 if (size(my_lattice%world).eq.1) then
 
-    call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,1,1,1),my_lattice,pos(:,:,1,1,1))
+    call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,1,1,1),my_lattice)
 
 elseif (size(my_lattice%world).eq.2) then
     if ((phase.eq.1).and.(count(my_motif%atomic(:)%moment.gt.0.0d0).eq.1)) then
-        call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,:,1,1),my_lattice,pos(:,:,:,1,1))
+        call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,:,1,1),my_lattice)
 
     elseif (phase.eq.1) then
-        call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,:,1,:),my_lattice,pos(:,:,:,1,:))
+        call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,:,1,:),my_lattice)
 
     endif
 
     if (phase.eq.2) then
         Nei_il=count(tabledist(:,2).ne.0)
-        call mapping_geometry(tabledist(:,:),N_Nneigh,Nei_il,indexNN(:,:),tableNN(:,:,:,:,1,:),my_lattice,pos(:,:,:,1,:))
+        call mapping_geometry(tabledist(:,:),N_Nneigh,Nei_il,indexNN(:,:),tableNN(:,:,:,:,1,:),my_lattice)
 
     endif
 
 else
      if (phase.eq.1) then
-        call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,:,:,:),my_lattice,pos(:,:,:,:,:))
+        call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,:,:,:),my_lattice)
 
      else
         Nei_il=count(tabledist(:,2).ne.0)
         Nei_z=count(tabledist(:,3).ne.0)
-        call mapping_geometry(tabledist(:,:),N_Nneigh,Nei_il,Nei_z,indexNN(:,:),tableNN(:,:,:,:,:,:),my_lattice,pos(:,:,:,:,:))
+        call mapping_geometry(tabledist(:,:),N_Nneigh,Nei_il,Nei_z,indexNN(:,:),tableNN(:,:,:,:,:,:),my_lattice)
 
      endif
 
@@ -70,7 +75,7 @@ end subroutine mapping
 ! first entry i_s: key of the cell
 ! second n is the neighbor index written on a line
 ! third column gives: 1-x;2-y;3-z position
-subroutine mapping_1D(d,nei,indexNN,tableNN,my_lattice,pos)
+subroutine mapping_1D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
 #ifdef CPP_MPI
@@ -80,7 +85,7 @@ implicit none
 ! variable that come in
 integer, intent(in) :: nei
 type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: d(:),pos(:,:)
+real(kind=8), intent(in) :: d(:)
 integer, intent(in) :: indexNN(:)
 ! value of the function
 integer, intent(inout) :: tableNN(:,:,:)
@@ -91,9 +96,7 @@ integer :: i_x,Xstop
 integer :: i,l,i_Nei,avant,dim_lat(3)
 integer :: v_x,ok
 real (kind=8) :: vec(3),dist,r(3,3)
-#ifndef CPP_MPI
-integer, parameter ::  Xstart=1
-#endif
+logical :: found
 
 avant=0
 Xstop=size(tableNN,3)
@@ -109,20 +112,20 @@ do i_nei=1,nei
     do i_x=1,Xstop
 
        l=1
-       do i=-i_nei,i_nei,1
+       do i=i_nei,-i_nei,-1
 
-          vec=-pos(:,i_x)
+          vec=0.0d0
+          found=.false.
           ! suppose that the neighbour should be taken into account
           ok=1
-
           call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-
-          vec=vec+pos(:,v_x)
           dist=norm(vec)
+          call associate_neighbour(tableNN(:,avant+l,i_x),v_x,1,1,1,ok,l,d(i_nei),dist,found)
 
-          call associate_neighbour(tableNN(:,avant+l,i_x),v_x,1,1,1,ok,l,d(i_nei),dist)
+          if ((i_x.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
        enddo
+
     enddo
 #ifdef CPP_OPENMP
 !$OMP end parallel
@@ -130,19 +133,11 @@ do i_nei=1,nei
     avant=avant+indexNN(i_Nei)
 enddo
 
-#ifdef CPP_DEBUG
-do i_x=1,dim_lat(1)
-   do l=1,size(tableNN,2)
-      write(6,*) i_x,"i_x=",tableNN(1,l,i_x)
-   enddo
-enddo
-#endif
-
 end subroutine mapping_1D
 
 !subroutine to treat the neighbour with one atom in the 2D unit cell
 !
-subroutine mapping_2D(d,nei,indexNN,tableNN,my_lattice,pos)
+subroutine mapping_2D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
 #ifdef CPP_MPI
@@ -154,7 +149,7 @@ use omp_lib
 implicit none
 integer, intent(in) :: nei
 type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: d(:),pos(:,:,:)
+real(kind=8), intent(in) :: d(:)
 integer, intent(in) :: indexNN(:)
 ! value of the function
 integer, intent(inout) :: tableNN(:,:,:,:)
@@ -167,6 +162,7 @@ integer :: shape_tableNN(4)
 integer :: i,j,l,i_Nei,avant,dim_lat(3)
 integer :: v_x,v_y,ok
 real (kind=8) :: vec(3),dist,r(3,3)
+logical :: found
 #ifndef CPP_MPI
 integer, parameter ::  Xstart=1
 integer, parameter ::  Ystart=1
@@ -199,22 +195,21 @@ do i_nei=1,nei
 
          l=1
 
-         do i=-i_nei,i_nei,1
-            do j=-i_nei,i_nei,1
+         do i=i_nei,-i_nei,-1
+            do j=i_nei,-i_nei,-1
 
-               vec=-pos(:,i_x,i_y)
+               vec=0.0d0
+               found=.false.
                ! suppose that the neighbour should be taken into account
                ok=1
-
                call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-
-               vec=vec+pos(:,v_x,v_y)
                dist=norm(vec)
 
-               call associate_neighbour(tableNN(:,avant+l,i_x,i_y),v_x,v_y,1,1,ok,l,d(i_nei),dist)
-
+               call associate_neighbour(tableNN(:,avant+l,i_x,i_y),v_x,v_y,1,1,ok,l,d(i_nei),dist,found)
                call check_l(l-1,indexNN(i_Nei))
+
+               if ((i_x.eq.1).and.(i_y.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
             enddo
          enddo
@@ -230,21 +225,12 @@ enddo
 !!$OMP end do
 !!$OMP end parallel
 #endif
-#ifdef CPP_DEBUG
-do i_y=1,Ystop
-   do i_x=1,Xstop
-      do l=1,sum(indexNN)
-          write(6,*) i_x,i_y,"i_x=",tableNN(1,l,i_x,i_y),"i_y=",tableNN(2,l,i_x,i_y)
-      enddo
-   enddo
-enddo
-#endif
 
 end subroutine mapping_2D
 
 !subroutine to treat the SL case
 !
-subroutine mapping_2D_SL(d,nei,Nei_il,indexNN,tableNN,my_lattice,pos)
+subroutine mapping_2D_SL(d,nei,Nei_il,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
 #ifdef CPP_MPI
@@ -253,7 +239,7 @@ use m_make_box, only : Xstart,Ystart
 implicit none
 integer, intent(in) :: nei,Nei_il
 type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: d(:,:),pos(:,:,:,:)
+real(kind=8), intent(in) :: d(:,:)
 integer, intent(in) :: indexNN(:,:)
 ! value of the function
 integer, intent(inout) :: tableNN(:,:,:,:,:)
@@ -264,6 +250,7 @@ integer :: v_x,v_y,ok
 ! dummy variable
 integer :: i,j,l,i_Nei,avant,i_p,i_phase,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
+logical :: found
 #ifndef CPP_MPI
 integer, parameter ::  Xstart=1
 integer, parameter ::  Ystart=1
@@ -289,21 +276,22 @@ do i_nei=1,nei
          do i_m=1,Mstop
 
             l=1
-            do i=-i_nei,i_nei,1
-               do j=-i_nei,i_nei,1
+            do i=i_nei,-i_nei,-1
+               do j=i_nei,-i_nei,-1
                   do i_p=1,Mstop
 
-                     vec=-pos(:,i_x,i_y,i_m)
+                     vec=0.0d0
+                     found=.false.
                      ! suppose that the neighbour should be taken into account
                      ok=1
 
                      call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                      call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-
-                     vec=vec+pos(:,v_x,v_y,i_p)
                      dist=norm(vec)
 
-                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist)
+                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist,found)
+
+                     if ((i_x.eq.1).and.(i_y.eq.1).and.(i_m.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
                   enddo
                enddo
@@ -329,22 +317,22 @@ do i_nei=1,Nei_il
          do i_m=1,Mstop
 
             l=1
-            do i=-i_nei,i_nei,1
-               do j=-i_nei,i_nei,1
+            do i=i_nei,-i_nei,-1
+               do j=i_nei,-i_nei,-1
                   do i_p=1,Mstop
 
-                     vec=-pos(:,i_x,i_y,i_m)
-
+                     vec=0.0d0
+                     found=.false.
                      ! suppose that the neighbour should be taken into account
                      ok=1
 
                      call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                      call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-
-                     vec=vec+pos(:,v_x,v_y,i_p)
                      dist=norm(vec)
 
-                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist)
+                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist,found)
+
+                     if ((i_x.eq.1).and.(i_y.eq.1).and.(i_m.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
                   enddo
                enddo
@@ -359,25 +347,11 @@ do i_nei=1,Nei_il
    avant=avant+indexNN(i_Nei,i_phase)
 enddo
 
-#ifdef CPP_DEBUG
-do i_x=1,Ystop
-   do i_y=1,Xstop
-      do i_m=1,size(motif%i_mom)
-         if (.not.motif%i_mom(i_m)) cycle
-         do l=1,size(tableNN,2)
-            write(6,*) i_x,i_y,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_m), &
-      "i_m=",tableNN(4,l,i_x,i_y,i_m)
-         enddo
-      enddo
-   enddo
-enddo
-#endif
-
 end subroutine mapping_2D_SL
 
 !subroutine to treat more than one atom in the unit cell
 !
-subroutine mapping_2D_motif(d,nei,indexNN,tableNN,my_lattice,pos)
+subroutine mapping_2D_motif(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
 #ifdef CPP_MPI
@@ -386,7 +360,7 @@ use m_make_box, only : Xstart,Ystart
 implicit none
 integer, intent(in) :: nei
 type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: d(:),pos(:,:,:,:)
+real(kind=8), intent(in) :: d(:)
 integer, intent(in) :: indexNN(:)
 ! value of the function
 integer, intent(inout) :: tableNN(:,:,:,:,:)
@@ -397,6 +371,7 @@ integer :: v_x,v_y,ok
 ! dummy variable
 integer :: i,j,l,i_Nei,avant,i_p,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
+logical :: found
 #ifndef CPP_MPI
 integer, parameter ::  Xstart=1
 integer, parameter ::  Ystart=1
@@ -420,22 +395,22 @@ do i_nei=1,nei
          do i_m=1,Mstop
 
             l=1
-            do i=-i_nei,i_nei,1
-               do j=-i_nei,i_nei,1
+            do i=i_nei,-i_nei,-1
+               do j=i_nei,-i_nei,-1
                   do i_p=1,Mstop
 
-                     vec=-pos(:,i_x,i_y,i_m)
-
+                     vec=0.0d0
+                     found=.false.
                      ! suppose that the neighbour should be taken into account
                      ok=1
 
                      call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                      call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-
-                     vec=vec+pos(:,v_x,v_y,i_p)
                      dist=norm(vec)
 
-                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei),dist)
+                     call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei),dist,found)
+
+                     if ((i_x.eq.1).and.(i_y.eq.1).and.(i_m.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
                   enddo
                enddo
@@ -450,23 +425,10 @@ do i_nei=1,nei
    avant=avant+indexNN(i_Nei)
 enddo
 
-#ifdef CPP_DEBUG
-do i_x=1,dim_lat(1)
-   do i_y=1,dim_lat(2)
-      do i_m=1,size(motif%i_mom)
-         if (.not.motif%i_mom(i_m)) cycle
-         do l=1,size(tableNN,2)
-          write(6,*) i_x,i_y,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_m), &
-           "i_m=",tableNN(4,l,i_x,i_y,i_m)
-         enddo
-      enddo
-   enddo
-enddo
-#endif
 
 end subroutine mapping_2D_motif
 
-subroutine mapping_3D(d,nei,indexNN,tableNN,my_lattice,pos)
+subroutine mapping_3D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
 #ifdef CPP_MPI
@@ -476,7 +438,7 @@ implicit none
 ! variable that come in
 integer, intent(in) :: nei
 type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: d(:),pos(:,:,:,:,:)
+real(kind=8), intent(in) :: d(:)
 integer, intent(in) :: indexNN(:)
 ! value of the function
 integer :: tableNN(:,:,:,:,:,:)
@@ -487,6 +449,7 @@ integer :: tableNN(:,:,:,:,:,:)
 ! dummy variable
 integer :: i,j,k,l,i_Nei,avant,i_p,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
+logical :: found
 #ifndef CPP_MPI
 integer, parameter ::  Xstart=1
 integer, parameter ::  Ystart=1
@@ -515,23 +478,24 @@ do i_nei=1,nei
 ! I selected a cell (i_x,i_y,i_z) and inside one of the atom i_m
 ! now we have to go along x,y and z direction and check all the distances
                l=1
-               do i=-i_nei,i_nei,1
-                  do j=-i_nei,i_nei,1
-                     do k=-i_nei,i_nei,1
+               do i=i_nei,-i_nei,-1
+                  do j=i_nei,-i_nei,-1
+                     do k=i_nei,-i_nei,-1
                         do i_p=1,Mstop
 
-                           vec=-pos(:,i_x,i_y,i_z,i_m)
+                           vec=0.0d0
+                           found=.false.
                            ! suppose that the neighbour should be taken into account
                            ok=1
 
                            call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                            call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
                            call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%boundary(3))
-
-                           vec=vec+pos(:,v_x,v_y,v_z,i_p)
                            dist=norm(vec)
 
-                           call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei),dist)
+                           call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei),dist,found)
+
+                           if ((i_x.eq.1).and.(i_y.eq.1).and.(i_m.eq.1).and.(i_z.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
                         enddo
                      enddo
@@ -548,30 +512,13 @@ do i_nei=1,nei
    avant=avant+indexNN(i_Nei)
 enddo
 
-
-#ifdef CPP_DEBUG
-do i_x=1,dim_lat(1)
-   do i_y=1,dim_lat(2)
-      do i_z=1,dim_lat(3)
-         do i_m=1,Mstop
-
-            do l=1,size(tableNN,2)
-               write(6,*) i_x,i_y,i_z,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_z,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_z,i_m), &
-           "i_z=",tableNN(3,l,i_x,i_y,i_z,i_m),"i_m=",tableNN(4,l,i_x,i_y,i_z,i_m)
-            enddo
-         enddo
-      enddo
-   enddo
-enddo
-#endif
-
 end subroutine mapping_3D
 !
 !
 !input variables are
 !net,tot_N_Nneigh,tabledist(:,:),N_Nneigh,Nei_il,Nei_z,phase,motif,indexNN(:,:),tableNN(:,:,:,:,:,:)
 
-subroutine mapping_3D_motif_SL(d,nei,Nei_il,Nei_z,indexNN,tableNN,my_lattice,pos)
+subroutine mapping_3D_motif_SL(d,nei,Nei_il,Nei_z,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : cell,lattice
 #ifdef CPP_MPI
@@ -581,7 +528,7 @@ implicit none
 ! variable that come in
 integer, intent(in) :: nei,Nei_il,Nei_z
 type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: d(:,:),pos(:,:,:,:,:)
+real(kind=8), intent(in) :: d(:,:)
 integer, intent(in) :: indexNN(:,:)
 ! value of the function
 integer :: tableNN(:,:,:,:,:,:)
@@ -592,6 +539,7 @@ integer :: v_x,v_y,v_z,ok
 ! dummy variable
 integer :: i,j,k,l,i_Nei,avant,i_p,i_phase,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
+logical :: found
 #ifndef CPP_MPI
 integer, parameter ::  Xstart=1
 integer, parameter ::  Ystart=1
@@ -620,22 +568,22 @@ do i_nei=1,nei
             do i_m=1,Mstop
 
                l=1
-               do i=-i_nei,i_nei,1
-                  do j=-i_nei,i_nei,1
+               do i=i_nei,-i_nei,-1
+                  do j=i_nei,-i_nei,-1
                      do i_p=1,Mstop
 
-                        vec=-pos(:,i_x,i_y,i_z,i_m)
-
+                        vec=0.0d0
+                        found=.false.
                         ! suppose that the neighbour should be taken into account
                         ok=1
 
                         call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                         call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-
-                        vec=vec+pos(:,v_x,v_y,i_z,i_p)
                         dist=norm(vec)
 
-                        call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist)
+                        call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist,found)
+
+                        if ((i_x.eq.1).and.(i_y.eq.1).and.(i_m.eq.1).and.(i_z.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
                      enddo
                   enddo
@@ -663,22 +611,23 @@ do i_nei=1,Nei_il
             do i_m=1,Mstop
 
                l=1
-               do i=-i_nei,i_nei,1
-                  do j=-i_nei,i_nei,1
+               do i=i_nei,-i_nei,-1
+                  do j=i_nei,-i_nei,-1
                      do i_p=1,Mstop
 
-                        vec=-pos(:,i_x,i_y,i_z,i_m)
-
+                        vec=0.0d0
+                        found=.false.
                         ! suppose that the neighbour should be taken into account
                         ok=1
 
                         call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                         call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-
-                        vec=vec+pos(:,v_x,v_y,i_z,i_p)
                         dist=norm(vec)
 
-                        call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist)
+                        call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist,found)
+
+                        if ((i_x.eq.1).and.(i_y.eq.1).and.(i_m.eq.1).and.(i_z.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
+
                      enddo
                   enddo
                enddo
@@ -705,24 +654,24 @@ do i_nei=1,Nei_z
             do i_m=1,Mstop
 
                l=1
-               do i=-i_nei,i_nei,1
-                  do j=-i_nei,i_nei,1
-                     do k=-i_nei,i_nei,1
+               do i=i_nei,-i_nei,-1
+                  do j=i_nei,-i_nei,-1
+                     do k=i_nei,-i_nei,-1
                         do i_p=1,Mstop
 
-                           vec=-pos(:,i_x,i_y,i_z,i_m)
-
+                           vec=0.0d0
+                           found=.false.
                            ! suppose that the neighbour should be taken into account
                            ok=1
 
                            call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
                            call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
                            call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%boundary(3))
-
-                           vec=vec+pos(:,v_x,v_y,v_z,i_p)
                            dist=norm(vec)
 
-                           call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei,i_phase),dist)
+                           call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei,i_phase),dist,found)
+
+                           if ((i_x.eq.1).and.(i_y.eq.1).and.(i_m.eq.1).and.(i_z.eq.1).and.(found)) call fill_map(i_nei,l-1,vec)
 
                         enddo
                      enddo
@@ -739,33 +688,16 @@ do i_nei=1,Nei_z
    avant=avant+indexNN(i_Nei,i_phase)
 enddo
 
-
-#ifdef CPP_DEBUG
-do i_x=1,dim_lat(1)
-   do i_y=1,dim_lat(2)
-      do i_z=1,dim_lat(3)
-         do i_m=1,size(motif%i_mom)
-         if (.not.motif%i_mom(i_m)) cycle
-         do l=1,size(tableNN,2)
-          write(6,*) i_x,i_y,i_z,i_m,"i_x=",tableNN(1,l,i_x,i_y,i_z,i_m),"i_y=",tableNN(2,l,i_x,i_y,i_z,i_m), &
-           "i_z=",tableNN(3,l,i_x,i_y,i_z,i_m),"i_m=",tableNN(4,l,i_x,i_y,i_z,i_m),l
-
-         enddo
-         enddo
-      enddo
-   enddo
-enddo
-#endif
-
 end subroutine mapping_3D_motif_SL
 
 
 
 
 ! subroutine that associates the neighbour in the table of neighbours
-subroutine associate_neighbour(tableNN,v_x,v_y,v_z,v_m,ok,l,d_ref,d_test)
+subroutine associate_neighbour(tableNN,v_x,v_y,v_z,v_m,ok,l,d_ref,d_test,found)
 implicit none
 integer, intent(inout) :: tableNN(5),l
+logical, intent(inout) :: found
 real(kind=8), intent(in) :: d_ref,d_test
 integer, intent(in) :: v_x,v_y,v_z,v_m,ok
 ! internal variables
@@ -777,6 +709,7 @@ if (dabs(d_ref-d_test).lt.1.0d-8) then
    tableNN(4)=v_m
    tableNN(5)=ok
    l=l+1
+   found=.true.
 endif
 
 end subroutine associate_neighbour
@@ -796,25 +729,13 @@ integer :: test
 
 test=i_x+i
 ! make a translation of r if the test>stop
-vec=vec+translate(test,stop,r)
+vec=vec+real(i)*r
 ! use the periodic boundary conditions if necessary
 v=periodic(test,stop)
 
 if (((test.lt.1).or.(test.gt.stop)).and.(.not.period)) ok=0
 
 end subroutine test_neighbour
-
-! translate the position of the neighbor along vector r
-function translate(i,N,r)
-implicit none
-real(kind=8), dimension(3) :: translate
-integer, intent(in) :: i,N
-real(kind=8), intent(in) :: r(3)
-
-translate=0.0d0
-if (N.ne.1) translate=r*real(N*((i+N-1)/N-1))
-
-end function translate
 
 ! return the position of the neighbor in internal units with the periodic boundary conditions
 integer function periodic(i,N)

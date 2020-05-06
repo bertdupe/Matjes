@@ -37,7 +37,7 @@ end subroutine rotate_vector
 ! ==============================================================
 !> Calculate axis of rotation based on two 3-vectors
 function rotation_axis_1D(m_in,f_in)
-use m_vector, only : norm_cross,norm
+use m_vector, only : norm_cross,norm,cross
 implicit none
 real(kind=8), intent(in) :: m_in(:),f_in(:)
 ! internal varible
@@ -62,8 +62,13 @@ y(1) = dsign(a,f_in(1))
 y(2) = dsign(b,f_in(2))
 y(3) = dsign(c,f_in(3))
 
+x=cross(m_in,y)
 tmp = norm_cross(m_in,y,1,3)
-rotation_axis_1D = x/sqrt(tmp)
+if (tmp.lt.eps) then
+  rotation_axis_1D = 0.0d0
+else
+  rotation_axis_1D = x/tmp
+endif
 
 end function rotation_axis_1D
 

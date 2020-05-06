@@ -135,7 +135,6 @@ call user_info(6,time,'done',.false.)
 ! allocate table of neighbors and masque
 tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
 
-
 allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
 
@@ -157,7 +156,7 @@ call dump_config(io,pos)
 call close_file('positions.dat',io)
 
 ! get table of neighbors
-call mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice,pos)
+call mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice)
 
 call user_info(6,time,'done',.true.)
 
@@ -169,11 +168,6 @@ call get_EM_external_fields(ext_param%H_ext%value,ext_param%E_ext%value,my_motif
 call initialize_external_fields(my_lattice)
 
 call user_info(6,time,'done',.false.)
-
-!check for the structure.xyz file for shape modification
-inquire (file='structure.xyz',exist=i_usestruct)
-if (i_usestruct) call user_def_struct(masque,pos, &
-     & my_lattice%dim_lat,count(my_motif%i_mom),tot_N_Nneigh+1,my_lattice%areal)
 
 ! setup the different parameters for the interaction DM, 4-spin... 
 ! hard part: setup DM interaction
@@ -198,7 +192,8 @@ if (n_DMI.ne.0) then
 ! have to be rearranged
     call user_info(6,time,'Re-aranging the position of the DM vectors',.false.)
 
-    call arrange_neigh(DM_vector,tableNN,indexNN,my_lattice%dim_lat,my_lattice%areal,n_DMI)
+    call arrange_DM(DM_vector,n_DMI)
+!    call arrange_neigh(DM_vector,tableNN,indexNN,my_lattice%dim_lat,my_lattice%areal,n_DMI)
 
     call user_info(6,time,'done',.true.)
 else

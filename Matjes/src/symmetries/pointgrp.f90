@@ -138,7 +138,7 @@ logical, intent(in) :: periodic(:)
 integer, intent(inout) :: number_sym,sym_index(:)
 type(cell), intent(in) :: my_motif
 !internal
-integer :: natom,i,j,i_sim,n_sym,new_index(64),io_sym,k
+integer :: natom,i,j,i_sim,new_index(64),k
 type(symop) :: all_sym_op(64)
 real(kind=8) :: test_vec(3),pos(3)
 logical :: found

@@ -44,24 +44,23 @@ do i=1,size_mode/3
 
 ! first term
   implicite(start)=-(-droite(start)+ &
-     &  (-B_int(start+2)*droite(start+1)+B_int(start+1)*droite(start+2)) + &
+     &  (B_int(start+2)*droite(start+1)-B_int(start+1)*droite(start+2)) + &
      &  (-B_int(start)**2*droite(start)-B_int(start)*B_int(start+1)*droite(start+1)-B_int(start)*B_int(start+2)*droite(start+2))) &
      &  /denominator
 
 ! second term
   implicite(start+1)=-(-droite(start+1)+ &
-     &  (B_int(start+2)*droite(start)-B_int(start)*droite(start+2))+ &
+     &  (-B_int(start+2)*droite(start)+B_int(start)*droite(start+2))+ &
      &  (-B_int(start+1)**2*droite(start+1)-B_int(start)*B_int(start+1)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+2))) &
      &  /denominator
 
 ! third term
   implicite(start+2)=-(-droite(start+2)+ &
-     &  (-B_int(start+1)*droite(start)+B_int(start)*droite(start+1))+ &
+     &  (B_int(start+1)*droite(start)-B_int(start)*droite(start+1))+ &
      &  (-B_int(start+2)**2*droite(start+2)-B_int(start)*B_int(start+2)*droite(start)-B_int(start+1)*B_int(start+2)*droite(start+1))) &
      &  /denominator
 
 enddo
-
 
 end function implicite
 
@@ -82,17 +81,9 @@ integer :: i,start,end
 
 euler=mode_t
 
-!if (BT_norm.gt.1.0d-10) then
-!   step_T=cross(S_norm,BT,1,3)
-!   DTs= step_T+damping*cross(S_norm,step_T,1,3)
-!endif
-
 do i=1,size_mode/3
    start=3*(i-1)+1
    end=3*i
-
-   norm_mode=norm(D_mode(start:end))
-   if (norm_mode.lt.1.0d-8) cycle
 
    norm_mode=norm(mode_t(start:end))
    euler_int(start:end)=mode_t(start:end)+(D_mode(start:end)*dt+sqrt(dt)*DT_mode(start:end))/hbar

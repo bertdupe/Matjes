@@ -97,9 +97,9 @@ type(symop), intent(in) :: symmetries(:)
 real(kind=8) :: get_DM_vectors(atom_all_shells,3,1)
 logical, intent(in) :: periodic(:)
 ! internal
-integer :: i,natom,n_at_mag,n_at_nonmag,j,k,l,n
+integer :: i,natom,n_at_mag,n_at_nonmag,j,l
 integer :: n_at_nonmag_incell,n_at_mag_inshell
-real(kind=8) :: R1(3),R2(3),DMV(3),test,test_pos_A(3),test_pos_B(3),dumy
+real(kind=8) :: DMV(3),dumy
 real(kind=8),allocatable :: R_mag(:,:,:),R_non_mag(:,:,:)
 real(kind=8),allocatable :: pos_mag_atom_in_shell(:,:),pos_nonmag_atom_in_shell(:,:)
 logical :: if_present,exists

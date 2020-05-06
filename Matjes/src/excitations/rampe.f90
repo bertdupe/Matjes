@@ -1,5 +1,4 @@
 module m_rampe
-use m_basic_types, only : excitations
 use m_convert
 
 private
@@ -7,10 +6,10 @@ public :: update_rampe
 
 contains
 
-subroutine update_rampe(time,field,excite,counter)
+subroutine update_rampe(time,field,t_start,t_end,start_value,end_value,counter)
 implicit none
-real(kind=8), intent(in) :: time
-type(excitations), intent(inout) :: excite(:)
+real(kind=8), intent(in) :: time,t_start,t_end
+real(kind=8), intent(in) :: end_value(:),start_value(:)
 integer, intent(inout) :: counter
 real(kind=8), intent(inout) :: field(:)
 ! internal
@@ -19,9 +18,9 @@ integer :: n
 
 n=size(field)
 
-if ((time.ge.excite(counter)%t_start).and.(time.le.excite(counter)%t_end)) then
+if ((time.ge.t_start).and.(time.le.t_end)) then
 
-   field=field+(excite(counter)%end_value(1)-excite(counter)%start_value(1))/real(excite(counter)%t_end-excite(counter)%t_start)
+   field=field+(end_value-start_value)/real(t_end-t_start)
 
    form=convert('(a,',n,'f14.6)')
    write(6,form) 'field value ',field

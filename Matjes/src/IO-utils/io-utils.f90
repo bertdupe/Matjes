@@ -45,8 +45,6 @@ interface get_parameter
  module procedure get_character
  module procedure get_my_simu
  module procedure get_atomic
- module procedure get_excitations
- module procedure get_shape
 end interface get_parameter
 
 interface number_nonzero_coeff
@@ -56,7 +54,7 @@ end interface number_nonzero_coeff
 
 
 private
-public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse,number_nonzero_coeff,check_last_char
+public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse,number_nonzero_coeff,check_last_char,check_read
 
 contains
 
@@ -872,104 +870,6 @@ check=check_read(nread,vname,fname)
 if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', vec
 
 end subroutine get_1D_vec_int
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! get the excitations for all the cycles
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine get_excitations(io,fname,vname,excite)
-implicit none
-type(excitations), intent(inout) :: excite
-integer, intent(in) :: io
-character(len=*), intent(in) :: vname,fname
-! internal variable
-integer :: fin,len_string,nread,check
-character(len=100) :: str
-character(len=100) :: dummy
-logical :: dum_logic
-
-nread=0
-len_string=len(trim(adjustl(vname)))
-
-
-excite%start_value(:)=0.0d0
-excite%end_value(:)=0.0d0
-excite%t_start=0
-excite%t_end=0
-excite%name=fname
-
-
-rewind(io)
-do
-   read (io,'(a)',iostat=fin) str
-   if (fin /= 0) exit
-   str= trim(adjustl(str))
-
-   if (len_trim(str)==0) cycle
-   if (str(1:1) == '#' ) cycle
-
-!cccc We start to read the input
-   if ( str(1:len_string) == trim(adjustl(vname)) ) then
-      nread=nread+1
-      backspace(io)
-      read(io,*) dummy,dum_logic,excite%name
-      if ((excite%name.eq.'Bfield').or.(excite%name.eq.'Efield')) then
-         backspace(io)
-         read(io,*) dummy,dum_logic,dummy,excite%start_value(1:3),excite%end_value(1:3),excite%t_start,excite%t_end
-      else
-         backspace(io)
-         read(io,*) dummy,dum_logic,dummy,excite%start_value(1),excite%end_value(1),excite%t_start,excite%t_end
-      endif
-
-   endif
-
-enddo
-
-check=check_read(nread,vname,fname)
-
-end subroutine get_excitations
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! get the shape of the excitations for all the cycles
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine get_shape(io,fname,vname,field)
-use m_basic_types, only : shape_field
-implicit none
-type(shape_field), intent(inout) :: field
-integer, intent(in) :: io
-character(len=*), intent(in) :: vname,fname
-! internal variable
-integer :: fin,len_string,nread,check
-character(len=100) :: str
-character(len=100) :: dummy
-
-nread=0
-len_string=len(trim(adjustl(vname)))
-
-field%name='plane'
-field%center=(/0.0d0,0.0d0,0.0d0/)
-field%cutoff=0.0d0
-
-rewind(io)
-do
-   read (io,'(a)',iostat=fin) str
-   if (fin /= 0) exit
-   str= trim(adjustl(str))
-
-   if (len_trim(str)==0) cycle
-   if (str(1:1) == '#' ) cycle
-
-!cccc We start to read the input
-   if ( str(1:len_string) == trim(adjustl(vname)) ) then
-      nread=nread+1
-      backspace(io)
-      read(io,*) dummy,field%name,field%center(1:3),field%cutoff
-   endif
-
-enddo
-
-check=check_read(nread,vname,fname)
-
-end subroutine get_shape
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get the number of lines in a ASCII file

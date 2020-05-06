@@ -24,8 +24,9 @@ type(var_name),dimension(8),parameter :: type_simu= [ var_name('magnet-dynamics'
                                                       var_name('entropic'),          &
                                                       var_name('tight-binding') ]
 
-type(var_name),dimension(3),parameter :: type_excitations= [ var_name('rampe'),           &
+type(var_name),dimension(4),parameter :: type_excitations= [ var_name('rampe'),           &
                                                       var_name('heavyside'),          &
-                                                      var_name('TPulse')]
+                                                      var_name('TPulse'),             &
+                                                      var_name('EMwave') ]
 
 end module m_simu_parameters

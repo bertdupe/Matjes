@@ -38,7 +38,7 @@ type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 ! internal
 logical :: gra_log,io_stochafield
-integer :: i,j,l,h,gra_freq,i_loop,i_dt
+integer :: i,j,l,h,gra_freq,i_loop,i_dt,input_excitations
 ! lattices that are used during the calculations
 real(kind=8),allocatable,dimension(:,:,:,:,:,:) :: spinafter
 real(kind=8),allocatable,dimension(:,:) :: D_T,Bini,BT
@@ -46,9 +46,9 @@ real(kind=8),allocatable,dimension(:,:,:) :: D_mode
 real(kind=8),allocatable,dimension(:) :: D_mode_int
 type(vec_point),allocatable,dimension(:) :: all_mode,all_mode_1,all_mode_2
 ! pointers specific for the modes
-type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield,mode_excitation_field,mode_magnetic,mode_disp
+type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield,mode_magnetic,mode_disp
 type(vec_point),target,allocatable,dimension(:) :: D_T_mag,B_mag,BT_mag
-type(vec_point),target,allocatable,dimension(:,:) :: D_mode_mag
+type(vec_point),target,allocatable,dimension(:,:) :: D_mode_mag,mode_excitation_field,lattice_ini_excitation_field
 type(vec_point),target,allocatable,dimension(:) :: D_T_disp,B_disp,BT_disp
 type(vec_point),target,allocatable,dimension(:,:) :: D_mode_disp
 ! dummys
@@ -66,6 +66,7 @@ logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_disp
 logical :: said_it_once,gra_topo
 
 time=0.0d0
+input_excitations=0
 
 OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
       Write(7,'(20(a,2x))') '# 1:step','2:real_time','3:E_av','4:M', &
@@ -260,13 +261,14 @@ call prepare_FFT_dipole(N_cell)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! part of the excitations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_excitations('input',i_excitation)
+call get_excitations('input',i_excitation,input_excitations)
 ! allocate the field on which the excitation occurs
 if (i_excitation) then
-   allocate(mode_excitation_field(N_cell))
-   call dissociate(mode_excitation_field,N_cell)
-
-   call associate_excitation(mode_excitation_field,all_mode_1,my_order_parameters)
+   allocate(mode_excitation_field(N_cell,input_excitations),lattice_ini_excitation_field(N_cell,input_excitations))
+   do iomp=1,input_excitations
+     call associate_excitation(iomp,mode_excitation_field(:,iomp),all_mode_1,my_order_parameters)
+     call associate_excitation(iomp,lattice_ini_excitation_field(:,iomp),all_mode,my_order_parameters)
+   enddo
 endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -284,13 +286,12 @@ call get_torques('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if (io_simu%io_tracker) call init_tracking(mag_lattice)
 
-call init_temp_measure(check,check1,check2,check3)
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! beginning of the
 do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   call init_temp_measure(check,check1,check2,check3)
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0
@@ -334,7 +335,10 @@ do j=1,duration
 !
     do iomp=1,N_cell
 
-      if (i_excitation) call update_EMT_of_r(iomp,mode_excitation_field(iomp)%w)
+      if (i_excitation) then
+        call update_EMT_of_r(iomp,mode_excitation_field)
+        call update_EMT_of_r(iomp,lattice_ini_excitation_field)
+      endif
 
       call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
 
@@ -347,6 +351,10 @@ do j=1,duration
 
     enddo
 
+!
+! check the Butcher's table for the new dt
+! if dt is 0 in the Butcher's table do not carry out integration
+    dt=get_dt_mode(timestep_int,i_loop)
 !
 ! loop that carry out the integration
 !
@@ -361,7 +369,7 @@ do j=1,duration
 
 !!!!!!!!!!!!!!! copy the final configuration from spinafter(:,2) in spinafter(:,1)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    call copy_lattice(all_mode_2,all_mode_1)
+   call copy_lattice(all_mode_2,all_mode_1)
 
   enddo
 
