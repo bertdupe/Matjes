@@ -64,6 +64,7 @@ integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq,dime
 logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_displacement
 ! dumy
 logical :: said_it_once,gra_topo
+
 time=0.0d0
 
 OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
