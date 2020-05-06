@@ -64,6 +64,7 @@ integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq,dime
 logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_displacement
 ! dumy
 logical :: said_it_once,gra_topo
+character(20) Beff_filename !to write Beff
 
 time=0.0d0
 input_excitations=0
@@ -450,6 +451,20 @@ if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 if (io_simu%io_tracker) then
 !  call update_tracking(j)
   if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,all_mode_1)
+endif
+
+
+!!!!!!!!!!!!!!! write local effective field to file here
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if (gra_log) then
+   if (mod(j-1,gra_freq).eq.0) then
+	write(Beff_filename,'(a,i0,a)') 'Beff_',j/gra_freq,'.dat'
+	open (9,file= Beff_filename,action="write",status="replace",form='formatted')
+  	do iomp=1,N_cell
+		write(9,*) Bini(:,iomp)
+	enddo
+  	close (9)
+   endif
 endif
 
 if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
