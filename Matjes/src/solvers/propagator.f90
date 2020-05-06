@@ -11,7 +11,7 @@ contains
 ! ----------------------------------------------
 ! LLG equation of motion that returns the D_M
 function LLG(B,damping,spini,size_B)
-use m_torques, only : update_B
+use m_torques, only : update_DS
 implicit none
 integer, intent(in) :: size_B
 real(kind=8), intent(in) :: spini(:),damping,B(:)   !,stm_field_torque
@@ -30,7 +30,7 @@ stepdamp=cross(S_norm,B,1,size_b)
 
 LLG_int=-B-damping*stepdamp
 
-call update_B(S_norm,damping,LLG_int)
+call update_DS(S_norm,damping,LLG_int)
 
 LLG=cross(S_norm,LLG_int,1,size_b)/(1+damping**2)
 

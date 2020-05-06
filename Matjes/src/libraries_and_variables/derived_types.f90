@@ -21,7 +21,6 @@ end type lattice
 
 ! parameters for printing in and out
 type io_parameter
-     logical :: io_dispersion
 ! Go in the spmstm program of Tobias
      logical :: io_spstmL
 ! plot the spin structure (or the order parameter structure)

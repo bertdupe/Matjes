@@ -131,7 +131,6 @@ end subroutine
 !
 
 subroutine calculate_fft_matrix(field,pos,sense,FFT)
-use m_derived_types, only : vec_point
 use m_get_position
 implicit none
 real(kind=8), intent(in) :: field(:,:),pos(:,:)

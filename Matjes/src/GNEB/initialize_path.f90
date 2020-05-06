@@ -57,11 +57,11 @@ if (initpath==2) then
 
        write (*,'(a)') "Relaxing the first image..."
 
-       call minimize(all_mode_path(:,1),io_simu)
+!       call minimize(all_mode_path(:,1),io_simu)
        write (*,'(a)') "Done!"
 
        write (*,'(a)') "Relaxing the last image..."
-       call minimize(all_mode_path(:,nim),io_simu)
+!       call minimize(all_mode_path(:,nim),io_simu)
        write (*,'(a)') "Done!"
 
    else
@@ -72,11 +72,11 @@ if (initpath==2) then
      call CreateSpinFile(path(:,:,nim),'povray_GNEB_fin.dat')
 
      write (*,'(a)') "Relaxing the first image..."
-     call minimize(all_mode_path(:,1),io_simu)
+!     call minimize(all_mode_path(:,1),io_simu)
      write (*,'(a)') "Done!"
 
      write (*,'(a)') "Relaxing the last image..."
-     call minimize(all_mode_path(:,nim),io_simu)
+!     call minimize(all_mode_path(:,nim),io_simu)
      write (*,'(a)') "Done!"
 
 
@@ -92,11 +92,11 @@ else
 
    write (*,'(a)') "Relaxing the first image..."
 
-   call minimize(all_mode_path(:,1),io_simu)
+!   call minimize(all_mode_path(:,1),io_simu)
    write (*,'(a)') "Done!"
 
    write (*,'(a)') "Relaxing the last image..."
-   call minimize(all_mode_path(:,nim),io_simu)
+!   call minimize(all_mode_path(:,nim),io_simu)
    write (*,'(a)') "Done!"
 
    call geodesic_path(amp_rnd_path,path)

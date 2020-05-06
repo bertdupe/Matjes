@@ -32,8 +32,8 @@ module m_vector
    end interface calc_ang
 
    interface calculate_damping
-       module procedure damping_2V
-   end interface calculate_damping
+      module procedure damping_2V
+   end interface
 
 public
 

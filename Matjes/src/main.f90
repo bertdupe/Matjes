@@ -10,6 +10,7 @@ use m_derived_types
 use m_lattice
 use m_write_spin
 use m_createspinfile
+use m_minimize
 
 ! old code
       use m_vector, only : norm
@@ -164,14 +165,8 @@ if (my_simu%name == 'tight-binding') then
 endif
 
 
-!if (my_simu%name == 'minimization') then
-!            write(6,'(a)') 'entering into the minimization routine'
-!
-!            call CreateSpinFile('Spinse_start.dat',mag_lattice,mag_motif)
-!
-!            call minimize(i_biq,i_dm,i_four,i_dip,gra_log,gra_freq,EA, &
-!              & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell,h_ext,mag_lattice)
-!endif ! montec, dynamic or i_gneb
+if (my_simu%name == 'minimization') call minimize(all_lattices,io_simu)
+
 
 
 !---------------------------------

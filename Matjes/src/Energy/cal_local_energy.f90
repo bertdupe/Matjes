@@ -23,7 +23,7 @@ integer, intent(in) :: iomp,dim_mode
 ! ouput
 real(kind=8), intent(out) :: E_int
 ! internal
-integer :: i,N,j,dim_ham
+integer :: i,N,j
 real(kind=8) :: S_int(dim_mode)
 
 N=size(energy%line(:,iomp))

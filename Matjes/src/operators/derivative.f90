@@ -33,6 +33,7 @@ integer, allocatable :: pos(:,:,:)
 integer :: N_cell,i,n,dim_lat(4),N_world,j,k,location
 integer :: io_input
 logical :: periodic(3)
+real(kind=8) :: DF(3,2)
 
 dim_lat=shape(mag_lattice%l_modes)
 periodic=mag_lattice%boundary
@@ -59,6 +60,13 @@ do i=1,N_cell
       enddo
    enddo
 enddo
+
+io_input=open_file_write('derivative.dat')
+do i=1,N_cell
+  DF=0.0d0
+  call calculate_derivative(DF,i)
+enddo
+call close_file('derivative.dat',io_input)
 
 end subroutine get_derivative_int
 
@@ -143,7 +151,7 @@ subroutine calculate_derivative_scalar_field(DF,field,n_dim,n_vois)
 implicit none
 integer, intent(in) :: n_dim,n_vois
 type(vec_point), intent(in) :: field(:,:)
-real(kind=8), intent(inout) :: DF(:)
+real(kind=8), intent(inout) :: DF(:,:)
 ! internal
 integer :: i,j
 
@@ -152,12 +160,12 @@ DF=0.0d0
 do i=1,n_dim
   do j=1,n_vois-1
 
-     DF=DF+field(j+1,i)%w-field(j,i)%w
+     DF(:,i)=DF(:,i)+field(j+1,i)%w-field(j,i)%w
 
    enddo
-
-   DF=DF/real(n_vois-1)
 enddo
+
+DF=DF/real(n_vois-1)
 
 end subroutine calculate_derivative_scalar_field
 
