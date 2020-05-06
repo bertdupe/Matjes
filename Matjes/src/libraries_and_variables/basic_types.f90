@@ -28,19 +28,6 @@ end type Op_Im
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!
 
-! variable that contains the the excitations form (sweep of EM field...)
-type excitations
-    real(kind=8) :: start_value(3),end_value(3)
-    integer :: t_start,t_end
-    character(len=30) :: name
-end type excitations
-
-! variable that contains the shape of the fields
-type shape_field
-   real(kind=8) :: center(3),cutoff
-   character(len=30) :: name
-end type
-
 ! variable that contains the name of a variable
 type var_name
      character(len=30) :: name
