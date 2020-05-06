@@ -214,7 +214,6 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-if (io_simu%io_Force) call get_derivative(mode_magnetic,mag_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -247,6 +246,10 @@ do iomp=1,N_cell
 enddo
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! prepare the derivation of the lattice
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+if (io_simu%io_Force) call get_derivative(mode_magnetic,mag_lattice)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! prepare the dipole dipole FFT

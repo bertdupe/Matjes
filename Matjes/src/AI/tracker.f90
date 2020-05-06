@@ -3,7 +3,8 @@ use m_topoplot
 use m_topo_commons
 use m_derived_types, only : lattice
 use m_basic_types, only : vec_point
-use m_derivative
+use m_io_files_utils
+use m_get_position
 
 ! tracking parameters
 type pattern
@@ -13,7 +14,7 @@ type pattern
 end type
 
 ! derivation of the field of interest
-type(vec_point), allocatable :: derivative(:,:,:)
+real(kind=8), allocatable :: pos(:,:)
 
 ! the field of interest
 real(kind=8), allocatable :: field(:,:)
@@ -33,15 +34,13 @@ contains
 !
 subroutine init_tracking(my_lattice)
 use m_constants, only : pi
-use m_io_files_utils
 use m_io_utils
 implicit none
 type(lattice), intent(in) :: my_lattice
 ! internal variable
-integer :: i,N_pat,Nsites,N_cell,N_world,dim_lat(3),io_input
+integer :: i,N_pat,Nsites,N_cell,N_world,dim_lat(3),i_site
 ! derivative parameter
-integer :: order_derivative
-real(kind=8) :: Q(5)
+real(kind=8) :: Q(5),real_vec(3,3)
 
 write(6,'(a)') ''
 write(6,'(a)') 'initialization of the tracking procedure'
@@ -50,9 +49,13 @@ write(6,'(a)') ''
 N_world=size(my_lattice%world)
 dim_lat=my_lattice%dim_lat
 N_cell=product(dim_lat)
+real_vec=transpose(my_lattice%areal)
 
-allocate(field(1,N_cell))
+allocate(field(5,N_cell),pos(3,N_cell))
 field=0.0d0
+pos=0.0d0
+
+call get_position(pos,'positions.dat ')
 
 
 call get_topoplot(field)
@@ -63,20 +66,9 @@ N_pat=abs( NINT((Q(1)+Q(2))/pi(4.0d0)) )
 
 write(6,'(a,2x,I3,2x,a)') 'first guess indicates', N_pat, 'patterns found'
 
-order_derivative=1
-io_input=open_file_read('input')
-call get_parameter(io_input,'input','order_derivative',order_derivative)
-call close_file('input',io_input)
-
-allocate(derivative(2*order_derivative+1,N_world,N_cell))
-
-call get_derivative(field,my_lattice,derivative)
-
-
-
-
 allocate(all_patterns(N_pat))
 do i=1,N_pat
+
   call locate_pattern(Nsites,field,N_cell)
 
   all_patterns(i)%Nsites=Nsites
@@ -89,16 +81,13 @@ do i=1,N_pat
 
   call find_center(all_patterns(i)%center,all_patterns(i)%Nsites,all_patterns(i)%interior,field,N_cell)
 
+  write(6,'(2(a,2x,I6))') 'center of ', i, ' at position ', all_patterns(i)%center
+
 enddo
 
-
-
 do i=1,N_pat
-  call locate_boundary(Nsites,all_patterns(i)%interior,field,N_cell)
-  allocate(all_patterns(i)%boundary(Nsites))
-  all_patterns(i)%boundary=0
 
-  call find_boundary(Nsites,all_patterns(i)%boundary,all_patterns(i)%interior,field,derivative,N_cell)
+  call find_boundary(Nsites,i,field,N_cell,real_vec)
 
 enddo
 
@@ -169,7 +158,7 @@ integer, intent(in) :: interior(:)
 integer, intent(out) :: center
 ! internal
 integer :: i,i_site
-real(kind=8) :: Q,sum_Q,sum_Qpos
+real(kind=8) :: Q,sum_Q,sum_Qpos(3),test
 
 sum_Q=0.0d0
 sum_Qpos=0.0d0
@@ -179,39 +168,18 @@ do i=1,Nsites
    Q=field(1,i_site)+field(2,i_site)
 
    sum_Q=sum_Q+Q
-   sum_Qpos=sum_Qpos+Q*real(i_site)
+   sum_Qpos=sum_Qpos+Q*pos(:,i_site)
 
 enddo
 
-center=NINT(sum_Qpos/sum_Q)
-
-end subroutine
-
-
-!
-! BOUNDARY PART
-!
-
-!
-! locate the edge of a pattern
-!
-subroutine locate_boundary(N,interior,field,N_cell)
-implicit none
-integer, intent(out) :: N
-real(kind=8), intent(in) :: field(:,:)
-integer, intent(in) :: N_cell,interior(:)
-! internal
-integer :: i,N_interior,i_site
-real(kind=8) :: Qavant,Qapres
-
-N_interior=size(interior)
-N=0
-do i=1,N_interior
-   i_site=interior(i)
-
-   Qavant=field(1,i_site-1)+field(2,i_site-1)
-   Qapres=field(1,i_site+1)+field(2,i_site+1)
-   if ((abs(Qavant).lt.1.0d-8).or.(abs(Qavant).lt.1.0d-8)) N=N+1
+test=sum((pos(:,1)-sum_Qpos/sum_Q)**2)
+center=1
+do i=1,Nsites
+  i_site=interior(i)
+  if (sum((pos(:,i_site)-sum_Qpos/sum_Q)**2).lt.test) then
+    test=sum((pos(:,i_site)-sum_Qpos/sum_Q)**2)
+    center=i_site
+  endif
 enddo
 
 end subroutine
@@ -219,36 +187,62 @@ end subroutine
 !
 ! locate the finds the interior of the skyrmion
 !
-subroutine find_boundary(Nsites,boundary,interior,field,DF,N_cell)
+subroutine find_boundary(Nsites,i_pat,field,N_cell,real_vec)
+use m_vector, only : norm
+use m_matrix, only : invert
+use m_sort
+use m_constants, only : pi
+use m_envelope
 implicit none
-integer, intent(in) :: Nsites,N_cell,interior(:)
-real(kind=8), intent(in) :: field(:,:)
-type(vec_point), intent(in) :: DF(:,:,:)
-integer, intent(inout) :: boundary(:)
+integer, intent(in) :: Nsites,N_cell,i_pat
+real(kind=8), intent(in) :: field(:,:),real_vec(:,:)
 ! internal
-integer :: i,N_interior,i_site,j,shape_DF(3),n_dim,n_vois
-real(kind=8) :: Qavant,Qapres,Derivate(2)
+integer :: i,i_site,i_center
+! test of the boundary
+integer, allocatable :: ind(:),vertex(:)
+real(kind=8), allocatable :: x(:),y(:)
+integer :: N_interior,nvert
+! position of the center
+real(kind=8) :: P0(3),vec(3)
 
-N_interior=size(interior)
-shape_DF=shape(DF)
-n_dim=shape_DF(2)
-n_vois=shape_DF(1)
-Derivate=0.0d0
-j=0
+N_interior=size(all_patterns(i_pat)%interior)
+! find the invert of the areal matrix to pass from the
+allocate(x(N_interior),y(N_interior))
+x=0.0d0
+y=0.0d0
+i_center=all_patterns(i_pat)%center
+P0=pos(:,i_center)
+
 do i=1,N_interior
-   i_site=interior(i)
+   i_site=all_patterns(i_pat)%interior(i)
 
-   call calculate_derivative(Derivate,DF(:,:,i_site),n_dim,n_vois)
+   vec=pos(:,i_site)-P0
+   x(i)=vec(1)
+   y(i)=vec(2)
 
-   Qavant=field(1,i_site-1)+field(2,i_site-1)
-   Qapres=field(1,i_site+1)+field(2,i_site+1)
-   if ((abs(Qavant).lt.1.0d-8).or.(abs(Qavant).lt.1.0d-8)) then
-     j=j+1
-     boundary(j)=i_site
-   endif
+enddo
+
+allocate(ind(N_interior),vertex(N_interior))
+ind=0
+vertex=0
+
+call envelope(x, y, N_interior, vertex, nvert, ind)
+
+allocate(all_patterns(i_pat)%boundary(nvert))
+do i=1,nvert
+  i_site=vertex(i)
+  all_patterns(i_pat)%boundary(i)=all_patterns(i_pat)%interior(i_site)
 enddo
 
 end subroutine
+
+
+
+
+
+
+
+
 
 
 
@@ -282,7 +276,7 @@ do i=1,N_pat
     iomp=all_patterns(i)%interior(j)
     call local_energy(Et,iomp,mode,dim_mode)
 
-    write(io_inside,'(I8,2x,E20.12E3)') iomp,Et
+    write(io_inside,'(4(2x,E20.12E3))') pos(:,iomp),Et
 
   enddo
 
@@ -295,9 +289,10 @@ do i=1,N_pat
   do j=1,size(all_patterns(i)%boundary)
 
     iomp=all_patterns(i)%boundary(j)
+
     call local_energy(Et,iomp,mode,dim_mode)
 
-    write(io_border,'(I8,2x,E20.12E3)') iomp,Et
+    write(io_border,'(4(2x,E20.12E3))') pos(:,iomp),Et
 
   enddo
 

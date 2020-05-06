@@ -22,7 +22,6 @@ implicit none
 type(io_parameter), intent(out) :: io_simu
 
 ! io_of the simulation
-io_simu%io_dispersion=.False.
 io_simu%io_Xstruct=.False.
 io_simu%io_fft_Xstruct=.False.
 io_simu%io_topo=.False.

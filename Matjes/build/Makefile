@@ -2,7 +2,7 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
+OBJS = envelope.o sort.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
@@ -45,10 +45,12 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+envelope.o:
+sort.o:
 matrix.o: basic_types.o
 Hamiltonian_variables.o: basic_types.o
 modes_variables.o: basic_types.o
-tracker.o: topoplot.o topo_commons.o convert.o io_files_utils.o cal_local_energy.o derived_types.o derivative.o
+tracker.o: envelope.o sort.o topoplot.o topo_commons.o convert.o io_files_utils.o cal_local_energy.o derived_types.o derivative.o
 solver_order.o: convert.o
 plot_FFT.o: io-utils.o io_files_utils.o convert.o fftw.o
 derivative.o: basic_types.o operator_pointer_utils.o io-utils.o io_files_utils.o
@@ -144,7 +146,6 @@ create_lattice.o: derived_types.o
 error.o:
 mapping.o: create_lattice.o inp_rw.o vector.o derived_types.o
 indexation.o: derived_types.o vector.o
-#dispBZ.o: inp_rw.o constant.o rw_lattice.o vector.o create_lattice.o constant.o sym_utils.o
 order_lattice.o: derived_types.o
 pathImc.o:
 qorienplot.o: rw_lattice.o inp_rw.o constant.o create_lattice.o
@@ -153,7 +154,7 @@ stdtypes.o:
 mtprng.o: stdtypes.o
 Energy_distrib.o: energy_commons.o operator_pointer_utils.o convert.o io_files_utils.o derived_types.o matrix.o
 
-minimize.o: energy_commons.o internal_fields.o vector.o dyna-utils.o WriteSpinAndCorrFile.o solver.o
+minimize.o: Beff_sd.o energy_commons.o internal_fields.o vector.o dyna-utils.o WriteSpinAndCorrFile.o solver.o
 
 gneb.o: energy_commons.o minimize.o io-gneb.o gneb_utils.o gneb_parameters.o initialize_path.o
 gneb_parameters.o: io_files_utils.o 
@@ -180,7 +181,7 @@ spindynamics.o: tracker.o solver_order.o plot_FFT.o forces.o solver_commun.o inf
 total_Energy.o: energy_commons.o vector.o
 qorien.o: vector.o inp_rw.o rw_lattice.o
 CalculateAverages.o: topo_commons.o vector.o rw_lattice.o create_lattice.o 
-main.o: tightbinding.o io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o qorien.o vector.o Correlation.o constant.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
+main.o: minimize.o tightbinding.o io-utils.o init-variables.o user_information.o WriteSpinAndCorrFile.o qorien.o vector.o Correlation.o constant.o create_lattice.o inp_rw.o rw_lattice.o CalculateAverages.o mtprng.o check_restart.o
 Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o

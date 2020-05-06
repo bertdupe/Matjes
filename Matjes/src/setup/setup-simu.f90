@@ -263,10 +263,6 @@ if (io_simu%io_Energy_Distrib) call init_Energy_distrib(my_lattice,tableNN,index
 
 call user_info(6,time,'done',.true.)
 
-!c Calculation of the dispertion in the full BZ
-! this is here because we have the table of distances
-!!!if (dispersion) call fullBZ(tabledist,N_Nneigh,Nei_z,phase)
-
 !deallocate(tabledist,tableNN,indexNN)
 
 

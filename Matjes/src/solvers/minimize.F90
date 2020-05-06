@@ -13,8 +13,8 @@ contains
 
 
 
-subroutine minimize(spin,io_simu)
-use m_derived_types, only : io_parameter
+subroutine minimize(my_lattice,io_simu)
+use m_derived_types, only : io_parameter,lattice
 use m_basic_types, only : vec_point
 use m_write_spin
 use m_createspinfile
@@ -23,20 +23,22 @@ use m_vector, only : norm_cross,norm, calculate_damping
 use m_dyna_utils, only : copy_lattice
 use m_eval_Beff
 use m_local_energy
+use m_lattice, only : my_order_parameters
+use m_operator_pointer_utils
 #ifdef CPP_OPENMP
-      use omp_lib
+use omp_lib
 #endif
 implicit none
 type(io_parameter), intent(in) :: io_simu
-type(vec_point), intent(inout) :: spin(:)
+type(lattice), intent(inout) :: my_lattice
 ! dummy variable
 real(kind=8),allocatable, dimension(:,:) :: velocity,predicator,force
-
+type(vec_point),allocatable,dimension(:) :: all_mode,mode_magnetic
 ! internal
 real(kind=8) :: F_eff(3),V_eff(3),dumy,force_norm,Energy,vmax,vtest,F_temp(3),Eint,test_torque,max_torque
 ! the computation time
-integer :: i_min,N_cell,gra_freq
-logical :: gra_log
+integer :: i_min,N_cell,gra_freq,i
+logical :: gra_log,i_magnetic
 integer :: iomp,dim_mode
 #ifdef CPP_OPENMP
 integer :: nthreads,ithread
@@ -48,11 +50,6 @@ gra_freq=io_simu%io_frequency
 gra_log=io_simu%io_Xstruct
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-N_cell=size(spin)
-allocate(velocity(3,N_cell),predicator(3,N_cell),force(3,N_cell))
-velocity=0.0d0
-force=0.0d0
-predicator=0.0d0
 F_eff=0.0d0
 V_eff=0.0d0
 force_norm=0.0d0
@@ -60,7 +57,26 @@ test_torque=0.0d0
 max_torque=10.0d0
 vmax=0.0d0
 vtest=0.0d0
-dim_mode=size(spin(1)%w)
+
+allocate(all_mode(N_cell))
+call associate_pointer(all_mode,my_lattice)
+
+dim_mode=size(all_mode(1)%w)
+allocate(velocity(3,N_cell),predicator(3,N_cell),force(3,N_cell))
+velocity=0.0d0
+force=0.0d0
+predicator=0.0d0
+
+! magnetization
+do i=1,size(my_order_parameters)
+  if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_magnetic(N_cell))
+   call dissociate(mode_magnetic,N_cell)
+   call associate_pointer(mode_magnetic,all_mode,'magnetic',i_magnetic)
+
+   exit
+  endif
+enddo
 
 #ifdef CPP_OPENMP
 nthreads=omp_get_num_procs()
@@ -73,16 +89,16 @@ write(6,'(a,2x,I3,2x,a)') 'I will calculate on',nthreads,'threads'
 
 do iomp=1,N_cell
 
-   call calculate_Beff(F_eff,iomp,spin,dim_mode)
-   force(:,iomp)=calculate_damping(spin(iomp)%w,F_eff)
-   call minimization(spin(iomp)%w,force(:,iomp),predicator(:,iomp),dt**2,masse*2.0d0,3)
+   call calculate_Beff(F_eff,iomp,mode_magnetic,dim_mode)
+   force(:,iomp)=calculate_damping(mode_magnetic(iomp)%w,F_eff)
+   call minimization(mode_magnetic(iomp)%w,force(:,iomp),predicator(:,iomp),dt**2,masse*2.0d0,3)
 
    test_torque=norm_cross(predicator(:,iomp),force(:,iomp),1,3)
    if (test_torque.gt.max_torque) max_torque=test_torque
 
 enddo
 
-call copy_lattice(predicator,spin)
+call copy_lattice(predicator,mode_magnetic)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! end of initialization
@@ -105,8 +121,8 @@ ithread=omp_get_thread_num()
 
 do iomp=1,N_cell
 
-   call calculate_Beff(F_eff,iomp,spin,dim_mode)
-   F_temp=calculate_damping(spin(iomp)%w,F_eff)
+   call calculate_Beff(F_eff,iomp,all_mode,dim_mode)
+   F_temp=calculate_damping(mode_magnetic(iomp)%w,F_eff)
 
    call minimization(velocity(:,iomp),(force(:,iomp)+F_temp)/2.0d0,V_eff,dt,masse,3)
 
@@ -144,7 +160,7 @@ endif
 #endif
 do iomp=1,N_cell
 
-   call minimization(spin(iomp)%w,velocity(:,iomp),force(:,iomp),predicator(:,iomp),dt,masse,3)
+   call minimization(mode_magnetic(iomp)%w,velocity(:,iomp),force(:,iomp),predicator(:,iomp),dt,masse,3)
    test_torque=norm(force(:,iomp))
    vtest=norm(velocity(:,iomp))**2
 
@@ -158,17 +174,17 @@ enddo
 !$OMP end do
 #endif
 
-call copy_lattice(predicator,spin)
+call copy_lattice(predicator,all_mode)
 Energy=0.0d0
 
-dim_mode=size(spin(1)%w)
+dim_mode=size(all_mode(1)%w)
 #ifdef CPP_OPENMP
 !$OMP do private(iomp) reduction(+:Energy) collapse(1)
 #endif
 
 do iomp=1,N_cell
 
-   call local_energy(Eint,iomp,spin,dim_mode)
+   call local_energy(Eint,iomp,all_mode,dim_mode)
    Energy=Energy+Eint
 
 enddo
@@ -185,8 +201,8 @@ if ((gra_log).and.(mod(i_min-1,gra_freq).eq.0)) then
    write(6,'(a,2x,f14.11)') 'Energy of the system (eV/unit cell)',Energy/dble(N_cell)
    write(6,'(2(a,2x,f14.11,2x))') 'convergence criteria:',conv_torque,',Measured Torque:',max_torque
    write(6,'(a,2x,f14.11,/)') 'speed of displacements:',vmax
-   call WriteSpinAndCorrFile(i_min/gra_freq,spin,'spin_minimization')
-   call CreateSpinFile(i_min/gra_freq,spin)
+   call WriteSpinAndCorrFile((i_min-1)/gra_freq,all_mode,'spin_minimization')
+   call CreateSpinFile((i_min-1)/gra_freq,all_mode)
 endif
 
 if (conv_torque.gt.max_torque) then
