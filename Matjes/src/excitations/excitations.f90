@@ -84,6 +84,8 @@ call get_parameter(io_input,fname,'num_excitations',input_excitations)
 allocate(EM_of_t%name(input_excitations),EM_of_t%temporal_param(input_excitations),EM_of_t%spatial_param(input_excitations))
 EM_of_t%counter=input_excitations
 
+
+
 if (input_excitations.ne.0) then
   i_excitations=.true.
   excitation=.true.
@@ -121,12 +123,13 @@ do j=1,EM_of_t%counter
   case('TPulse')
 
     write(6,'(a)') 'initialization of the electron temperature pulse'
-    call get_parameter_TPulse(io_input,fname)
+    call read_excitations(io_input,fname,excitations,EM_of_t%temporal_param(j))
+     call get_parameter_TPulse(io_input,fname)
 
   case('EMwave')
 
-    write(6,'(a)') 'initialization of the electron temperature pulse'
-    call get_parameter_EMwave(io_input,fname)
+    call read_excitations(io_input,fname,excitations,EM_of_t%temporal_param(j))
+   call get_parameter_EMwave(io_input,fname)
 
   case default
      write(6,'(a)') 'no excitations selected'
@@ -167,14 +170,20 @@ integer, intent(in) :: i_excite
 ! internal variables
 integer :: i,j
 
+
 do i=1,size(my_order_parameters)
    if( my_order_parameters(i)%name.eq.EM_of_t%temporal_param(i_excite)%name) then
       write(6,'(2a)') 'excitations was found on  ', my_order_parameters(i)%name
       do j=1,size(all_mode)
          point(j)%w => all_mode(j)%w(my_order_parameters(i)%start:my_order_parameters(i)%end)
+  	if (associated(point(j)%w) .eqv. .false.)  then
+		write(*,*) '!!!!! In associate excitations, pointer not associated, aborting...'
+		call abort
+	endif
       enddo
    endif
 enddo
+
 
 write(6,'(/,a,/)') 'the pointers for the excitations has been allocated in associate_excitation'
 
@@ -195,7 +204,7 @@ integer :: j
 r=position(:,i)
 
 do j=1,EM_of_t%counter
-  mode(i,j)%w=EM_of_t%spatial_param(j)%field*EM_of_t%spatial_param(j)%norm(r,shape_excitation%center,shape_excitation%cutoff)
+ mode(i,j)%w=EM_of_t%spatial_param(j)%field*EM_of_t%spatial_param(j)%norm(r,shape_excitation%center,shape_excitation%cutoff)
 enddo
 
 end subroutine
@@ -255,7 +264,7 @@ do j=1,EM_of_t%counter
   end select
 
   if (norm(field_ini-EM_of_t%spatial_param(j)%field).gt.1.0d-5) then
-    form=convert('(a,',size_field,'f14.6/)')
+    form=convert('(a,',size_field,'f16.6/)')
     write(6,'(/a,2x,f16.6)') 'real time',time
     write(6,form) 'field value ',EM_of_t%spatial_param(j)%field(:)
   endif
@@ -363,8 +372,8 @@ do
          backspace(io)
          read(io,*) dummy,dum_logic,dummy,excite%start_value(1:3),excite%end_value(1:3),excite%t_start,excite%t_end
       else
-         backspace(io)
-         read(io,*) dummy,dum_logic,dummy,excite%start_value(1),excite%end_value(1),excite%t_start,excite%t_end
+        backspace(io)
+	read(io,*) dummy,dum_logic,dummy,excite%start_value(1),excite%end_value(1),excite%t_start,excite%t_end
       endif
 
    endif

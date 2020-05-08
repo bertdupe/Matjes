@@ -37,8 +37,11 @@ TPulse%sigma=sqrt(52.29)
 TPulse%t_cut_pulse=2500
 TPulse%forme='exponential'
 
+
+
 call get_parameter(io,fname,'T0',TPulse%T0)
-call get_parameter(io,fname,'t_start',TPulse%t_start)
+write(*,*) TPulse%T0
+call get_parameter(io,fname,'t_start_pulse',TPulse%t_start)
 call get_parameter(io,fname,'alpha',TPulse%alpha)
 call get_parameter(io,fname,'I_exp',TPulse%I_exp)
 call get_parameter(io,fname,'I_over_x',TPulse%I_over_x)
@@ -47,14 +50,21 @@ call get_parameter(io,fname,'t_frac',TPulse%t_frac)
 call get_parameter(io,fname,'expo',TPulse%expo)
 call get_parameter(io,fname,'sigma',TPulse%sigma)
 
+
+
 TPulse%t_cut_pulse=(TPulse%t_exp-TPulse%t_frac)/TPulse%I_over_x/TPulse%expo+TPulse%t_exp
+
+
 
 call get_parameter(io,fname,'t_cut_pulse',TPulse%t_cut_pulse)
 call get_parameter(io,fname,'forme',TPulse%forme)
 
+
+
 TPulse%forme=trim(TPulse%forme)
 TPulse%I_exp=TPulse%I_exp*TPulse%alpha
 TPulse%I_over_x=TPulse%I_over_x*TPulse%alpha
+
 
 end subroutine get_parameter_TPulse
 
@@ -75,19 +85,19 @@ kt1=0.0d0
 select case (TPulse%forme)
   case ('exponential')
 
-   if ((time.le.(TPulse%t_exp-3.0*TPulse%sigma)).or.(time.ge.(TPulse%t_exp+3.0*TPulse%sigma))) then
+   if ((time.le.(TPulse%t_exp-3.0*TPulse%sigma)).or.(time.ge.(TPulse%t_exp+3.0*TPulse%sigma))) then !before pulse
      kt1=TPulse%T0
    else
-     kt1=TPulse%T0+TPulse%I_exp*exp(-(time-TPulse%t_exp)**2/2.0d0/TPulse%sigma**2)
+     kt1=TPulse%T0+TPulse%I_exp*exp(-(time-TPulse%t_exp)**2/2.0d0/TPulse%sigma**2) !pulse
    endif
 
   case default
 
-   if (time.le.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)) then
+   if (time.le.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)) then !before pulse
      kt1=TPulse%T0
-    elseif ((time.gt.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)).and.(time.lt.(TPulse%t_exp+TPulse%t_start))) then
+    elseif ((time.gt.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)).and.(time.lt.(TPulse%t_exp+TPulse%t_start))) then !pulse
      kt1=TPulse%T0+TPulse%I_exp*exp(-(real(time-TPulse%t_start)-TPulse%t_exp)**2/TPulse%sigma**2)
-    elseif ((time.ge.(TPulse%t_start+TPulse%t_exp)).and.(time.lt.(TPulse%t_cut_pulse+TPulse%t_start))) then
+    elseif ((time.ge.(TPulse%t_start+TPulse%t_exp)).and.(time.lt.(TPulse%t_cut_pulse+TPulse%t_start))) then !cool down
      kt1=TPulse%T0+TPulse%I_over_x/(real(time-TPulse%t_start)-TPulse%t_frac)**TPulse%expo
     else
      kt1=TPulse%T0

@@ -13,7 +13,8 @@ integer, intent(inout) :: counter
 real(kind=8), intent(inout) :: field(:)
 ! internal
 
-if ((time.gt.t_start).and.(time.lt.t_end)) field=start_value(:)
+if ((time.ge.t_start).and.(time.le.t_end)) field=start_value(:)
+
 
 if (time.gt.t_end) field=end_value(:)
 

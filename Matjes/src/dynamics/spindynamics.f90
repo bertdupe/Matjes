@@ -325,6 +325,8 @@ do j=1,duration
 #endif
   test_torque=0.0d0
 
+
+
 !
 ! loop over the integration order
 !
@@ -394,7 +396,7 @@ check(2)=check(2)+check2
 !$OMP end parallel
 #endif
 
-real_time=real_time+timestep_int
+
 #ifdef CPP_MPI
 trans(1)=test_torque
 call MPI_REDUCE(trans(1),test_torque,1,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
@@ -520,10 +522,19 @@ if (mod(j-1,Efreq).eq.0) write(8,'(I10,3x,3(E20.12E3,3x))') j,Edy,test_torque,av
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! update timestep
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 call update_time(timestep_int,Bini,BT,damping)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! reinitialize T variables
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+check(1)=0.0d0
+check(2)=0.0d0
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!! end of a timestep
+real_time=real_time+timestep_int !increment time counter
 enddo
 
 !!!!!!!!!!!!!!! end of a timestep

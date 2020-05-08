@@ -50,6 +50,9 @@ call get_parameter(io,fname,'t_0',EM_Pulse%t_0)
 
 ! en fs-1
 EM_Pulse%omega_l=pi(2.0d0)*c/lambda_l
+write(*,*)'get_parameter_EMwave the weird pi thing'
+write(*,*)pi(2.0d0)
+
 
 if (EM_Pulse%t_start.lt.0) then
    write(6,'(a)') 't_start is negative or not read in input'
@@ -71,7 +74,7 @@ EM_Pulse%E_0=I_0*alpha
 end subroutine get_parameter_EMwave
 
 !!!!!!!!!!!!!!!!!!!!!!!!!
-! initialize parameters
+! update EMwave
 !!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine update_EMwave(time,field)
 use m_io_utils
@@ -83,7 +86,13 @@ real(kind=8), intent(inout) :: field(:)
 
 field=0.0d0
 
-field(1)=EM_Pulse%E_0*cos(EM_Pulse%omega_l*time)*exp(((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
+field(1)=EM_Pulse%E_0 *cos(EM_Pulse%omega_l*time) * exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
+
+write(*,*)'in update_EMwave field='
+write(*,*) field(:)
+write(*,*)EM_Pulse%E_0,exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
+write(*,*)cos(EM_Pulse%omega_l*time)
+write(*,*)EM_Pulse%E_0 *cos(EM_Pulse%omega_l*time) * exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
 
 end subroutine update_EMwave
 
