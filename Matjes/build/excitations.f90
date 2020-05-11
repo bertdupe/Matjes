@@ -66,7 +66,7 @@ integer, intent(inout) :: input_excitations
 character(len=*), intent(in) :: fname
 logical, intent(out) :: excitation
 !internal variable
-integer :: io_input,i,n_excite,N,j
+integer :: io_input,n_variable,i,n_excite,N,j
 logical :: test
 character(len=30) :: excitations
 character(len=30) :: name_variable

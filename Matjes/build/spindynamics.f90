@@ -30,8 +30,6 @@ use m_dipolar_field, only : prepare_FFT_dipole,calculate_FFT_modes
 use m_solver_order
 use m_io_files_utils
 use m_tracker
-use m_print_Beff
-use omp_lib
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -40,7 +38,7 @@ type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 ! internal
 logical :: gra_log,io_stochafield
-integer :: i,j,gra_freq,i_loop,input_excitations
+integer :: i,j,l,h,gra_freq,i_loop,i_dt,input_excitations
 ! lattices that are used during the calculations
 real(kind=8),allocatable,dimension(:,:,:,:,:,:) :: spinafter
 real(kind=8),allocatable,dimension(:,:) :: D_T,Bini,BT
@@ -66,6 +64,7 @@ integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq,dime
 logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_displacement
 ! dumy
 logical :: said_it_once,gra_topo
+character(20) Beff_filename !to write Beff
 
 time=0.0d0
 input_excitations=0
@@ -219,12 +218,6 @@ do i=1,size(my_order_parameters)
 enddo
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Prepare the calculation of the energy and the effective field
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_B_matrix(mag_lattice%dim_mode)
-call get_E_matrix(mag_lattice%dim_mode)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -251,7 +244,7 @@ call copy_lattice(all_mode,all_mode_1)
 Edy=0.0d0
 dimension_mode=size(all_mode(1)%w)
 do iomp=1,N_cell
-    call local_energy(Et,iomp,all_mode)
+    call local_energy(Et,iomp,all_mode,dimension_mode)
     Edy=Edy+Et
 enddo
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
@@ -294,15 +287,12 @@ call get_torques('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if (io_simu%io_tracker) call init_tracking(mag_lattice)
 
-!$omp parallel
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! beginning of the
 do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    call init_temp_measure(check,check1,check2,check3)
-
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0
@@ -317,44 +307,43 @@ do j=1,duration
    vortex=0.0d0
    test_torque=0.0d0
    ave_torque=0.0d0
+   l=l+1
+   h=h+1
+   BT=0.0d0
+   Bini=0.0d0
+   D_mode=0.0d0
    Mdy=0.0d0
-!$omp do private(iomp) schedule(auto)
-   do iomp=1,N_cell
-     Bini(:,iomp)=0.0d0
-     D_mode(:,iomp,:)=0.0d0
-     BT(:,iomp)=0.0d0
-   enddo
-!$omp end do
+
    dt=timestep_int
 
    call update_ext_EM_fields(real_time,check)
 
    call calculate_FFT_modes(j)
 
-   test_torque=0.0d0
+#ifdef CPP_OPENMP
+!$OMP parallel private(iomp,Beff) default(shared) reduction(+:check1,check2,check3)
+#endif
+  test_torque=0.0d0
 
 
 
 !
 ! loop over the integration order
 !
-!$omp do ordered private(i_loop,iomp) schedule(auto)
+
   do i_loop=1,N_loop
 
 !
 ! loop that get all the fields
 !
-
     do iomp=1,N_cell
 
       if (i_excitation) then
         call update_EMT_of_r(iomp,mode_excitation_field)
         call update_EMT_of_r(iomp,lattice_ini_excitation_field)
       endif
-! call routine normal which is very slow
-!      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
-! call routine optimized which is very slow
-      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
+
+      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
 
 !
 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
@@ -383,27 +372,23 @@ do j=1,duration
 
 !!!!!!!!!!!!!!! copy the final configuration from spinafter(:,2) in spinafter(:,1)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
    call copy_lattice(all_mode_2,all_mode_1)
 
   enddo
-!$omp end do
-!$omp single
+
 !!!!!!!!!!!!!!! copy the final configuration in my_lattice
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-call copy_lattice(all_mode_2,all_mode)
+   call copy_lattice(all_mode_2,all_mode)
+
 
 !
 !!!!!! Measure the temperature if the users wish
 !
-!!!!$omp do private(iomp) reduction(+:check1,check2) reduction(max:test_torque) schedule(auto)
 do iomp=1,N_cell
    call update_temp_measure(check1,check2,mode_magnetic(iomp)%w,B_mag(iomp)%w)
    if (norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3)
 enddo
-!!!!$omp end do
 check(1)=check(1)+check1
 check(2)=check(2)+check2
 
@@ -412,19 +397,28 @@ check(2)=check(2)+check2
 #endif
 
 
+#ifdef CPP_MPI
+trans(1)=test_torque
+call MPI_REDUCE(trans(1),test_torque,1,MPI_REAL8,MPI_SUM,0,MPI_COMM,ierr)
+#endif
+
 if (j.eq.1) check3=test_torque
 
 ! calculate energy
 
-!!!$omp do private(iomp,Et,dumy) reduction(+:Edy,Mdy,q_plus,q_moins,vx,vy,vz) schedule(auto)
-
+dimension_mode=size(all_mode(1)%w)
+#ifdef CPP_OPENMP
+!$OMP parallel do private(iomp) default(shared) reduction(+:Edy,Mx,My,Mz,qeuler,vx,vy,vz)
+#endif
 do iomp=1,N_cell
 
-    call local_energy(Et,iomp,all_mode)
+    call local_energy(Et,iomp,all_mode_1,dimension_mode)
 
     Edy=Edy+Et
 
-    Mdy=Mdy+mode_magnetic(iomp)%w
+    Mdy(1)=Mdy(1)+mode_magnetic(iomp)%w(1)
+    Mdy(2)=Mdy(2)+mode_magnetic(iomp)%w(2)
+    Mdy(3)=Mdy(3)+mode_magnetic(iomp)%w(3)
 
     dumy=get_charge(iomp)
 
@@ -437,10 +431,18 @@ do iomp=1,N_cell
 
 enddo
 
-!!!$omp end do
+#ifdef CPP_OPENMP
+!$OMP end parallel do
+#endif
 vortex=(/vx,vy,vz/)/3.0d0/sqrt(3.0d0)
 Edy=Edy/real(N_cell)
 Mdy=Mdy/real(N_cell)
+
+!#ifdef CPP_MPI
+!      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0).and.(irank.eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,shape_tableNN,masque,indexNN,h_int,mag_lattice,irank,start,isize,MPI_COMM)
+!#else
+!      if ((i_Efield).and.(mod(j-1,gra_freq).eq.0)) call Efield_sd(j/gra_freq,spin,shape_spin,tableNN,masque,indexNN,h_int,mag_lattice)
+!#endif
 
 if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
@@ -456,7 +458,16 @@ endif
 
 !!!!!!!!!!!!!!! write local effective field to file here
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-if ((io_simu%io_Beff).and.(mod(j-1,gra_freq).eq.0)) call print_Beff(j/gra_freq,Bini)
+if (gra_log) then
+   if (mod(j-1,gra_freq).eq.0) then
+	write(Beff_filename,'(a,i0,a)') 'Beff_',j/gra_freq,'.dat'
+	open (9,file= Beff_filename,action="write",status="replace",form='formatted')
+  	do iomp=1,N_cell
+		write(9,*) Bini(:,iomp)
+	enddo
+  	close (9)
+   endif
+endif
 
 if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
      &   norm(Mdy),Mdy,norm(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
@@ -500,8 +511,13 @@ endif
 
 if (mod(j-1,Efreq).eq.0) write(8,'(I10,3x,3(E20.12E3,3x))') j,Edy,test_torque,ave_torque
 
-check3=test_torque
-Eold=Edy
+      check3=test_torque
+      Eold=Edy
+
+#ifdef CPP_MPI
+      endif
+      call mpi_barrier(MPI_COMM,ierr)
+#endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! update timestep
@@ -520,8 +536,6 @@ check(2)=0.0d0
 !!!!!!!!!!!!!!! end of a timestep
 real_time=real_time+timestep_int !increment time counter
 enddo
-
-!$omp end parallel
 
 !!!!!!!!!!!!!!! end of a timestep
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
