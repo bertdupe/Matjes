@@ -25,7 +25,7 @@ ci=1
 
 call set_gneb_defaults()
 call read_gneb_parameters()
-      
+
 allocate(path(size_order,N_cell,nim),spinsp(size_order,N_cell),rx(nim),ene(nim),dene(nim))
 path=0.0d0
 spinsp=0.0d0
@@ -38,7 +38,7 @@ dene=0.0d0
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call path_initialization(path,io_simu)
-      
+
 call write_path(path)
       
 if (do_gneb=='Y') then

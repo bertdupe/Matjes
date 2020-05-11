@@ -54,8 +54,10 @@ zeeman%ham(1)%H=0.0d0
 
 call get_borders('magnetic',x_start,x_end,'Bfield',y_start,y_end,my_order_parameters)
 
-! get the zeeman Hamiltonian
-call get_symmetric_Op(zeeman%ham(1)%H,mu_0*mu_B*Ms*zeeman%c_ham/2.0d0,x_start,y_start,x_end,y_end)
+! get the zeeman Hamiltonian (get the symmetric tensor)
+call get_symmetric_Op(zeeman%ham(1)%H,mu_0*mu_B*Ms*zeeman%c_ham,x_start,y_start,x_end,y_end)
+! make it asymmetric
+zeeman%ham(1)%H(:,y_start:y_end)=0.0d0
 
 form=convert('(',dim_ham,'(f12.8,2x))')
 write(6,'(a)') ''

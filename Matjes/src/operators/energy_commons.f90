@@ -494,37 +494,8 @@ energy%nline=Nspin
 energy%ncolumn=Nspin
 energy%line=0
 
-!call dissociate(energy%value,shape_tableNN(2)+1,Nspin)
-
 call associate_pointer(energy,total_hamiltonian,my_lattice,tableNN,indexNN)
 
 end subroutine associate_energy_Hamiltonian
-
-
-
-
-!subroutine get_E_line(E_line,mode_E_column,spin)
-!implicit none
-!type(point_shell_Operator), intent(inout) :: E_line(:)
-!type(point_shell_mode),intent(inout) :: mode_E_column(:)
-!type(vec_point),target,intent(in) :: spin(:)
-!! internal variables
-!integer :: shape_energy(2)
-!! slope variables
-!integer :: i
-!
-!shape_energy=shape(energy%value)
-!
-!do i=1,shape_energy(2)
-!   allocate(E_line(i)%shell(shape_energy(1)))
-!   allocate(mode_E_column(i)%shell(shape_energy(1)))
-!enddo
-!call dissociate(E_line,shape_energy(1),shape_energy(2))
-!call dissociate(mode_E_column,shape_energy(1),shape_energy(2))
-!
-!
-!!call associate_pointer(mode_E_column,spin,E_line,energy)
-!
-!end subroutine get_E_line
 
 end module m_energy_commons

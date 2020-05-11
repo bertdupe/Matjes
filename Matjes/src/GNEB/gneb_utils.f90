@@ -30,38 +30,44 @@ real(kind=8), intent(in) :: dt               !> timestep
 real(kind=8), intent(in) :: kappa            !> spring constant
 real(kind=8), intent(in) :: ftol            !> spring constant
 integer, intent(in) :: itrmax,N_cell
-real(kind=8), intent(inout) :: path(:,:,:)
+real(kind=8), target, intent(inout) :: path(:,:,:)
 integer, intent(in) :: every !< Save path every 'every' step
 real(kind=8), intent(out) :: rx(nim) !< Reaction coordinate
 real(kind=8), intent(out) :: ene(nim) !< Energy of the images
 real(kind=8), intent(out) :: dene(nim) !< Derivative of the energy with respect to reaction coordinate
 ! internal
 integer :: iomp,i_nim,itr
-type(vec), allocatable :: vel(:,:),fxyz1(:,:),fxyz2(:,:),ax(:,:),coo(:,:),tau_i(:),tau(:)
+type(vec), allocatable :: vel(:,:),fxyz1(:,:),fxyz2(:,:),ax(:,:),tau_i(:),tau(:),coo(:,:)
 real(kind=8), allocatable :: ang(:,:)
-real(kind=8) :: fchk,ftmp(3),veltmp(3),u0,u(nim),fpp(nim)
+real(kind=8) :: fchk,veltmp(3),u0,u(nim),fpp(nim)
+real(kind=8), allocatable :: ftmp(:)
 real(kind=8) :: pathlen(nim)
 real(kind=8) :: fv,fd,fp,E_int,norm_local
 integer :: i,imax,dim_mode
 logical :: found
 !!!!!!!!!!! allocate the pointers to find the path
-type(vec_point),allocatable,dimension(:,:) :: all_mode_path
+type(vec_point),allocatable,dimension(:,:) :: all_mode_path,magnetic_mode_path
 !!!!!!!!!!!!!!!
 
 ! initialize all pointers
-allocate(all_mode_path(N_cell,nim))
+allocate(all_mode_path(N_cell,nim),magnetic_mode_path(N_cell,nim))
 found=.false.
 do i_nim=1,nim
-   call associate_pointer(all_mode_path(:,i_nim),path(:,:,i_nim),'magnetic',found)
+   call associate_pointer(magnetic_mode_path(:,i_nim),path(:,:,i_nim),'magnetic',found)
 enddo
-
+call get_B_matrix(my_lattice%dim_mode)
+call get_E_matrix(my_lattice%dim_mode)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the pointers for the B-field and the energy
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+do i_nim=1,nim
+  do i=1,N_cell
+    all_mode_path(i,i_nim)%w=>path(:,i,i_nim)
+  enddo
+enddo
 
 
-
-allocate(vel(N_cell,nim),fxyz1(N_cell,nim),fxyz2(N_cell,nim),ax(N_cell,nim),coo(N_cell,nim))
+allocate(vel(N_cell,nim),fxyz1(N_cell,nim),fxyz2(N_cell,nim),ax(N_cell,nim),coo(N_cell,nim),ang(N_cell,nim))
 allocate(tau_i(N_cell),tau(N_cell))
 
 ! NOT DONE:
@@ -70,21 +76,23 @@ allocate(tau_i(N_cell),tau(N_cell))
 fchk=1d0+ftol
 itr=1
 dim_mode=my_lattice%dim_mode
-call the_path(nim,path,pathlen)
+allocate(ftmp(dim_mode))
+ftmp=0.0d0
+
+call the_path(nim,magnetic_mode_path,pathlen)
    
 do i_nim=1,nim
 
    u(i_nim) = 0d0
    do iomp=1,N_cell
 
-      vel(iomp,i_nim)%w = 0d0
-      coo(iomp,i_nim)%w = path(:,iomp,i_nim)
+      coo(iomp,i_nim)%w = magnetic_mode_path(iomp,i_nim)%w
 
-      call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim),dim_mode)
+      call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-      call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
+      call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(iomp,i_nim)%w)
 
-      call local_energy(E_int,iomp,all_mode_path(:,i_nim),dim_mode)
+      call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
       u(i_nim) = u(i_nim) + E_int
 
@@ -130,10 +138,7 @@ do i_nim=2,nim-1
 
          
    do iomp=1,N_cell
-      do i=1,3
-         !print *,fxyz1(i,i_x,i_y,i_z,i_m,i_nim)
-         fxyz1(iomp,i_nim)%w(i) = fxyz1(iomp,i_nim)%w(i) - tau(iomp)%w(i)*fp + kappa*tau(iomp)%w(i)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
-      end do
+     fxyz1(iomp,i_nim)%w = fxyz1(iomp,i_nim)%w - tau(iomp)%w*fp + kappa*tau(iomp)%w*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
    end do
 end do
       
@@ -185,6 +190,7 @@ call write_path(path)
 ! This part is the integrator
 !
 !
+
 do while ((fchk>ftol).and.(itr<=itrmax))
    do i_nim=2,nim-1
       u(i_nim) = 0d0
@@ -193,12 +199,12 @@ do while ((fchk>ftol).and.(itr<=itrmax))
          !print *,'i)nim:',i_nim
          ax(iomp,i_nim)%w = rotation_axis(coo(iomp,i_nim)%w,fxyz1(iomp,i_nim)%w)
                         
-         coo(iomp,i_nim)%w = path(:,iomp,i_nim)+vel(iomp,i_nim)%w*dt+0.5d0*fxyz1(iomp,i_nim)%w/mass*dt*dt
+         coo(iomp,i_nim)%w = magnetic_mode_path(iomp,i_nim)%w+vel(iomp,i_nim)%w*dt+0.5d0*fxyz1(iomp,i_nim)%w/mass*dt*dt
 
-         norm_local=norm(coo(i,i_nim)%w)
-         coo(i,i_nim)%w=coo(i,i_nim)%w/norm_local
-         ang(iomp,i_nim) = calc_ang(coo(iomp,i_nim)%w,path(:,iomp,i_nim))
-         path(:,iomp,i_nim) = coo(iomp,i_nim)%w
+         norm_local=norm(coo(iomp,i_nim)%w)
+         coo(iomp,i_nim)%w=coo(iomp,i_nim)%w/norm_local
+         ang(iomp,i_nim) = calc_ang(coo(iomp,i_nim)%w,magnetic_mode_path(iomp,i_nim)%w)
+         magnetic_mode_path(iomp,i_nim)%w = coo(iomp,i_nim)%w
          !print *,'ang:',ang(i_x,i_y,i_z,i_m)
       end do
    end do
@@ -209,11 +215,11 @@ do while ((fchk>ftol).and.(itr<=itrmax))
 
       do iomp=1,N_cell
 
-         call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim),dim_mode)
+         call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-         call project_force(ftmp,path(:,iomp,i_nim),fxyz1(iomp,i_nim)%w)
+         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(iomp,i_nim)%w)
 
-         call local_energy(E_int,iomp,all_mode_path(:,i_nim),dim_mode)
+         call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
          u(i_nim) = u(i_nim) + E_int
 
@@ -222,7 +228,7 @@ do while ((fchk>ftol).and.(itr<=itrmax))
    end do
          
          
-   call the_path(nim,path,pathlen)
+   call the_path(nim,magnetic_mode_path,pathlen)
          
    !print *,'pathlen:',pathlen
 
@@ -250,7 +256,7 @@ do while ((fchk>ftol).and.(itr<=itrmax))
          call rotate(vel(iomp,i_nim)%w,ax(iomp,i_nim)%w,ang(iomp,i_nim),veltmp)
          call rotate(fxyz1(iomp,i_nim)%w,ax(iomp,i_nim)%w,ang(iomp,i_nim),ftmp)
 
-         vel(iomp,i_nim)%w = veltmp + 0.5d0*(ftmp+fxyz2(iomp,i_nim)%w)/mass*dt
+         vel(iomp,i_nim)%w = veltmp + 0.5d0*(ftmp(1:3)+fxyz2(iomp,i_nim)%w)/mass*dt
 
       enddo
    enddo
@@ -338,7 +344,7 @@ do while ((fchk>ftol).and.(itr<=itrmax))
          
    end if
 end do
-   
+
 if (itr>itrmax) then
    write(*,*) 'WARNING: exceeded maximum iterations in GNEB'
 end if
@@ -354,524 +360,6 @@ end do
    
 
 end subroutine find_path
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!subroutine find_path_ci(nim,dt,mass,kappa,path,ftol,itrmax,every,my_lattice,rx,ene,dene,ci)
-!implicit none
-!type(lattice), intent(in) :: my_lattice
-!integer, intent(in) :: nim
-!real(kind=8), intent(in) :: mass             !> mass of the point
-!real(kind=8), intent(in) :: dt               !> timestep
-!real(kind=8), intent(in) :: kappa            !> spring constant
-!real(kind=8), intent(in) :: ftol            !> spring constant
-!integer, intent(in) :: itrmax
-!real(kind=8), intent(inout) :: path(:,:)
-!integer, intent(in) :: every !< Save path every 'every' step
-!real(kind=8), intent(out) :: rx(nim) !< Reaction coordinate
-!real(kind=8), intent(out) :: ene(nim) !< Energy of the images
-!real(kind=8), intent(out) :: dene(nim) !< Derivative of the energy with respect to reaction coordinate
-!integer, intent(out) :: ci
-!! internal variables
-!integer :: i,i_nim,itr
-!   real(kind=8) :: vel(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-!   real(kind=8) :: fxyz1(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-!   real(kind=8) :: fxyz2(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-!   real(kind=8) :: fchk,ftmp(3),veltmp(3),u0,u(nim),fpp(nim),tau_i(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-!   real(kind=8) :: tau(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5))
-!   real(kind=8) :: pathlen(nim),ax(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim),ang(shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-!   real(kind=8) :: coo(3,shape_spin(2),shape_spin(3),shape_spin(4),shape_spin(5),nim)
-!   real(kind=8) :: fv,fd,fp,E_int
-!   integer :: i,imax
-!
-!   fchk=1d0+ftol
-!   itr=1
-!
-!   call the_path(nim,shape_spin,path,pathlen)
-!
-!   ci = 1
-!   fxyz1 = 0d0
-!   fxyz2 = 0d0
-!   do i_nim=1,nim
-!
-!      u(i_nim) = 0d0
-!      do i_m=1,shape_spin(5)
-!         do i_z=1,shape_spin(4)
-!            do i_y=1,shape_spin(3)
-!               do i_x=1,shape_spin(2)
-!                  vel(:,i_x,i_y,i_z,i_m,i_nim) = 0d0
-!                  do i = 1,3
-!                     coo(i,i_x,i_y,i_z,i_m,i_nim) = path(3+i,i_x,i_y,i_z,i_m,i_nim)
-!                  end do
-!
-!
-!
-!
-!                  call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,ftmp, &
-!                    &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
-!
-!                  call project_force(ftmp,path(4:6,i_x,i_y,i_z,i_m,i_nim),fxyz1(:,i_x,i_y,i_z,i_m,i_nim))
-!
-!                  call local_energy(E_int,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
-!                       & shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
-!
-!                  u(i_nim) = u(i_nim) + E_int
-!               end do
-!            end do
-!         end do
-!      end do
-!      if (u(i_nim)>u(ci)) then
-!         ci = i_nim
-!      end if
-!   end do
-!
-!   print *,'ci:',ci
-!
-!   !stop
-!
-!
-!
-!
-!
-!
-!   if (en_zero=='I') then
-!      u0 = u(1)
-!   elseif (en_zero=='F') then
-!      u0 = u(nim)
-!   else
-!      u0 = 0d0
-!   end if
-!
-!!   !fname_work = 'triven_'//trim(adjustl(simid))
-!!      !open(777,file = fname_work, access = 'sequential', action = 'write',status = 'replace')
-!
-!      call tang(nim,shape_spin,1,coo,tau_i)
-!      fpp(1) = 0d0
-!      do i_m=1,shape_spin(5)
-!         do i_z=1,shape_spin(4)
-!            do i_y=1,shape_spin(3)
-!               do i_x=1,shape_spin(2)
-!                  do i=1,3
-!                     fpp(1) = fpp(1) + fxyz1(i,i_x,i_y,i_z,i_m,1)*tau_i(i,i_x,i_y,i_z,i_m)
-!                  end do
-!               end do
-!            end do
-!         end do
-!      end do
-!
-!
-!
-!
-!
-!      do i_nim=2,nim-1
-!         call tang_spec(nim,shape_spin,i_nim,coo,u,tau)
-!
-!         call tang(nim,shape_spin,i_nim,coo,tau_i)
-!
-!         fp = 0d0
-!         fpp(i_nim) = 0d0
-!
-!         do i_m=1,shape_spin(5)
-!            do i_z=1,shape_spin(4)
-!               do i_y=1,shape_spin(3)
-!                  do i_x=1,shape_spin(2)
-!                     do i=1,3
-!                        fpp(i_nim) = fpp(i_nim) + fxyz1(i,i_x,i_y,i_z,i_m,i_nim)*tau_i(i,i_x,i_y,i_z,i_m)
-!                        fp = fp + fxyz1(i,i_x,i_y,i_z,i_m,i_nim)*tau(i,i_x,i_y,i_z,i_m)
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end do
-!
-!         if (i_nim==ci) then
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!                        do i=1,3
-!                           !print *, fxyz1(i,i_x,i_y,i_z,i_m,i_nim)
-!                           fxyz1(i,i_x,i_y,i_z,i_m,i_nim) = fxyz1(i,i_x,i_y,i_z,i_m,i_nim) - 2d0*tau(i,i_x,i_y,i_z,i_m)*fp
-!                           !print *, fxyz1(i,i_x,i_y,i_z,i_m,i_nim)
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         else
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!                        do i=1,3
-!                           !print *, fxyz1(i,i_x,i_y,i_z,i_m,i_nim)
-!                           fxyz1(i,i_x,i_y,i_z,i_m,i_nim) = fxyz1(i,i_x,i_y,i_z,i_m,i_nim) - tau(i,i_x,i_y,i_z,i_m)*fp + kappa*tau(i,i_x,i_y,i_z,i_m)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end if
-!
-!
-!      end do
-!
-!      call tang(nim,shape_spin,nim,coo,tau_i)
-!      fpp(nim) = 0d0
-!      do i_m=1,shape_spin(5)
-!         do i_z=1,shape_spin(4)
-!            do i_y=1,shape_spin(3)
-!               do i_x=1,shape_spin(2)
-!                  do i=1,3
-!                     fpp(nim) = fpp(nim) + fxyz1(i,i_x,i_y,i_z,i_m,nim)*tau_i(i,i_x,i_y,i_z,i_m)
-!                  end do
-!               end do
-!            end do
-!         end do
-!      end do
-!
-!
-!
-!      fchk=0d0
-!      imax = 1
-!      do i_nim=1,nim
-!         do i_m=1,shape_spin(5)
-!            do i_z=1,shape_spin(4)
-!               do i_y=1,shape_spin(3)
-!                  do i_x=1,shape_spin(2)
-!                     do i=1,3
-!                        if (dabs(fxyz1(i,i_x,i_y,i_z,i_m,i_nim))>fchk) then
-!                           fchk = dabs(fxyz1(i,i_x,i_y,i_z,i_m,i_nim))
-!                           imax = i_nim
-!                        end if
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end do
-!      end do
-!
-!
-!      itr=1
-!
-!      open(99,file = 'force_mep.txt',access = 'sequential',action='write',status='replace')
-!      close(99)
-!
-!      open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-!      write(99,'(i12,a,es16.8E3,a,i3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax,'   ',ci
-!
-!      close(99)
-!      do i=1,nim
-!               ene(i) = (u(i)-u0)
-!               dene(i) = -fpp(i)
-!               rx(i) = pathlen(i)
-!      end do
-!      call write_en(nim,rx,ene,dene,rx(nim),'en_path.in',do_norm_rx)
-!
-!      call write_path(nim,shape_spin,path)
-!
-!
-!!======================MAIN LOOP============================
-!      do while ((fchk>ftol).and.(itr<=itrmax))
-!         ci = 1
-!         do i_nim=2,nim-1
-!            u(i_nim) = 0d0
-!            !print *,'i_nim:',i_nim
-!            !print *,' '
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!
-!
-!                        ax(:,i_x,i_y,i_z,i_m,i_nim) = calc_axis(coo(:,i_x,i_y,i_z,i_m,i_nim),fxyz1(:,i_x,i_y,i_z,i_m,i_nim))
-!
-!                        coo(:,i_x,i_y,i_z,i_m,i_nim) = path(4:6,i_x,i_y,i_z,i_m,i_nim)+vel(:,i_x,i_y,i_z,i_m,i_nim)*dt+0.5d0*fxyz1(:,i_x,i_y,i_z,i_m,i_nim)/mass*dt*dt
-!
-!                        call normalize_vec(3,coo(:,i_x,i_y,i_z,i_m,i_nim))
-!                        ang(i_x,i_y,i_z,i_m,i_nim) = calc_ang(coo(:,i_x,i_y,i_z,i_m,i_nim),path(4:6,i_x,i_y,i_z,i_m,i_nim))
-!                        path(4:6,i_x,i_y,i_z,i_m,i_nim) = coo(:,i_x,i_y,i_z,i_m,i_nim)
-!                        !print *,'ang:',ang(i_x,i_y,i_z,i_m)
-!                     end do
-!                  end do
-!               end do
-!            end do
-!
-!
-!         end do
-!
-!
-!         do i_nim=2,nim-1
-!            u(i_nim) = 0d0
-!
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!
-!                        call calculate_Beff(i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,ftmp, &
-!                              &  path(:,:,:,:,:,i_nim),shape_spin,indexNN,shape_index,masque,shape_masque,tableNN,shape_tableNN,h_ext,my_lattice)
-!
-!                        call project_force(ftmp,path(4:6,i_x,i_y,i_z,i_m,i_nim),fxyz2(:,i_x,i_y,i_z,i_m,i_nim))
-!
-!                        call local_energy(E_int,i_DM,i_four,i_biq,i_dip,EA,i_x,i_y,i_z,i_m,path(:,:,:,:,:,i_nim), &
-!                             &shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
-!
-!                        u(i_nim) = u(i_nim) + E_int
-!
-!                        !print *,'ene:',u(i_nim)
-!                     end do
-!                  end do
-!               end do
-!            end do
-!
-!            if (u(i_nim)>u(ci)) then
-!               ci = i_nim
-!            end if
-!
-!         end do
-!
-!
-!
-!         call the_path(nim,shape_spin,path,pathlen)
-!
-!         !print *,'pathlen:',pathlen
-!
-!         do i_nim=2,nim-1
-!
-!
-!
-!
-!
-!            call tang_spec(nim,shape_spin,i_nim,coo,u,tau)
-!
-!            call tang(nim,shape_spin,i_nim,coo,tau_i)
-!
-!            fp = 0d0
-!            fpp(i_nim) = 0d0
-!
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!                        do i=1,3
-!                           fpp(i_nim) = fpp(i_nim) + fxyz2(i,i_x,i_y,i_z,i_m,i_nim)*tau_i(i,i_x,i_y,i_z,i_m)
-!                           fp = fp + fxyz2(i,i_x,i_y,i_z,i_m,i_nim)*tau(i,i_x,i_y,i_z,i_m)
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!
-!            if (i_nim == ci) then
-!               do i_m=1,shape_spin(5)
-!                  do i_z=1,shape_spin(4)
-!                     do i_y=1,shape_spin(3)
-!                        do i_x=1,shape_spin(2)
-!                           do i=1,3
-!                              fxyz2(i,i_x,i_y,i_z,i_m,i_nim) = fxyz2(i,i_x,i_y,i_z,i_m,i_nim) - 2d0*tau(i,i_x,i_y,i_z,i_m)*fp
-!                           end do
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            else
-!               do i_m=1,shape_spin(5)
-!                  do i_z=1,shape_spin(4)
-!                     do i_y=1,shape_spin(3)
-!                        do i_x=1,shape_spin(2)
-!                           do i=1,3
-!                              fxyz2(i,i_x,i_y,i_z,i_m,i_nim) = fxyz2(i,i_x,i_y,i_z,i_m,i_nim) - tau(i,i_x,i_y,i_z,i_m)*fp + kappa*tau(i,i_x,i_y,i_z,i_m)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
-!                           end do
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end if
-!         end do
-!         !stop
-!         fv = 0d0
-!         fd = 0d0
-!         do i_nim=2,nim-1
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!                        call rotate_vec(vel(:,i_x,i_y,i_z,i_m,i_nim),ax(:,i_x,i_y,i_z,i_m,i_nim),ang(i_x,i_y,i_z,i_m,i_nim),veltmp)
-!                        call rotate_vec(fxyz1(:,i_x,i_y,i_z,i_m,i_nim),ax(:,i_x,i_y,i_z,i_m,i_nim),ang(i_x,i_y,i_z,i_m,i_nim),ftmp)
-!                        !vel(:,i_x,i_y,i_z,i_m,i_nim) = vel(:,i_x,i_y,i_z,i_m,i_nim) + 0.5d0*(fxyz1(:,i_x,i_y,i_z,i_m,i_nim)+fxyz2(:,i_x,i_y,i_z,i_m,i_nim))/mass*dt
-!                        vel(:,i_x,i_y,i_z,i_m,i_nim) = veltmp + 0.5d0*(ftmp+fxyz2(:,i_x,i_y,i_z,i_m,i_nim))/mass*dt
-!                        do i=1,3
-!                           fv = fv + vel(i,i_x,i_y,i_z,i_m,i_nim)*fxyz2(i,i_x,i_y,i_z,i_m,i_nim)
-!                           fd = fd + fxyz2(i,i_x,i_y,i_z,i_m,i_nim)*fxyz2(i,i_x,i_y,i_z,i_m,i_nim)
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end do
-!
-!
-!         fv = 0d0
-!         fd = 0d0
-!         do i_nim=1,nim
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!
-!                        do i=1,3
-!                           fv = fv + vel(i,i_x,i_y,i_z,i_m,i_nim)*fxyz2(i,i_x,i_y,i_z,i_m,i_nim)
-!                           fd = fd + fxyz2(i,i_x,i_y,i_z,i_m,i_nim)*fxyz2(i,i_x,i_y,i_z,i_m,i_nim)
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end do
-!
-!         if (fv<0d0) then
-!            do i_nim=1,nim
-!               do i_m=1,shape_spin(5)
-!                  do i_z=1,shape_spin(4)
-!                     do i_y=1,shape_spin(3)
-!                        do i_x=1,shape_spin(2)
-!                           do i=1,3
-!                              vel(i,i_x,i_y,i_z,i_m,i_nim) = 0d0
-!                           end do
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         else
-!            do i_nim=1,nim
-!               do i_m=1,shape_spin(5)
-!                  do i_z=1,shape_spin(4)
-!                     do i_y=1,shape_spin(3)
-!                        do i_x=1,shape_spin(2)
-!                           do i=1,3
-!                              vel(i,i_x,i_y,i_z,i_m,i_nim) = fxyz2(i,i_x,i_y,i_z,i_m,i_nim)*fv/fd
-!                           end do
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end if
-!
-!
-!
-!
-!         imax=1
-!         fchk=0d0
-!
-!         do i_nim=2,nim-1
-!            do i_m=1,shape_spin(5)
-!               do i_z=1,shape_spin(4)
-!                  do i_y=1,shape_spin(3)
-!                     do i_x=1,shape_spin(2)
-!                        do i=1,3
-!                           fxyz1(i,i_x,i_y,i_z,i_m,i_nim) = fxyz2(i,i_x,i_y,i_z,i_m,i_nim)
-!                           if (dabs(fxyz1(i,i_x,i_y,i_z,i_m,i_nim))>fchk) then
-!                              fchk = dabs(fxyz1(i,i_x,i_y,i_z,i_m,i_nim))
-!                              imax = i_nim
-!                           end if
-!                        end do
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end do
-!
-!
-!
-!
-!
-!         call tang(nim,shape_spin,1,coo,tau_i)
-!         fpp(1) = 0d0
-!         do i_m=1,shape_spin(5)
-!            do i_z=1,shape_spin(4)
-!               do i_y=1,shape_spin(3)
-!                  do i_x=1,shape_spin(2)
-!                     do i=1,3
-!                        fpp(1) = fpp(1) + fxyz1(i,i_x,i_y,i_z,i_m,1)*tau_i(i,i_x,i_y,i_z,i_m)
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end do
-!
-!
-!         call tang(nim,shape_spin,nim,coo,tau_i)
-!         fpp(nim) = 0d0
-!         do i_m=1,shape_spin(5)
-!            do i_z=1,shape_spin(4)
-!               do i_y=1,shape_spin(3)
-!                  do i_x=1,shape_spin(2)
-!                     do i=1,3
-!                        fpp(nim) = fpp(nim) + fxyz1(i,i_x,i_y,i_z,i_m,nim)*tau_i(i,i_x,i_y,i_z,i_m)
-!                     end do
-!                  end do
-!               end do
-!            end do
-!         end do
-!
-!
-!
-!         itr=itr+1
-!
-!         if (mod(itr,every).eq.0) then
-!            call prn_gneb_progress(itr, itrmax, fchk, imax,'Y',ci)
-!
-!            open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-!            write(99,'(i12,a,es16.8E3,a,i3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax,'   ',ci
-!            close(99)
-!
-!            do i=1,nim
-!               ene(i) = (u(i)-u0)
-!               dene(i) = -fpp(i)
-!               rx(i) = pathlen(i)
-!            end do
-!            call write_en(nim,rx,ene,dene,rx(nim),'en_path.out',do_norm_rx)
-!            call write_path(path)
-!
-!
-!         end if
-!      end do
-!
-!      if (itr>itrmax) then
-!         write(*,*) 'WARNING: exceeded maximum iterations in CI-GNEB'
-!      end if
-!
-!
-!
-!
-!      do i=1,nim
-!         ene(i) = (u(i)-u0)
-!         dene(i) = -fpp(i)
-!         rx(i) = pathlen(i)
-!      end do
-!
-!
-!end subroutine find_path_ci
-
-
-
-
-
-
 
 
 

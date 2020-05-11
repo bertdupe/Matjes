@@ -5,26 +5,14 @@ Program Matjes
 use m_io_utils
 use m_io_files_utils
 use m_init_variables
-use mtprng
 use m_derived_types
 use m_lattice
 use m_write_spin
 use m_createspinfile
 use m_minimize
-
-! old code
-      use m_vector, only : norm
-      use m_average_MC
-      use m_user_info
-      use m_check_restart
-
-#ifdef CPP_MPI
-      use m_randperm
-      use m_make_box
-      use m_mpi_prop, only : irank,irank_working,isize,MPI_COMM,all_world,irank_box,MPI_COMM_MASTER,MPI_COMM_BOX
-      use m_gather_reduce
-#endif
-      Implicit None
+use m_get_random
+use m_user_info
+Implicit None
 
 ! variable for the simulation
 !----------------------------------------
@@ -40,8 +28,6 @@ integer :: io_param
 type(cell) :: motif
 ! external parameter
 type(simulation_parameters) :: ext_param
-! internal variables
-type(mtprng_state) :: state
 ! tag that defines the system
       integer :: n_system
       Integer :: N_cell
@@ -53,9 +39,9 @@ type(mtprng_state) :: state
 ! initialize the random number generator
 #ifdef CPP_MRG
 #ifdef CPP_MPI
-  call mtprng_init(irank+1,state)
+  call init_mtprng(irank+1)
 #else
-  call mtprng_init(1,state)
+  call init_mtprng(1)
 #endif
 #else
   call init_rand_seed
@@ -80,7 +66,7 @@ call close_file('input',io_param)
 
 
 ! read the input and prepare the lattices, the Hamitlonian and all this mess
-call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param,state)
+call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param)
 
 ! number of cell in the simulation
 N_cell=size(all_lattices%l_modes)
@@ -115,16 +101,6 @@ call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
 
 !            call cpu_time(computation_time)
 !            write(*,*) 'computation time:',computation_time,'seconds'
-
-!#ifdef CPP_MPI
-!            if (irank_working.eq.0) Write(*,*) 'The program has reached the end.'
-!            call MPI_FINALIZE(ierr)
-!#else
-!            Write(*,*) 'The program has reached the end.'
-!#endif
-
-!           stop
-!endif
 
 !---------------------------------
 !  Part which does a normal MC with the metropolis algorithm

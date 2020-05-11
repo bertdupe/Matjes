@@ -49,7 +49,6 @@ test=nline/ncolumn
 do while (test.ne.0)
 
   do i=1,nline
-    if (sum( abs( matrix_int(:,i) ) ).lt.1.0d-8) cycle
     j=mod(i-1,ncolumn)+1
     k=(i-1)/ncolumn+1
     matrix_int(j,k)=dot_product( matrix_int(:,i) , S_int )
@@ -92,7 +91,6 @@ do while (test.ne.0)
   S_int=mode(:,i_loop)
 
   do i=1,nline
-    if (sum( abs( matrix_int(:,i) ) ).lt.1.0d-8) cycle
     j=mod(i-1,ncolumn)+1
     k=(i-1)/ncolumn+1
     matrix_int(j,k)=dot_product( matrix_int(:,i) , S_int )

@@ -1,4 +1,4 @@
-subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif,ext_param,state)
+subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif,ext_param)
 use m_derived_types
 use m_energyfield, only : init_Energy_distrib
 use m_energy_commons
@@ -13,7 +13,6 @@ use m_mapping
 use m_indexation
 use m_arrange_neigh
 use m_topoplot
-use mtprng
 use m_total_energy
 use m_get_position
 use m_external_fields
@@ -38,7 +37,6 @@ type(io_parameter), intent(out) :: io_simu
 type(bool_var), intent(in) :: my_simu
 type(lattice), intent(inout) :: my_lattice
 type(cell), intent(out) :: my_motif
-type (mtprng_state),intent(inout) :: state
 type(simulation_parameters),intent (inout) :: ext_param
 ! variable of the system
 real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
@@ -128,7 +126,7 @@ call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_m
 ! prepare the lattice
 call user_info(6,time,'initializing the spin structure',.false.)
 
-call InitSpin(my_lattice,my_motif,state,ext_param)
+call InitSpin(my_lattice,my_motif,ext_param)
 
 call user_info(6,time,'done',.false.)
 

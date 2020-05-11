@@ -33,7 +33,7 @@
 #ifdef CPP_OPENMP
        do k=1,3
        E_int=0.0d0
-!$OMP parallel do reduction(+:E_int) private(i4,i3,i2,i1,j4,j3,j2,j1,a_cor,b_cor,i_cor) default(shared)
+!$OMP parallel do reduction(+:E_int) private(i4,i3,i2,i1,j4,j3,j2,j1,a_cor,b_cor) default(shared)
 #else
        do k=1,3
        E_int=0.0d0

@@ -11,7 +11,6 @@ character(len=*), intent(in) :: file_ini,file_fin
 real(kind=8), intent(in):: amp_rnd
 real(kind=8), intent(inout) :: path(:,:,:)
 ! internal variables
-type(mtprng_state) :: state
 integer :: i,io_ini,io_fin,N_cell,nim,shape_path(3)
 real(kind=8) :: u(3),norm_local
 
@@ -33,25 +32,11 @@ endif
 
 do i=1,N_cell
    read(io_ini,*)  path(:,i,1)
-   u(1)=2d0*(get_rand_classic(state)-1d0)
-   u(2)=2d0*(get_rand_classic(state)-1d0)
-   u(3)=2d0*(get_rand_classic(state)-1d0)
-   path(:,i,1)=path(:,i,1)+amp_rnd*u
-
-   norm_local=norm(path(:,i,1))
-   path(:,i,1)=path(:,i,1)/norm_local
 end do
 call close_file(file_ini,io_ini)
 
 do i=1,N_cell
     read(io_fin,*) path(:,i,nim)
-    u(1)=2d0*(get_rand_classic(state)-1d0)
-    u(2)=2d0*(get_rand_classic(state)-1d0)
-    u(3)=2d0*(get_rand_classic(state)-1d0)
-    path(:,i,nim) = path(:,i,nim)+amp_rnd*u
-
-    norm_local=norm(path(:,i,nim))
-    path(:,i,nim)=path(:,i,nim)/norm_local
 end do
 call close_file(file_fin,io_fin)
 
@@ -72,7 +57,7 @@ integer :: shape_path(3),i_nim
 
 shape_path=shape(path)
 do i_nim=1,shape_path(3)
-   call WriteSpinAndCorrFile(i_nim,path(:,:,i_nim),'image-GNEB')
+   call WriteSpinAndCorrFile(i_nim,path(:,:,i_nim),'image-GNEB_')
    call CreateSpinFile('povray-GNEB_',i_nim,path(:,:,i_nim))
 end do
 end subroutine write_path
@@ -98,7 +83,6 @@ logical, intent(out) :: exists
 integer :: i,i_nim,shape_path(3),io,N_cell,nim
 real(kind=8) :: u(3),norm_local
 character(len=50) :: fname
-type (mtprng_state) :: state
 
 shape_path=shape(path)
 nim=shape_path(3)
@@ -112,15 +96,6 @@ do i_nim = 1,nim
       exists=.true.
       do i=1,N_cell
          read(io,*) path(:,i,i_nim)
-         if ((i_nim.ne.1).and.(i_nim.ne.nim)) then
-            u(1)=2d0*(get_rand_classic(state)-1d0)
-            u(2)=2d0*(get_rand_classic(state)-1d0)
-            u(3)=2d0*(get_rand_classic(state)-1d0)
-            path(:,i,i_nim) = path(:,i,i_nim)+amp_rnd*u
-
-            norm_local=norm(path(:,i,i_nim))
-            path(:,i,i_nim)=path(:,i,i_nim)/norm_local
-         end if
       end do
    else
       exists=.false.
@@ -159,13 +134,11 @@ else
    STOP
 end if
 
-io=open_file_read(filn)
+io=open_file_write(filn)
 do i=1,n
-   write(io,*) x(i)/norm_local, y(i), dy(i)
+   write(io,'(3(E20.12E3,3x))') x(i)/norm_local, y(i), dy(i)
 end do
 call close_file(filn,io)
-
-!10002 format (es16.8E3,2x,es16.8E3,2x,es16.8E3)
 
 end subroutine write_en
 
@@ -178,9 +151,9 @@ integer, intent(in) :: imax,ci
 character(len=1), intent(in) :: do_ci
 
 if (do_ci.eq.'Y') then
-   write(6,*) 'MP  ',real(itr)/real(itrmax)*100d0,'% of itrmax.   fchk: ',fchk,'   imax: ',imax,'   ci: ',ci
+   write(6,'(3(f12.6,a),f12.6)') 'MP  ',real(itr)/real(itrmax)*100d0,'% of itrmax.   fchk: ',fchk,'   imax: ',imax,'   ci: ',ci
 else
-   write(6,*) 'MP  ',real(itr)/real(itrmax)*100d0,'% of itrmax.   fchk: ',fchk,'   imax: ',imax
+   write(6,'(2(f12.6,a),I8)') 'MP  ',real(itr)/real(itrmax)*100d0,'% of itrmax.   fchk: ',fchk,'   imax: ',imax
 end if
 
 end subroutine prn_gneb_progress

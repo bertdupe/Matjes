@@ -4,15 +4,28 @@ FC=gfortran
 
 CC=gcc
 
-FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
+#
+# normal flags
+#
+#FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none
 
-#FFLAGS= -O0 -g -fcheck=all -Wall -Werror -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#
+#debugging flags
+#
+FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
 
-#FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none 
 
-INCLUDES=-I/usr/local/include
+#
+# profiling with gprof
+#
+#FFLAGS= -O0 -g -lprofiler -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#LDFLAGS= -O0 -g
+
+#INCLUDES=-I/usr/local/include
 #LIBRARIES= -L/usr/local/lib/ -lfftw3
 
+#CPPS= -DCPP_MRG -DCPP_BRUTDIP -DCPP_OPENMP
 CPPS= -DCPP_MRG -DCPP_BRUTDIP
 #CPPS= -DCPP_MRG -DCPP_FFTW
 #CPPS= -DCPP_MRG -DCPP_SUM

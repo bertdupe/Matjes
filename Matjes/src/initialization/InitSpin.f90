@@ -1,17 +1,15 @@
 ! ===============================================================
-SUBROUTINE InitSpin(my_lattice,motif,state,ext_param)
+SUBROUTINE InitSpin(my_lattice,motif,ext_param)
 use m_get_position
 use m_init_modes
 use m_init_config
 use m_vector, only : cross,norm
 use m_constants
 use m_derived_types
-use mtprng, only : mtprng_state
 Implicit none
 ! variables that come in
 type (cell), intent(in) :: motif
 type(lattice), intent(inout) :: my_lattice
-type (mtprng_state),intent(inout) :: state
 type (simulation_parameters), intent(in) :: ext_param
 !     Slope Indexes for three dim spins
 LOGICAL :: i_exi,i_init_config
@@ -58,7 +56,7 @@ endif
 i_init_config=.False.
 inquire(file='init.config',exist=i_init_config)
 if (i_init_config) then
-    call init_config('init.config',my_lattice,motif,state,ext_param)
+    call init_config('init.config',my_lattice,motif,ext_param)
     return
 endif
 

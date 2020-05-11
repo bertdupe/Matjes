@@ -3,7 +3,7 @@ module m_operator_pointer_utils
 interface associate_pointer
    module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target,asso_pointer_to_2Dmatrix
    module procedure associate_mode_name,associate_mode_real2D_name,asso_lattice_to_matrix,asso_pointer_to_4Dmatrix,asso_pointer_to_lattice
-   module procedure A_Opreal_OrderN_shellHam1D
+   module procedure A_Opreal_OrderN_shellHam1D,asso_pointer2Dreal_to_2Dreal_name
 end interface associate_pointer
 
 interface dissociate
@@ -15,6 +15,45 @@ private
 public :: associate_pointer,dissociate,associate_line_target
 
 contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+! routine that associates a (:,:) pointer to part of the first dimension of a 2D matrix
+! this is typically used when you only want to get the magnetic moments or the integrator fields
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine asso_pointer2Dreal_to_2Dreal_name(point,static_target,name,i_name)
+implicit none
+real(kind=8), pointer, intent(inout) :: point(:,:,:)
+logical, intent(out) :: i_name
+real(kind=8), target, intent(in) :: static_target(:,:,:)
+character(len=*), intent(in) :: name
+! internal
+integer :: i,N_order_found,istart,iend
+integer, allocatable :: position_found(:,:)
+
+i_name=.false.
+
+! function at the end of the module
+N_order_found=numer_order_param(name)
+if (N_order_found.ne.0) then
+   i_name=.true.
+else
+   return
+endif
+
+allocate(position_found(3,N_order_found))
+position_found=0
+
+! function at the end of the module
+position_found=find_position_order(N_order_found,name)
+
+istart=position_found(2,1)
+iend=position_found(3,N_order_found)
+
+point=>static_target(istart:iend,:,:)
+
+end subroutine asso_pointer2Dreal_to_2Dreal_name
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !

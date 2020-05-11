@@ -116,6 +116,7 @@ integer :: i,j,k,l,N_point(4),N_mat(5)
 N_point=shape(my_lattice%l_modes)
 N_mat=shape(matrix)
 
+!!!!$omp do ordered private(i,j,k,l) schedule(auto) collapse(4)
 do l=1,N_point(4)
   do k=1,N_point(3)
     do j=1,N_point(2)
@@ -125,6 +126,7 @@ do l=1,N_point(4)
     enddo
   enddo
 enddo
+!!!!$omp end do
 
 end subroutine copy_Mat_Point
 
@@ -147,6 +149,7 @@ N_mat2=shape(matrix2)
 test=test_size_mat(N_mat1,N_mat2)
 if (.not.test) stop 'error'
 
+!!!$omp do ordered private(i,j,k,l) schedule(auto) collapse(4)
 do l=1,N_mat1(5)
   do k=1,N_mat1(4)
     do j=1,N_mat1(3)
@@ -156,6 +159,7 @@ do l=1,N_mat1(5)
     enddo
   enddo
 enddo
+!!!!$omp end do
 
 end subroutine copy_Mat_Mat
 

@@ -276,14 +276,14 @@ local_lattice(6,:,:,:,:)=20.0d0
 local_lattice(1:2,:,:,:,:)=0.0d0
 local_lattice(3,:,:,:,:)=1.0d0
 do i_m=1,nmag
-   do i_x=1,500
-      do i_y=1,500
+   do i_x=1,100
+      do i_y=1,100
          do i_z=1,1
-           if ((i_x.le.100).and.(i_y.le.100)) then
+!           if ((i_x.le.100).and.(i_y.le.100)) then
              read(io,*) (dumy(i),i=1,3),(local_lattice(j_lat,i_x,i_y,i_z,i_m),j_lat=1,3),dumy(1)
-           else
-             read(io,*) (dumy(i),i=1,7)
-           endif
+!           else
+!             read(io,*) (dumy(i),i=1,7)
+!           endif
 
          enddo
       enddo

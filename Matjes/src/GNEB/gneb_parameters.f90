@@ -56,7 +56,7 @@ call get_parameter(io,'GNEB.in','mep_itrmax',mepitrmax)
 call get_parameter(io,'GNEB.in','meptraj_step',meptraj_step)
 call get_parameter(io,'GNEB.in','mep_ftol',mepftol)
 call get_parameter(io,'GNEB.in','mep_ftol_ci',mepftol_ci)
-call get_parameter(io,'GNEB.in','do_gneb',do_gneb)
+call get_parameter(io,'GNEB.in','io_do_gneb',do_gneb)
 call get_parameter(io,'GNEB.in','do_gneb_ci',do_gneb_ci)
 call get_parameter(io,'GNEB.in','do_norm_rx',do_norm_rx)
 call get_parameter(io,'GNEB.in','en_zero',en_zero)
@@ -91,7 +91,7 @@ spring = 0.5d0
 mepftol = 0.001d0
 mepftol_ci = 0.00001d0
 mepitrmax = 10000000
-meptraj_step = 100
+meptraj_step = 10
 do_gneb = 'Y'
 do_gneb_ci = 'N'
 do_norm_rx = 'N'

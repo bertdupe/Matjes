@@ -1,6 +1,8 @@
 module m_get_random
 use mtprng
 
+type(mtprng_state) :: state
+
 interface get_rand_classic
  module procedure get_random_standard
  module procedure get_random_Mag
@@ -9,14 +11,24 @@ end interface get_rand_classic
 interface get_rand_QM
  module procedure get_random_Ising
 end interface get_rand_QM
+
+private
+public :: get_rand_QM,get_rand_classic,init_mtprng
 contains
+
+subroutine init_mtprng(N)
+implicit none
+integer, intent(in) :: N
+
+call mtprng_init(N, state)
+
+end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! functions that returns a random number between 0 and 1
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function get_random_standard(state) result(Choice)
+function get_random_standard() result(Choice)
 implicit none
-type (mtprng_state),intent(inout) :: state
 real(kind=8) :: choice
 
 #ifdef CPP_MRG
@@ -30,9 +42,8 @@ end function get_random_standard
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! functions that returns a random N dimensions vector if norm length
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function get_random_Mag(state,N,length)
+function get_random_Mag(N,length)
 implicit none
-type (mtprng_state),intent(inout) :: state
 real(kind=8), intent(in) :: length
 integer, intent(in) :: N
 real(kind=8), dimension(N) :: get_random_Mag(N)
@@ -62,9 +73,8 @@ end function get_random_Mag
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! functions that returns a random Ising spin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function get_random_Ising(state) result(ising)
+function get_random_Ising() result(ising)
 implicit none
-type (mtprng_state),intent(inout) :: state
 real(kind=8) :: ising
 real(kind=8) :: choice
 

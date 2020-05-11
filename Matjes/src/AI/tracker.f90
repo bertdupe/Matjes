@@ -75,7 +75,7 @@ do i=1,N_pat
   allocate(all_patterns(i)%interior(Nsites))
   all_patterns(i)%interior=0
 
-  write(6,'(2(a,2x,I6),a)') 'pattern', i, ' is composed of', Nsites, 'sites'
+  write(6,'(2(a,2x,I6),a)') 'pattern  ', i, '  is composed of  ', Nsites, '  sites'
 
   call find_interior(all_patterns(i)%Nsites,all_patterns(i)%interior,field,N_cell)
 

@@ -15,13 +15,12 @@ implicit none
 integer, intent(in) :: N
 type(vec_point), intent(in) :: spin(:)
 ! internal
-integer :: i,dim_mode
+integer :: i
 
 total_energy=0.0d0
-dim_mode=size(spin(1)%w)
 
 do i=1,N
-   call local_energy(total_energy,i,spin,dim_mode)
+   call local_energy(total_energy,i,spin)
 enddo
 
 end function total_energy

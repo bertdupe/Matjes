@@ -100,34 +100,36 @@ end function euler
 !!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine euler_minimization(initial,force,predicator,dt,masse,N)
+subroutine euler_minimization(initial,force,predicator,dt,masse)
 implicit none
-integer, intent(in) :: N
-real(kind=8), intent(out) :: predicator(N)
-real(kind=8), intent(in) :: force(N),initial(N)
+real(kind=8), intent(in) :: force(:),initial(:)
+real(kind=8), intent(out) :: predicator(size(initial))
 real(kind=8), intent(in) :: dt,masse
 ! dummy variable
 
 predicator=force*dt/masse+initial
 
 end subroutine euler_minimization
-
-subroutine euler_o2_minimization(spin,v_spin,force,predicator,dt,masse,N)
+!velocity(:,iomp),(force(:,iomp)+F_temp)/2.0d0,V_ef
+subroutine euler_o2_minimization(spin,v_spin,force,predicator,dt,masse)
 implicit none
-integer, intent(in) :: N
-real(kind=8), intent(out) :: predicator(N)
-real(kind=8), intent(in) :: force(N),v_spin(N),spin(N)
+real(kind=8), intent(in) :: force(:),v_spin(:),spin(:)
 real(kind=8), intent(in) :: dt,masse
+real(kind=8), intent(out) :: predicator(size(spin))
 ! dummy variable
-real(kind=8) :: s_dumy(N),norm
+real(kind=8) :: s_dumy(size(spin)),norm_fin,norm_ini
+integer :: i
 
 s_dumy=0.0d0
 predicator=0.0d0
 
 s_dumy=force*dt**2/masse/2.0d0+v_spin*dt+spin
-norm=sqrt(sum(s_dumy**2))
 
-predicator=s_dumy/norm
+do i=1,size(spin)/3
+  norm_ini=sqrt(sum(spin(3*(i-1)+1:3*i)**2))
+  norm_fin=sqrt(sum(s_dumy(3*(i-1)+1:3*i)**2))
+  if (norm_fin.gt.1.0d-8) predicator(3*(i-1)+1:3*i)=s_dumy(3*(i-1)+1:3*i)/norm_fin*norm_ini
+enddo
 
 end subroutine euler_o2_minimization
 

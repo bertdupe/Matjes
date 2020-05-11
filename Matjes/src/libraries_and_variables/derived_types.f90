@@ -25,6 +25,8 @@ type io_parameter
      logical :: io_spstmL
 ! plot the spin structure (or the order parameter structure)
      logical :: io_Xstruct=.false.
+! plot the effective neighbouring field
+     logical :: io_Beff=.false.
 ! plot the stochastic field
      logical :: io_Tfield=.false.
 ! frequency for writting the plotting data (magnetization density and so one)

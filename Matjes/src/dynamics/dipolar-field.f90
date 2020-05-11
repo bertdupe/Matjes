@@ -179,7 +179,7 @@ N_k=product(N_kpoint)
 
 B_int=0.0d0
 #ifdef CPP_OPENMP
-!$OMP parallel do reduction(+:B_int) private(i,rc,ss) default(shared)
+!$OMP parallel do reduction(+:B_int) private(D_int,phase) default(shared)
 #endif
 
 do i=1,N_k

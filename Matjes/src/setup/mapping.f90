@@ -106,9 +106,6 @@ enddo
 dim_lat=my_lattice%dim_lat
 
 do i_nei=1,nei
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,l,i,i_p,vec,dist) default(shared)
-#endif
     do i_x=1,Xstop
 
        l=1
@@ -127,9 +124,6 @@ do i_nei=1,nei
        enddo
 
     enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
     avant=avant+indexNN(i_Nei)
 enddo
 
@@ -183,11 +177,6 @@ do i=1,3
   r(:,i)=my_lattice%areal(i,:)
 enddo
 
-#ifdef CPP_OPENMP
-!!$OMP parallel default(shared) private(ithread)
-!ithread=omp_get_thread_num()
-#endif
-
 do i_nei=1,nei
 
    do i_y=1,Ystop
@@ -220,11 +209,6 @@ do i_nei=1,nei
    avant=avant+indexNN(i_Nei)
 
 enddo
-
-#ifdef CPP_OPENMP
-!!$OMP end do
-!!$OMP end parallel
-#endif
 
 end subroutine mapping_2D
 
@@ -268,9 +252,6 @@ dim_lat=my_lattice%dim_lat
 i_phase=1
 
 do i_nei=1,nei
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_m,l,i,j,i_p,vec,dist) default(shared)
-#endif
    do i_y=1,Ystop
       do i_x=1,Xstop
          do i_m=1,Mstop
@@ -300,18 +281,12 @@ do i_nei=1,nei
          enddo
       enddo
    enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
    avant=avant+indexNN(i_Nei,i_phase)
 enddo
 
 i_phase=2
 
 do i_nei=1,Nei_il
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_m,l,i,j,i_p,vec,dist) default(shared)
-#endif
    do i_y=1,Ystop
       do i_x=1,Xstop
          do i_m=1,Mstop
@@ -341,9 +316,6 @@ do i_nei=1,Nei_il
          enddo
       enddo
    enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
    avant=avant+indexNN(i_Nei,i_phase)
 enddo
 
@@ -387,9 +359,6 @@ do i=1,3
 enddo
 
 do i_nei=1,nei
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_m,l,i,j,i_p,vec,dist) default(shared)
-#endif
    do i_y=1,Ystop
       do i_x=1,Xstop
          do i_m=1,Mstop
@@ -419,9 +388,6 @@ do i_nei=1,nei
          enddo
       enddo
    enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
    avant=avant+indexNN(i_Nei)
 enddo
 
@@ -467,9 +433,6 @@ do i=1,3
 enddo
 
 do i_nei=1,nei
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_z,i_m,l,i,j,k,i_p,vec,dist) default(shared)
-#endif
    do i_z=1,Zstop
       do i_y=1,Ystop
          do i_x=1,Xstop
@@ -506,9 +469,6 @@ do i_nei=1,nei
          enddo
       enddo
    enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
    avant=avant+indexNN(i_Nei)
 enddo
 
@@ -559,9 +519,6 @@ dim_lat=my_lattice%dim_lat
 i_phase=1
 
 do i_nei=1,nei
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_m,l,i,j,i_p,vec,dist) default(shared)
-#endif
    do i_y=1,Ystop
       do i_x=1,Xstop
          do i_z=1,Zstop
@@ -593,18 +550,12 @@ do i_nei=1,nei
          enddo
       enddo
    enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
    avant=avant+indexNN(i_Nei,i_phase)
 enddo
 
 i_phase=2
 
 do i_nei=1,Nei_il
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_m,l,i,j,i_p,vec,dist) default(shared)
-#endif
    do i_y=1,Ystop
       do i_x=1,Xstop
          do i_z=1,Zstop
@@ -636,18 +587,12 @@ do i_nei=1,Nei_il
          enddo
       enddo
    enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
    avant=avant+indexNN(i_Nei,i_phase)
 enddo
 
 i_phase=3
 
 do i_nei=1,Nei_z
-#ifdef CPP_OPENMP
-!$OMP parallel private(i_x,i_y,i_m,l,i,j,i_p,vec,dist) default(shared)
-#endif
    do i_y=1,Ystop
       do i_x=1,Xstop
          do i_z=1,Zstop
@@ -682,9 +627,6 @@ do i_nei=1,Nei_z
          enddo
       enddo
    enddo
-#ifdef CPP_OPENMP
-!$OMP end parallel
-#endif
    avant=avant+indexNN(i_Nei,i_phase)
 enddo
 

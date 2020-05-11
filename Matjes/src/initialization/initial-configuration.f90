@@ -8,7 +8,6 @@ use m_init_constant
 use m_io_utils
 use m_init_heavyside
 use m_io_files_utils
-use mtprng, only : mtprng_state
 use m_init_random_config
 use m_lattice, only : my_order_parameters
 use m_convert
@@ -19,13 +18,12 @@ contains
 
 !!!!!!!!!!!
 ! find the different starting configurations for the order parameters
-subroutine init_config(fname,my_lattice,my_motif,state,ext_param)
+subroutine init_config(fname,my_lattice,my_motif,ext_param)
 implicit none
 character(len=*), intent(in) :: fname
 type (lattice), intent(inout) :: my_lattice
 type (cell), intent(in) :: my_motif
 type (simulation_parameters), intent(in) :: ext_param
-type (mtprng_state),intent(inout) :: state
 ! internal variables
 integer :: io,N_mode,index_mode,i
 character(len=30) :: seed_name,mode_name,configuration
@@ -57,7 +55,7 @@ call get_parameter(io,fname,mode_name,configuration)
       call init_Sk_lattice(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
     case('random')
       write(6,'(a)') 'random configuration was choosen'
-      call init_random_config(my_lattice,my_motif,state,my_order_parameters(i)%start,my_order_parameters(i)%end)
+      call init_random_config(my_lattice,my_motif,my_order_parameters(i)%start,my_order_parameters(i)%end)
     case default
       call init_constant_config(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end,ext_param)
   end select

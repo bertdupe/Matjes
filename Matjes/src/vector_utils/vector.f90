@@ -63,10 +63,17 @@ end function calc_ang_real
 function damping_2V(A,B)
 ! calculates Ax(AxB)=-(A.(A.B)-B)
 implicit none
-real(kind=8), intent(in) :: A(3),B(3)
-real(kind=8), dimension(3) :: damping_2V
+real(kind=8), intent(in) :: A(:),B(:)
+real(kind=8), dimension(size(A)) :: damping_2V
+! internal
+integer :: i
+real(kind=8) :: dummy
 
-damping_2V=-A*(A(1)*B(1)+A(2)*B(2)+A(3)*B(3))+B
+damping_2V=0.0d0
+do i=1,size(A)/3
+  dummy=dot_product( A((i-1)*3+1:i*3) ,B((i-1)*3+1:i*3) )
+  damping_2V((i-1)*3+1:i*3) = -(A((i-1)*3+1:i*3) * dummy - B((i-1)*3+1:i*3))
+enddo
 
 end function damping_2V
 

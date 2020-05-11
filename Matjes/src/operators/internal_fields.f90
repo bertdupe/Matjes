@@ -83,6 +83,13 @@ do i=1,N_all_shell
      do j=1,N_all_vois
 
        B_int%shell_num(i)%order(i_order)%atom(j)%H=-2.0d0*total_hamiltonian%shell_num(i)%order(i_order)%atom(j)%H
+!! take care of the first shell. Only the anisotropy is multiplied by 2
+       if (i.eq.1) then
+         B_int%shell_num(i)%order(i_order)%atom(j)%H=-total_hamiltonian%shell_num(i)%order(i_order)%atom(j)%H
+         do k=1,dim_ham
+           B_int%shell_num(i)%order(i_order)%atom(j)%H(k,k)=-2.0d0*total_hamiltonian%shell_num(i)%order(i_order)%atom(j)%H(k,k)
+         enddo
+       endif
 
      enddo
    enddo
@@ -122,28 +129,5 @@ do i=1,size(B_int%num)
 enddo
 
 end subroutine associate_internal_Beff
-
-!subroutine get_B_line(B_line,mode_B_column,spin)
-!use m_operator_pointer_utils
-!implicit none
-!type(point_shell_Operator), intent(inout) :: B_line(:)
-!type(point_shell_mode),intent(inout) :: mode_B_column(:)
-!type(vec_point),target,intent(in) :: spin(:)
-!! internal variables
-!integer :: shape_B_total(2),i
-
-!shape_B_total=shape(B_total%value)
-!
-!do i=1,shape_B_total(2)
-!   allocate(B_line(i)%shell(shape_B_total(1)))
-!   allocate(mode_B_column(i)%shell(shape_B_total(1)))
-!enddo
-!call dissociate(B_line,shape_B_total(1),shape_B_total(2))
-!call dissociate(mode_B_column,shape_B_total(1),shape_B_total(2))
-!
-!
-!call associate_pointer(mode_B_column,spin,B_line,B_total)
-
-!end subroutine get_B_line
 
 end module m_internal_fields_commons
