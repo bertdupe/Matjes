@@ -1,6 +1,5 @@
 module m_gneb_utils
 use m_vector, only : calc_ang,norm
-use m_rotation, only : rotate
 use m_path
 use m_write_spin
 use m_local_energy
@@ -9,7 +8,7 @@ use m_basic_types, only : vec_point, vec
 use m_derived_types, only : io_parameter,lattice
 use m_gneb_parameters, only : do_norm_rx,en_zero
 use m_eval_Beff
-use m_rotation, only : rotation_axis
+use m_rotation, only : rotation_axis,rotate
 use m_operator_pointer_utils
 use m_energyfield
 use m_spline
@@ -37,13 +36,13 @@ real(kind=8), intent(out) :: ene(nim) !< Energy of the images
 real(kind=8), intent(out) :: dene(nim) !< Derivative of the energy with respect to reaction coordinate
 ! internal
 integer :: iomp,i_nim,itr
-type(vec), allocatable :: vel(:,:),fxyz1(:,:),fxyz2(:,:),ax(:,:),tau_i(:),tau(:),coo(:,:)
-real(kind=8), allocatable :: ang(:,:)
-real(kind=8) :: fchk,veltmp(3),u0,u(nim),fpp(nim)
-real(kind=8), allocatable :: ftmp(:)
+real(kind=8), allocatable, dimension(:,:,:) :: vel,fxyz1,fxyz2,ax,coo
+real(kind=8), allocatable, dimension(:,:) :: tau_i,tau,ang
+real(kind=8), allocatable, dimension(:) :: ftmp,veltmp
+real(kind=8) :: fchk,u0,u(nim),fpp(nim)
 real(kind=8) :: pathlen(nim)
 real(kind=8) :: fv,fd,fp,E_int,norm_local
-integer :: i,imax,dim_mode
+integer :: i,imax,dim_mode,dim_mode_mag,maximum(3)
 logical :: found
 !!!!!!!!!!! allocate the pointers to find the path
 type(vec_point),allocatable,dimension(:,:) :: all_mode_path,magnetic_mode_path
@@ -66,18 +65,24 @@ do i_nim=1,nim
   enddo
 enddo
 
-
-allocate(vel(N_cell,nim),fxyz1(N_cell,nim),fxyz2(N_cell,nim),ax(N_cell,nim),coo(N_cell,nim),ang(N_cell,nim))
-allocate(tau_i(N_cell),tau(N_cell))
-
-! NOT DONE:
-! one has to carefully attribute the different pointers
+dim_mode_mag=size(magnetic_mode_path(1,1)%w)
+allocate(vel(dim_mode_mag,N_cell,nim),fxyz1(dim_mode_mag,N_cell,nim),fxyz2(dim_mode_mag,N_cell,nim),ax(dim_mode_mag,N_cell,nim),coo(dim_mode_mag,N_cell,nim),ang(N_cell,nim))
+allocate(tau_i(dim_mode_mag,N_cell),tau(dim_mode_mag,N_cell))
+vel=0.0d0
+fxyz1=0.0d0
+fxyz2=0.0d0
+ax=0.0d0
+coo=0.0d0
+ang=0.0d0
+tau_i=0.0d0
+tau=0.0d0
 
 fchk=1d0+ftol
 itr=1
 dim_mode=my_lattice%dim_mode
-allocate(ftmp(dim_mode))
+allocate(ftmp(dim_mode),veltmp(dim_mode_mag))
 ftmp=0.0d0
+veltmp=0.0d0
 
 call the_path(nim,magnetic_mode_path,pathlen)
    
@@ -86,11 +91,11 @@ do i_nim=1,nim
    u(i_nim) = 0d0
    do iomp=1,N_cell
 
-      coo(iomp,i_nim)%w = magnetic_mode_path(iomp,i_nim)%w
+      coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w
 
       call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-      call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(iomp,i_nim)%w)
+      call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
 
       call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
@@ -99,7 +104,7 @@ do i_nim=1,nim
    enddo
 enddo
    
-   
+
                         
 if (en_zero=='I') then
       u0 = u(1)
@@ -114,13 +119,8 @@ end if
 
 ! Calculation of the tangent trajectory of constant energy
 call tang(nim,1,coo,tau_i)
-fpp(1) = 0d0
-do iomp=1,N_cell
-   fpp(1) = fpp(1) + dot_product(fxyz1(iomp,1)%w,tau_i(iomp)%w)
-end do
-            
-      
-      
+fpp = 0d0
+fpp(1)=sum( fxyz1(:,:,1) * tau_i )
 
 ! calculation of the tangent trajectory for all the images
 do i_nim=2,nim-1
@@ -131,41 +131,29 @@ do i_nim=2,nim-1
    fp = 0d0
    fpp(i_nim) = 0d0
 
-   do iomp=1,N_cell
-      fpp(i_nim) = fpp(i_nim) + dot_product(fxyz1(iomp,i_nim)%w,tau_i(iomp)%w)
-      fp = fp + dot_product(fxyz1(iomp,i_nim)%w,tau(iomp)%w)
-   end do
+   fpp(i_nim)=sum( fxyz1(:,:,i_nim) *tau_i )
+   fp = sum( fxyz1(:,:,i_nim) * tau )
 
          
    do iomp=1,N_cell
-     fxyz1(iomp,i_nim)%w = fxyz1(iomp,i_nim)%w - tau(iomp)%w*fp + kappa*tau(iomp)%w*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
+     fxyz1(:,iomp,i_nim) = fxyz1(:,iomp,i_nim) - tau(:,iomp)*fp + kappa*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
    end do
+
 end do
-      
+
 call tang(nim,nim,coo,tau_i)
 fpp(nim) = 0d0
 
-do iomp=1,N_cell
-   fpp(nim) = fpp(nim) + dot_product(fxyz1(iomp,nim)%w,tau_i(iomp)%w)
-end do
-
-      
+fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
 
       
 fchk=0d0
 imax = 1
-do i_nim=1,nim
-   do iomp=1,N_cell
-      do i=1,3
-         if (dabs(fxyz1(iomp,i_nim)%w(i))>fchk) then
-            fchk = dabs(fxyz1(iomp,i_nim)%w(i))
-            imax = i_nim
-         end if
-      end do
-   end do
-end do
-                  
-      
+fchk=maxval( abs(fxyz1) )
+maximum=maxloc(fxyz1)
+imax=maximum(3)
+
+
 itr=1
       
 open(99,file = 'force_mep.txt',access = 'sequential',action='write',status='replace')
@@ -175,12 +163,7 @@ open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status =
 write(99,'(i12,a,es16.8E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
       
 close(99)
-do i=1,nim
-   ene(i) = (u(i)-u0)
-   dene(i) = -fpp(i)
-   rx(i) = pathlen(i)
-end do
-call write_en(nim,rx,ene,dene,rx(nim),'en_path.in',do_norm_rx)
+call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.in',do_norm_rx)
       
 call write_path(path)
       
@@ -197,15 +180,15 @@ do while ((fchk>ftol).and.(itr<=itrmax))
       do iomp=1,N_cell
             
          !print *,'i)nim:',i_nim
-         ax(iomp,i_nim)%w = rotation_axis(coo(iomp,i_nim)%w,fxyz1(iomp,i_nim)%w)
+         ax(:,iomp,i_nim) = rotation_axis(coo(:,iomp,i_nim),fxyz1(:,iomp,i_nim))
                         
-         coo(iomp,i_nim)%w = magnetic_mode_path(iomp,i_nim)%w+vel(iomp,i_nim)%w*dt+0.5d0*fxyz1(iomp,i_nim)%w/mass*dt*dt
+         coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w+vel(:,iomp,i_nim)*dt+0.5d0*fxyz1(:,iomp,i_nim)/mass*dt*dt
 
-         norm_local=norm(coo(iomp,i_nim)%w)
-         coo(iomp,i_nim)%w=coo(iomp,i_nim)%w/norm_local
-         ang(iomp,i_nim) = calc_ang(coo(iomp,i_nim)%w,magnetic_mode_path(iomp,i_nim)%w)
-         magnetic_mode_path(iomp,i_nim)%w = coo(iomp,i_nim)%w
-         !print *,'ang:',ang(i_x,i_y,i_z,i_m)
+         norm_local=norm(coo(:,iomp,i_nim))
+         coo(:,iomp,i_nim)=coo(:,iomp,i_nim)/norm_local
+         ang(iomp,i_nim) = calc_ang(coo(:,iomp,i_nim),magnetic_mode_path(iomp,i_nim)%w)
+         magnetic_mode_path(iomp,i_nim)%w = coo(:,iomp,i_nim)
+         !print *,'ang:',ang(iomp,i_nim)
       end do
    end do
             
@@ -217,7 +200,7 @@ do while ((fchk>ftol).and.(itr<=itrmax))
 
          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(iomp,i_nim)%w)
+         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
 
          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
@@ -234,29 +217,27 @@ do while ((fchk>ftol).and.(itr<=itrmax))
 
 
    do i_nim=2,nim-1
-   call tang(i_nim,coo,u,tau)
-   call tang(nim,i_nim,coo,tau_i)
+     call tang(i_nim,coo,u,tau)
+     call tang(nim,i_nim,coo,tau_i)
          
-   fp = 0d0
-   fpp(i_nim) = 0d0
-         
-      do iomp=1,N_cell
-         fpp(i_nim) = fpp(i_nim) + dot_product(fxyz2(iomp,i_nim)%w,tau_i(iomp)%w)
-         fp = fp + dot_product(fxyz2(iomp,i_nim)%w,tau(iomp)%w)
-      end do
+     fp = 0d0
+     fpp(i_nim) = 0d0
 
-      do iomp=1,N_cell
-         fxyz2(iomp,i_nim)%w = fxyz2(iomp,i_nim)%w - tau(iomp)%w*fp + kappa*tau(iomp)%w*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
-      enddo
+     fpp(i_nim)=sum( fxyz2(:,:,i_nim) * tau_i )
+     fp = sum( fxyz2(:,:,i_nim) * tau )
+
+     do iomp=1,N_cell
+       fxyz2(:,iomp,i_nim) = fxyz2(:,iomp,i_nim) - tau(:,iomp)*fp + kappa*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
+     enddo
    enddo
    !stop
 
    do i_nim=2,nim-1
       do iomp=1,N_cell
-         call rotate(vel(iomp,i_nim)%w,ax(iomp,i_nim)%w,ang(iomp,i_nim),veltmp)
-         call rotate(fxyz1(iomp,i_nim)%w,ax(iomp,i_nim)%w,ang(iomp,i_nim),ftmp)
+         call rotate(vel(:,iomp,i_nim),ax(:,iomp,i_nim),ang(iomp,i_nim),veltmp)
+         call rotate(fxyz1(:,iomp,i_nim),ax(:,iomp,i_nim),ang(iomp,i_nim),ftmp(1:3))
 
-         vel(iomp,i_nim)%w = veltmp + 0.5d0*(ftmp(1:3)+fxyz2(iomp,i_nim)%w)/mass*dt
+         vel(:,iomp,i_nim) = veltmp + 0.5d0*(ftmp(1:3)+fxyz2(:,iomp,i_nim))/mass*dt
 
       enddo
    enddo
@@ -264,28 +245,14 @@ do while ((fchk>ftol).and.(itr<=itrmax))
          
    fv = 0d0
    fd = 0d0
-   do i_nim=1,nim
-      do iomp=1,N_cell
-                        
-         fv = fv + dot_product(vel(iomp,i_nim)%w,fxyz2(iomp,i_nim)%w)
-         fd = fd + dot_product(fxyz2(iomp,i_nim)%w,fxyz2(iomp,i_nim)%w)
 
-      end do
-   end do
-
+   fv= sum( vel * fxyz2 )
+   fd= sum( fxyz2**2 )
          
    if (fv<0d0) then
-      do i_nim=1,nim
-         do iomp=1,N_cell
-            vel(iomp,i_nim)%w = 0d0
-         end do
-      end do
+     vel = 0d0
    else
-      do i_nim=1,nim
-         do iomp=1,N_cell
-            vel(iomp,i_nim)%w = fxyz2(iomp,i_nim)%w*fv/fd
-         end do
-      end do
+     vel=fxyz2*fv/fd
    end if
          
          
@@ -293,35 +260,20 @@ do while ((fchk>ftol).and.(itr<=itrmax))
          
    imax=1
    fchk=0d0
+   fxyz1 = fxyz2
 
-   do i_nim=2,nim-1
-      do iomp=1,N_cell
-         do i=1,3
-            fxyz1(iomp,i_nim)%w(i) = fxyz2(iomp,i_nim)%w(i)
-            if (dabs(fxyz1(iomp,i_nim)%w(i))>fchk) then
-               fchk = dabs(fxyz1(iomp,i_nim)%w(i))
-               imax = i_nim
-            end if
-         end do
-      end do
-   end do
-         
+   fchk=maxval( abs(fxyz1) )
+   maximum=maxloc(fxyz1)
+   imax=maximum(3)
          
          
          
    call tang(nim,1,coo,tau_i)
-   fpp(1) = 0d0
-   do iomp=1,N_cell
-      fpp(1) = fpp(1) + dot_product(fxyz1(iomp,1)%w,tau_i(iomp)%w)
-   end do
+   fpp(1) = sum( fxyz1(:,:,1)*tau_i )
          
          
    call tang(nim,nim,coo,tau_i)
-   fpp(nim) = 0d0
-   do iomp=1,N_cell
-      fpp(nim) = fpp(nim) + dot_product(fxyz1(iomp,nim)%w,tau_i(iomp)%w)
-   end do
-         
+   fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
          
          
    itr=itr+1
@@ -333,12 +285,7 @@ do while ((fchk>ftol).and.(itr<=itrmax))
       write(99,'(i12,a,es16.8E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
       close(99)
             
-      do i=1,nim
-         ene(i) = (u(i)-u0)
-         dene(i) = -fpp(i)
-         rx(i) = pathlen(i)
-      end do
-      call write_en(nim,rx,ene,dene,rx(nim),'en_path.out',do_norm_rx)
+      call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.out',do_norm_rx)
       call write_path(path)
             
          
@@ -378,18 +325,18 @@ end subroutine find_path
 subroutine calc_axis_all(m_in,f_in,ax)
 use m_rotation, only : rotation_axis
 implicit none
-type(vec), intent(in) :: m_in(:),f_in(:)
-type(vec), intent(out) :: ax(:)
+real(kind=8), intent(in) :: m_in(:,:),f_in(:,:)
+real(kind=8), intent(out) :: ax(:,:)
 ! internal variables
 real(kind=8) :: x(3),y(3)
 integer :: i,N_cell
 
 N_cell=size(m_in)
 do i=1,N_cell
-   x = m_in(i)%w
-   y = f_in(i)%w
+   x = m_in(:,i)
+   y = f_in(:,i)
             
-   ax(i)%w = rotation_axis(x,y)
+   ax(:,i) = rotation_axis(x,y)
 
 end do
    
@@ -472,7 +419,7 @@ end subroutine find_SP_conf
 
 
 subroutine find_SP_conf_one(ni,nf,l1,l2,lsp,ax,nsp)
-use mtprng
+use m_get_random
 use m_vector, only : calc_ang,norm
 use m_constants, only : pi
 use m_rotation, only : rotation_axis
@@ -481,7 +428,6 @@ real(kind=8), intent(in) :: ni(3),nf(3),l1,l2,lsp
 real(kind=8), intent(inout) :: ax(3)
 real(kind=8), intent(out) :: nsp(3)
 ! internal variables
-type(mtprng_state) :: state
 real(kind=8) :: dl,theta,angle,tmp,vec(3),eps=epsilon(angle),pr,norm_local
 integer :: i,j
       
@@ -513,7 +459,7 @@ elseif (dabs(angle-pi(1.0d0))<eps) then
    do while (tmp<eps)
       pr = 0d0
       do j=1,3
-         ax(j) = dsign(1d0,2d0*mtprng_rand_real1(state)-1d0)*(mtprng_rand_real1(state)+1d0)
+         ax(j) = dsign(1d0,2d0*get_rand_classic()-1d0)*(get_rand_classic()+1d0)
          pr = pr + ax(j)*ni(j)
       end do
       ax(:) = ax(:) - pr*ni(:)

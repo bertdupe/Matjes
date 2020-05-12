@@ -20,7 +20,7 @@ implicit none
 character(len=*), intent(in) :: fname
 ! internal variables
 logical :: i_file
-integer :: io
+integer :: io,error
 
 io=-1
 i_file=inquire_file(fname)
@@ -32,9 +32,9 @@ endif
 
 if (io.lt.0) io=inquire_file_unit(io)
 
-open(io,file=fname,form='formatted',status='unknown',action='write')
+open(io,file=fname,form='formatted',status='unknown',action='write',iostat=error)
 
-write(6,'(3a,/)') 'The file ', fname,' has been succesfully open'
+if (error.ne.0) write(6,'(3a,/)') 'The file ', fname,' could not be opened for writting'
 rewind(io)
 
 open_file_write=io
@@ -47,7 +47,7 @@ implicit none
 character(len=*), intent(in) :: fname
 ! internal variables
 logical :: i_file
-integer :: io
+integer :: io,error
 
 io=-1
 i_file=inquire_file(fname)
@@ -61,9 +61,9 @@ endif
 if (io.lt.0) io=inquire_file_unit(io)
 
 
-open (io,file=fname,form='formatted',status='old',action='read')
+open (io,file=fname,form='formatted',status='old',action='read',iostat=error)
 
-write(6,'(3a,/)') 'The file ', fname,' has been succesfully open'
+if (error.ne.0) write(6,'(3a,/)') 'The file ', fname,' could ne be opened for reading'
 rewind(io)
 
 open_file_read=io
@@ -75,10 +75,12 @@ subroutine close_file(filename,io)
 implicit none
 integer, intent(in) :: io
 character(len=*), intent(in) :: filename
+! internal
+integer :: error
 
-close(io)
+close(io,iostat=error)
 
-write(6,'(/,3a,/)') 'The file ', filename, ' has been succesfully closed'
+if (error.ne.0) write(6,'(/,3a,/)') 'The file ', filename, ' could not be closed'
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!
@@ -95,9 +97,7 @@ inquire_file=.false.
 
 inquire(file=filename,exist=inquire_file)
 
-if (inquire_file) then
-  write(6,'(/,3a,/)') 'file ', filename, ' has been found'
-else
+if (.not.inquire_file) then
   write(6,'(/,3a)') 'file ', filename, ' has not been found'
 endif
 
