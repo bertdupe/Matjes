@@ -173,8 +173,11 @@ call write_path(path)
 ! This part is the integrator
 !
 !
+write(6,'(/a)') 'Main loop'
+write(6,'(2(a,I8))') 'maximum iteration  ', itrmax, ' iteration number', itr
+write(6,'(2(a,f16.12)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
 
-do while ((fchk>ftol).and.(itr<=itrmax))
+do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    do i_nim=2,nim-1
       u(i_nim) = 0d0
       do iomp=1,N_cell
@@ -293,17 +296,14 @@ do while ((fchk>ftol).and.(itr<=itrmax))
 end do
 
 if (itr>itrmax) then
-   write(*,*) 'WARNING: exceeded maximum iterations in GNEB'
+   write(6,'(a)') 'WARNING: exceeded maximum iterations in GNEB'
 end if
    
       
-      
-      
-do i=1,nim
-   ene(i) = (u(i)-u0)
-   dene(i) = -fpp(i)
-   rx(i) = pathlen(i)
-end do
+
+ene = u-u0
+dene = -fpp
+rx = pathlen
    
 
 end subroutine find_path

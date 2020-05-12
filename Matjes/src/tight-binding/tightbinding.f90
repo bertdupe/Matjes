@@ -13,6 +13,8 @@
 
 subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
 use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
+use m_rw_TB
+use m_exchange_TB
 implicit none
 type(io_parameter), intent(in) :: io_simu
 type(lattice), intent(in) :: my_lattice
@@ -21,9 +23,7 @@ type(simulation_parameters), intent(in) :: ext_param
 ! internal parameter
 
 
-write(6,'(a)') 'your now in the tight-binding code'
-
-write(*,*) my_lattice%l_modes(1,1,1,1)%w
+call get_ham_TB('input')
 
 
 stop
