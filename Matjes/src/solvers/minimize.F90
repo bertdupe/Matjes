@@ -88,6 +88,7 @@ use m_local_energy
 use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
 use omp_lib
+use m_torques
 implicit none
 type(io_parameter), intent(in) :: io_simu
 real(kind=8), intent(inout) :: my_lattice(:,:)
@@ -106,6 +107,7 @@ integer :: nthreads,ithread
 #endif
 
 call init_variables()
+call get_torques('input')
 
 gra_freq=io_simu%io_frequency
 gra_log=io_simu%io_Xstruct
@@ -152,6 +154,7 @@ call get_E_matrix(dim_mode)
 do iomp=1,N_cell
 
    call calculate_Beff(F_eff,iomp,all_mode)
+   call update_B(all_mode(iomp)%w,0.3d0,F_eff)
    force(:,iomp)=calculate_damping(all_mode(iomp)%w,F_eff)
    call minimization(all_mode(iomp)%w,force(:,iomp),predicator(:,iomp),dt**2,masse*2.0d0)
 

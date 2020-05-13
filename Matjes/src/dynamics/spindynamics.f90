@@ -285,7 +285,7 @@ endif
 call init_update_time('input')
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! initialize the difference torques
+! initialize the different torques
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_torques('input')
 
