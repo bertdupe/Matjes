@@ -11,20 +11,21 @@
 
 
 
+
 subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
-use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
-use m_rw_TB
-use m_exchange_TB
-implicit none
-type(io_parameter), intent(in) :: io_simu
-type(lattice), intent(in) :: my_lattice
-type(cell), intent(in) :: my_motif
-type(simulation_parameters), intent(in) :: ext_param
-! internal parameter
+    use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
+    use m_rw_TB
+    !use m_exchange_TB
+    !use m_chem_pot_TB
+    use m_total_Hamiltonian_TB
 
+    implicit none
+    ! internal parameter
+    type(io_parameter), intent(in) :: io_simu
+    type(lattice), intent(in) :: my_lattice
+    type(cell), intent(in) :: my_motif
+    type(simulation_parameters), intent(in) :: ext_param
 
-call get_ham_TB('input')
-
-
-stop
+    !call get_total_Hamiltonian('input')
+    call rw_TB('input')
 end subroutine tightbinding
