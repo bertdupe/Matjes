@@ -12,7 +12,7 @@ OBJS = exchange_tight_binding.o envelope.o matrix_power.o matrix.o Hamiltonian_v
  create_lattice.o forces.o fftw.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
- mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o plot_FFT.o \
+ mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o plot_FFT.o sort.o \
  print_Beff.o setup-simu.o arrange_neihg.o mapping.o indexation.o order_lattice.o qorien.o path.o \
  stdtypes.o Energy_distrib.o error.o setup_zdir.o rw_efield.o energy_commons.o excitations.o rotation.o projection.o spline.o \
  rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o torques.o tangent.o gneb.o io-gneb.o gneb_utils.o gneb_parameters.o initialize_path.o \

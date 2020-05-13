@@ -29,3 +29,4 @@ LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,u
 CPPS= -DCPP_MRG -DCPP_BRUTDIP
 #CPPS= -DCPP_MRG -DCPP_FFTW
 #CPPS= -DCPP_MRG -DCPP_SUM
+
