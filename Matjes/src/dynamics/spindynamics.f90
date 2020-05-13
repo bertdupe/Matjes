@@ -352,9 +352,9 @@ do j=1,duration
         call update_EMT_of_r(iomp,lattice_ini_excitation_field)
       endif
 ! call routine normal which is very slow
-!      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
+      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
 ! call routine optimized which is very slow
-      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
+!      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
 
 !
 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
@@ -421,8 +421,9 @@ if (j.eq.1) check3=test_torque
 do iomp=1,N_cell
 
 ! très lent
-!    call local_energy(Et,iomp,all_mode,mag_lattice%dim_mode)
-    call local_energy(Et,iomp,all_mode)
+    call local_energy(Et,iomp,all_mode,mag_lattice%dim_mode)
+! optimisé
+!    call local_energy(Et,iomp,all_mode)
 
     Edy=Edy+Et
 
