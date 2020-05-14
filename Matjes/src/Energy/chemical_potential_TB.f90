@@ -47,7 +47,11 @@ module m_chem_pot_TB
             ! c_Ei and put its value in the variable onsite_ham_TB%c_ham
             call get_parameter(io_param,fname,'c_Ei',onsite_ham_TB%c_ham)
 
-            if (chem_pot_count.ne.0) onsite_ham_TB%i_exist=.true.
+            if (chem_pot_count.ne.0) then
+              onsite_ham_TB%i_exist=.true.
+            else
+              return
+            endif
 
             ! Allocate the different blocs in the total Hamiltonian
             allocate(onsite_ham_TB%ham(1))

@@ -307,6 +307,7 @@ integer :: i
 i=0
 nvariable=0
 length_string=len_trim(var_name)
+n_var_fin=0
 
 rewind(io)
   do

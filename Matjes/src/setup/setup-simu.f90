@@ -118,7 +118,7 @@ n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
 call get_Hamiltonians('input',my_motif%atomic(1)%moment,my_lattice%dim_mode)
 
 N_Nneigh=get_number_shell()
-
+write(*,*) 'toto', N_Nneigh
 allocate(indexNN(N_Nneigh,1),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
 allocate(tabledist(N_Nneigh,1),stat=alloc_check)

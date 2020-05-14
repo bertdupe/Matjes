@@ -81,7 +81,7 @@ if (ham_tot_heisenberg%i_exist) then
   number_hamiltonian=number_hamiltonian+1
   Hamiltonians(number_hamiltonian)%name=ham_tot_heisenberg%name
   Hamiltonians(number_hamiltonian)%order=ham_tot_heisenberg%order
-  Hamiltonians(number_hamiltonian)%onsite=.false.
+  Hamiltonians(number_hamiltonian)%onsite=.true.
   n_shell=size(ham_tot_heisenberg%ham)
   
   allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
@@ -97,6 +97,7 @@ if (ME%i_exist) then
   number_hamiltonian=number_hamiltonian+1
   Hamiltonians(number_hamiltonian)%name=ME%name
   Hamiltonians(number_hamiltonian)%order=ME%order
+  Hamiltonians(number_hamiltonian)%onsite=.false.
   n_shell=size(ME%ham)
   allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
   do i=1,n_shell
@@ -109,7 +110,7 @@ if (ham_tot_TB%i_exist) then
   number_hamiltonian=number_hamiltonian+1
   Hamiltonians(number_hamiltonian)%name=ham_tot_TB%name
   Hamiltonians(number_hamiltonian)%order=ham_tot_TB%order
-  Hamiltonians(number_hamiltonian)%onsite=.false.
+  Hamiltonians(number_hamiltonian)%onsite=.true.
   n_shell=size(ham_tot_TB%ham)
 
   allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
@@ -203,14 +204,20 @@ write(6,'(a)') ''
 
 ! shell_order_max(:,1) maximum Hamiltonian order for each shell
 ! shell_order_max(:,2) number of Hamiltonian per shell
+! Hamiltonians(i)%onsite=.True. means that the shell 0 is included in the Hamiltonian
 allocate(shell_order_max(N_shell+1,2))
 shell_order_max=0
 do i=1,n_ham
   n_ham_shell=size(Hamiltonians(i)%ham)
   i_order=Hamiltonians(i)%order
   do j=1,n_ham_shell
-    if (shell_order_max(j,1).lt.i_order) shell_order_max(j,1)=i_order
-    shell_order_max(j,2)=shell_order_max(j,2)+1
+    if (Hamiltonians(i)%onsite) then
+      if (shell_order_max(j,1).lt.i_order) shell_order_max(j,1)=i_order
+      shell_order_max(j,2)=shell_order_max(j,2)+1
+    else
+      if (shell_order_max(j+1,1).lt.i_order) shell_order_max(j+1,1)=i_order
+      shell_order_max(j+1,2)=shell_order_max(j+1,2)+1
+    endif
   enddo
 enddo
 
@@ -393,7 +400,7 @@ implicit none
 integer :: N_coeff
 integer :: i
 
-get_number_shell=size(Hamiltonians(1)%ham)
+get_number_shell=0
 
 do i=1,size(Hamiltonians)
 ! obtain the size of all matrices
@@ -405,7 +412,7 @@ if (get_number_shell.eq.0) then
    write(6,'(a)') 'WARNING!!!! No shells were found in the Hamiltonian (H=0)'
 else
    ! the onsite term is always preset in the Hamiltonian so we take it out for the table of distance and the table of neighbor
-   get_number_shell=N_coeff-1
+   get_number_shell=get_number_shell-1
    write(6,'(I6,a/)') N_coeff,' shells were found in the Hamiltonian'
 endif
 
