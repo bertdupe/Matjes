@@ -67,6 +67,8 @@ else
 
 endif
 
+call write_out(tableNN,indexNN)
+
 end subroutine mapping
 
 ! establish the table of neighbors
@@ -698,5 +700,66 @@ if (l.gt.Nmax) then
 endif
 
 end subroutine check_l
+
+
+
+
+
+!
+! Subroutine that writes out the table of neighbours for selected sites
+!
+!
+subroutine write_out(tableNN,indexNN)
+implicit none
+integer, intent(in) :: tableNN(:,:,:,:,:,:),indexNN(:,:)
+! internal
+integer :: i_nei,i_shell
+integer :: shape_tableNN(6)
+
+shape_tableNN=shape(tableNN)
+
+write(6,'(a)') ''
+write(6,'(a)') 'Table of neighbors for selected sites'
+write(6,'(a)') '(cut out at shell 2)'
+write(6,'(a)') '-------------------------------------'
+write(6,'(a)') '(1,1,1,1)'
+
+do i_shell=1,size(indexNN,1)
+  write(6,'(a,I4)') 'Shell  ', i_shell
+  do i_nei=1,indexNN(i_shell,1)
+    write(6,'(5(a,I8,2X))') 'i_x=',tableNN(1,i_nei,1,1,1,1),'i_y=',tableNN(2,i_nei,1,1,1,1), 'i_z=',tableNN(3,i_nei,1,1,1,1), 'i_m=',tableNN(4,i_nei,1,1,1,1), 'present', tableNN(5,i_nei,1,1,1,1)
+  enddo
+  if (i_shell.eq.3) exit
+enddo
+
+write(6,'(a)') '-------------------------------------'
+write(6,'(a)') '(N/2+1,N/2+1,N/2+1,N/2+1)'
+do i_shell=1,size(indexNN,1)
+  write(6,'(a,I4)') 'Shell  ', i_shell
+  do i_nei=1,indexNN(i_shell,1)
+    write(6,'(5(a,I8,2X))') 'i_x=',tableNN(1,i_nei,shape_tableNN(3)/2+1,shape_tableNN(4)/2+1,shape_tableNN(5)/2+1,shape_tableNN(6)/2+1), &
+        & 'i_y=',tableNN(2,i_nei,shape_tableNN(3)/2+1,shape_tableNN(4)/2+1,shape_tableNN(5)/2+1,shape_tableNN(6)/2+1), &
+        & 'i_z=',tableNN(3,i_nei,shape_tableNN(3)/2+1,shape_tableNN(4)/2+1,shape_tableNN(5)/2+1,shape_tableNN(6)/2+1), &
+        & 'i_m=',tableNN(4,i_nei,shape_tableNN(3)/2+1,shape_tableNN(4)/2+1,shape_tableNN(5)/2+1,shape_tableNN(6)/2+1), &
+        & 'present', tableNN(5,i_nei,shape_tableNN(3)/2+1,shape_tableNN(4)/2+1,shape_tableNN(5)/2+1,shape_tableNN(6)/2+1)
+  enddo
+  if (i_shell.eq.3) exit
+enddo
+
+write(6,'(a)') '-------------------------------------'
+write(6,'(a)') '(N/2+1,N/2+1,N/2+1,N/2+1)'
+do i_shell=1,size(indexNN,1)
+  write(6,'(a,I4)') 'Shell  ', i_shell
+  do i_nei=1,indexNN(i_shell,1)
+    write(6,'(5(a,I8,2X))') 'i_x=',tableNN(1,i_nei,shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6)), &
+        & 'i_y=',tableNN(2,i_nei,shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6)), &
+        & 'i_z=',tableNN(3,i_nei,shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6)), &
+        & 'i_m=',tableNN(4,i_nei,shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6)), &
+        & 'present', tableNN(5,i_nei,shape_tableNN(3),shape_tableNN(4),shape_tableNN(5),shape_tableNN(6))
+  enddo
+  if (i_shell.eq.3) exit
+enddo
+
+end subroutine
 
 end module m_mapping
