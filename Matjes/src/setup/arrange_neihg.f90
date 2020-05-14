@@ -153,9 +153,9 @@ integer, intent(in) :: i_shell,i_bond
 real(kind=8) , intent(out) :: h_dum(:,:)
 ! internal
 
-call rotate((/1.0d0,0.0d0,0.0d0/),map(i_shell)%bond(i_bond)%rotation_axis,-map(i_shell)%bond(i_bond)%rotation_angle,h_dum(:,1))
-call rotate((/0.0d0,1.0d0,0.0d0/),map(i_shell)%bond(i_bond)%rotation_axis,-map(i_shell)%bond(i_bond)%rotation_angle,h_dum(:,2))
-call rotate((/0.0d0,0.0d0,1.0d0/),map(i_shell)%bond(i_bond)%rotation_axis,-map(i_shell)%bond(i_bond)%rotation_angle,h_dum(:,3))
+call rotate((/1.0d0,0.0d0,0.0d0/),map(i_shell)%bond(i_bond)%rotation_axis,map(i_shell)%bond(i_bond)%rotation_angle,h_dum(:,1))
+call rotate((/0.0d0,1.0d0,0.0d0/),map(i_shell)%bond(i_bond)%rotation_axis,map(i_shell)%bond(i_bond)%rotation_angle,h_dum(:,2))
+call rotate((/0.0d0,0.0d0,1.0d0/),map(i_shell)%bond(i_bond)%rotation_axis,map(i_shell)%bond(i_bond)%rotation_angle,h_dum(:,3))
 
 end subroutine get_rotation
 
