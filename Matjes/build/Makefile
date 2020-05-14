@@ -2,8 +2,8 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = exchange_tight_binding.o envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
- null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o \
+OBJS = exchange_tight_binding.o chemical_potential_TB.o total_Hamiltonian_TB.o envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
+ null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
  rw_TB.o tightbinding.o Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o \
@@ -45,8 +45,11 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
-exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o
-tightbinding.o: rw_TB.o exchange_tight_binding.o
+total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
+exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
+chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
+tightbinding.o: rw_TB.o total_Hamiltonian_TB.o
+total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
 rw_TB.o: io_files_utils.o io-utils.o
 print_Beff.o: convert.o io_files_utils.o
 envelope.o:
@@ -92,7 +95,7 @@ measure_temp.o: constant.o vector.o
 operator_pointer_utils.o: Hamiltonian_variables.o create_lattice.o null.o derived_types.o get-position.o
 topo_commons.o: vector.o get-position.o derived_types.o operator_pointer_utils.o
 internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
-energy_commons.o: dipolar-energy.o setup_DM.o convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
+energy_commons.o: total_Heisenberg_Ham.o dipolar-energy.o setup_DM.o convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
 basic_types.o:
 pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o
@@ -190,6 +193,6 @@ Correlation.o: vector.o constant.o derived_types.o create_lattice.o
 sym_utils.o: vector.o
 topocharge_all.o: rw_lattice.o topocharge_local.o
 
-setup-simu.o: derivative.o null.o dipolar-energy.o io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o sym_utils.o Table_dist.o mtprng.o
+setup-simu.o: rw_TB.o derivative.o null.o dipolar-energy.o io-utils.o io_files_utils.o topo_commons.o excitations.o external_fields.o get-position.o internal_fields.o energy_commons.o user_information.o rw_motif.o arrange_neihg.o indexation.o mapping.o derived_types.o create_lattice.o inp_rw.o rw_lattice.o setup_DM.o main.o sym_utils.o Table_dist.o mtprng.o
 cal_local_energy.o:
 choosespin.o: mtprng.o
