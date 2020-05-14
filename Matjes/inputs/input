@@ -5,6 +5,9 @@ E_ext 0.0 0.0 0.0
 Tini 0.0d0
 Tfin 0.0d0
 J_1 12.1d-3
+activate_mag_TB .F.
+t_1 = 1.0d-3
+mu_1 = 1.0d-2
 #magnetoelectric coupling
 ME_sym_1 0.0d-3
 ME_antisym_1 0.0d-3

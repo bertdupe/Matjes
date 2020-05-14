@@ -11,6 +11,7 @@ use m_anisotropy_heisenberg
 use m_dipole_energy
 use m_zeeman
 use m_symmetry_operators
+use m_total_Hamiltonian_TB
 !
 ! This has to be public so the variable can be accessed from elsewhere
 ! BUT it has to be protected so it can only be read and not written from outside the module
@@ -75,6 +76,10 @@ if (exchange%i_exist) number_hamiltonian=number_hamiltonian+1
 call get_ham_ME(fname,dim_ham)
 if (ME%i_exist) number_hamiltonian=number_hamiltonian+1
 
+! get the TB Hamiltonian
+call get_total_Hamiltonian_TB(fname,dim_ham)
+if (ham_tot_TB%i_exist) number_hamiltonian=number_hamiltonian+1
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! put all the Hamiltonians into a big matrix
 !!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -125,6 +130,22 @@ if (Zeeman%i_exist) then
   Hamiltonians(number_hamiltonian)%onsite=.true.
   allocate(Hamiltonians(number_hamiltonian)%ham(1))
   Hamiltonians(number_hamiltonian)%ham(1)%Op_loc=>zeeman%ham(1)%H
+endif
+
+! Tight-binding
+if (ham_tot_TB%i_exist) then
+  number_hamiltonian=number_hamiltonian+1
+  Hamiltonians(number_hamiltonian)%name=ham_tot_TB%name
+  Hamiltonians(number_hamiltonian)%order=ham_tot_TB%order
+  Hamiltonians(number_hamiltonian)%onsite=.false.
+  n_shell=size(ham_tot_TB%ham)
+  
+  allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
+  
+  do i=1,n_shell
+    Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>ham_tot_TB%ham(i)%H
+  enddo
+  
 endif
 
 end subroutine get_Hamiltonians
@@ -219,17 +240,17 @@ enddo
 
 do i=1,N_shell
   n_order=shell_order_max(i,2)
-  allocate(total_hamiltonian%shell_num(i+1)%order(n_order),total_hamiltonian%shell_num(i+1)%num(n_order))
+  allocate(total_hamiltonian%shell_num(i+1)%order(n_order-1),total_hamiltonian%shell_num(i+1)%num(n_order-1))
   total_hamiltonian%shell_num(i+1)%num=2
 
   N_atom_shell=total_hamiltonian%num(i+1)
-  do i_order=1,n_order
-    allocate(total_hamiltonian%shell_num(i+1)%order(i_order)%atom( N_atom_shell ))
-    total_hamiltonian%shell_num(i+1)%order(i_order)%line=dim_ham**(i_order)
-    total_hamiltonian%shell_num(i+1)%order(i_order)%column=dim_ham
+  do i_order=2,n_order
+    allocate(total_hamiltonian%shell_num(i+1)%order(i_order-1)%atom( N_atom_shell ))
+    total_hamiltonian%shell_num(i+1)%order(i_order-1)%line=dim_ham**(i_order-1)
+    total_hamiltonian%shell_num(i+1)%order(i_order-1)%column=dim_ham
     do j=1,total_hamiltonian%num(i+1)
-      allocate(total_hamiltonian%shell_num(i+1)%order(i_order)%atom(j)%H( dim_ham , dim_ham**( i_order) ))
-      total_hamiltonian%shell_num(i+1)%order(i_order)%atom(j)%H=0.0d0
+      allocate(total_hamiltonian%shell_num(i+1)%order(i_order-1)%atom(j)%H( dim_ham , dim_ham**( i_order-1) ))
+      total_hamiltonian%shell_num(i+1)%order(i_order-1)%atom(j)%H=0.0d0
     enddo
   enddo
 enddo
@@ -323,16 +344,15 @@ enddo
 ! put all the different parts of the Hamiltonian in the big one
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
 ! first the onsite terms
-
 do i=1,n_ham
 
   if ('zeeman'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian%shell_num(1)%order(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
   if ('anisotropy'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian%shell_num(1)%order(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
 
   if ('exchange'.eq.trim(Hamiltonians(i)%name)) then
-    do j=2,size(total_hamiltonian%num)
-      do l=1,total_hamiltonian%num(j)
-        total_hamiltonian%shell_num(j)%order(1)%atom(l)%H=total_hamiltonian%shell_num(j)%order(1)%atom(l)%H+ham_DMI_Nshell_local(j-1)%atom(l)%H
+    do j=1,size(Hamiltonians(i)%ham)
+      do l=1,size(ham_DMI_Nshell_local(j)%atom)
+        total_hamiltonian%shell_num(j+1)%order(1)%atom(l)%H=total_hamiltonian%shell_num(j+1)%order(1)%atom(l)%H+ham_DMI_Nshell_local(j)%atom(l)%H
       enddo
     enddo
   endif
@@ -342,6 +362,14 @@ do i=1,n_ham
       total_hamiltonian%shell_num(j+1)%num(2)=3
       do l=1,total_hamiltonian%num(j+1)   ! so one needs to look at j+1 since j=1 is the anisotropy tensor of order 2
         total_hamiltonian%shell_num(j+1)%order(2)%atom(l)%H=total_hamiltonian%shell_num(j+1)%order(2)%atom(l)%H+ham_EM_Nshell_local(j)%atom(l)%H
+      enddo
+    enddo
+  endif
+  
+  if ('Total-Tight-Binding'.eq.trim(Hamiltonians(i)%name)) then
+    do j=1,size(Hamiltonians(i)%ham)
+      do l=1,size(total_hamiltonian%shell_num(j)%order(1)%atom)
+        total_hamiltonian%shell_num(j)%order(1)%atom(l)%H=total_hamiltonian%shell_num(j)%order(1)%atom(l)%H+ham_tot_TB%ham(j)%H
       enddo
     enddo
   endif
@@ -355,10 +383,10 @@ if (write_ham) call rw_hamiltonian('Hamiltonian.dat')
 
 write(6,'(a)') ''
 write(6,'(a)') 'Total Hamiltonian'
-do i=1,size(total_hamiltonian%num)
+do i=1,size(total_hamiltonian%shell_num)
   write(6,'(a,2x,I3)') 'Hamiltonian for shell ',i
 
-  do j=1,size(total_hamiltonian%shell_num(i)%num)
+  do j=1,size(total_hamiltonian%shell_num(i)%order)
     write(6,'(a,2x,I3)') 'Hamiltonian of order ',j
 
     do k=1,total_hamiltonian%num(i)
@@ -435,9 +463,9 @@ character(len=50) :: form
 
 io=open_file_write(fname)
 
-do i=1,size(total_hamiltonian%num)
+do i=1,size(total_hamiltonian%shell_num)
   write(io,'(a,2x,I3)') 'Hamiltonian for shell ',i
-  do j=1,size(total_hamiltonian%shell_num(i)%num)
+  do j=1,size(total_hamiltonian%shell_num(i)%order)
     write(io,'(a,2x,I3)') 'Hamiltonian of order ',j
 
     do k=1,total_hamiltonian%num(i)

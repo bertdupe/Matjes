@@ -20,9 +20,10 @@ private
 public :: modes,create_lattice,my_order_parameters
 contains
 
-subroutine create_lattice(mag_lattice,motif,ext_param)
+subroutine create_lattice(mag_lattice,motif,ext_param,nb_orbitals)
 use m_derived_types
 implicit none
+integer, intent(in) :: nb_orbitals
 type(cell), intent(in) :: motif
 type(lattice), intent(inout) :: mag_lattice
 type(simulation_parameters), intent(in) :: ext_param
@@ -35,7 +36,7 @@ dim_lat=mag_lattice%dim_lat
 !nmag=count(motif%atomic(:)%moment.gt.0.0d0)
 nmag=1
 
-N_mode=get_num_mode(motif,ext_param)
+N_mode=get_num_mode(motif,ext_param,nb_orbitals)
 allocate(my_order_parameters(N_mode))
 ! initialize the data
 do i=1,N_mode
@@ -44,7 +45,7 @@ do i=1,N_mode
     my_order_parameters(i)%end=-1
 enddo
 
-N_dim_order_param=get_dim_mode(motif,ext_param)
+N_dim_order_param=get_dim_mode(motif,ext_param,nb_orbitals)
 
 !!!!!!!!!!!!!!!!!!!!!!
 !
@@ -80,9 +81,10 @@ end subroutine create_lattice
 !!!!!!!!!!!!!!!!!!!!!!!!
 ! function that gets the number of order parameter
 !!!!!!!!!!!!!!!!!!!!!!!!
-integer function get_dim_mode(motif,ext_param)
+integer function get_dim_mode(motif,ext_param,nb_orbitals)
 use m_derived_types
 implicit none
+integer, intent(in) :: nb_orbitals
 type(cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
 ! internal parameters
@@ -95,17 +97,17 @@ N_dim_order_param=N_dim_order_param+nmag*3
 
 ! for each order parameter, organize the matrix of the mode
 N_mode=0
-do i=1,nmag
-   N_mode=N_mode+1
-   call order_mode(N_mode,'magnetic')
-enddo
+if (nmag.ne.0) then
+    N_mode=N_mode+1
+    call order_mode(N_mode,'magnetic',3*nmag)
+endif
 
 ! electric field
 Field=ext_param%E_ext%value
 if (sqrt(Field(1)**2+Field(2)**2+Field(3)**2).gt.1.0d-8) then
    N_dim_order_param=N_dim_order_param+3
    N_mode=N_mode+1
-   call order_mode(N_mode,'Efield')
+   call order_mode(N_mode,'Efield',3)
    write(6,'(a)') 'electric field found'
    write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
 endif
@@ -115,7 +117,7 @@ Field=ext_param%H_ext%value
 if (sqrt(Field(1)**2+Field(2)**2+Field(3)**2).gt.1.0d-8) then
    N_dim_order_param=N_dim_order_param+3
    N_mode=N_mode+1
-   call order_mode(N_mode,'Bfield')
+   call order_mode(N_mode,'Bfield',3)
    write(6,'(a)') 'magnetic field found'
    write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
 endif
@@ -124,8 +126,17 @@ endif
 if ((ext_param%ktini%value.gt.1.0d-8).or.(ext_param%ktfin%value.gt.1.0d-8)) then
    N_dim_order_param=N_dim_order_param+1
    N_mode=N_mode+1
-   call order_mode(N_mode,'temperature')
+   call order_mode(N_mode,'temperature',1)
    write(6,'(a)') 'Temperature found'
+   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
+endif
+
+! TB
+if (nb_orbitals.gt.0) then
+   N_dim_order_param=N_dim_order_param+nb_orbitals
+   N_mode=N_mode+1
+   call order_mode(N_mode,'Tight-binding',nb_orbitals)
+   write(6,'(a)') 'Tight-binding found'
    write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
 endif
 
@@ -136,9 +147,10 @@ end function get_dim_mode
 !!!!!!!!!!!!!!!!!!!!!!!!
 ! function that gets the number of different order parameter
 !!!!!!!!!!!!!!!!!!!!!!!!
-integer function get_num_mode(motif,ext_param)
+integer function get_num_mode(motif,ext_param,nb_orbitals)
 use m_derived_types
 implicit none
+integer, intent(in) :: nb_orbitals
 type(cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
 ! internal parameters
@@ -165,6 +177,11 @@ if ((ext_param%ktini%value.gt.1.0d-8).or.(ext_param%ktfin%value.gt.1.0d-8)) then
    N_mode=N_mode+1
 endif
 
+! TB
+if (nb_orbitals.gt.0) then
+   N_mode=N_mode+1
+endif
+
 if (N_mode.eq.0) then
    stop 'ERROR: I have find no order parameter in the simulations'
 else
@@ -176,9 +193,9 @@ get_num_mode=N_mode
 end function get_num_mode
 
 ! routine that order the modes as fonction of what is already in the matrix
-subroutine order_mode(i,name)
+subroutine order_mode(i,name,dim_mode)
 implicit none
-integer, intent(in) :: i
+integer, intent(in) :: i, dim_mode
 character(len=*), intent(in) :: name
 ! internal
 
@@ -187,43 +204,13 @@ my_order_parameters(i)%name=name
 if (i.eq.1) then
    write(6,'(2(a,2x))') 'first mode is',name
    my_order_parameters(i)%start=1
-   my_order_parameters(i)%end=my_order_parameters(i)%start+dim_name_mode(name)-1
-
+   my_order_parameters(i)%end=my_order_parameters(i)%start+dim_mode-1
 else
    my_order_parameters(i)%start=my_order_parameters(i-1)%end+1
-   my_order_parameters(i)%end=my_order_parameters(i)%start+dim_name_mode(name)-1
+   my_order_parameters(i)%end=my_order_parameters(i)%start+dim_mode-1
 
 endif
 
 end subroutine order_mode
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!
-!
-! function that gives if the mode has a dimension 1,2,3
-!
-!!!!!!!!!!!!!!!!!!!!!!!
-integer function dim_name_mode(name)
-implicit none
-character(len=*), intent(in) :: name
-dim_name_mode=0
-
-select case (name)
-  case ('magnetic')
-    dim_name_mode=3
-  case ('temperature')
-    dim_name_mode=1
-  case ('Bfield')
-    dim_name_mode=3
-  case ('Efield')
-    dim_name_mode=3
-  case ('polarisation')
-    dim_name_mode=3
-  case default
-    stop 'this mode does not exist'
-end select
-
-end function dim_name_mode
 
 end module m_lattice

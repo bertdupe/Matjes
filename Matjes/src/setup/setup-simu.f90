@@ -21,6 +21,7 @@ use m_io_files_utils
 use m_io_utils
 use m_dipolar_field
 use m_null
+use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
 
 #ifdef CPP_MPI
       use m_make_box
@@ -50,6 +51,8 @@ integer :: dim_lat(3),n_mag,n_DMI,N_Nneigh
 logical :: i_usestruct
 ! check the allocation of memory
 integer :: alloc_check
+! Nb orbitals in TB
+integer :: nb_orbitals = 0
 
 ! innitialisation of dummy
 i_usestruct=.False.
@@ -69,6 +72,10 @@ call rw_lattice(my_lattice)
 call user_info(6,time,'reading the motif in the input file',.False.)
 
 call rw_motif(my_motif,my_lattice)
+
+! read the TB parameters
+call rw_TB('input')
+if (check_activate_TB()) nb_orbitals=get_nb_orbitals()
 
 ! find the symmetry of the lattice here
 
@@ -101,7 +108,7 @@ call rw_efield(my_lattice%dim_lat,my_lattice%areal)
 call user_info(6,time,'allocating the spin, table of neighbors and the index...',.false.)
 time=0.0d0
 
-call create_lattice(my_lattice,my_motif,ext_param)
+call create_lattice(my_lattice,my_motif,ext_param,nb_orbitals)
 
 dim_lat=my_lattice%dim_lat
 n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)

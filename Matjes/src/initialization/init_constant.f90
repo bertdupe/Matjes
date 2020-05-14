@@ -58,6 +58,8 @@ select case (adjustl(mode_name))
     value=ext_param%H_ext%value
   case('temperature')
     value(1)=ext_param%ktini%value
+  case('Tight-binding')
+    value=0.5d0
   case default
     stop 'field name could not be found in get_value_field'
 end select

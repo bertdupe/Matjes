@@ -2,46 +2,59 @@ module m_total_Hamiltonian_TB
     use m_exchange_TB
     use m_chem_pot_TB
     use m_Hamiltonian_variables, only: coeff_ham_inter_spec
+    use m_convert
 
     type(coeff_ham_inter_spec), target, public, protected :: ham_tot_TB
 
     private
-    public :: get_total_Hamiltonian
+    public :: get_total_Hamiltonian_TB
 
     contains
-        subroutine get_total_Hamiltonian(fname)
+        subroutine get_total_Hamiltonian_TB(fname,dim_ham)
             implicit none
             character(len=*), intent(in) :: fname
+            integer, intent(in) :: dim_ham
 
             ! Internal variables
-            integer :: size_ham, shape_ham(2)
-            integer :: i
+            integer :: size_ham
+            integer :: i,j
+            character(len=50) :: form
 
 
-            call get_onsite_ham_TB(fname)
-            call get_exc_ham_TB(fname)
+            call get_onsite_ham_TB(fname,dim_ham)
+            call get_exc_ham_TB(fname,dim_ham)
 
             if (.not. (onsite_ham_TB%i_exist .or. exc_ham_TB%i_exist) ) return
 
             ham_tot_TB%c_ham=1.0d0
             ham_tot_TB%name='Total-Tight-Binding'
+            ham_tot_TB%i_exist=.true.
             ham_tot_TB%order=2
 
             size_ham=size(exc_ham_TB%ham)+size(onsite_ham_TB%ham)
             ham_tot_TB%N_shell=size_ham
             allocate(ham_tot_TB%ham(size_ham))
 
-            shape_ham = shape(exc_ham_TB%ham(1)%H)
             do i=1,size_ham
-                allocate(ham_tot_TB%ham(i)%H(shape_ham(1), shape_ham(2)))
+                allocate(ham_tot_TB%ham(i)%H(dim_ham,dim_ham))
                 ham_tot_TB%ham(i)%H=0.0d0
             enddo
 
             ! Filling of total Hamiltonian matrix
             do i=1,size_ham
-                !if (onsite_ham_TB%i_exist .and. exc_ham_TB%i_exist) then
                 if (onsite_ham_TB%i_exist .and. (i==1)) ham_tot_TB%ham(i)%H =ham_tot_TB%ham(i)%H+onsite_ham_TB%ham(i)%H
                 if (exc_ham_TB%i_exist .and. (i>1)) ham_tot_TB%ham(i)%H = ham_tot_TB%ham(i)%H+exc_ham_TB%ham(i-1)%H
             enddo
-        end subroutine get_total_Hamiltonian
+            
+            form=convert('(',dim_ham,'(f12.8,2x))')
+            write(6,'(a)') ''
+            write(6,'(a)') 'Total Hamiltonian tight-binding is OK'
+            do j=1,size(ham_tot_TB%ham)
+                write(6,'(a,I8)') 'Now in shell ', j
+                do i=1,dim_ham
+                    write(6,form) ham_tot_TB%ham(j)%H(:,i)
+                enddo
+            enddo
+            write(6,'(a)') ''
+        end subroutine get_total_Hamiltonian_TB
 end module m_total_Hamiltonian_TB

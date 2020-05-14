@@ -1,6 +1,8 @@
 module m_exchange_TB
     use m_symmetry_operators
     use m_Hamiltonian_variables, only : coeff_ham_inter_spec
+    use m_rw_TB
+    use m_lattice, only : my_order_parameters
 
     type(coeff_ham_inter_spec), target, public, protected :: exc_ham_TB
 
@@ -8,16 +10,21 @@ module m_exchange_TB
     public :: get_exc_ham_TB
 
     contains
-        subroutine get_exc_ham_TB(fname)
+        subroutine get_exc_ham_TB(fname,dim_ham)
             use m_io_utils
             use m_io_files_utils
             use m_convert
             implicit none
+            integer, intent(in) :: dim_ham
             character(len=*), intent(in) :: fname
+            
             ! internal
-            integer :: io_param,neighbor_hoping
-            integer :: i
+            integer :: io_param,nb_shell
+            character(len=50) :: form
+            integer :: i, j
+            integer :: x_start, x_end
             real(kind=8), allocatable :: t_local(:)
+            
 
             ! Multiplicative coefficient
             exc_ham_TB%c_ham=1.0d0
@@ -33,40 +40,40 @@ module m_exchange_TB
             ! c_tij and put its value in the variable exc_ham_TB%c_ham
             call get_parameter(io_param,fname,'c_tij',exc_ham_TB%c_ham)
 
-            ! Count the number of hopping parameters
-            call get_parameter(io_param,fname,'N_hoping',exc_ham_TB%N_shell)
-            if (exc_ham_TB%N_shell.eq.-1) then
-                neighbor_hoping=count_variables(io_param,'t_',fname)
-            else
-                neighbor_hoping=exc_ham_TB%N_shell
-            endif
-
-
-            ! If there are hopping parameters, read the values
-            ! and put them in the allocated t_local array
-            if (neighbor_hoping.ne.0) then
-                allocate(t_local(neighbor_hoping))
-                t_local=0.0d0
-
-                call get_coeff(io_param,fname,'t_',t_local)
-                neighbor_hoping=number_nonzero_coeff(t_local,'TB')
-            endif
-
-            if (neighbor_hoping.ne.0) exc_ham_TB%i_exist=.true.
-
-            ! Allocate the muber of shell in exc_ham_TB
-            allocate(exc_ham_TB%ham(neighbor_hoping))
-            do i=1,neighbor_hoping
-                allocate(exc_ham_TB%ham(i)%H(2,2))
-                exc_ham_TB%ham(i)%H=0.0d0
+            nb_shell=TB_params%nb_shell
+            if (nb_shell.ne.0) exc_ham_TB%i_exist=.true.
+            
+            do i=1, size(my_order_parameters)
+                if (my_order_parameters(i)%name.eq.'Tight-binding') then
+                    x_start=my_order_parameters(i)%start
+                    x_end=my_order_parameters(i)%end
+                endif
             enddo
 
+            ! Allocate the different blocs in the total Hamiltonian
+            allocate(exc_ham_TB%ham(nb_shell))
+            do i=1,nb_shell
+                allocate(exc_ham_TB%ham(i)%H(dim_ham,dim_ham))
+                exc_ham_TB%ham(i)%H=0.0d0
+            enddo
+            
+            allocate(t_local(x_end-x_start+1))
+            t_local=reshape( TB_params%hopping, (/x_end-x_start+1/) )
+
             ! Put the hopping parameters out of the diagonal
-            if (neighbor_hoping.ne.0) then
-                do i=1,neighbor_hoping
-                    exc_ham_TB%ham(i)%H(1,2)=exc_ham_TB%c_ham*t_local(i)
-                    exc_ham_TB%ham(i)%H(2,1)=exc_ham_TB%c_ham*t_local(i)
+            do j=1,nb_shell
+                do i=x_start,x_end
+                    exc_ham_TB%ham(j)%H(i,i)=exc_ham_TB%c_ham*t_local(j)
                 enddo
-            endif
+            enddo
+            
+            form=convert('(',dim_ham,'(f12.8,2x))')
+            write(6,'(a)') ''
+            write(6,'(a)') 'Exchange tight-binding is OK'
+            do i=1,dim_ham
+                write(6,form) exc_ham_TB%ham(1)%H(:,i)
+            enddo
+            write(6,'(a)') ''
+
         end subroutine get_exc_ham_TB
 end module m_exchange_TB
