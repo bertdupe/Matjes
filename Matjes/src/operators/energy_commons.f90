@@ -5,13 +5,11 @@ use m_derived_types, only : operator_real_order_N,point_shell_Operator,lattice,p
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,shell_Ham,H_vois
 use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters
-use m_couplage_ME
-use m_exchange_heisenberg
-use m_anisotropy_heisenberg
 use m_dipole_energy
-use m_zeeman
 use m_symmetry_operators
 use m_total_Hamiltonian_TB
+use m_total_Heisenberg_Ham
+use m_couplage_ME
 !
 ! This has to be public so the variable can be accessed from elsewhere
 ! BUT it has to be protected so it can only be read and not written from outside the module
@@ -60,57 +58,41 @@ integer :: number_hamiltonian,n_shell,i
 
 number_hamiltonian=0
 
-! get the anisotropy Hamiltonian
-call get_ham_anisotropy(fname,dim_ham)
-if (anisotropy%i_exist) number_hamiltonian=number_hamiltonian+1
-
-! get the zeeman
-call get_ham_zeeman(fname,dim_ham,Ms)
-if (zeeman%i_exist) number_hamiltonian=number_hamiltonian+1
-
-! get the exchange Hamiltonian
-call get_ham_exchange(fname,dim_ham)
-if (exchange%i_exist) number_hamiltonian=number_hamiltonian+1
-
-! get the magnetoelectric coefficients
-call get_ham_ME(fname,dim_ham)
-if (ME%i_exist) number_hamiltonian=number_hamiltonian+1
+! get the Heisenberg Hamiltonian
+call get_total_Heisenberg_Ham(fname,dim_ham,Ms)
+if (ham_tot_heisenberg%i_exist) number_hamiltonian=number_hamiltonian+1
 
 ! get the TB Hamiltonian
 call get_total_Hamiltonian_TB(fname,dim_ham)
 if (ham_tot_TB%i_exist) number_hamiltonian=number_hamiltonian+1
+
+! get the magnetoelectric coefficients
+call get_ham_ME(fname,dim_ham)
+if (ME%i_exist) number_hamiltonian=number_hamiltonian+1
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! put all the Hamiltonians into a big matrix
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 allocate(Hamiltonians(number_hamiltonian))
 number_hamiltonian=0
-! the anisotropy first
-if (anisotropy%i_exist) then
+
+! Heisenberg
+if (ham_tot_heisenberg%i_exist) then
   number_hamiltonian=number_hamiltonian+1
-  Hamiltonians(number_hamiltonian)%name=anisotropy%name
-  Hamiltonians(number_hamiltonian)%order=anisotropy%order
-  Hamiltonians(number_hamiltonian)%onsite=.true.
-  n_shell=size(anisotropy%ham)
+  Hamiltonians(number_hamiltonian)%name=ham_tot_heisenberg%name
+  Hamiltonians(number_hamiltonian)%order=ham_tot_heisenberg%order
+  Hamiltonians(number_hamiltonian)%onsite=.false.
+  n_shell=size(ham_tot_heisenberg%ham)
+  
   allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
+  
   do i=1,n_shell
-     Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>anisotropy%ham(i)%H
+    Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>ham_tot_heisenberg%ham(i)%H
   enddo
+  
 endif
 
-! the exchange
-if (exchange%i_exist) then
-  number_hamiltonian=number_hamiltonian+1
-  Hamiltonians(number_hamiltonian)%name=exchange%name
-  Hamiltonians(number_hamiltonian)%order=exchange%order
-  n_shell=size(exchange%ham)
-  allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
-  do i=1,n_shell
-     Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>exchange%ham(i)%H
-  enddo
-endif
-
-! The magnetoelectric coupling
+! Magnetoelectric coupling
 if (ME%i_exist) then
   number_hamiltonian=number_hamiltonian+1
   Hamiltonians(number_hamiltonian)%name=ME%name
@@ -122,16 +104,6 @@ if (ME%i_exist) then
   enddo
 endif
 
-! The Zeeman
-if (Zeeman%i_exist) then
-  number_hamiltonian=number_hamiltonian+1
-  Hamiltonians(number_hamiltonian)%name=zeeman%name
-  Hamiltonians(number_hamiltonian)%order=Zeeman%order
-  Hamiltonians(number_hamiltonian)%onsite=.true.
-  allocate(Hamiltonians(number_hamiltonian)%ham(1))
-  Hamiltonians(number_hamiltonian)%ham(1)%Op_loc=>zeeman%ham(1)%H
-endif
-
 ! Tight-binding
 if (ham_tot_TB%i_exist) then
   number_hamiltonian=number_hamiltonian+1
@@ -139,13 +111,13 @@ if (ham_tot_TB%i_exist) then
   Hamiltonians(number_hamiltonian)%order=ham_tot_TB%order
   Hamiltonians(number_hamiltonian)%onsite=.false.
   n_shell=size(ham_tot_TB%ham)
-  
+
   allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
-  
+
   do i=1,n_shell
     Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>ham_tot_TB%ham(i)%H
   enddo
-  
+
 endif
 
 end subroutine get_Hamiltonians
@@ -199,12 +171,14 @@ form=convert('(a,',max_order,'(2x,I3))')
 write(6,form) 'order of the Hamitlonian',order
 write(6,'(a)') ''
 
-! set up the correct number of shells
+! set up the correct number of shells (always +1 for the onsite term always present in the total hamiltonians)
 N_shell=size(indexNN,1)
 allocate(total_hamiltonian%shell_num(N_shell+1),total_hamiltonian%num(N_shell+1))
-total_hamiltonian%num(1)=1
+! always the onsite term
+total_hamiltonian%num=1
 allocate(total_hamiltonian%shell_num(1)%order(1),total_hamiltonian%shell_num(1)%num(1))
 total_hamiltonian%shell_num(1)%num=2
+! only one atom the site 0
 allocate(total_hamiltonian%shell_num(1)%order(1)%atom(1))
 
 ! allocate Hamiltonian of the anisotropy and the Zeeman
@@ -213,6 +187,7 @@ total_hamiltonian%shell_num(1)%order(1)%line=dim_ham
 total_hamiltonian%shell_num(1)%order(1)%column=dim_ham
 total_hamiltonian%shell_num(1)%order(1)%atom(1)%H=0.0d0
 
+! load the number of neighbors in eachs shell in the total_Hamiltonians
 do i=1,N_shell
   total_hamiltonian%num(i+1)=indexNN(i,1)
 enddo
@@ -226,10 +201,11 @@ write(6,'(a)') ''
 ! find the shells with order N
 !
 
-allocate(shell_order_max(N_shell,2))
+! shell_order_max(:,1) maximum Hamiltonian order for each shell
+! shell_order_max(:,2) number of Hamiltonian per shell
+allocate(shell_order_max(N_shell+1,2))
 shell_order_max=0
 do i=1,n_ham
-  if (Hamiltonians(i)%onsite) cycle
   n_ham_shell=size(Hamiltonians(i)%ham)
   i_order=Hamiltonians(i)%order
   do j=1,n_ham_shell
@@ -238,19 +214,24 @@ do i=1,n_ham
   enddo
 enddo
 
-do i=1,N_shell
-  n_order=shell_order_max(i,2)
-  allocate(total_hamiltonian%shell_num(i+1)%order(n_order-1),total_hamiltonian%shell_num(i+1)%num(n_order-1))
-  total_hamiltonian%shell_num(i+1)%num=2
+form=convert('(a,',N_shell+1,'I4)')
+write(6,form) 'Maximum Hamiltonianss order per shell', shell_order_max(:,1)
+write(6,form) 'number of Hamiltonians per shell', shell_order_max(:,2)
 
-  N_atom_shell=total_hamiltonian%num(i+1)
+do i=2,N_shell+1
+  n_order=shell_order_max(i,1)
+  ! if you have a Hamiltonian of order 3 on one shell, you must an Hamiltonian of order 2
+  allocate(total_hamiltonian%shell_num(i)%order(n_order-1),total_hamiltonian%shell_num(i)%num(n_order-1))
+  total_hamiltonian%shell_num(i)%num=n_order-1
+
+  N_atom_shell=total_hamiltonian%num(i)
   do i_order=2,n_order
-    allocate(total_hamiltonian%shell_num(i+1)%order(i_order-1)%atom( N_atom_shell ))
-    total_hamiltonian%shell_num(i+1)%order(i_order-1)%line=dim_ham**(i_order-1)
-    total_hamiltonian%shell_num(i+1)%order(i_order-1)%column=dim_ham
-    do j=1,total_hamiltonian%num(i+1)
-      allocate(total_hamiltonian%shell_num(i+1)%order(i_order-1)%atom(j)%H( dim_ham , dim_ham**( i_order-1) ))
-      total_hamiltonian%shell_num(i+1)%order(i_order-1)%atom(j)%H=0.0d0
+    allocate(total_hamiltonian%shell_num(i)%order(i_order-1)%atom( N_atom_shell ))
+    total_hamiltonian%shell_num(i)%order(i_order-1)%line=dim_ham**(i_order-1)
+    total_hamiltonian%shell_num(i)%order(i_order-1)%column=dim_ham
+    do j=1,total_hamiltonian%num(i)
+      allocate(total_hamiltonian%shell_num(i)%order(i_order-1)%atom(j)%H( dim_ham , dim_ham**( i_order-1) ))
+      total_hamiltonian%shell_num(i)%order(i_order-1)%atom(j)%H=0.0d0
     enddo
   enddo
 enddo
@@ -266,40 +247,39 @@ enddo
 do i=1,n_ham
 
 !
-! Exchange and DMI part part
+! Heisenberg part
 !
 
-  if ('exchange'.eq.trim(Hamiltonians(i)%name)) then
+  if ('heisenberg'.eq.trim(Hamiltonians(i)%name)) then
     n_DMI=get_number_DMI('input')
     N_shell=size(Hamiltonians(i)%ham)
-    n_ham_shell=sum(indexNN(1:N_shell,1))
 
     ! ham_DMI_Nshell_local( Hamiltonian column , Hamiltonian row , number of atom in shell i , shell i )
 
-    allocate(ham_DMI_Nshell_local(N_shell))
+    allocate(ham_DMI_Nshell_local(N_shell-1))
 
-    do j=1,N_shell
-       N_voisin_DMI=indexNN(j,1)
-       allocate(ham_DMI_Nshell_local(j)%atom(N_voisin_DMI))
-       ham_DMI_Nshell_local(j)%line=dim_ham
-       ham_DMI_Nshell_local(j)%column=dim_ham
-       do k=1,size(ham_DMI_Nshell_local(j)%atom)
-          allocate(ham_DMI_Nshell_local(j)%atom(k)%H(dim_ham,dim_ham))
-          ham_DMI_Nshell_local(j)%atom(k)%H=0.0d0
+    do j=2,N_shell
+       N_voisin_DMI=indexNN(j-1,1)
+       allocate(ham_DMI_Nshell_local(j-1)%atom(N_voisin_DMI))
+       ham_DMI_Nshell_local(j-1)%line=dim_ham
+       ham_DMI_Nshell_local(j-1)%column=dim_ham
+       do k=1,size(ham_DMI_Nshell_local(j-1)%atom)
+          allocate(ham_DMI_Nshell_local(j-1)%atom(k)%H(dim_ham,dim_ham))
+          ham_DMI_Nshell_local(j-1)%atom(k)%H=0.0d0
        enddo
     enddo
 
     call get_borders('magnetic',x_start,x_end,'magnetic',y_start,y_end,my_order_parameters)
 
     ! Hamiltonians(i)%ham is just the shell number. The number of atom in each shell is not taken into account here
-    do j=1,size(Hamiltonians(i)%ham)
-      if (j.le.n_DMI) then
-         do k=1,size(ham_DMI_Nshell_local(j)%atom)
-            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_DMI_Nshell_local(j)%atom(k)%H(x_start:x_end,y_start:y_end))
+    do j=2,size(Hamiltonians(i)%ham)
+      if (j.le.n_DMI+1) then
+         do k=1,size(ham_DMI_Nshell_local(j-1)%atom)
+            call convoluate_Op_SOC_vector(D(k,:,1),Hamiltonians(i)%ham(j)%op_loc(x_start:x_end,y_start:y_end),ham_DMI_Nshell_local(j-1)%atom(k)%H(x_start:x_end,y_start:y_end))
          enddo
       else
-         do k=1,size(ham_DMI_Nshell_local(j)%atom)
-            ham_DMI_Nshell_local(j)%atom(k)%H=Hamiltonians(i)%ham(j)%op_loc
+         do k=1,size(ham_DMI_Nshell_local(j-1)%atom)
+            ham_DMI_Nshell_local(j-1)%atom(k)%H=Hamiltonians(i)%ham(j)%op_loc
          enddo
       endif
 
@@ -346,13 +326,10 @@ enddo
 ! first the onsite terms
 do i=1,n_ham
 
-  if ('zeeman'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian%shell_num(1)%order(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
-  if ('anisotropy'.eq.trim(Hamiltonians(i)%name)) call add(total_hamiltonian%shell_num(1)%order(1)%atom(1)%H,Hamiltonians(i)%ham(1)%Op_loc)
-
-  if ('exchange'.eq.trim(Hamiltonians(i)%name)) then
-    do j=1,size(Hamiltonians(i)%ham)
-      do l=1,size(ham_DMI_Nshell_local(j)%atom)
-        total_hamiltonian%shell_num(j+1)%order(1)%atom(l)%H=total_hamiltonian%shell_num(j+1)%order(1)%atom(l)%H+ham_DMI_Nshell_local(j)%atom(l)%H
+  if ('heisenberg'.eq.trim(Hamiltonians(i)%name)) then
+    do j=2,size(Hamiltonians(i)%ham)
+      do l=1,size(ham_DMI_Nshell_local(j-1)%atom)
+        total_hamiltonian%shell_num(j)%order(1)%atom(l)%H=total_hamiltonian%shell_num(j)%order(1)%atom(l)%H+ham_DMI_Nshell_local(j-1)%atom(l)%H
       enddo
     enddo
   endif
@@ -427,10 +404,17 @@ enddo
 if (get_number_shell.eq.0) then
    write(6,'(a)') 'WARNING!!!! No shells were found in the Hamiltonian (H=0)'
 else
+   ! the onsite term is always preset in the Hamiltonian so we take it out for the table of distance and the table of neighbor
+   get_number_shell=N_coeff-1
    write(6,'(I6,a/)') N_coeff,' shells were found in the Hamiltonian'
 endif
 
 end function get_number_shell
+
+
+
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! add a pointer of a good size to the matrix of the total hamiltonian
@@ -447,6 +431,11 @@ if (size(H).ne.size(pointer)) stop 'ERROR in energy_commons ADD function'
 H=H+pointer
 
 end subroutine add
+
+
+
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! smal subroutine that reads and writes the total Hamiltonian

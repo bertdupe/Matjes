@@ -70,8 +70,11 @@ module m_exchange_TB
             form=convert('(',dim_ham,'(f12.8,2x))')
             write(6,'(a)') ''
             write(6,'(a)') 'Exchange tight-binding is OK'
-            do i=1,dim_ham
-                write(6,form) exc_ham_TB%ham(1)%H(:,i)
+            do j=1,size(exc_ham_TB%ham)
+              write(6,'(a,I8)') 'Exchange tight-binding - shell',j
+              do i=1,dim_ham
+                write(6,form) exc_ham_TB%ham(j)%H(:,i)
+              enddo
             enddo
             write(6,'(a)') ''
 

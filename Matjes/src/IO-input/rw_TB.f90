@@ -42,6 +42,7 @@ module m_rw_TB
             io_input=open_file_read(fname)
 
             ! Check if magnetism is activated
+            activate_mag_TB=.false.
             call get_parameter(io_input,fname,'activate_mag_TB',activate_mag_TB)
 
             ! Count the occurrences of different parameters
@@ -50,7 +51,7 @@ module m_rw_TB
             nb_t_tot_spin=0
             nb_t=0
             if (activate_mag_TB) then
-                nb_t_up=count_variables(io_input,'t_upp_',fname)
+                nb_t_up=count_variables(io_input,'t_up_',fname)
                 nb_t_down=count_variables(io_input,'t_down_',fname)
                 nb_t_tot_spin=nb_t_up+nb_t_down
             else

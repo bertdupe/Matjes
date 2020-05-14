@@ -31,7 +31,7 @@ module m_total_Hamiltonian_TB
             ham_tot_TB%i_exist=.true.
             ham_tot_TB%order=2
 
-            size_ham=size(exc_ham_TB%ham)+size(onsite_ham_TB%ham)
+            size_ham=size(exc_ham_TB%ham)+1
             ham_tot_TB%N_shell=size_ham
             allocate(ham_tot_TB%ham(size_ham))
 
@@ -41,16 +41,18 @@ module m_total_Hamiltonian_TB
             enddo
 
             ! Filling of total Hamiltonian matrix
-            do i=1,size_ham
-                if (onsite_ham_TB%i_exist .and. (i==1)) ham_tot_TB%ham(i)%H =ham_tot_TB%ham(i)%H+onsite_ham_TB%ham(i)%H
-                if (exc_ham_TB%i_exist .and. (i>1)) ham_tot_TB%ham(i)%H = ham_tot_TB%ham(i)%H+exc_ham_TB%ham(i-1)%H
-            enddo
+            if (onsite_ham_TB%i_exist) ham_tot_TB%ham(1)%H =ham_tot_TB%ham(1)%H+onsite_ham_TB%ham(1)%H
+            if (exc_ham_TB%i_exist) then
+              do i=2,size_ham
+                 ham_tot_TB%ham(i)%H = ham_tot_TB%ham(i)%H+exc_ham_TB%ham(i-1)%H
+              enddo
+            endif
             
             form=convert('(',dim_ham,'(f12.8,2x))')
             write(6,'(a)') ''
             write(6,'(a)') 'Total Hamiltonian tight-binding is OK'
             do j=1,size(ham_tot_TB%ham)
-                write(6,'(a,I8)') 'Now in shell ', j
+                write(6,'(a,I8)') 'Now in shell ', j-1
                 do i=1,dim_ham
                     write(6,form) ham_tot_TB%ham(j)%H(:,i)
                 enddo
