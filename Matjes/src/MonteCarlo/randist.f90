@@ -1,35 +1,46 @@
 module m_randist
+
  interface randist
     module procedure gaussianran
     module procedure wiener
  end interface
 
+private
+public :: randist
+
 contains
+
+!!!! the different ways to generate random forces
 real(kind=8) function gaussianran(kt)
 implicit none
 real(kind=8), intent(in) :: kt
 real(kind=8) :: Choice1, Choice2
 
-call RANDOM_NUMBER(Choice1)
-call RANDOM_NUMBER(Choice2)
+Choice1=10.0d0
+Choice2=10.0d0
 
-Choice1=(Choice1*2.0d0-1.0d0)/dsqrt(2.0d0)
-Choice2=(Choice2*2.0d0-1.0d0)/dsqrt(2.0d0)
+do while (Choice1**2+Choice2**2.gt.1.0d0)
+  call RANDOM_NUMBER(Choice1)
+  call RANDOM_NUMBER(Choice2)
+  Choice1=(Choice1*2.0d0-1.0d0)
+  Choice2=(Choice2*2.0d0-1.0d0)
+enddo
 
-!      if (dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2).gt.0.0d0) STOP
+!
+! according to the PhD of Schieback (2010) from Constanz p. 35
+!
 
-gaussianran=dsqrt(2.0d0*kT)*Choice1*dsqrt(-dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
+gaussianran=sqrt(2.0d0*kT)*Choice1*sqrt(-2.0d0*dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
 
-! as expressed in Mentink et al J. Phys. C 22, 176001 (2010)
-!      gaussianran=2.0d0*damping*kT/(1+damping**2)*Choice1*dsqrt(-2.0d0*dlog( &
-!         Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
 end function
 
-real(kind=8) function wiener(state)
+
+!!!! wiener process
+real(kind=8) function wiener()
 use mtprng
 implicit none
-type(mtprng_state), intent(inout) :: state
 !dummy
+type(mtprng_state) :: state
 real(kind=8) :: Choice
 
 #ifdef CPP_MRG

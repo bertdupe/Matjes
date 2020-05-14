@@ -48,17 +48,17 @@ call path_initialization(path,io_simu)
 call write_path(path)
       
 if (do_gneb=='Y') then
-   write (*,'(a)') "GNEB calculation in progress..."
+   write (6,'(a)') "GNEB calculation in progress..."
    call find_path(nim,N_cell,vpodt,vpomass,spring,mepftol,mepitrmax,meptraj_step,rx,ene,dene,path,my_lattice,io_simu)
          
-   write (*,'(a)') "Done!"
+   write (6,'(a)') "Done!"
 end if
       
 !if (do_gneb_ci=='Y') then
-!   write (*,'(a)') "CI-GNEB calculation in progress..."
+!   write (6,'(a)') "CI-GNEB calculation in progress..."
 !   call find_path_ci(nim,N_cell,vpodt,vpomass,spring,path,mepftol_ci,mepitrmax,meptraj_step,my_lattice,rx,ene,dene,ci)
-!   print *,'ci:',ci
-!   write (*,'(a)') "Done!"
+!   write(6,'(a)') *,'ci:',ci
+!   write (6,'(a)') "Done!"
 !end if
       
 call write_en(nim,rx,ene,dene,rx(nim),'en_path.out',do_norm_rx)
