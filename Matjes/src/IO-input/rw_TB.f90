@@ -22,8 +22,18 @@ module m_rw_TB
             implicit none
             character(len=*), intent(in) :: fname
             integer :: io_input
-            integer :: nb_orbitals_TB
-            integer :: nb_t_up,nb_t_down,nb_t,nb_t_tot_spin,nb_mu_down,nb_mu_up,nb_mu,nb_mu_tot_spin
+            
+            ! Read in the input file the number of t_up_1, t_down_1,
+            ! t_up_2, t_down_2, t_up_3, t_down_3, etc.
+            ! Store that amount in nb_t_tot_spin
+            ! ===> nb_t_tot_spin/2 is the number of shells
+            integer :: nb_t_up,nb_t_down,nb_t,nb_t_tot_spin
+
+            ! Read in the input file the number of mu_up_1, mu_down_1,
+            ! mu_up_2, mu_down_2, t_up_3, t_down_3, etc.
+            ! Store that amount in nb_mu_tot_spin
+            ! ===> nb_mu_tot_spin/2 is the number of orbitals (2 electrons per orbital)
+            integer :: nb_mu_down,nb_mu_up,nb_mu,nb_mu_tot_spin
             real(kind=8) :: Jsd
             logical :: activate_mag_TB
 
@@ -66,9 +76,7 @@ module m_rw_TB
             ! If magnetism IS NOT activated but there are some mu_up and/or mu_down,
             ! is is wrong ===> stop the execution
             if ((.not.activate_mag_TB) .and. (nb_mu_tot_spin.ne.0)) return
-            
-            ! nb_tot_mu_spin is the number of onsite energies depending
-            ! on the spin
+
             if (activate_mag_TB) then
                 allocate(TB_params%hopping(2,nb_t_tot_spin/2))
                 allocate(TB_params%onsite(2,nb_mu_tot_spin/2))
@@ -87,6 +95,9 @@ module m_rw_TB
             TB_params%hopping=0.0d0
             TB_params%onsite=0.0d0
 
+            ! Storage:
+            !    1st line ===> 'up' values
+            !    2nd line ===> 'down' values
             if (nb_t_tot_spin.ne.0) then
                 call get_coeff(io_input,fname,'t_up_',TB_params%hopping(1,:))
                 call get_coeff(io_input,fname,'t_down_',TB_params%hopping(2,:))
