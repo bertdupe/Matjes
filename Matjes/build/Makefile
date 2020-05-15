@@ -2,7 +2,8 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = exchange_tight_binding.o chemical_potential_TB.o total_Hamiltonian_TB.o envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
+OBJS = random_lib.o exchange_tight_binding.o chemical_potential_TB.o \
+ total_Hamiltonian_TB.o envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
@@ -45,6 +46,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+random_lib.o:
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
@@ -83,7 +85,7 @@ symmetry_operators.o: arrange_neihg.o basic_types.o matrix.o pointgrp.o derived_
 info-dynamics.o:
 torques.o: derived_types.o vector.o io-utils.o io_files_utils.o
 EMwave.o: constant.o vector.o io-utils.o io_files_utils.o
-BTeff_sd.o: randist.o
+BTeff_sd.o: randist.o random_lib.o
 update_time.o: constant.o vector.o io-utils.o io_files_utils.o
 TPulse.o: constant.o io-utils.o
 init_random_config.o: derived_types.o

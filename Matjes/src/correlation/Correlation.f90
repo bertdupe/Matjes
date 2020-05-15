@@ -1,10 +1,12 @@
-      module m_Corre
-      interface Correlation
-       module procedure Correlations
-       module procedure autocorre_1d
-       module procedure autocorre_2d
-      end interface Correlation
-      contains
+module m_Corre
+
+interface Correlation
+   module procedure Correlations
+   module procedure autocorre_1d
+   module procedure autocorre_2d
+end interface Correlation
+
+contains
 ! ===============================================================
 ! calculate the correlation length
 ! written by Lukas Deuchler

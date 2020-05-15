@@ -334,6 +334,7 @@ enddo
 do i=1,n_ham
 
   if ('heisenberg'.eq.trim(Hamiltonians(i)%name)) then
+    total_hamiltonian%shell_num(1)%order(1)%atom(1)%H=total_hamiltonian%shell_num(1)%order(1)%atom(1)%H+Hamiltonians(i)%ham(1)%op_loc
     do j=2,size(Hamiltonians(i)%ham)
       do l=1,size(ham_DMI_Nshell_local(j-1)%atom)
         total_hamiltonian%shell_num(j)%order(1)%atom(l)%H=total_hamiltonian%shell_num(j)%order(1)%atom(l)%H+ham_DMI_Nshell_local(j-1)%atom(l)%H
