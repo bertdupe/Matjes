@@ -19,6 +19,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_fftw
     use m_lattice
     use m_operator_pointer_utils
+    use m_kmesh
 
     implicit none
     ! internal parameter
@@ -37,11 +38,28 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! all_mode is an array of custom type vec_point that will
     ! contain all the modes present in the simulation
     type(vec_point),allocatable :: all_mode(:)
+    ! dim_mode contains the dimension of the mode array
+    integer :: dimm
+
+    call get_k_mesh('input',my_lattice)
+
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
 
     allocate(all_mode(N_cell))
-    write(*,*) 'Coucou from file ', __FILE__, ' at line ', __LINE__
 
     call associate_pointer(all_mode,my_lattice)
+    call get_E_matrix(my_lattice%dim_mode)
+
+    ! Perform the FFT of the Hamiltonian
+    ! In that function, the arguments are:
+    !   _ kmesh: array of kpoints
+    !   _ -1.0: the direction of the transform (-1.0=direct, +1.0=reverse)
+    !   _ my_motif%pos: position of the atoms in the lattice
+    !   _ field: ???
+    !   _ Nsize: number of sites in the lattice (here equal to N_cell ?)
+    !   _ my_lattice%dim_mode: dimension of the order parameter
+    call get_FFT_vec_point(kmesh,-1.0,my_motif%pos,all_mode,N_cell,my_lattice%dim_mode)
+
+    write(*,*) 'Coucou from file ', __FILE__, ' at line ', __LINE__
 end subroutine tightbinding
