@@ -55,7 +55,7 @@ allocate(B_int%shell_num(N_all_shell),B_int%num(N_all_shell))
 B_int%num=total_hamiltonian%num
 do i=1,N_all_shell
    N_all_vois=B_int%num(i)
-   N_order=size(total_hamiltonian%shell_num(i)%num)
+   N_order=size(total_hamiltonian%shell_num(i)%order)
    allocate(B_int%shell_num(i)%order(N_order),B_int%shell_num(i)%num(N_order))
    B_int%shell_num(i)%num=total_hamiltonian%shell_num(i)%num
 
@@ -63,12 +63,12 @@ do i=1,N_all_shell
 
      allocate(B_int%shell_num(i)%order(i_order)%atom(N_all_vois))
      order=B_int%shell_num(i)%num(i_order)
-     B_int%shell_num(i)%order(i_order)%line=dim_ham**( order-1 )
+     B_int%shell_num(i)%order(i_order)%line=dim_ham**( i_order )
      B_int%shell_num(i)%order(i_order)%column=dim_ham
 
      do j=1,N_all_vois
 
-       allocate(B_int%shell_num(i)%order(i_order)%atom(j)%H( dim_ham , dim_ham**( order-1 ) ))
+       allocate(B_int%shell_num(i)%order(i_order)%atom(j)%H( dim_ham , dim_ham**( i_order ) ))
        B_int%shell_num(i)%order(i_order)%atom(j)%H=0.0d0
 
      enddo
@@ -78,7 +78,7 @@ enddo
 do i=1,N_all_shell
 
    N_all_vois=B_int%num(i)
-   N_order=size(B_int%shell_num(i)%num)
+   N_order=size(B_int%shell_num(i)%order)
    do i_order=1,N_order
      do j=1,N_all_vois
 
@@ -110,7 +110,7 @@ write(6,'(a)') 'Total crystal field B_eff'
 do i=1,size(B_int%num)
   write(6,'(a,2x,I3)') 'B_eff for shell ',i
 
-  do j=1,size(B_int%shell_num(i)%num)
+  do j=1,size(B_int%shell_num(i)%order)
     write(6,'(a,2x,I3)') 'B_eff of order ',j
 
     do k=1,B_int%num(i)

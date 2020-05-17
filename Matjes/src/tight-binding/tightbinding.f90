@@ -21,4 +21,10 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     type(lattice), intent(in) :: my_lattice
     type(cell), intent(in) :: my_motif
     type(simulation_parameters), intent(in) :: ext_param
+
+
+
+
+
+
 end subroutine tightbinding
