@@ -78,6 +78,7 @@ end subroutine
 subroutine minimize_2Dlattice(my_lattice,io_simu)
 use m_derived_types, only : io_parameter
 use m_basic_types, only : vec_point
+use m_constants, only : pi
 use m_write_spin
 use m_createspinfile
 use m_solver, only : minimization
@@ -142,6 +143,7 @@ do i=1,size(my_order_parameters)
    exit
   endif
 enddo
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Prepare the calculation of the energy and the effective field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
