@@ -13,6 +13,7 @@ complex(kind=16), allocatable, protected, public :: FFT_pos_D(:,:,:)
 
 interface calculate_fft
   module procedure calculate_fft_vec_point,calculate_FFT_matrix
+  ! module procedure calculate_FFT_Hamiltonian
 end interface
 
 interface get_FFT

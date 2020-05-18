@@ -48,7 +48,7 @@ clean:
 
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
-tightbinding.o: basic_types.o derived_types.o cal_local_energy.o fftw.o create_lattice.o operator_pointer_utils.o kmesh.o
+tightbinding.o: basic_types.o derived_types.o cal_local_energy.o fftw.o create_lattice.o operator_pointer_utils.o get-position.o
 total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
 rw_TB.o: io_files_utils.o io-utils.o
 
