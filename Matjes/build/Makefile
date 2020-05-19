@@ -2,7 +2,7 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = exchange_tight_binding.o chemical_potential_TB.o total_Hamiltonian_TB.o \
+OBJS = exchange_tight_binding.o chemical_potential_TB.o total_Hamiltonian_TB.o bandstructure.o \
 envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
@@ -10,7 +10,7 @@ envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tra
  rw_TB.o tightbinding.o Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
- create_lattice.o forces.o fftw.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
+ create_lattice.o forces.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o plot_FFT.o sort.o \
@@ -19,7 +19,7 @@ envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tra
  rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o torques.o tangent.o gneb.o io-gneb.o gneb_utils.o gneb_parameters.o initialize_path.o \
  initialize_temperature.o cal_local_energy.o user_information.o parallel_tempering.o paratemp.o  mpi_prop.o \
  initial-configuration.o init-spiral.o init_random_config.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o get-position.o \
- IO-modes.o io-utils.o get-random.o simu-parameters.o init-variables.o convert.o kmesh.o dyna-utils.o pointgrp.o
+ IO-modes.o io-utils.o get-random.o simu-parameters.o init-variables.o convert.o kmesh.o dyna-utils.o pointgrp.o fftw.o
 
 Matjes: $(OBJS)
 	$(LD) -o $@ $^ $(LDFLAGS) $(LIBRARIES)
@@ -48,9 +48,10 @@ clean:
 
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
-tightbinding.o: basic_types.o derived_types.o cal_local_energy.o fftw.o create_lattice.o operator_pointer_utils.o get-position.o
+tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o
 total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
 rw_TB.o: io_files_utils.o io-utils.o
+bandstructure.o: basic_types.o derived_types.o energy_commons.o
 
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
 print_Beff.o: convert.o io_files_utils.o
@@ -136,7 +137,7 @@ WriteSpinAndCorrFile.o: CreateSpinFile.o rw_lattice.o create_lattice.o constant.
 init_rand_seed.o: main.o
 MakeLattice.o: main.o
 relaxationtype.o:
-fftw.o: kmesh.o vector.o constant.o io-utils.o derived_types.o
+fftw.o: cal_local_energy.o kmesh.o vector.o constant.o io-utils.o basic_types.o derived_types.o
 randist.o: rw_dyna.o mtprng.o
 rw_dyna.o: main.o
 DM_vector.o: main.o
@@ -178,8 +179,7 @@ store_relaxation.o: constant.o Correlation.o
 parallel_tempering.o: paratemp.o MCstep.o check_restart.o store_relaxation.o initialize_temperature.o CreateSpinFile.o
 paratemp.o: fit.o mtprng.o constant.o inp_rw.o
 initialize_temperature.o:
-cal_local_energy.o: Energy_distrib.o energy_commons.o external_fields.o
-
+cal_local_energy.o: energy_commons.o
 arrange_neihg.o: rotation.o matrix_power.o create_lattice.o inp_rw.o sym_utils.o constant.o
 MCstep.o: choosespin.o cal_local_energy.o main.o create_lattice.o inp_rw.o rw_lattice.o  sampling.o relaxationtype.o mtprng.o
 solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o

@@ -13,7 +13,7 @@ complex(kind=16), allocatable, protected, public :: FFT_pos_D(:,:,:)
 
 interface calculate_fft
   module procedure calculate_fft_vec_point,calculate_FFT_matrix
-  ! module procedure calculate_FFT_Hamiltonian
+!  module procedure calculate_FFT_Hamiltonian
 end interface
 
 interface get_FFT
@@ -363,5 +363,38 @@ do iomp=1,Nkpoint
 enddo
 
 end subroutine get_k_mesh
+
+
+
+
+
+subroutine calculate_dispersion(all_mode,pos,my_lattice)
+    use m_basic_types, only : vec_point
+    use m_local_energy, only : get_E_k_local
+    implicit none
+    type(vec_point),intent(in) :: all_mode(:)
+    real(kind=8), intent(in) :: pos(:,:)
+
+    ! Internal variable
+    integer :: i, j, nb_kpoint
+    real(kind=8), allocatable :: dispersion(:)
+
+    call get_k_mesh('input',my_lattice)
+
+    nb_kpoint = product(N_kpoint)
+
+    allocate(dispersion(nb_kpoint))
+    dispersion=0.0d0
+
+    do i=1, nb_kpoint
+        do j=1, nb_site
+            dispersion(i) = get_E_k_local(all_mode,pos,kmesh(:,i),-1.0,pos(:,j))
+        enddo
+    enddo
+end subroutine calculate_dispersion
+
+
+
+
 
 end module m_fftw

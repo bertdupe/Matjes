@@ -15,9 +15,10 @@
 subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_basic_types, only : vec_point
     use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
-    use m_local_energy, only : get_E_matrix
-    use m_fftw
-    use m_lattice
+!    use m_local_energy, only : get_E_matrix
+!    use m_fftw
+!    use m_lattice
+    use m_bandstructure
     use m_operator_pointer_utils
     use  m_get_position
 
@@ -41,38 +42,40 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! sense gives the sense of the FFT transform
     real(kind=8) :: sense
     ! array containing all the positions in the lattice
-    real(kind=8), allocatable :: all_positions(:,:,:,:,:)
-    ! array that will contain the FFT coefficients
+    real(kind=8), allocatable :: all_positions(:,:,:,:,:),pos(:,:)
+    ! array that will contain the FFT of another array
     complex(kind=16), allocatable :: array_FFT(:,:)
-    complex(kind=16) :: testCOMPLEX(17,17)
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
 
-    allocate(all_mode(N_cell))
+    call get_k_mesh('input',my_lattice)
+    allocate(all_mode(N_cell),pos(3,N_cell))
+    pos=0.0d0
 
     ! We have access to the variable 'N_kpoint' because it is in the module
     ! m_fftw
-    allocate(array_FFT(product(N_kpoint),product(N_kpoint)))
+    allocate(array_FFT(my_lattice%dim_mode,product(N_kpoint)))
+    array_FFT=0.0
 
     allocate(all_positions(3,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),size(my_motif%atomic)))
     call get_position(all_positions,my_lattice%dim_lat,my_lattice%areal,my_motif)
+    pos=reshape(all_positions,(/3,N_cell/))
+    deallocate(all_positions)
+
 
     call associate_pointer(all_mode,my_lattice)
     call get_E_matrix(my_lattice%dim_mode)
 
-    call get_k_mesh('input',my_lattice)
+!    sense=-1.0
+!    call calculate_fft(all_mode,pos,sense,my_lattice%dim_mode,array_FFT)
 
-    sense=-1.0
-
-    !call calcultae_fft(all_mode,all_positions,sense,array_FFT)
-    !                                                         1
-    !Error: There is no specific subroutine for the generic calculate_fft at (1)
-    !call calculate_fft(all_mode,all_positions,sense,array_FFT)
-
-    !undefined reference to calculate_fft_matrix
-    call calculate_fft_matrix(all_mode,all_positions,sense,array_FFT)
+    ! Write data for the FFT to file
+    open(12, file='data.txt', status='unknown')    
+    write(12,*) array_FFT
 
     write(*,*) 'Coucou from file ', __FILE__, ' at line ', __LINE__
     write(*,*) 'shape_lattice = ', shape_lattice
+
+    close(12)
 end subroutine tightbinding
