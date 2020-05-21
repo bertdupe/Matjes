@@ -97,23 +97,23 @@ do i=1,n_ME
   ME%ham(i)%H(y_start+2,x_start+2*(dim_ham+1))=ME_local_sym(i)*ME%c_ham
 
   ! get the of diagonal terms
-  ME%ham(i)%H(y_start,x_start+1)=ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start,x_start+1)=ME_local_antisym(i)*ME%c_ham
   ME%ham(i)%H(y_start+1,x_start+1)=ME_local_antisym(i)*ME%c_ham
 
-  ME%ham(i)%H(y_start,x_start+2)=-ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start,x_start+2)=-ME_local_antisym(i)*ME%c_ham
   ME%ham(i)%H(y_start+2,x_start+2)=-ME_local_antisym(i)*ME%c_ham
 
-  ME%ham(i)%H(y_start,x_start+dim_ham)=-ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start,x_start+dim_ham)=-ME_local_antisym(i)*ME%c_ham
   ME%ham(i)%H(y_start+1,x_start+dim_ham)=-ME_local_antisym(i)*ME%c_ham
 
-  ME%ham(i)%H(y_start+1,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
-  ME%ham(i)%H(y_start+2,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start+1,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start+2,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
 
-  ME%ham(i)%H(y_start,x_start+2*dim_ham)=ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start,x_start+2*dim_ham)=ME_local_antisym(i)*ME%c_ham
   ME%ham(i)%H(y_start+2,x_start+2*dim_ham)=ME_local_antisym(i)*ME%c_ham
 
-  ME%ham(i)%H(y_start+1,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
-  ME%ham(i)%H(y_start+2,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start+1,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
+!  ME%ham(i)%H(y_start+2,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
 enddo
 
 form=convert('(',dim_ham,'(f12.8,2x))')

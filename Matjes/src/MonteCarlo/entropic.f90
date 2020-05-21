@@ -5,7 +5,6 @@
 subroutine entropic(my_lattice,my_motif,io_simu,ext_param)
 use mtprng
 use m_choose_spin
-use m_local_energy
 use m_constants, only : pi,k_B
 use m_relaxtyp
 use m_sampling
@@ -32,7 +31,7 @@ integer :: iomp
 real(kind=8) :: S_new(3),S_old(3)
 ! energy variable
 real(kind=8) :: E_min,E_max,E_delta,E_test
-real(kind=8) :: E_new,E_old,E_total,kTfin,kTini
+real(kind=8) :: E_new,E_old,E_total,kTfin,kTini,Et
 integer,allocatable :: count_E(:)
 ! histogram variables
 integer :: n_histo,n_old,n_new,min_histo,i_histo
@@ -41,24 +40,30 @@ real(kind=8) :: lnf,lng_new,lng_old,delta_lng,flatness,mean_histo
 ! thermodynamical quantitites
 real(kind=8),allocatable :: energy(:),Z(:),temperatures(:),free_E(:),entropy(:),energy_sq(:),heat_cap(:)
 real(kind=8) :: kT,DProb,DE
-integer :: i_T,N_spin,n_Tsteps,dim_mode
+integer :: i_T,N_cell,n_Tsteps,dim_mode
 logical :: sphere,equi,ising,i_magnetic,underrel,overrel
 
 type(vec_point),allocatable,dimension(:) :: all_mode
 type(vec_point),allocatable,dimension(:) :: mode_magnetic
 
+!call mtprng_init(37, state)
 
+sphere=.true.
+equi=.false.
+ising=.false.
+underrel=.false.
+overrel=.false.
 n_Tsteps=10
 ! initialize variables
 allocate(energy(n_Tsteps),Z(n_Tsteps),temperatures(n_Tsteps),free_E(n_Tsteps),entropy(n_Tsteps),energy_sq(n_Tsteps),heat_cap(n_Tsteps))
-N_spin=product(my_lattice%dim_lat)
+N_cell=product(my_lattice%dim_lat)
 mu_s=0.0d0
 E_min=0.0d0
 E_max=0.0d0
 E_new=0.0d0
 E_old=0.0d0
 E_delta=0.0d0
-n_histo=82
+n_histo=90
 allocate(lng(n_histo))
 energy=0.0d0
 heat_cap=0.0d0
@@ -87,30 +92,36 @@ flatness=0.9d0
 i_exit=.False.
 kTfin=1.0d0
 kTini=1.0d0
-dim_mode=size(all_mode(i)%w)
+dim_mode=my_lattice%dim_mode
 
-allocate(all_mode(N_spin))
+allocate(all_mode(N_cell))
 call associate_pointer(all_mode,my_lattice)
 
 ! magnetization
 do i=1,size(my_order_parameters)
   if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
-   allocate(mode_magnetic(N_spin))
-   call dissociate(mode_magnetic,N_spin)
+   allocate(mode_magnetic(N_cell))
+   call dissociate(mode_magnetic,N_cell)
    call associate_pointer(mode_magnetic,all_mode,'magnetic',i_magnetic)
   endif
 enddo
 
+call get_E_matrix(my_lattice%dim_mode)
 
 ! initializing the variables above
-E_total=total_energy(N_spin,all_mode)
+E_total=0.0d0
+do iomp=1,N_cell
+    call local_energy(Et,iomp,all_mode)
+    E_total=E_total+Et
+enddo
+write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',E_total/real(N_cell)
 
 
 write(6,'(a)') "in entropic sampling subroutine"
 ! find the energy range
 
-E_min=-8.0d-3*real(N_spin)
-E_max=8.0000001d-3*real(N_spin)
+E_min=-8.0d-3*real(N_cell)
+E_max=8.0000001d-3*real(N_cell)
 #ifdef CPP_DEBUG
 if ((E_total-E_min).lt.0.0d0) then
     write(6,'(a,f12.7)') 'the minimum of energy ', E_min
@@ -129,7 +140,7 @@ OPEN(7,FILE='histogram.dat',action='write',status='unknown',position='append',fo
 do i_loop=1,n_loop
    do i_step=1,n_steps
 ! pic a spin
-      call choose_spin(iomp,N_spin)
+      call choose_spin(iomp,N_cell)
 
       S_old=mode_magnetic(iomp)%w
 !---------------------------------------
@@ -157,11 +168,11 @@ do i_loop=1,n_loop
 
 ! calculate the energy before and after
 
-      call local_energy(E_old,iomp,all_mode,dim_mode)
+      call local_energy(E_old,iomp,all_mode)
 
       mode_magnetic(iomp)%w=S_new
 
-      call local_energy(E_new,iomp,all_mode,dim_mode)
+      call local_energy(E_new,iomp,all_mode)
 
       mode_magnetic(iomp)%w=S_old
       E_test=E_total+E_new-E_old
@@ -214,7 +225,7 @@ do i_loop=1,n_loop
 ! check the flatness of the histogramm
 ! The minimum of energy and the max must be taken out
       n_sweep=sum(count_E)
-      mean_histo=real(n_sweep)/real(N_spin)
+      mean_histo=real(n_sweep)/real(N_cell)
       min_histo=minval(count_E)
 
 #ifdef CPP_DEBUG
@@ -243,7 +254,7 @@ do i_loop=1,n_loop
    write(6,'(/a,I10/)') "writing the results for loop", i_loop
 
    do i=1,n_histo
-        write(7,'(3(E20.10E3,2x),I10)') (E_min+real(i-1)*E_delta)/real(N_spin),lng(i),real(count_E(i))/real(N_spin),count_E(i)
+        write(7,'(3(E20.10E3,2x),I10)') (E_min+real(i-1)*E_delta)/real(N_cell),lng(i),real(count_E(i))/real(N_cell),count_E(i)
    enddo
    write(7,'(a)') ''
 
@@ -274,7 +285,7 @@ delta_lng=minval(lng)
 
 OPEN(7,FILE='lngE.dat',action='write',status='unknown',form='formatted')
 do i=1,n_histo
-   write(7,'(2(E20.10E3,2x))') (E_min+real(i-1)*E_delta)/real(N_spin),lng(i)-delta_lng
+   write(7,'(2(E20.10E3,2x))') (E_min+real(i-1)*E_delta)/real(N_cell),lng(i)-delta_lng
 enddo
 close(7)
 

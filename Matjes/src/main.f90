@@ -118,7 +118,7 @@ if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_s
 !---------------------------------
 !  Part which does Entropic Sampling
 !---------------------------------
-if (my_simu%name == 'entropics') call entropic(all_lattices,motif,io_simu,ext_param)
+if (my_simu%name == 'entropic') call entropic(all_lattices,motif,io_simu,ext_param)
 
 
 !---------------------------------
