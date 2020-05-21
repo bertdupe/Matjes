@@ -183,12 +183,12 @@ end function damping_2V
       do while (u.le.1.0d0)
        v=-1.0d0
        do while (v.le.1.0d0)
-        test=sqrt((a(1)+u*dble(dim_lat(1))*net(1,1)+v*dble(dim_lat(2))*net(2,1)-x)**2+ &
-     & (a(2)+u*dble(dim_lat(1))*net(1,2)+v*dble(dim_lat(2))*net(2,2)-y)**2)
+        test=sqrt((a(1)+u*real(dim_lat(1))*net(1,1)+v*real(dim_lat(2))*net(2,1)-x)**2+ &
+     & (a(2)+u*real(dim_lat(1))*net(1,2)+v*real(dim_lat(2))*net(2,2)-y)**2)
         if (test.lt.d) then
          d=test
-         phi=acos((a(1)+u*dble(dim_lat(1))*net(1,1)+v*dble(dim_lat(2))*net(2,1)-x)/test)
-         test_sin=asin((a(2)+u*dble(dim_lat(1))*net(1,2)+v*dble(dim_lat(2))*net(2,2)-y)/test)
+         phi=acos((a(1)+u*real(dim_lat(1))*net(1,1)+v*real(dim_lat(2))*net(2,1)-x)/test)
+         test_sin=asin((a(2)+u*real(dim_lat(1))*net(1,2)+v*real(dim_lat(2))*net(2,2)-y)/test)
          if (test_sin.lt.0.0d0) phi=-phi+2.0d0*3.14159265359d0
         endif
         v=v+1.0d0

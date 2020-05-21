@@ -26,7 +26,8 @@ LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,u
 #LIBRARIES= -L/usr/local/lib/ -lfftw3
 
 #CPPS= -DCPP_MRG -DCPP_BRUTDIP -DCPP_OPENMP
-CPPS= -DCPP_MRG -DCPP_BRUTDIP
+#CPPS= -DCPP_MRG -DCPP_BRUTDIP
+CPPS= -DCPP_BRUTDIP
 #CPPS= -DCPP_MRG -DCPP_FFTW
 #CPPS= -DCPP_MRG -DCPP_SUM
 

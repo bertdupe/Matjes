@@ -399,10 +399,13 @@ call copy_lattice(all_mode_2,all_mode)
 !!!!!! Measure the temperature if the users wish
 !
 !!!!$omp do private(iomp) reduction(+:check1,check2) reduction(max:test_torque) schedule(auto)
-do iomp=1,N_cell
-   call update_temp_measure(check1,check2,mode_magnetic(iomp)%w,B_mag(iomp)%w)
-   if (norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3)
-enddo
+if (i_temperature) then
+  do iomp=1,N_cell
+
+    call update_temp_measure(check1,check2,mode_magnetic(iomp)%w,B_mag(iomp)%w)
+    if (norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3).gt.test_torque) test_torque=norm_cross(mode_magnetic(iomp)%w,B_mag(iomp)%w,1,3)
+  enddo
+endif
 !!!!$omp end do
 check(1)=check(1)+check1
 check(2)=check(2)+check2
