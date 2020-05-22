@@ -12,13 +12,13 @@ module m_fftw
     end interface
 
     interface get_FFT
-      module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix
+      module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix,get_E_k_local
     end interface
 
     private
-    public :: get_k_mesh,calculate_fft,calculate_FFT_Dr
+    public :: get_k_mesh,calculate_fft,calculate_FFT_Dr,get_FFT
     contains
-        #ifdef CPP_FFTW
+#ifdef CPP_FFTW
         !!!!!!!!!!!!!!!!!!!!!!
         ! FFT dipole
         !!!!!!!!!!!!!!!!!!!!!!
@@ -84,7 +84,7 @@ module m_fftw
             enddo
             !      call fftw_destroy_plan(plan)
         end subroutine fft_depol_c2r
-        #endif
+#endif
 
 
 
@@ -248,30 +248,32 @@ module m_fftw
         end function get_FFT_matrix
 
 
-
         !Function computing the product X*e^{ikr}*H(r-r')*X*e^{ikr'} for a given r and kvec
         !all_mode contains the values in X
         !pos contains the positions of the sites and neighbours of the sites
         !kvec is the k-vector multiplying the position in the exponential
         !sense is the sense of the transform (-1.0 or +1.0)
-        complex(kind=16) function get_E_k_local(all_energy, pos, all_vectors, X_site, pos_k, size_all_vectors, dim_mode, sense)
+        function get_E_k_local(all_energy, pos, all_vectors, X_site, pos_k, size_all_vectors, dim_mode, sense)
             implicit none
             integer :: pos_k, dim_mode
             integer :: size_all_vectors
             complex(kind=16) :: all_energy(:,:), all_vectors(:), X_site(:)
             real(kind=8) :: pos(:,:), sense !pos is the array of all r-r'
+            complex(kind=16) :: get_E_k_local
             
             ! Internal variable
             integer :: i
             complex(kind=16) :: intermediate_sum(size_all_vectors)
             real(kind=8) :: alpha
             
+            get_E_k_local=0.0d0
+
             do i=1, size_all_vectors, dim_mode
                 alpha = dot_product( pos(:,(i/dim_mode)+1), kmesh(:,pos_k) )
                 intermediate_sum(i:i+dim_mode-1) = all_vectors(i:i+dim_mode-1)*exp(sense*alpha) !gives exp[i*k*(r-r')]
             enddo
             
-            get_E_k_local=dot_product( X_site, matmul(all_E, intermediate_sum) )
+            get_E_k_local=dot_product( X_site, matmul(all_energy, intermediate_sum) )
         end function get_E_k_local
 
 
@@ -325,30 +327,4 @@ module m_fftw
             enddo
         end subroutine get_k_mesh
 
-
-
-        subroutine calculate_dispersion(all_mode,pos,my_lattice)
-            use m_basic_types, only : vec_point
-            use m_local_energy, only : get_E_k_local
-            implicit none
-            type(vec_point),intent(in) :: all_mode(:)
-            real(kind=8), intent(in) :: pos(:,:)
-
-            ! Internal variable
-            integer :: i, j, nb_kpoint
-            real(kind=8), allocatable :: dispersion(:)
-
-            call get_k_mesh('input',my_lattice)
-
-            nb_kpoint = product(N_kpoint)
-
-            allocate(dispersion(nb_kpoint))
-            dispersion=0.0d0
-
-            do i=1, nb_kpoint
-                do j=1, nb_site
-                    dispersion(i) = get_E_k_local(all_mode,pos,kmesh(:,i),-1.0,pos(:,j))
-                enddo
-            enddo
-        end subroutine calculate_dispersion
 end module m_fftw

@@ -51,7 +51,7 @@ chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_varia
 tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o
 total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
 rw_TB.o: io_files_utils.o io-utils.o
-bandstructure.o: basic_types.o derived_types.o fftw.o
+bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 
 
 
@@ -105,7 +105,8 @@ ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
 basic_types.o:
 pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o
 dyna-utils.o:
-kmesh.o: io_files_utils.o
+kmesh.o: io_files_utils.o get-position.o
+
 convert.o:
 simu-parameters.o: basic_types.o
 get-random.o: mtprng.o
@@ -139,7 +140,7 @@ WriteSpinAndCorrFile.o: CreateSpinFile.o rw_lattice.o create_lattice.o constant.
 init_rand_seed.o: main.o
 MakeLattice.o: main.o
 relaxationtype.o:
-fftw.o: cal_local_energy.o kmesh.o vector.o constant.o io-utils.o basic_types.o derived_types.o
+fftw.o: kmesh.o vector.o constant.o io-utils.o basic_types.o derived_types.o
 randist.o: rw_dyna.o mtprng.o
 rw_dyna.o: main.o
 DM_vector.o: main.o
@@ -181,7 +182,7 @@ store_relaxation.o: constant.o Correlation.o
 parallel_tempering.o: paratemp.o MCstep.o check_restart.o store_relaxation.o initialize_temperature.o CreateSpinFile.o
 paratemp.o: fit.o mtprng.o constant.o inp_rw.o
 initialize_temperature.o:
-cal_local_energy.o: energy_commons.o
+cal_local_energy.o: energy_commons.o dipolar-energy.o
 arrange_neihg.o: rotation.o matrix_power.o create_lattice.o inp_rw.o sym_utils.o constant.o
 MCstep.o: choosespin.o cal_local_energy.o main.o create_lattice.o inp_rw.o rw_lattice.o  sampling.o relaxationtype.o mtprng.o
 solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o

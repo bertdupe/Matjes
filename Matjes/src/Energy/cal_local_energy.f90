@@ -14,7 +14,7 @@ real(kind=8), allocatable, dimension(:) :: all_vectors
 real(kind=8), allocatable, dimension(:,:) :: all_E
 
 private
-public :: local_energy,get_E_matrix,kill_E_matrix,get_E_k_local
+public :: local_energy,get_E_matrix,kill_E_matrix
 
 contains
 
@@ -76,11 +76,11 @@ N=size(energy%line(:,iomp))
 E_int=0.0d0
 dim_mode=size(all_vectors)/N
 
-!energy%line représente toutes les lignes de H.
+!energy%line reprï¿½sente toutes les lignes de H.
 !Dans energy%line, la composante (i,iomp) correspond au voisin i
 !du site iomp.
 !Ici, i correspond aux valeurs non nulles
-!j correspond à tous les voisins (j=1, N_voisins)
+!j correspond ï¿½ tous les voisins (j=1, N_voisins)
 do i=1,N
    j=energy%line(i,iomp)
    all_vectors((i-1)*dim_mode+1:i*dim_mode)=spin(j)%w

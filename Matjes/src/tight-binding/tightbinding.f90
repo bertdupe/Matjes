@@ -21,6 +21,8 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_bandstructure
     use m_operator_pointer_utils
     use  m_get_position
+    use m_io_utils
+    use m_io_files_utils
 
     implicit none
     ! internal parameter
@@ -42,40 +44,41 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! sense gives the sense of the FFT transform
     real(kind=8) :: sense
     ! array containing all the positions in the lattice
-    real(kind=8), allocatable :: all_positions(:,:,:,:,:),pos(:,:)
+    real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
     ! array that will contain the FFT of another array
     complex(kind=16), allocatable :: dispersion(:)
+    integer :: io, i
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
 
     call get_k_mesh('input',my_lattice)
-    allocate( all_mode(N_cell), pos(3,N_cell) )
+    allocate( all_mode(N_cell), pos(3,N_cell), distances(3,N_cell) )
     pos=0.0d0
+    distances=0.0d0
 
     ! We have access to the variable 'N_kpoint' because it is in the module
     ! m_fftw
     allocate(dispersion(product(N_kpoint)))
     dispersion=0.0d0
 
-    allocate( all_positions(3, my_lattice%dim_lat(1), my_lattice%dim_lat(2), my_lattice%dim_lat(3), size(my_motif%atomic)) )
-    call get_position( all_positions, my_lattice%dim_lat, my_lattice%areal, my_motif )
-    pos=reshape( all_positions, (/3, N_cell/) )
-    deallocate(all_positions)
+    allocate( start_positions(3, my_lattice%dim_lat(1), my_lattice%dim_lat(2), my_lattice%dim_lat(3), size(my_motif%atomic)) )
+    call get_position( start_positions, my_lattice%dim_lat, my_lattice%areal, my_motif )
+    pos=reshape( start_positions, (/3, N_cell/) )
+    deallocate(start_positions)
+    call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
+    deallocate(pos)
 
     call associate_pointer(all_mode,my_lattice)
-    call get_E_matrix(my_lattice%dim_mode)
+    call set_E_bandstructure(my_lattice%dim_mode,distances)
 
-    call set_E_bandstructure(my_lattice%dim_mode)
-
-    call calculate_dispersion(all_mode, pos, dispersion, my_lattice%dim_mode)
+    call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, product(N_kpoint))
 
     ! Write data for the FFT to file
-    open(12, file='data.txt', status='unknown')    
-    write(12,*) array_FFT
+    io=open_file_write('data.txt')
+    do i=1,product(N_kpoint)
+      write(io,'(2(f16.10,2x))') real(dispersion(i)),aimag(dispersion(i))
+    enddo
+    call close_file('data.txt',io)
 
-    write(*,*) 'Coucou from file ', __FILE__, ' at line ', __LINE__
-    write(*,*) 'shape_lattice = ', shape_lattice
-
-    close(12)
 end subroutine tightbinding
