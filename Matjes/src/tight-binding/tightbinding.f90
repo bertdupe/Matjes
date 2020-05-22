@@ -44,31 +44,31 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! array containing all the positions in the lattice
     real(kind=8), allocatable :: all_positions(:,:,:,:,:),pos(:,:)
     ! array that will contain the FFT of another array
-    complex(kind=16), allocatable :: array_FFT(:,:)
+    complex(kind=16), allocatable :: dispersion(:)
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
 
     call get_k_mesh('input',my_lattice)
-    allocate(all_mode(N_cell),pos(3,N_cell))
+    allocate( all_mode(N_cell), pos(3,N_cell) )
     pos=0.0d0
 
     ! We have access to the variable 'N_kpoint' because it is in the module
     ! m_fftw
-    allocate(array_FFT(my_lattice%dim_mode,product(N_kpoint)))
-    array_FFT=0.0
+    allocate(dispersion(product(N_kpoint)))
+    dispersion=0.0d0
 
-    allocate(all_positions(3,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),size(my_motif%atomic)))
-    call get_position(all_positions,my_lattice%dim_lat,my_lattice%areal,my_motif)
-    pos=reshape(all_positions,(/3,N_cell/))
+    allocate( all_positions(3, my_lattice%dim_lat(1), my_lattice%dim_lat(2), my_lattice%dim_lat(3), size(my_motif%atomic)) )
+    call get_position( all_positions, my_lattice%dim_lat, my_lattice%areal, my_motif )
+    pos=reshape( all_positions, (/3, N_cell/) )
     deallocate(all_positions)
-
 
     call associate_pointer(all_mode,my_lattice)
     call get_E_matrix(my_lattice%dim_mode)
 
-!    sense=-1.0
-!    call calculate_fft(all_mode,pos,sense,my_lattice%dim_mode,array_FFT)
+    call set_E_bandstructure(my_lattice%dim_mode)
+
+    call calculate_dispersion(all_mode, pos, dispersion, my_lattice%dim_mode)
 
     ! Write data for the FFT to file
     open(12, file='data.txt', status='unknown')    

@@ -51,7 +51,9 @@ chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_varia
 tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o
 total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
 rw_TB.o: io_files_utils.o io-utils.o
-bandstructure.o: basic_types.o derived_types.o energy_commons.o
+bandstructure.o: basic_types.o derived_types.o fftw.o
+
+
 
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
 print_Beff.o: convert.o io_files_utils.o
@@ -95,10 +97,10 @@ rampe.o: constant.o basic_types.o
 excitations.o: shape_excitations.o EMwave.o TPulse.o simu-parameters.o heavyside.o rampe.o derived_types.o io-utils.o io_files_utils.o
 external_fields.o: create_lattice.o operator_pointer_utils.o derived_types.o get-position.o
 measure_temp.o: constant.o vector.o
-operator_pointer_utils.o: Hamiltonian_variables.o create_lattice.o null.o derived_types.o get-position.o
+operator_pointer_utils.o: Hamiltonian_variables.o create_lattice.o null.o derived_types.o get-position.o modes_variables.o
 topo_commons.o: vector.o get-position.o derived_types.o operator_pointer_utils.o
 internal_fields.o: energy_commons.o get-position.o derived_types.o operator_pointer_utils.o
-energy_commons.o: total_Heisenberg_Ham.o dipolar-energy.o setup_DM.o convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
+energy_commons.o: total_Heisenberg_Ham.o setup_DM.o convert.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o constant.o symmetry_operators.o get-position.o couplage_ME.o operator_pointer_utils.o derived_types.o io-utils.o io_files_utils.o
 ext_param_rw.o: derived_types.o io-utils.o io_files_utils.o
 basic_types.o:
 pointgrp.o: io_files_utils.o constant.o vector.o derived_types.o basic_types.o user_information.o

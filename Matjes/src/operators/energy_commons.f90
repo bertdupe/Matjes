@@ -5,7 +5,6 @@ use m_derived_types, only : operator_real_order_N,point_shell_Operator,lattice,p
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,shell_Ham,H_vois
 use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters
-use m_dipole_energy
 use m_symmetry_operators
 use m_total_Hamiltonian_TB
 use m_total_Heisenberg_Ham
