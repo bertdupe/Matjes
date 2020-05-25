@@ -17,14 +17,14 @@ module m_exchange_TB
             implicit none
             integer, intent(in) :: dim_ham
             character(len=*), intent(in) :: fname
-            
+
             ! internal
             integer :: io_param,nb_shell
             character(len=50) :: form
             integer :: i, j
             integer :: x_start, x_end
             real(kind=8), allocatable :: t_local(:)
-            
+
 
             ! Multiplicative coefficient
             exc_ham_TB%c_ham=1.0d0
@@ -42,7 +42,7 @@ module m_exchange_TB
 
             nb_shell=TB_params%nb_shell
             if (nb_shell.ne.0) exc_ham_TB%i_exist=.true.
-            
+
             do i=1, size(my_order_parameters)
                 if (my_order_parameters(i)%name.eq.'Tight-binding') then
                     x_start=my_order_parameters(i)%start
@@ -56,17 +56,17 @@ module m_exchange_TB
                 allocate(exc_ham_TB%ham(i)%H(dim_ham,dim_ham))
                 exc_ham_TB%ham(i)%H=0.0d0
             enddo
-            
+
             allocate(t_local(x_end-x_start+1))
             t_local=reshape( TB_params%hopping, (/x_end-x_start+1/) )
 
-            ! Put the hopping parameters out of the diagonal
+            ! Put the hopping parameters on the diagonal
             do j=1,nb_shell
                 do i=x_start,x_end
                     exc_ham_TB%ham(j)%H(i,i)=exc_ham_TB%c_ham*t_local(j)
                 enddo
             enddo
-            
+
             form=convert('(',dim_ham,'(f12.8,2x))')
             write(6,'(a)') ''
             write(6,'(a)') 'Exchange tight-binding is OK'
@@ -79,4 +79,4 @@ module m_exchange_TB
             write(6,'(a)') ''
 
         end subroutine get_exc_ham_TB
-end module m_exchange_TB
+end module m_exchange_TB 

@@ -267,13 +267,34 @@ module m_fftw
             real(kind=8) :: alpha
             
             get_E_k_local=0.0d0
-
+!write(*,*) 'all_energy = ', all_energy
+!write(*,*) 'X_site = ', X_site
+!write(*,*) 'pos_k = ', pos_k
+!write(*,*) 'size_all_vectors = ', size_all_vectors
+!write(*,*) 'dim_mode = ', dim_mode
+!write(*,*) 'sense = ', sense
             do i=1, size_all_vectors, dim_mode
+!write(*,*) 'pos(:,', (i/dim_mode)+1, ') = ', pos(:,(i/dim_mode)+1)
+!write(*,*) 'kmesh(:, ', pos_k, ') = ', kmesh(:,pos_k)
                 alpha = dot_product( pos(:,(i/dim_mode)+1), kmesh(:,pos_k) )
-                intermediate_sum(i:i+dim_mode-1) = all_vectors(i:i+dim_mode-1)*exp(sense*alpha) !gives exp[i*k*(r-r')]
+!write(*,*) 'alpha = dot_product( pos(:,', (i/dim_mode)+1, '), kmesh(:,', pos_k, ') =', alpha
+                intermediate_sum(i:i+dim_mode-1) = all_vectors(i:i+dim_mode-1)*complex( cos(sense*alpha), sin(sense*alpha) )!gives exp[i*k*(r-r')] (all r' and one particular r)
+!write(*,*) '(i:i+dim_mode-1) = (', i, ':', i+dim_mode-1, ')'
+!write(*,*) 'all_vectors(i:i+dim_mode-1) = ', all_vectors(i:i+dim_mode-1)
+!write(*,'(a, 4(F7.4, F7.4))') 'all_vectors(i:i+dim_mode-1) = ', all_vectors(i:i+dim_mode-1)
+!write(*,*) 'sense*alpha = ', sense*alpha
+!write(*,*) 'intermediate_sum(i:i+dim_mode-1) = all_vectors(i:i+dim_mode-1)*exp(sense*alpha) = ', intermediate_sum(i:i+dim_mode-1)
+!write(*,*) ''
+!write(*,*) ''
+!write(*,*) ''
+!write(*,'(a, 4(F7.4, F7.4))') 'intermediate_sum(i:i+dim_mode-1) = all_vectors(i:i+dim_mode-1)*exp(sense*alpha) = ', intermediate_sum(i:i+dim_mode-1)
             enddo
             
             get_E_k_local=dot_product( X_site, matmul(all_energy, intermediate_sum) )
+!write(*,*) 'get_E_k_local = ', get_E_k_local
+!write(*,*) ''
+!write(*,*) ''
+!write(*,*) ''
         end function get_E_k_local
 
 

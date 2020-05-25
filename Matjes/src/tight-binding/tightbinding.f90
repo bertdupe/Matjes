@@ -47,7 +47,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
     ! array that will contain the FFT of another array
     complex(kind=16), allocatable :: dispersion(:)
-    integer :: io, i
+    integer :: io, i, nb_kpoints
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
@@ -59,7 +59,8 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
 
     ! We have access to the variable 'N_kpoint' because it is in the module
     ! m_fftw
-    allocate(dispersion(product(N_kpoint)))
+    nb_kpoints = product(N_kpoint)
+    allocate( dispersion(nb_kpoints) )
     dispersion=0.0d0
 
     allocate( start_positions(3, my_lattice%dim_lat(1), my_lattice%dim_lat(2), my_lattice%dim_lat(3), size(my_motif%atomic)) )
@@ -72,13 +73,15 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     call associate_pointer(all_mode,my_lattice)
     call set_E_bandstructure(my_lattice%dim_mode,distances)
 
-    call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, product(N_kpoint))
+    call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
 
     ! Write data for the FFT to file
     io=open_file_write('data.txt')
-    do i=1,product(N_kpoint)
+    do i=1,nb_kpoints
       write(io,'(2(f16.10,2x))') real(dispersion(i)),aimag(dispersion(i))
     enddo
     call close_file('data.txt',io)
+!To get an easy processing with gnuplot, use
+!paste kpoints data.txt | awk '{print $1 " " $4}' > dispersion.txt
 
 end subroutine tightbinding
