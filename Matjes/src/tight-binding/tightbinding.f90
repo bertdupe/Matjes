@@ -45,8 +45,8 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8) :: sense
     ! array containing all the positions in the lattice
     real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
-    ! array that will contain the FFT of another array
-    complex(kind=16), allocatable :: dispersion(:)
+
+    complex(kind=16), allocatable :: dispersion(:), input_energy(:), DOS(:)
     integer :: io, i, nb_kpoints
 
     shape_lattice=shape(my_lattice%l_modes)
@@ -75,12 +75,27 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
 
     call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
 
-    ! Write data for the FFT to file
-    io=open_file_write('data.txt')
+    allocate(input_energy(10*size(dispersion)), DOS(10*size(dispersion)))
+    input_energy = 0.0d0
+    DOS = 0.0d0
+    call initiate_input_E(57d-2, input_energy)
+
+    io=open_file_write('dispersion_energy.txt')
     do i=1,nb_kpoints
       write(io,'(2(f16.10,2x))') real(dispersion(i)),aimag(dispersion(i))
     enddo
-    call close_file('data.txt',io)
+    call close_file('dispersion_energy.txt',io)
+    io=open_file_write('input_energy_DOS.txt')
+    do i=1,size(input_energy)
+      write(io,'(2(f16.10,2x))') real(input_energy(i)),aimag(input_energy(i))
+    enddo
+    call close_file('input_energy_DOS.txt',io)
+    call compute_DOS(dispersion, input_energy, DOS)
+    io=open_file_write('DOS.txt')
+    do i=1,size(DOS)
+      write(io,'(2(f16.10,2x))') real(DOS(i)),aimag(DOS(i))
+    enddo
+    call close_file('DOS.txt',io)
 !To get an easy processing with gnuplot, use
 !paste kpoints data.txt | awk '{print $1 " " $4}' > dispersion.txt
 
