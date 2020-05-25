@@ -1,6 +1,6 @@
 !
 ! ===============================================================
-SUBROUTINE Relaxation(mode,B_line,mode_B_column,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
+SUBROUTINE Relaxation(mode,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
 use mtprng
 use m_Corre
 use m_constants, only : k_b
@@ -13,16 +13,15 @@ use m_topo_commons
 use m_io_utils
 use m_io_files_utils
 use m_convert
+use m_MCstep
 #ifdef CPP_MPI
       use m_mpi_prop, only : isize,irank_working,MPI_COMM,MPI_COMM_BOX,irank_box
 #endif
 Implicit none
 ! input
-type(vec_point), intent(inout) :: mode(:)
-type(point_shell_Operator), intent(in) :: B_line(:)
-type(point_shell_mode), intent(in) :: mode_B_column(:)
+type(vec_point), intent(inout) :: mode(N_cell)
 real(kind=8), intent(inout) :: qeulerp,qeulerm,cone,acc,rate,E_total,magnetization(3),E(8)
-integer, intent(inout) :: nb
+real(kind=8), intent(inout) :: nb
 real(kind=8), intent(in) :: kT
 integer, intent(in) :: n_relaxation,T_relax,N_cell,n_sizerelax
 logical, intent(in) :: ising,equi,overrel,sphere,underrel,print_relax
@@ -54,14 +53,13 @@ do i_relaxation=1,n_relaxation
 !         T_relax_1 is probably larger then T_relax, this is because
 !         the last step might take more time to relax than an
 !         the step to an unordered structure
-
             !Relaxation of the System
    Do i_MC=1,T_relax*N_cell
-      Call MCStep(mode,B_line,mode_B_column,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+      Call MCStep(mode,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
    enddo
 
             !In case T_relax set to zero at least one MCstep is done
-   Call MCStep(mode,B_line,mode_B_column,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+   Call MCStep(mode,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
 ! calculate the topocharge
    dumy=get_charge()

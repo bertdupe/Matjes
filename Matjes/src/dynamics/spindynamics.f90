@@ -110,7 +110,6 @@ call associate_pointer(all_mode_2,spinafter(:,:,:,:,:,2))
 call user_info(6,time,'topological operators',.false.)
 
 call get_size_Q_operator(mag_lattice)
-
 call associate_Q_operator(all_mode_1,mag_lattice%boundary,shape(mag_lattice%l_modes))
 
 call user_info(6,time,'done',.true.)

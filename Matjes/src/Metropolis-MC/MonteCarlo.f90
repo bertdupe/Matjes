@@ -16,6 +16,8 @@ use m_topo_commons
 use m_convert
 use m_io_files_utils
 use m_operator_pointer_utils
+use m_eval_Beff
+use m_MCstep
 
       use m_Corre
       use m_check_restart
@@ -41,7 +43,7 @@ type(simulation_parameters), intent(in) :: ext_param
 ! internal variables
 !!!!!!!!!!!!!!!!!!!!!!!
 ! slope of the MC
-integer :: i_relax,n_kT,n_MC,T_relax,restart_MC_steps,T_auto,N_cell,n_sizerelax,n_thousand,n_Tsteps,nb,size_table,Total_MC_Steps
+integer :: i_relax,n_kT,n_MC,T_relax,restart_MC_steps,T_auto,N_cell,n_sizerelax,n_thousand,n_Tsteps,size_table,Total_MC_Steps
 ! variable for the temperature
 real(kind=8) :: kT,kTini,kTfin
 ! variables that being followed during the simulation
@@ -58,7 +60,7 @@ real(kind=8),allocatable :: M_sq_sum_av(:,:),E_sum_av(:),E_sq_sum_av(:),Q_sq_sum
 real(kind=8),allocatable :: E_av(:),qeulerp_av(:),qeulerm_av(:),kt_all(:),M_av(:,:)
 real(kind=8),allocatable :: M_sum_av(:,:),vortex_av(:,:),chi_l(:,:)
 ! variable for the convergence of the MC
-real(kind=8) :: acc,rate,tries,cone
+real(kind=8) :: acc,rate,tries,cone,nb
 integer :: i
 logical :: underrel,overrel,sphere,equi,i_restart,ising,print_relax,Cor_log,Gra_log,i_magnetic,i_print_W,spstmL
 
@@ -120,6 +122,16 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
+call get_E_matrix(my_lattice%dim_mode)
+call get_B_matrix(my_lattice%dim_mode)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! associate pointer for the topological charge, vorticity calculations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+call get_size_Q_operator(my_lattice)
+call associate_Q_operator(all_mode,my_lattice%boundary,shape(my_lattice%l_modes))
+
 !ktini=ext_param%ktini%value
 !ktfin=ext_param%ktfin%value
 ! initializing the variables above
@@ -156,6 +168,7 @@ M_av=0.0d0
 acc=0.0d0
 rate=0.0d0
 tries=0.0d0
+nb=0.0d0
 
 ! initialize the temperatures
 #ifdef CPP_MPI
@@ -165,11 +178,15 @@ call ini_temp(kt_all,kTfin,kTini,size_table,i_print_W)
 #endif
 
 
+write(6,'(/a)') 'Initialization done'
+write(6,'(2(a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', qeulerp+qeulerm
+write(6,'(a/)') '---------------------'
+
 Do n_kT=1,n_Tsteps
 
 kt=kt_all(n_kT)
 
-call Relaxation(mode_magnetic,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
+call Relaxation(all_mode,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
 
 !       Monte Carlo steps, calculate the values
 
@@ -179,11 +196,11 @@ call Relaxation(mode_magnetic,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_de
 
       Do i_relax=1,T_auto*N_cell
 
-         Call MCstep(mode_magnetic,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+         Call MCstep(all_mode,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
       End do
 
-      Call MCstep(mode_magnetic,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+      Call MCstep(all_mode,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
 ! Calculate the topological charge and the vorticity
       dumy=get_charge()

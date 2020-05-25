@@ -1,7 +1,4 @@
-!
-! ===============================================================
-!
-SUBROUTINE MCstep(mode,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+module m_MCstep
 use m_derived_types, only : lattice
 use m_basic_types, only : vec_point
 use m_sampling
@@ -9,6 +6,14 @@ use m_choose_spin
 use m_relaxtyp
 use m_createspinfile
 use m_local_energy
+
+private
+public :: MCstep
+contains
+!
+! ===============================================================
+!
+SUBROUTINE MCstep(mode,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 #ifdef CPP_MPI
       use m_parameters, only : d_mu,n_ghost,i_separate,i_average,i_ghost
       use m_make_box, only : ghost_border,rank_nei
@@ -32,7 +37,6 @@ real(kind=8) :: tmp
 real(kind=8) :: choice
 !     flipped Spin
 real(kind=8) :: S_new(3),S_old(3)
-logical :: accept
 ! decomposition of the energy
 real(kind=8) :: E_dec_new(8),E_dec_old(8)
 integer :: iomp
@@ -56,6 +60,7 @@ at_border=.False.
 discuss_trans=.False.
 irank_discuss=0
 irank_send=0
+tmp=0.0d0
 
 #endif
 
@@ -84,12 +89,12 @@ endif
 !---------------------------------------
 
 if (sphere) then
-   S_new=sphereft(mode(iomp)%w,cone)
+   S_new=sphereft(mode(iomp)%w(1:3),cone)
 !---------------------------------------
 ! Algorithm square sampling
 !---------------------------------------
 elseif (equi) then
-   S_new=equirep(mode(iomp)%w,cone)
+   S_new=equirep(mode(iomp)%w(1:3),cone)
 endif
 !---------------------------------
 ! different relaxation process
@@ -100,26 +105,21 @@ elseif (overrel) then
    S_new=overrelax(iomp,mode)
 endif
 
-if (ising) S_new=-mode(iomp)%w
+if (ising) S_new=-mode(iomp)%w(1:3)
 !----------------------------------
 !       Calculate the energy difference if this was flipped
 !       and decider, if the Spin flip will be performed
 !----------------------------------
 !Energy of old configuration
-!        E_dec_old=local_energy_MC(i_DM,i_four,i_biq,i_dip,i_stone,EA,Ilat, &
-!          & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,h_ext,my_lattice)
-
-E_old=sum(E_dec_old)
-
+call local_energy(E_old,iomp,mode)
 
 !Energy of the new configuration
-S_old=mode(iomp)%w
+S_old=mode(iomp)%w(1:3)
 
-mode(iomp)%w=S_new
+mode(iomp)%w(1:3)=S_new
+call local_energy(E_new,iomp,mode)
 
-E_new=sum(E_dec_new)
-
-mode(iomp)%w=S_old
+mode(iomp)%w(1:3)=S_old
 
 !! variation of the energy for this step
 DE=E_new-E_old
@@ -149,46 +149,13 @@ endif
 #endif
 
 nb=nb+1.0d0
-accept=.False.
-! security in case kt is 0
-if (kt.gt.1.0d-10) then
-!       Calculate the probability of this flip
-   tmp=-DE/kT
-   if (DE.lt.0.0d0) tmp=2.0d0
-else
-   tmp=-100.0d0
-!       Accept the change of the new energy is lower than the old one
-   if (DE.lt.0.0d0) tmp=2.0d0
-endif
 
-if (exp(tmp).gt.1.0d0) then
-   accept=.True.
-else
-#ifdef CPP_MPI
-#ifdef CPP_MRG
-   choice=mtprng_rand_real1(state)
-#else
-   CALL RANDOM_NUMBER(Choice)
-#endif
-   if ((.not.i_separate).and.(.not.i_average).and.(.not.i_ghost)) call mpi_bcast(Choice,1,MPI_REAL8,0,MPI_COMM,ierr)
-#else
-#ifdef CPP_MRG
-   choice=mtprng_rand_real1(state)
-#else
-   CALL RANDOM_NUMBER(Choice)
-#endif
-#endif
-   if (Choice.lt.exp(tmp)) Then
-      accept=.True.
-   endif
-endif
+if ( accept(kt,DE) ) then
 
-if (accept) then
-
-   Dmag=-mode(iomp)%w+S_new
+   Dmag=-mode(iomp)%w(1:3)+S_new
 
 ! update the spin
-   mode(iomp)%w=S_new
+   mode(iomp)%w(1:3)=S_new
 
 ! update the quantities
    E_total=E_total+DE
@@ -227,3 +194,53 @@ rate=acc/nb
 
 END SUBROUTINE MCstep
 ! ===============================================================
+
+
+
+function accept(kt,DE)
+implicit none
+real(kind=8) :: kt,DE
+real(kind=8) :: choice, tmp
+logical :: accept
+
+accept=.False.
+write(*,*) kt
+pause
+! security in case kt is 0
+if (kt.gt.1.0d-10) then
+!       Calculate the probability of this flip
+   tmp=-DE/kT
+   if (DE.lt.0.0d0) tmp=2.0d0
+else
+   tmp=-100.0d0
+!       Accept the change of the new energy is lower than the old one
+   if (DE.lt.0.0d0) tmp=2.0d0
+endif
+
+if (exp(tmp).gt.1.0d0) then
+   accept=.True.
+else
+#ifdef CPP_MPI
+#ifdef CPP_MRG
+   choice=mtprng_rand_real1(state)
+#else
+   CALL RANDOM_NUMBER(Choice)
+#endif
+   if ((.not.i_separate).and.(.not.i_average).and.(.not.i_ghost)) call mpi_bcast(Choice,1,MPI_REAL8,0,MPI_COMM,ierr)
+#else
+#ifdef CPP_MRG
+   choice=mtprng_rand_real1(state)
+#else
+   CALL RANDOM_NUMBER(Choice)
+#endif
+#endif
+   if (Choice.lt.exp(tmp)) Then
+      accept=.True.
+   endif
+endif
+
+end function
+
+
+
+end module

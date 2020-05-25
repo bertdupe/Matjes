@@ -88,7 +88,7 @@ integer, intent(in) :: nb_orbitals
 type(cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
 ! internal parameters
-integer :: N_dim_order_param,nmag,i,N_mode
+integer :: N_dim_order_param,nmag,N_mode
 real(kind=8) :: Field(3)
 
 N_dim_order_param=0

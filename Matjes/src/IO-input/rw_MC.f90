@@ -17,7 +17,7 @@ logical, intent(out) :: i_restart,ising,underrel,overrel,sphere,equi,print_relax
 integer :: io_input
 
 n_Tsteps=10
-n_sizerelax=10
+n_sizerelax=1
 n_thousand=1000
 cone=pi(1.0d0)
 restart_MC_steps=0
@@ -25,12 +25,12 @@ i_restart=.False.
 ising=.False.
 print_relax=.False.
 equi=.False.
-sphere=.False.
+sphere=.True.
 overrel=.False.
 underrel=.False.
 Cor_log=.False.
 T_relax=1
-
+T_auto=1
 
 io_input=open_file_read('input')
 

@@ -86,11 +86,6 @@ call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
 !     Start main procedures:
 !     *****************************************************************
 
-!!!!!!!! part that does the tight-binging from a frozen spin configuration
-
-!if (my_simu%name == 'tight-binding') then
-!           call tightbinding(spin,shape_spin)
-!endif
 !!!!!!!! part of the parallel tempering
 
 !if (my_simu%name == 'parallel-tempering') then
