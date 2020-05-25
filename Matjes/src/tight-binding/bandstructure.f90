@@ -34,17 +34,9 @@ module m_bandstructure
 
            do i=1,N
               i_vois=energy%line(i,1) !all neighbours of site 1
-!              write(*,*) 'i_vois=', i_vois
               all_E(:,(i-1)*dim_mode+1:i*dim_mode)=transpose(cmplx(energy%value(i,1)%order_op(1)%Op_loc, kind=16))
-!              write(*,*) 'energy%value(', i, ',1)%order_op(1)%Op_loc = ', energy%value(i,1)%order_op(1)%Op_loc
               all_positions(:,i) = pos(:,i_vois) !could have written all_positions(:,i) = pos(:,i_vois)-pos(:,1), but pos(:,1) is always 0
-!              write(*,*) 'all_positions(:,', i, ')=', all_positions(:,i)
            enddo
-!           write(*,*) 'In file ', __FILE__, ' at line', __LINE__
-!           write(*,*) 'shape(all_E) = ', shape(all_E)
-!           write(*,*) ''
-!           write(*,*) ''
-
        end subroutine set_E_bandstructure
 
 
@@ -66,41 +58,11 @@ module m_bandstructure
                 do j=1, N_cell !loop to get the sites
                     do k=1, N !loop to get the neighbours of site j
                         i_vois=energy%line(k,j) !contain the neighbour "k" of site "j"
-!                        write(*,*) '======================= i=', i, 'j=', j, 'k=', k, ' ======================='
-!                        write(*,*) 'i_vois = ', i_vois
                         all_vectors((k-1)*dim_mode+1:k*dim_mode)=cmplx(all_mode(i_vois)%w,kind=16) !all_mode is the vector of ordre parameter for each site. We put everything in a big vector
-!                        write(*,*) 'all_vectors(', (k-1)*dim_mode+1, ':', k*dim_mode, ')=', all_vectors((k-1)*dim_mode+1:k*dim_mode)
-!                        write(*,*) ''
-!                        write(*,*) ''
                     enddo
-!                    write(*,*) '======================= kpoint=', i, 'neighbour=', j, ' ======================='
-!                    write(*,*) 'all_E = ', all_E
-!                    write(*,*) 'all_positions = ', all_positions
-!                    write(*,*) 'all_vectors = ', all_vectors
-!                    write(*,*) 'cmplx(all_mode(j)%w, kind=16) = ', cmplx(all_mode(j)%w, kind=16)
                     dispersion(i) = dispersion(i) + get_FFT(all_E, all_positions, all_vectors, cmplx(all_mode(j)%w, kind=16), i, dim_mode*N, dim_mode, -1.0d0) !dispersion(i)=dispersion(i)+... accounts for the sum over r
-!                    write(*,*) 'all_mode(', j, ')= ', all_mode(j)%w
-!                    write(*,*) ''
-!                    write(*,*) ''
                 enddo
             enddo
-
             dispersion = dispersion/real(N_cell)
-!            write(*,*) 'In file ', __FILE__, ' at line', __LINE__
-!            write(*,*) 'N=size(energy%line(:,1)) = ', dim_mode
-!            write(*,*) 'dim_mode = ', dim_mode
-!            write(*,*) ''
-!            write(*,*) ''
-            do i=1,N
-                write(*, *) 'all_E(:,', (i-1)*dim_mode+1, ':', i*dim_mode, ') = ', all_E(:, (i-1)*dim_mode+1:i*dim_mode)
-                write(*,*) ''
-                write(*,*) 'all_vectors(', (i-1)*dim_mode+1, ':', i*dim_mode, ') = ', all_vectors((i-1)*dim_mode+1:i*dim_mode)
-                write(*,*) ''
-                write(*,*) ''
-                write(*,*) ''
-                write(*,*) ''
-                write(*,*) ''
-                write(*,*) ''
-            enddo
        end subroutine calculate_dispersion
 end module m_bandstructure
