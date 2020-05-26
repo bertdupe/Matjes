@@ -2,12 +2,12 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = exchange_tight_binding.o chemical_potential_TB.o total_Hamiltonian_TB.o bandstructure.o \
+OBJS = rw_TB.o exchange_tight_binding.o chemical_potential_TB.o total_Hamiltonian_TB.o tightbinding.o bandstructure.o DOS.o wavefunction.o \
 envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
- rw_TB.o tightbinding.o Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o \
+ Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
  create_lattice.o forces.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
@@ -46,12 +46,14 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+rw_TB.o: io_files_utils.o io-utils.o
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
-tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o
 total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
-rw_TB.o: io_files_utils.o io-utils.o
+tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
+DOS.o: io_files_utils.o io-utils.o
+wavefunction.o: basic_types.o
 
 
 

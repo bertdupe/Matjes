@@ -15,14 +15,13 @@
 subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_basic_types, only : vec_point
     use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
-!    use m_local_energy, only : get_E_matrix
-!    use m_fftw
-!    use m_lattice
     use m_bandstructure
     use m_operator_pointer_utils
     use  m_get_position
     use m_io_utils
     use m_io_files_utils
+    use m_DOS
+    use m_wavefunction
 
     implicit none
     ! internal parameter
@@ -75,27 +74,33 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
 
     call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
 
-    allocate(input_energy(10*size(dispersion)), DOS(10*size(dispersion)))
-    input_energy = 0.0d0
-    DOS = 0.0d0
-    call initiate_input_E(57d-2, input_energy)
+!allocate(input_energy(10*size(dispersion)), DOS(10*size(dispersion)))
+call read_params_DOS('input')
+call init_Evector_DOS(input_energy)
+call compute_DOS(dispersion, input_energy, DOS, N_cell)
+!do i=1, N_cell
+!    write(*,*) 'all_mode(', i, ')%w(:) = ', all_mode(i)%w(:)
+!    write(*,*) 'my_lattice%dim_mode = ', my_lattice%dim_mode
+!    write(*,*) ''
+!    write(*,*) ''
+!enddo
+call check_norm_wavefct(all_mode, my_lattice%dim_mode)
 
-    io=open_file_write('dispersion_energy.txt')
-    do i=1,nb_kpoints
-      write(io,'(2(f16.10,2x))') real(dispersion(i)),aimag(dispersion(i))
-    enddo
-    call close_file('dispersion_energy.txt',io)
-    io=open_file_write('input_energy_DOS.txt')
-    do i=1,size(input_energy)
-      write(io,'(2(f16.10,2x))') real(input_energy(i)),aimag(input_energy(i))
-    enddo
-    call close_file('input_energy_DOS.txt',io)
-    call compute_DOS(dispersion, input_energy, DOS)
-    io=open_file_write('DOS.txt')
-    do i=1,size(DOS)
-      write(io,'(2(f16.10,2x))') real(DOS(i)),aimag(DOS(i))
-    enddo
-    call close_file('DOS.txt',io)
+io=open_file_write('dispersion_energy.txt')
+do i=1,nb_kpoints
+  write(io,'(2(f16.10,2x))') real(dispersion(i)),aimag(dispersion(i))
+enddo
+call close_file('dispersion_energy.txt',io)
+io=open_file_write('input_energy_DOS.txt')
+do i=1,size(input_energy)
+  write(io,'(2(f16.10,2x))') real(input_energy(i)),aimag(input_energy(i))
+enddo
+call close_file('input_energy_DOS.txt',io)
+io=open_file_write('DOS.txt')
+do i=1,size(DOS)
+  write(io,'(2(f16.10,2x))') real(DOS(i)),aimag(DOS(i))
+enddo
+call close_file('DOS.txt',io)
 !To get an easy processing with gnuplot, use
 !paste kpoints data.txt | awk '{print $1 " " $4}' > dispersion.txt
 

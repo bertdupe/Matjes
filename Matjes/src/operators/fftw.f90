@@ -190,7 +190,7 @@ module m_fftw
                     get_FFT_vec_point(k)=get_FFT_vec_point(k)+complex(field(j)%w(k)*cos(sense*phase),field(j)%w(k)*sin(sense*phase))
                 enddo
             enddo
-            get_FFT_vec_point=get_FFT_vec_point/real(Nsize)
+            get_FFT_vec_point=get_FFT_vec_point/sqrt(real(Nsize))
         end function get_FFT_vec_point
 
 

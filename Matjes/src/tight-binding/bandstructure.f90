@@ -77,7 +77,7 @@ module m_bandstructure
             integer :: i
 
             do i=1, size(in_en)
-                in_en(i) = complex( (i-1)*2.5*fermi_energy/(size(in_en)-1), 0.0d0)
+                in_en(i) = complex( (i-1)*0.75*fermi_energy/(size(in_en)-1), 0.0d0)
             enddo
         end subroutine initiate_input_E
 
@@ -93,25 +93,27 @@ module m_bandstructure
         !   _ in_en: array of energy values for the DOS
         ! Output:
         !   _ DOS: DOS of the system
-        subroutine compute_DOS(disp_en, in_en, DOS)
-            implicit none
-            complex(kind=16), intent(in) :: disp_en(:), in_en(:)
-            complex(kind=16), intent(inout) :: DOS(:)
-
-            ! Internal variables
-            integer :: i, j, nb_E_levels
-            real(kind=8) :: dE, sigma
-
-            sigma=1.0d-2
-
-            do i=1, size(disp_en)
-                do j=1, size(in_en)
-!                    if ( (real(in_en(j))-dE.le.real(disp_en(i))) .and. (real(in_en(j))+dE.ge.real(disp_en(i))) ) DOS(j)=DOS(j)+1
-                    if( ((real(in_en(j)) .le. 1.1*real(disp_en(i)*exp( -((in_en(j)-disp_en(i))**2)/(2*sigma**2)))))\
-                            .and.\
-                            ((real(in_en(j)).ge.real(0.9*disp_en(i)*exp( -((in_en(j)-disp_en(i))**2)/(2*sigma**2))))) )\
-                            DOS(j)=DOS(j)+1
-                enddo
-            enddo
-        end subroutine compute_DOS
+!        subroutine compute_DOS(disp_en, in_en, DOS, N_cell)
+!            implicit none
+!            integer, intent(in) :: N_cell
+!            complex(kind=16), intent(in) :: disp_en(:), in_en(:)
+!            complex(kind=16), intent(inout) :: DOS(:)
+!
+!            ! Internal variables
+!            integer :: i, j, nb_E_levels
+!            real(kind=8) :: dE, sigma
+!
+!            sigma=1.0d-2
+!
+!            do i=1, size(disp_en)
+!                do j=1, size(in_en)
+!!                    if ( (real(in_en(j))-dE.le.real(disp_en(i))) .and. (real(in_en(j))+dE.ge.real(disp_en(i))) ) DOS(j)=DOS(j)+1
+!                    if( ((real(in_en(j)) .le. 1.3*real(disp_en(i)*exp( -((in_en(j)-disp_en(i))**2)/(2*sigma**2)))))\
+!                            .and.\
+!                            ((real(in_en(j)).ge.real(0.7*disp_en(i)*exp( -((in_en(j)-disp_en(i))**2)/(2*sigma**2))))) )\
+!                            DOS(j)=DOS(j)+1
+!                enddo
+!            enddo
+!            DOS = DOS/cmplx(N_cell, kind=16)
+!        end subroutine compute_DOS
 end module m_bandstructure
