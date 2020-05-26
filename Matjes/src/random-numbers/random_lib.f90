@@ -37,6 +37,7 @@ END FUNCTION
 FUNCTION rand_normal(mean,stdev) RESULT(c)
 implicit none
 real(kind=8) :: mean,stdev,c,temp(2),r,theta
+c=0.0d0
 IF(stdev <= 0.0d0) THEN
 
   WRITE(*,*) "Standard Deviation must be +ve"
@@ -54,6 +55,7 @@ END FUNCTION
 FUNCTION rand_exponential(mean) RESULT(c)
 implicit none
 real(kind=8) :: mean,c,temp
+c=0.0d0
 IF (mean <= 0.0d0) THEN
 
    WRITE(*,*) "mean must be positive"

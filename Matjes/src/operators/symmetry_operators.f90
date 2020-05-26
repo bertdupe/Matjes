@@ -332,7 +332,7 @@ real(kind=8), intent(in) :: H_in(:,:)
 real(kind=8), intent(inout) :: H_out(:,:)
 ! internal
 integer :: i,j,shape_H(2),l,m,n,o
-real(kind=8) :: H_in_local(3,3),H_dum(3,3)
+real(kind=8) :: H_dum(3,3)
 real(kind=8), allocatable :: test(:,:,:),test_out(:,:,:),sym_mat(:,:)
 integer :: n_sym
 

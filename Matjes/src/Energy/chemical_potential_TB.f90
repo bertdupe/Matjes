@@ -24,6 +24,9 @@ module m_chem_pot_TB
             integer :: i, j, x_start, x_end
             real(kind=8), allocatable :: chem_pot_local(:)
             
+            x_start=-1
+            x_end=-1
+
             do i=1, size(my_order_parameters)
                 if (my_order_parameters(i)%name.eq.'Tight-binding') then
                     x_start=my_order_parameters(i)%start
