@@ -33,6 +33,7 @@ neighbor_exch_antisym=0
 exchange%name='exchange'
 exchange%N_shell=-1
 exchange%order=2
+exch_local_sym=0.0d0
 
 io_param=open_file_read(fname)
 call get_parameter(io_param,fname,'c_Jij',exchange%c_ham)

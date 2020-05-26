@@ -87,6 +87,10 @@ if (i_dip) E_int=E_int+get_dipole_E(iomp)
 
 end subroutine local_energy_optimized
 
+
+
+
+
 subroutine get_E_matrix(dim_mode)
 use m_energy_commons, only : energy
 implicit none
