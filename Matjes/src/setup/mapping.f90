@@ -24,7 +24,7 @@ type(cell), intent(in) :: my_motif
 real(kind=8), intent(in) :: tabledist(:,:)
 integer, intent(in) :: N_Nneigh,indexNN(:,:)
 ! internal
-integer :: phase,Nei_il,Nei_z,shape_tabdist(2),i,j
+integer :: phase,Nei_il,Nei_z,shape_tabdist(2)
 
 shape_tabdist=shape(tabledist)
 phase=1

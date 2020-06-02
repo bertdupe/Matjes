@@ -115,7 +115,6 @@ qeulerm=0.0d0
 
 E_sum=E_sum+E
 E_sq_sum=E_sq_sum+E**2
-
 ! calculate the topocharge
 dumy=get_charge()
 qeulerp=dumy(1)

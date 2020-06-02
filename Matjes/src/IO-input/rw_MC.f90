@@ -5,12 +5,12 @@ public :: rw_MC
 
 contains
 
-subroutine rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
+subroutine rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
 use m_constants, only : pi
 use m_io_utils
 use m_io_files_utils
 implicit none
-integer, intent(out) :: n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto
+integer, intent(out) :: n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto,Total_MC_Steps
 real(kind=8), intent(out) :: cone
 logical, intent(out) :: i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log
 ! internal
@@ -31,6 +31,7 @@ underrel=.False.
 Cor_log=.False.
 T_relax=1
 T_auto=1
+Total_MC_Steps=1000
 
 io_input=open_file_read('input')
 
@@ -38,6 +39,7 @@ call get_parameter(io_input,'input','n_Tsteps',n_Tsteps)
 call get_parameter(io_input,'input','n_sizerelax',n_sizerelax)
 call get_parameter(io_input,'input','n_relaxation',n_thousand)
 call get_parameter(io_input,'input','restart_MC_steps',restart_MC_steps)
+call get_parameter(io_input,'input','Total_MC_Steps',Total_MC_Steps)
 call get_parameter(io_input,'input','T_relax',T_relax)
 call get_parameter(io_input,'input','T_auto',T_auto)
 

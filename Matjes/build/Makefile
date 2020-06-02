@@ -2,7 +2,7 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f
 
-OBJS = random_lib.o exchange_tight_binding.o chemical_potential_TB.o \
+OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o exchange_tight_binding.o chemical_potential_TB.o \
  total_Hamiltonian_TB.o envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
@@ -46,6 +46,10 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+tbessk.o:
+tbessj.o:
+tbessy.o:
+summerfeld_exp.o: tbessk.o tbessj.o tbessy.o Table_dist.o symmetry_operators.o convert.o create_lattice.o Hamiltonian_variables.o io_files_utils.o io-utils.o
 random_lib.o:
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
@@ -147,8 +151,8 @@ InitSpin.o: get-random.o initial-configuration.o IO-modes.o get-position.o creat
 createSpinFile.o: rw_lattice.o constant.o inp_rw.o
 computeDM.o: main.o
 forces.o: derivative.o
-rw_lattice.o: io-utils.o vector.o derived_types.o create_lattice.o constant.o
-Table_dist.o: user_information.o vector.o derived_types.o
+rw_lattice.o: io_files_utils.o io-utils.o vector.o derived_types.o create_lattice.o constant.o
+Table_dist.o: convert.o user_information.o vector.o derived_types.o
 spstm.o: rw_lattice.o create_lattice.o vector.o
 setup_DM.o: sym_utils.o vector.o derived_types.o Table_dist.o pointgrp.o
 create_lattice.o: derived_types.o

@@ -427,8 +427,6 @@ call find_position(name_int,my_order_parameters,positions_int)
 x_start=minval(positions_int)
 x_end=maxval(positions_int)
 
-if (((x_end-x_start+1)/3).ne.size(positions_int,2)) stop 'ERROR in couplage_ME - data not contiguous'
-
 n_mode_ext=find_n_mode(name_ext,my_order_parameters)
 allocate(positions_ext(2,n_mode_ext))
 positions_ext=0
@@ -437,8 +435,6 @@ call find_position(name_ext,my_order_parameters,positions_ext)
 
 y_start=minval(positions_ext)
 y_end=maxval(positions_ext)
-
-if (((y_end-y_start+1)/3).ne.size(positions_ext,2)) stop 'ERROR in couplage_ME - data not contiguous'
 
 end subroutine
 

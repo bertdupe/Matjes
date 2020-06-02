@@ -129,7 +129,7 @@ DE=E_new-E_old
 ! candidate for the spin
 !---------------------------------------------------
 
-! End of the boradcast
+! End of the broadcast
 #ifdef CPP_MPI
 if ((.not.i_separate).and.(.not.i_average).and.(.not.i_ghost)) then
 
@@ -204,8 +204,7 @@ real(kind=8) :: choice, tmp
 logical :: accept
 
 accept=.False.
-write(*,*) kt
-pause
+
 ! security in case kt is 0
 if (kt.gt.1.0d-10) then
 !       Calculate the probability of this flip

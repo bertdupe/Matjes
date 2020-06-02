@@ -41,7 +41,7 @@ integer,allocatable :: image_temp(:)  ! contains the POSITION of temperatures
 ! slope of temperature sets
 integer :: j_optset
 ! size of the world
-integer :: world
+integer :: world,total_MC_steps
 ! slope of the MC
 integer :: i_MC,i_relax,i_pos
 real(kind=8) :: pos
@@ -94,7 +94,7 @@ type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
 #endif
 
 ! initialized the size of the tables
-call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
+call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,total_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
 size_table=n_Tsteps
 world=size(my_lattice%world)
 N_cell=product(shape(my_lattice%l_modes))
