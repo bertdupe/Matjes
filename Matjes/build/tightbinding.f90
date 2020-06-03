@@ -45,9 +45,15 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8) :: sense
     ! array containing all the positions in the lattice
     real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
+    ! Etot gives the total energy contained in the system
+    real(kind=8) :: Etot, kt
+    ! eps_nk is a vector containing all the eigenvalues
+    real(kind=8), allocatable :: eps_nk(:)
 
     complex(kind=16), allocatable :: dispersion(:), input_energy(:), DOS(:)
     integer :: io, i, nb_kpoints
+
+    kt=0.0d0
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
@@ -103,7 +109,17 @@ call check_norm_wavefct(all_mode, my_lattice%dim_mode)
 !enddo
 !call close_file('DOS.txt',io)
 call rewrite_H_k(my_lattice%dim_mode)
-!To get an easy processing with gnuplot, use
-!paste kpoints data.txt | awk '{print $1 " " $4}' > dispersion.txt
+
+!The function "diagonalise_H_k" in file energy_k.f90 diagonalises the Hamiltonian
+!for a given k-vector (it calls the function "Fourier_transform_H" inside)
+!==> we need to loop over all the k-vectors to have the eigenenergies for
+!all wavevectors
+!do i = 1, nb_kpoints
+!    call diagonalise_H_k(i, pos, my_lattice%dim_mode, -1.0d0)
+!enddo
+allocate( eps_nk(N_cell) )
+Etot = 0.0d0
+call compute_Etot(Etot, input_energy, eps_nk, kt)
+deallocate( eps_nk )
 
 end subroutine tightbinding

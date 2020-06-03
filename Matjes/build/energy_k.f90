@@ -8,7 +8,7 @@ module m_energy_k
     complex(kind=16), allocatable, dimension(:,:) :: all_E_k
 
     private
-    public :: rewrite_H_k, diagonalise_H_k
+    public :: rewrite_H_k, diagonalise_H_k, fermi_distrib, compute_Etot
     contains
         subroutine rewrite_H_k(dim_mode)
             implicit none
@@ -46,7 +46,6 @@ module m_energy_k
 !write(*,*) ''
                 enddo
             enddo
-            write(*,*) all_E_k
         end subroutine rewrite_H_k
 
 
@@ -82,10 +81,22 @@ module m_energy_k
             allocate( W(N), VL(N,N), VR(N,N), WORK(4*N) )
 
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
-!            call CGEEV('N', 'V', N, get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense), LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
+            call CGEEV('N', 'V', N, get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense), LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
 
             deallocate( W, VL, VR, WORK )
         end subroutine diagonalise_H_k
+
+
+
+        ! Function implementing the FD distribution for a given energy
+        real(kind=8) function fermi_distrib(E, energy, kt)
+            implicit none
+            real(kind=8) :: E(:)
+            real(kind=8) :: kt
+            real(kind=8) :: energy, fermi_distrib
+
+            fermi_distrib = 1.0/( 1.0 + exp((E-energy)/kt )
+        end function fermi_distrib
 
 
 
@@ -94,8 +105,24 @@ module m_energy_k
         !   sum_{n,k} f_{FD}(epsilon_{n,k}) epsilon_{n,k}
         ! where epsilon_{n,k} are the eigenenergies and f_{FD} is the
         ! Fermi-Dirac distribution corresponding to that energy.
-        subroutine compute_Etot( eps_nk )
+        ! Input:
+        !   _ E is the energy vector
+        !   _ eps_nk is the vector containing all the eigenvalues
+        !   _ Etot is the total energy contained in the system
+        ! Output:
+        !   _ Etot is the total energy contained in the system
+        subroutine compute_Etot( Etot, E, eps_nk , kt)
             implicit none
-            real(kind=8), intent(in) :: eps_nk
+            real(kind=8), intent(in) :: eps_nk(:), kt
+            real(kind=8), intent(inout) :: Etot
+
+            ! Internal variable
+            integer :: i
+
+            do i=1, size(eps_nk)
+                Etot = Etot + eps_nk(i)*fermi_distrib(E, eps_nk(i), kt)
+            enddo
+
         end subroutine compute_Etot
+
 end module m_energy_k

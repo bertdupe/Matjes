@@ -89,12 +89,13 @@ module m_energy_k
 
 
         ! Function implementing the FD distribution for a given energy
-        real(kind=8) function fermi_distrib(E, energy)
+        real(kind=8) function fermi_distrib(E, energy, kt)
             implicit none
             real(kind=8) :: E(:)
+            real(kind=8) :: kt
             real(kind=8) :: energy, fermi_distrib
 
-            fermi_distrib = 1.0/( 1.0 + exp((E-energy)/(k*T)) )
+            fermi_distrib = 1.0/( 1.0 + exp((E-energy)/kt )
         end function fermi_distrib
 
 
@@ -110,16 +111,18 @@ module m_energy_k
         !   _ Etot is the total energy contained in the system
         ! Output:
         !   _ Etot is the total energy contained in the system
-        subroutine compute_Etot( Etot, E, eps_nk )
+        subroutine compute_Etot( Etot, E, eps_nk , kt)
             implicit none
-            real(kind=8), intent(in) :: eps_nk(:)
+            real(kind=8), intent(in) :: eps_nk(:), kt
             real(kind=8), intent(inout) :: Etot
 
             ! Internal variable
             integer :: i
 
             do i=1, size(eps_nk)
-                Etot = Etot + eps_nk(i)*fermi_distrib(E, eps_nk(i))
+                Etot = Etot + eps_nk(i)*fermi_distrib(E, eps_nk(i), kt)
             enddo
+
         end subroutine compute_Etot
+
 end module m_energy_k

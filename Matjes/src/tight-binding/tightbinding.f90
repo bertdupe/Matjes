@@ -46,12 +46,14 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! array containing all the positions in the lattice
     real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
     ! Etot gives the total energy contained in the system
-    real(kind=8) :: Etot
+    real(kind=8) :: Etot, kt
     ! eps_nk is a vector containing all the eigenvalues
     real(kind=8), allocatable :: eps_nk(:)
 
     complex(kind=16), allocatable :: dispersion(:), input_energy(:), DOS(:)
     integer :: io, i, nb_kpoints
+
+    kt=0.0d0
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
@@ -117,7 +119,7 @@ call rewrite_H_k(my_lattice%dim_mode)
 !enddo
 allocate( eps_nk(N_cell) )
 Etot = 0.0d0
-call compute_Etot(Etot, input_energy, eps_nk)
+call compute_Etot(Etot, input_energy, eps_nk, kt)
 deallocate( eps_nk )
 
 end subroutine tightbinding
