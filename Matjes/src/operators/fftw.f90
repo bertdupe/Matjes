@@ -284,7 +284,6 @@ module m_fftw
         !   _ n_lines: non-zero elements in all_E_k
         !   _ pos: vector containing the position of all non-zero elements in the Hamiltonian
         !   _ pos_k: position in the kmesh of the k-vector needed in the Fourier transform
-        !   _ size_all_vectors:
         !   _ dim_mode: length of the order parameter
         !   _ sense: gives the sense of the transform (-1.0d0 ==> direct, +1.0d0 ==> indirect)
         ! Output:
@@ -294,7 +293,8 @@ module m_fftw
             implicit none
             integer :: pos_k, dim_mode
             real(kind=8) :: pos(:, :), sense !pos is the array of all r-r'
-            complex(kind=16) :: all_E_k(:, :), Fourier_transform_H(:, :)
+            complex(kind=16) :: all_E_k(:, :)
+            complex(kind=16) :: Fourier_transform_H( size(all_E_k, 1), size(all_E_k, 2) )
 
             ! Internal variable
             integer :: i, j, nblines_n_lines, nbcols_n_lines
@@ -313,6 +313,7 @@ module m_fftw
                 enddo
             enddo
             Fourier_transform_H = all_E_k
+write(*,*) Fourier_transform_H
         end function Fourier_transform_H
 
 

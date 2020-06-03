@@ -26,21 +26,76 @@ module m_energy_k
             do i=1, N_cells
                 do j=1, N_neighbours
                     k = energy%line(j, i) ! "k" is the index in the vector of the "j" non-zero Hamiltonian for site "i"
-
                     ! energy%value(1,k)%order_op(1)%Op_loc corresponds to the onsite
                     ! energy%value(2,k)%order_op(1)%Op_loc corresponds to the first neighbour
                     ! energy%value(3,k)%order_op(1)%Op_loc corresponds to the second neighbour
                     ! etc.
                     ! This means that the first argument in "value" corresponds to the shell
-                    all_E_k( (k-1)*dim_mode+1:k*dim_mode, (i-1)*dim_mode+1:i*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
+                    ! The matrix all_E_k will have the structure
+                    !   [H0 H1 H2 0 .......... 0 H2 H1]
+                    !   [H1 H0 H1 H2 0 .......... 0 H2]
+                    !   [.............................]
+                    !   [.............................]
+                    !   [.............................]
+                    !   [H1 H2 0 ...........0 H2 H1 H0]
+!                    all_E_k( (k-1)*dim_mode+1:k*dim_mode, (i-1)*dim_mode+1:i*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
+                    all_E_k( (i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
+!write(*,*) 'all_E_k(', (i-1)*dim_mode+1, ':', i*dim_mode, ',', (k-1)*dim_mode+1, ':', k*dim_mode, ') = ', all_E_k( (i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode )
+!write(*,*) ''
+!write(*,*) ''
+!write(*,*) ''
                 enddo
             enddo
+            write(*,*) all_E_k
         end subroutine rewrite_H_k
 
 
 
-        subroutine diagonalise_H_k()
+        subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense)
             implicit none
-            call Fourier_transform_H(all_E_k)
+            integer :: kvector_pos, dim_mode
+            real(kind=8) :: sense
+            real(kind=8), intent(in) :: pos(:,:)
+
+            ! Internal variable
+            integer :: i
+
+            ! JOBVL: left eigenvec of A are computed ('V') or not ('N')
+            ! JOBVR: right eigenvec of A are computed ('V') or not ('N')
+            ! N: order of matrix A
+            ! A: N-by-N input matrix. Is overwritten at output
+            ! LDA: leading dimension of A
+            ! W: eigenvalues of A
+            ! VL: left eigenvec if JOVL is 'V'. Not referenced otherwise
+            ! LDVL: leading dimension of array VL
+            ! VR: right eigenvec if JOVL is 'V'. Not referenced otherwise
+            ! LDVR: leading dimension of array VR
+            ! WORK: ???
+            ! LWORK: dimension of array WORK
+            ! RWORK: real array of dimension 2*N
+            ! INFO: computation information
+            ! CGEEV(JOBVL, JOBVR, N, A, LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
+            integer :: N, LDA, LDVL, LDVR, LWORK, RWORK, INFO
+            complex(kind=16), allocatable :: W(:), VL(:,:), VR(:,:), WORK(:)
+
+            N = size(all_E_k, 1)
+            allocate( W(N), VL(N,N), VR(N,N), WORK(4*N) )
+
+            ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
+!            call CGEEV('N', 'V', N, get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense), LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
+
+            deallocate( W, VL, VR, WORK )
         end subroutine diagonalise_H_k
+
+
+
+        ! Subroutine computing the total energy contained in the system
+        ! The total energy contained in the system is given by
+        !   sum_{n,k} f_{FD}(epsilon_{n,k}) epsilon_{n,k}
+        ! where epsilon_{n,k} are the eigenenergies and f_{FD} is the
+        ! Fermi-Dirac distribution corresponding to that energy.
+        subroutine compute_Etot( eps_nk )
+            implicit none
+            real(kind=8), intent(in) :: eps_nk
+        end subroutine compute_Etot
 end module m_energy_k
