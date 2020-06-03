@@ -35,37 +35,39 @@ use m_io_files_utils
 use m_io_utils
 implicit none
 integer :: io
+character(len=30) :: fname
 
+fname='input'
 !    character(len=1) :: OPT_flag_str, ip_adapt_flag_str, OPT_printcores_flag_str
 
-io=open_file_read('GNEB.in')
+io=open_file_read(fname)
 
-call get_parameter(io,'GNEB.in','momfile_i',momfile_i)
-call get_parameter(io,'GNEB.in','momfile_f',momfile_f)
-call get_parameter(io,'GNEB.in','restartfile_if',restartfile_if)
-call get_parameter(io,'GNEB.in','restartfile_path',restartfile_path)
+call get_parameter(io,fname,'momfile_i',momfile_i)
+call get_parameter(io,fname,'momfile_f',momfile_f)
+call get_parameter(io,fname,'restartfile_if',restartfile_if)
+call get_parameter(io,fname,'restartfile_path',restartfile_path)
 
-call get_parameter(io,'GNEB.in','spring',spring)
-call get_parameter(io,'GNEB.in','initpath',initpath)
-call get_parameter(io,'GNEB.in','amp_rnd',amp_rnd)
-call get_parameter(io,'GNEB.in','amp_rnd_path',amp_rnd_path)
-call get_parameter(io,'GNEB.in','min_itrmax',minitrmax)
-call get_parameter(io,'GNEB.in','mintraj_step',mintraj_step)
-call get_parameter(io,'GNEB.in','min_ftol',minftol)
-call get_parameter(io,'GNEB.in','mep_itrmax',mepitrmax)
-call get_parameter(io,'GNEB.in','meptraj_step',meptraj_step)
-call get_parameter(io,'GNEB.in','mep_ftol',mepftol)
-call get_parameter(io,'GNEB.in','mep_ftol_ci',mepftol_ci)
-call get_parameter(io,'GNEB.in','io_do_gneb',do_gneb)
-call get_parameter(io,'GNEB.in','do_gneb_ci',do_gneb_ci)
-call get_parameter(io,'GNEB.in','do_norm_rx',do_norm_rx)
-call get_parameter(io,'GNEB.in','en_zero',en_zero)
-call get_parameter(io,'GNEB.in','vpo_dt',vpodt)
-call get_parameter(io,'GNEB.in','vpo_mass',vpomass)
-call get_parameter(io,'GNEB.in','sample_num',sample_num)
-call get_parameter(io,'GNEB.in','nim',nim)
+call get_parameter(io,fname,'spring',spring)
+call get_parameter(io,fname,'initpath',initpath)
+call get_parameter(io,fname,'amp_rnd',amp_rnd)
+call get_parameter(io,fname,'amp_rnd_path',amp_rnd_path)
+call get_parameter(io,fname,'min_itrmax',minitrmax)
+call get_parameter(io,fname,'mintraj_step',mintraj_step)
+call get_parameter(io,fname','min_ftol',minftol)
+call get_parameter(io,fname','mep_itrmax',mepitrmax)
+call get_parameter(io,fname,'meptraj_step',meptraj_step)
+call get_parameter(io,fname,'mep_ftol',mepftol)
+call get_parameter(io,fname,'mep_ftol_ci',mepftol_ci)
+call get_parameter(io,fname,'io_do_gneb',do_gneb)
+call get_parameter(io,fname,'do_gneb_ci',do_gneb_ci)
+call get_parameter(io,fname,'do_norm_rx',do_norm_rx)
+call get_parameter(io,fname,'en_zero',en_zero)
+call get_parameter(io,fname,'vpo_dt',vpodt)
+call get_parameter(io,fname,'vpo_mass',vpomass)
+call get_parameter(io,fname,'sample_num',sample_num)
+call get_parameter(io,fname,'nim',nim)
 
-call close_file('GNEB.in',io)
+call close_file(fname,io)
 
 end subroutine read_gneb_parameters
 
