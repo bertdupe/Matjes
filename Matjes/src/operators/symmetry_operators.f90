@@ -332,7 +332,7 @@ real(kind=8), intent(in) :: H_in(:,:)
 real(kind=8), intent(inout) :: H_out(:,:)
 ! internal
 integer :: i,j,shape_H(2),l,m,n,o
-real(kind=8) :: H_in_local(3,3),H_dum(3,3)
+real(kind=8) :: H_dum(3,3)
 real(kind=8), allocatable :: test(:,:,:),test_out(:,:,:),sym_mat(:,:)
 integer :: n_sym
 
@@ -427,8 +427,6 @@ call find_position(name_int,my_order_parameters,positions_int)
 x_start=minval(positions_int)
 x_end=maxval(positions_int)
 
-if (((x_end-x_start+1)/3).ne.size(positions_int,2)) stop 'ERROR in couplage_ME - data not contiguous'
-
 n_mode_ext=find_n_mode(name_ext,my_order_parameters)
 allocate(positions_ext(2,n_mode_ext))
 positions_ext=0
@@ -437,8 +435,6 @@ call find_position(name_ext,my_order_parameters,positions_ext)
 
 y_start=minval(positions_ext)
 y_end=maxval(positions_ext)
-
-if (((y_end-y_start+1)/3).ne.size(positions_ext,2)) stop 'ERROR in couplage_ME - data not contiguous'
 
 end subroutine
 

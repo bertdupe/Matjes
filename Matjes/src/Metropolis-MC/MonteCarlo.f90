@@ -16,6 +16,8 @@ use m_topo_commons
 use m_convert
 use m_io_files_utils
 use m_operator_pointer_utils
+use m_eval_Beff
+use m_MCstep
 
       use m_Corre
       use m_check_restart
@@ -41,7 +43,7 @@ type(simulation_parameters), intent(in) :: ext_param
 ! internal variables
 !!!!!!!!!!!!!!!!!!!!!!!
 ! slope of the MC
-integer :: i_relax,n_kT,n_MC,T_relax,restart_MC_steps,T_auto,N_cell,n_sizerelax,n_thousand,n_Tsteps,nb,size_table,Total_MC_Steps
+integer :: i_relax,n_kT,n_MC,T_relax,restart_MC_steps,T_auto,N_cell,n_sizerelax,n_thousand,n_Tsteps,size_table,Total_MC_Steps
 ! variable for the temperature
 real(kind=8) :: kT,kTini,kTfin
 ! variables that being followed during the simulation
@@ -58,15 +60,15 @@ real(kind=8),allocatable :: M_sq_sum_av(:,:),E_sum_av(:),E_sq_sum_av(:),Q_sq_sum
 real(kind=8),allocatable :: E_av(:),qeulerp_av(:),qeulerm_av(:),kt_all(:),M_av(:,:)
 real(kind=8),allocatable :: M_sum_av(:,:),vortex_av(:,:),chi_l(:,:)
 ! variable for the convergence of the MC
-real(kind=8) :: acc,rate,tries,cone
+real(kind=8) :: acc,rate,tries,cone,nb
 integer :: i
-logical :: underrel,overrel,sphere,equi,i_restart,ising,print_relax,Cor_log,Gra_log,i_magnetic,i_print_W,spstmL
+logical :: underrel,overrel,sphere,equi,i_restart,ising,print_relax,Cor_log,Gra_log,i_magnetic,i_print_W,spstmL,i_temperature
 
 type(vec_point),allocatable,dimension(:) :: all_mode
-type(vec_point),allocatable,dimension(:) :: mode_magnetic
+type(vec_point),allocatable,dimension(:) :: mode_magnetic,mode_temp
 
 ! initialize the variables
-call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
+call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
 size_table=n_Tsteps
 
 #ifdef CPP_MPI
@@ -120,17 +122,34 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
+! temperature
+do i=1,size(my_order_parameters)
+  if ('temperature'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_temp(N_cell))
+   call dissociate(mode_temp,N_cell)
+   call associate_pointer(mode_temp,all_mode,'temperature',i_temperature)
+
+   exit
+  endif
+enddo
+
+call get_E_matrix(my_lattice%dim_mode)
+call get_B_matrix(my_lattice%dim_mode)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! associate pointer for the topological charge, vorticity calculations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+call get_size_Q_operator(my_lattice)
+call associate_Q_operator(all_mode,my_lattice%boundary,shape(my_lattice%l_modes))
+
 !ktini=ext_param%ktini%value
 !ktfin=ext_param%ktfin%value
 ! initializing the variables above
 
 E_total=total_energy(N_cell,all_mode)
 
-dumy=get_charge()
-qeulerp=dumy(1)
-qeulerm=dumy(2)
-vortex=dumy(3:5)
-
+call CalculateAverages(mode_magnetic,qeulerp,qeulerm,vortex,Magnetization)
 
 ! Measured data
 E_av=0.0d0
@@ -156,6 +175,7 @@ M_av=0.0d0
 acc=0.0d0
 rate=0.0d0
 tries=0.0d0
+nb=0.0d0
 
 ! initialize the temperatures
 #ifdef CPP_MPI
@@ -165,37 +185,43 @@ call ini_temp(kt_all,kTfin,kTini,size_table,i_print_W)
 #endif
 
 
+write(6,'(/a)') 'Initialization done'
+write(6,'(2(a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', qeulerp+qeulerm
+write(6,'(a/)') '---------------------'
+
 Do n_kT=1,n_Tsteps
 
-kt=kt_all(n_kT)
+  kt=kt_all(n_kT)
+!  do i=1,N_cell
+!     mode_temp(i)%w=kt
+!  enddo
+!  call get_E_matrix(my_lattice%dim_mode,kt/k_b)
 
-call Relaxation(mode_magnetic,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
+  call Relaxation(all_mode,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
 
 !       Monte Carlo steps, calculate the values
 
-   do n_MC=1+restart_MC_steps,Total_MC_Steps+restart_MC_steps
+    do n_MC=1+restart_MC_steps,Total_MC_Steps+restart_MC_steps
 
 !         Monte Carlo steps for independency
 
-      Do i_relax=1,T_auto*N_cell
+       Do i_relax=1,T_auto*N_cell
 
-         Call MCstep(mode_magnetic,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+          Call MCstep(all_mode,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
-      End do
+       End do
 
-      Call MCstep(mode_magnetic,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+       Call MCstep(all_mode,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
 ! Calculate the topological charge and the vorticity
-      dumy=get_charge()
-      qeulerp_av(n_kT)=qeulerp_av(n_kT)+dumy(1)
-      qeulerm_av(n_kT)=qeulerm_av(n_kT)+dumy(2)
-      vortex_av(:,n_kT)=vortex_av(:,n_kT)+dumy(3:5)
-
+       dumy=get_charge()
+       qeulerp_av(n_kT)=qeulerp_av(n_kT)+dumy(1)
+       qeulerm_av(n_kT)=qeulerm_av(n_kT)+dumy(2)
+       vortex_av(:,n_kT)=vortex_av(:,n_kT)+dumy(3:5)
 
 ! CalculateAverages makes the averages from the sums
-      Call CalculateAverages(qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
+       Call CalculateAverages(qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
                 &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),E_total,Magnetization)
-
 !      if (Cor_log) chi_l(:,n_kT)=chi_l(:,n_kT)+Correlation(spin_sum,spin(4:6,:,:,:,:),shape_spin,n_MC,dble(N_cell))
 
 
@@ -254,13 +280,6 @@ call Relaxation(mode_magnetic,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_de
 !
 !      Call EnergyDensity(fname,fname2,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index)
 !   endif
-
-!CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-! Calcul of the fft
-!CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-#ifndef CPP_MPI
-!        if (gra_fft) call fft(shape_spin(2:4),kT)
-#endif
 
   Write(6,'(I6,a,I6,a,f8.4,a,/)')  n_kT, ' nd step out of ', n_Tsteps,' steps. T=', kT/k_B,' Kelvin'
 
@@ -334,7 +353,7 @@ endif
 ! write the data into a file
 do i=1,n_Tsteps
    Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(Total_MC_Steps+restart_MC_steps), &
-     &             M_sum_av(:,i), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
+     &             M_sum_av(:,i)/N_cell/(Total_MC_Steps+restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
      &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
 enddo
 

@@ -7,6 +7,10 @@ interface local_energy
   module procedure  local_energy_pointer,local_energy_optimized
 end interface
 
+interface get_E_matrix
+  module procedure  get_E_matrix_normal,get_E_matrix_T
+end interface
+
 ! all vectors on one line (must be updated at each line)
 real(kind=8), allocatable, dimension(:) :: all_vectors
 
@@ -87,7 +91,11 @@ if (i_dip) E_int=E_int+get_dipole_E(iomp)
 
 end subroutine local_energy_optimized
 
-subroutine get_E_matrix(dim_mode)
+
+
+
+
+subroutine get_E_matrix_normal(dim_mode)
 use m_energy_commons, only : energy
 implicit none
 integer, intent(in) :: dim_mode
@@ -107,7 +115,26 @@ do i=1,N
    all_E(:,(i-1)*dim_mode+1:i*dim_mode)=transpose(energy%value(i,1)%order_op(1)%Op_loc)
 enddo
 
-end subroutine get_E_matrix
+end subroutine get_E_matrix_normal
+
+subroutine get_E_matrix_T(dim_mode,T)
+use m_energy_commons, only : energy,translator
+implicit none
+integer, intent(in) :: dim_mode
+real(kind=8), intent(in) :: T
+! internal
+integer :: N,i,j
+
+N=size(energy%line(:,1))
+
+! the B_total is always read in the same direction so we can fill it only once
+! one has to do a transpose here
+
+do i=1,N
+   all_E(:,(i-1)*dim_mode+1:i*dim_mode)=transpose(energy%value(i,1)%order_op(1)%Op_loc)+translator(:,:,i)*T**2
+enddo
+
+end subroutine get_E_matrix_T
 
 subroutine kill_E_matrix()
 implicit none

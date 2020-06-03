@@ -25,6 +25,9 @@ module m_exchange_TB
             integer :: x_start, x_end
             real(kind=8), allocatable :: t_local(:)
             
+            x_start=-1
+            x_end=-1
+
 
             ! Multiplicative coefficient
             exc_ham_TB%c_ham=1.0d0
