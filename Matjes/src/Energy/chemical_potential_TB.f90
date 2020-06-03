@@ -17,7 +17,7 @@ module m_chem_pot_TB
             implicit none
             character(len=*), intent(in) :: fname
             integer, intent(in) :: dim_ham
-            
+
             ! Internal variables
             integer :: io_param,chem_pot_count
             character(len=50) :: form
@@ -33,7 +33,7 @@ module m_chem_pot_TB
                     x_end=my_order_parameters(i)%end
                 endif
             enddo
-            
+
             chem_pot_count=TB_params%nb_orbitals
 
             ! Multiplicative coefficient
@@ -63,12 +63,12 @@ module m_chem_pot_TB
 
             allocate(chem_pot_local(x_end-x_start+1))
             chem_pot_local=reshape( TB_params%onsite, (/x_end-x_start+1/) )
-            j=0           
+            j=0
             do i=x_start,x_end
                 j=j+1
                 onsite_ham_TB%ham(1)%H(i,i)=onsite_ham_TB%c_ham*chem_pot_local(j)
             enddo
-            
+
             form=convert('(',dim_ham,'(f12.8,2x))')
             write(6,'(a)') ''
             write(6,'(a)') 'Onsite tight-binding is OK'

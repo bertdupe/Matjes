@@ -80,6 +80,11 @@ N=size(energy%line(:,iomp))
 E_int=0.0d0
 dim_mode=size(all_vectors)/N
 
+!energy%line repr�sente toutes les lignes de H.
+!Dans energy%line, la composante (i,iomp) correspond au voisin i
+!du site iomp.
+!Ici, i correspond aux valeurs non nulles
+!j correspond � tous les voisins (j=1, N_voisins)
 do i=1,N
    j=energy%line(i,iomp)
    all_vectors((i-1)*dim_mode+1:i*dim_mode)=spin(j)%w
@@ -136,12 +141,14 @@ enddo
 
 end subroutine get_E_matrix_T
 
+
+
 subroutine kill_E_matrix()
-implicit none
-
-deallocate(all_vectors,all_E)
-write(6,'(a)') 'Energy matrix deallocated'
-
+    implicit none
+    deallocate(all_vectors,all_E)
+    write(6,'(a)') 'Energy matrix deallocated'
 end subroutine kill_E_matrix
+
+
 
 end module m_local_energy

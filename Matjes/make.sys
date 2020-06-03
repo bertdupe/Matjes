@@ -23,6 +23,10 @@ LDFLAGS= -O4 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,u
 #FFLAGS= -O0 -g -lprofiler -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
 #LDFLAGS= -O0 -g
 
+#BLAS
+#INCLUDES=-I/usr/local/include
+LIBRARIES=-L/usr/local/Cellar/openblas/0.3.9/lib/ -lopenblas
+#FFTW
 #INCLUDES=-I/usr/local/include
 #LIBRARIES= -L/usr/local/lib/ -lfftw3
 
