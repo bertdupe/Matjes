@@ -7,15 +7,15 @@ CC=gcc
 #
 # normal flags
 #
-FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none
-LDFLAGS= -O4
+#FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none
+#LDFLAGS= -O4
 
 #
 #debugging flags
 #
 
-#FFLAGS= -O4 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
-#LDFLAGS= -O4 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none 
+FFLAGS= -O4 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+LDFLAGS= -O4 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none 
 
 #
 # profiling with gprof
