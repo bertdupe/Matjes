@@ -13,6 +13,7 @@ LDFLAGS= -O4
 #
 #debugging flags
 #
+
 #FFLAGS= -O4 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
 #LDFLAGS= -O4 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none 
 
