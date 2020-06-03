@@ -75,28 +75,18 @@ module m_energy_k
             ! INFO: computation information
             ! CGEEV(JOBVL, JOBVR, N, A, LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
             integer :: N, LDA, LDVL, LDVR, LWORK, RWORK, INFO
-            complex(kind=16), allocatable :: W(:), VL(:,:), VR(:,:), WORK(:)
+            complex(kind=16), allocatable :: W(:), VL(:,:), VR(:,:), WORK(:), H_complex(:,:)
 
             N = size(all_E_k, 1)
-            allocate( W(N), VL(N,N), VR(N,N), WORK(4*N) )
-
+            allocate( W(N), VL(N,N), VR(N,N), WORK(4*N), H_complex(N,N))
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
-            call CGEEV('N', 'V', N, get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense), LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
+            H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
+
+            ! diagonalising the Hamiltonian
+            call CGEEV('N', 'V', N, H_complex , LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
 
             deallocate( W, VL, VR, WORK )
         end subroutine diagonalise_H_k
-
-
-
-        ! Function implementing the FD distribution for a given energy
-        real(kind=8) function fermi_distrib(E, energy, kt)
-            implicit none
-            real(kind=8) :: E(:)
-            real(kind=8) :: kt
-            real(kind=8) :: energy, fermi_distrib
-
-            fermi_distrib = 1.0/( 1.0 + exp((E-energy)/kt )
-        end function fermi_distrib
 
 
 
@@ -111,18 +101,71 @@ module m_energy_k
         !   _ Etot is the total energy contained in the system
         ! Output:
         !   _ Etot is the total energy contained in the system
-        subroutine compute_Etot( Etot, E, eps_nk , kt)
+        subroutine compute_Etot( Etot, E, eps_nk , kt, N_electrons)
             implicit none
+            complex(kind=16), intent(in) :: E(:)
+            integer, intent(in) :: N_electrons
             real(kind=8), intent(in) :: eps_nk(:), kt
-            real(kind=8), intent(inout) :: Etot
+            real(kind=8), intent(out) :: Etot
 
             ! Internal variable
             integer :: i
+            real(kind=8) :: fermi_level
 
+!            call compute_Fermi_level(eps_nk, N_electrons, fermi_level, kt)
+
+            Etot=0.0d0
             do i=1, size(eps_nk)
-                Etot = Etot + eps_nk(i)*fermi_distrib(E, eps_nk(i), kt)
+                Etot = Etot + eps_nk(i)*fermi_distrib(fermi_level, eps_nk(i), kt)
             enddo
 
         end subroutine compute_Etot
+
+! Function computing the Fermi energy of the system
+!        subroutine compute_Fermi_level(eps_nk, N_electrons, fermi_level, kt)
+!            use m_sort
+!            implicit none
+!            real(kind=8), intent(out) :: fermi_level
+!            complex(kind=16), intent(in) :: eps_nk(:)
+!            integer, intent(in) :: N_electrons
+!            ! Internal variable
+!            integer :: i,size_ham
+!            real(kind=8) :: precision_Ef, tmp_sum
+!            real(kind=16), allocatable :: eps_nk_real(:)
+!
+!            size_ham=size(eps_nk)
+!            allocate(eps_nk_real(size_ham))
+!            eps_nk_real=real(eps_nk)
+!            eps_nk_real=sort(eps_nk_real)
+!
+!            fermi_level = real(eps_nk_real(1),kind=8)
+!            precision_Ef = 1.0d-3
+!
+!            tmp_sum = 0.0d0
+!            while (abs(tmp_sum-real(N_electrons).)
+!            do i=1, size_ham
+!                tmp_sum = tmp_sum + fermi_distrib(fermi_level, eps_nk(i), kt)
+!            enddo
+!        end subroutine compute_Fermi_level
+
+
+
+
+
+
+        ! Function implementing the FD distribution for a given energy
+        real(kind=8) function fermi_distrib(E_F, energy, kt)
+            implicit none
+            real(kind=8) :: E_F
+            real(kind=8) :: kt
+            real(kind=8) :: energy
+
+            fermi_distrib=0.0d0
+            if (kt.lt.1.0d-8) then
+              if (energy.lt.E_F) fermi_distrib=1.0d0
+            else
+              fermi_distrib = 1.0d0/( 1.0d0 + exp((E_F-energy)/kt ) )
+            endif
+        end function fermi_distrib
 
 end module m_energy_k

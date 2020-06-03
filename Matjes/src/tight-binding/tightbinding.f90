@@ -51,9 +51,10 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8), allocatable :: eps_nk(:)
 
     complex(kind=16), allocatable :: dispersion(:), input_energy(:), DOS(:)
-    integer :: io, i, nb_kpoints
+    integer :: io, i, nb_kpoints, N_electrons
 
     kt=0.0d0
+    N_electrons=0
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
@@ -119,7 +120,7 @@ call rewrite_H_k(my_lattice%dim_mode)
 !enddo
 allocate( eps_nk(N_cell) )
 Etot = 0.0d0
-call compute_Etot(Etot, input_energy, eps_nk, kt)
+call compute_Etot(Etot, input_energy, eps_nk, kt, N_electrons)
 deallocate( eps_nk )
 
 end subroutine tightbinding
