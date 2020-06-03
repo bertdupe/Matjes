@@ -307,6 +307,7 @@ integer :: i
 i=0
 nvariable=0
 length_string=len_trim(var_name)
+n_var_fin=0
 
 rewind(io)
   do
@@ -908,7 +909,7 @@ character(len=*), intent(in) :: fname
 integer :: N
 ! internal
 integer :: ncol,io,i
-character(len=100) :: str
+character(len=400) :: str
 
 ncol=0
 

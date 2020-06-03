@@ -24,6 +24,9 @@ module m_exchange_TB
             integer :: i, j
             integer :: x_start, x_end
             real(kind=8), allocatable :: t_local(:)
+            
+            x_start=-1
+            x_end=-1
 
 
             ! Multiplicative coefficient
@@ -42,6 +45,7 @@ module m_exchange_TB
 
             nb_shell=TB_params%nb_shell
             if (nb_shell.ne.0) exc_ham_TB%i_exist=.true.
+
 
             do i=1, size(my_order_parameters)
                 if (my_order_parameters(i)%name.eq.'Tight-binding') then

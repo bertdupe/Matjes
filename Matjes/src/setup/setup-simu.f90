@@ -22,6 +22,7 @@ use m_io_utils
 use m_dipolar_field
 use m_null
 use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
+use m_summer_exp, only : get_coeff_TStra
 
 #ifdef CPP_MPI
       use m_make_box
@@ -41,7 +42,7 @@ type(cell), intent(out) :: my_motif
 type(simulation_parameters),intent (inout) :: ext_param
 ! variable of the system
 real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
-integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:),masque(:,:,:,:)
+integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:)
 real (kind=8), allocatable :: pos(:,:,:,:,:)
 integer :: tot_N_Nneigh,io
 real(kind=8) :: time
@@ -113,21 +114,23 @@ call create_lattice(my_lattice,my_motif,ext_param,nb_orbitals)
 dim_lat=my_lattice%dim_lat
 n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
 
+! check if you put the Strasbourg temperature
+call get_coeff_TStra(my_lattice,my_motif)
+
 ! setup the Hamiltonian of the system
 ! One need the dimension of the order parameter before the hamiltonians can be created
 call get_Hamiltonians('input',my_motif%atomic(1)%moment,my_lattice%dim_mode)
 
 N_Nneigh=get_number_shell()
 
-allocate(indexNN(N_Nneigh,1),stat=alloc_check)
-if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
+! get the table of neighbors and the numbers of atom per shell
 allocate(tabledist(N_Nneigh,1),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate table of distance'
-indexNN=0
 tabledist=0.0d0
-
-call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,indexNN,n_mag,tabledist)
-
+allocate(indexNN(N_Nneigh,1),stat=alloc_check)
+if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
+indexNN=0
+call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,n_mag,tabledist)
 call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_motif,indexNN)
 
 ! prepare the lattice

@@ -29,7 +29,7 @@ logical, intent(out) :: i_name
 real(kind=8), target, intent(in) :: static_target(:,:,:)
 character(len=*), intent(in) :: name
 ! internal
-integer :: i,N_order_found,istart,iend
+integer :: N_order_found,istart,iend
 integer, allocatable :: position_found(:,:)
 
 i_name=.false.

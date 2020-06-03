@@ -18,14 +18,14 @@ contains
 
 
 
-subroutine get_table_of_distance(r,N_Nneigh,world,my_motif,indexNN,n_mag,d)
+subroutine get_table_of_distance(r,N_Nneigh,world,my_motif,n_mag,d)
 use m_user_info
 use m_derived_types, only : cell
 use m_convert
 implicit none
 real(kind=8), intent(in) :: r(:,:)
 type(cell), intent(in) :: my_motif
-integer, intent(in) :: N_Nneigh,world(:),indexNN(:,:),n_mag
+integer, intent(in) :: N_Nneigh,world(:),n_mag
 real(kind=8), intent(inout) :: d(:,:)
 ! internal variable
 integer :: Nei_z,Nei_il,phase,i,shape_table(2),j

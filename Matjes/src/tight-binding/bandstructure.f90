@@ -1,4 +1,5 @@
 module m_bandstructure
+
     use m_basic_types, only : vec_point
     use m_energy_commons, only : energy
     use m_fftw
@@ -65,8 +66,6 @@ module m_bandstructure
             enddo
             dispersion = dispersion/real(N_cell)
         end subroutine calculate_dispersion
-
-
 
         subroutine initiate_input_E(fermi_energy, in_en)
             implicit none
