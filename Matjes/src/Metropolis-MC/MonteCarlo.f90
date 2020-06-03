@@ -192,10 +192,10 @@ write(6,'(a/)') '---------------------'
 Do n_kT=1,n_Tsteps
 
   kt=kt_all(n_kT)
-  do i=1,N_cell
-     mode_temp(i)%w=kt
-  enddo
-  call get_E_matrix(my_lattice%dim_mode,kt/k_b)
+!  do i=1,N_cell
+!     mode_temp(i)%w=kt
+!  enddo
+!  call get_E_matrix(my_lattice%dim_mode,kt/k_b)
 
   call Relaxation(all_mode,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
 
