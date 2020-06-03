@@ -82,8 +82,10 @@ module m_energy_k
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
             H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
 
+#ifdef CPP_BLAS
             ! diagonalising the Hamiltonian
             call CGEEV('N', 'V', N, H_complex , LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
+#endif
 
             deallocate( W, VL, VR, WORK )
         end subroutine diagonalise_H_k

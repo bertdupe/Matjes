@@ -131,7 +131,7 @@ do j=1,n_at_mag
   enddo
 enddo
 allocate(pos_mag_atom_in_shell(3,n_at_mag_inshell))
-call find_all_atom(pos_mag_atom_in_shell,R_mag(:,:,2),R_mag(:,:,1),n_sym,symmetries,areal)
+call find_all_atom(pos_mag_atom_in_shell,R_mag(:,:,2),R_mag(:,:,1),n_sym,symmetries)
 
 ! find all equivalent non magnetic atoms
 ! for that apply symmetry operations
@@ -143,7 +143,7 @@ do j=1,n_at_mag
 enddo
 
 allocate(pos_nonmag_atom_in_shell(3,n_at_nonmag_incell))
-call find_all_atom(pos_nonmag_atom_in_shell,R_non_mag(:,:,2),R_mag(:,:,2),n_sym,symmetries,areal)
+call find_all_atom(pos_nonmag_atom_in_shell,R_non_mag(:,:,2),R_mag(:,:,2),n_sym,symmetries)
 
 ! for all magnetic atoms in the unit cell
 ! find the unique non-magnetic atom that verifies the Moriya rules
@@ -287,10 +287,10 @@ end function find_all_equivalent_atom
 ! calculate the position of all the atoms which at a distance R_1 of one atom.
 !
 
-subroutine find_all_atom(pos_atom_in_shell,R,Ref,n_sym,symmetries,areal)
+subroutine find_all_atom(pos_atom_in_shell,R,Ref,n_sym,symmetries)
 implicit none
 real(kind=8), intent(inout) :: pos_atom_in_shell(:,:)
-real(kind=8), intent(in) :: R(:,:),Ref(:,:),areal(:,:)
+real(kind=8), intent(in) :: R(:,:),Ref(:,:)
 integer, intent(in) :: n_sym
 type(symop), intent(in) :: symmetries(:)
 ! internal
