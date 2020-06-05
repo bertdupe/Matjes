@@ -909,7 +909,7 @@ character(len=*), intent(in) :: fname
 integer :: N
 ! internal
 integer :: ncol,io,i
-character(len=100) :: str
+character(len=400) :: str
 
 ncol=0
 

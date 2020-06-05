@@ -18,6 +18,7 @@ use m_convert
 use m_io_files_utils
 use m_operator_pointer_utils
 use m_rw_MC
+use m_MCstep
 
 #ifdef CPP_MPI
       use m_mpi_prop, only : irank_working,isize,MPI_COMM,all_world,irank_box,MPI_COMM_MASTER,MPI_COMM_BOX
@@ -40,7 +41,7 @@ integer,allocatable :: image_temp(:)  ! contains the POSITION of temperatures
 ! slope of temperature sets
 integer :: j_optset
 ! size of the world
-integer :: world
+integer :: world,total_MC_steps
 ! slope of the MC
 integer :: i_MC,i_relax,i_pos
 real(kind=8) :: pos
@@ -81,9 +82,9 @@ real(kind=8), target, allocatable :: replicas(:,:,:)
 ! relaxation informations
 real(kind=8), allocatable :: relax(:,:,:)
 ! dummy slopes
-integer :: i,istart,istop,io_EM,io_Trange,N_cell,n_sizerelax,N_temp,n_thousand,n_Tsteps,nb,restart_MC_steps,T_auto,T_relax
+integer :: i,istart,istop,io_EM,io_Trange,N_cell,n_sizerelax,N_temp,n_thousand,n_Tsteps,restart_MC_steps,T_auto,T_relax
 logical :: Cor_log,gra_log,equi,i_magnetic,i_optTset,i_print_W,i_restart,ising,overrel,sphere,print_relax,underrel
-real(kind=8) :: dumy(5)
+real(kind=8) :: dumy(5),nb
 
 type(vec_point),allocatable,dimension(:,:) :: all_mode
 type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
@@ -93,7 +94,7 @@ type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
 #endif
 
 ! initialized the size of the tables
-call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
+call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,total_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
 size_table=n_Tsteps
 world=size(my_lattice%world)
 N_cell=product(shape(my_lattice%l_modes))

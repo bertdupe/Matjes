@@ -16,6 +16,7 @@ type(simulation_parameters), intent(inout) :: ext_param
 integer :: io_input
 real(kind=8) :: kt
 
+kt=0.0d0
 io_input=open_file_read('input')
 
 call get_parameter(io_input,'input','H_ext',3,ext_param%H_ext%value)

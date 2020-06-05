@@ -31,6 +31,10 @@ module m_total_Hamiltonian_TB
             ham_tot_TB%i_exist=.true.
             ham_tot_TB%order=2
 
+            ! size_ham is the size of the total Hamiltonian. We need to
+            ! now the number of shells that are considered, which is realised
+            ! thanks to size(exc_ham_TB%ham).
+            ! We add 1 because the onsite Hamiltonian has only 1 shell
             size_ham=size(exc_ham_TB%ham)+1
             ham_tot_TB%N_shell=size_ham
             allocate(ham_tot_TB%ham(size_ham))
@@ -41,10 +45,10 @@ module m_total_Hamiltonian_TB
             enddo
 
             ! Filling of total Hamiltonian matrix
-            if (onsite_ham_TB%i_exist) ham_tot_TB%ham(1)%H =ham_tot_TB%ham(1)%H+onsite_ham_TB%ham(1)%H
+            if (onsite_ham_TB%i_exist) ham_tot_TB%ham(1)%H = ham_tot_TB%ham(1)%H + onsite_ham_TB%ham(1)%H
             if (exc_ham_TB%i_exist) then
               do i=2,size_ham
-                 ham_tot_TB%ham(i)%H = ham_tot_TB%ham(i)%H+exc_ham_TB%ham(i-1)%H
+                 ham_tot_TB%ham(i)%H = ham_tot_TB%ham(i)%H + exc_ham_TB%ham(i-1)%H
               enddo
             endif
             

@@ -16,7 +16,6 @@ use m_io_gneb
 use m_projection
 use m_tangent
 use m_local_energy
-use m_torques
 
 private
 public :: find_path,find_path_ci,find_SP,find_SP_conf
@@ -97,8 +96,6 @@ do i_nim=1,nim
       coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w
 
       call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
-
-      call update_B(magnetic_mode_path(iomp,i_nim)%w,0.3d0,ftmp(1:3))
 
       call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
 
@@ -207,8 +204,6 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
       do iomp=1,N_cell
 
          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
-
-         call update_B(magnetic_mode_path(iomp,i_nim)%w,0.3d0,ftmp(1:3))
 
          call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
 

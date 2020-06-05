@@ -5,11 +5,11 @@ use m_derived_types, only : operator_real_order_N,point_shell_Operator,lattice,p
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,shell_Ham,H_vois
 use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters
-use m_dipole_energy
 use m_symmetry_operators
 use m_total_Hamiltonian_TB
 use m_total_Heisenberg_Ham
 use m_couplage_ME
+use m_summer_exp
 !
 ! This has to be public so the variable can be accessed from elsewhere
 ! BUT it has to be protected so it can only be read and not written from outside the module
@@ -20,6 +20,8 @@ type(coeff_ham_inter_spec_pointer), allocatable, public, protected, target :: Ha
 type(H_vois), public, protected, target, save :: total_hamiltonian
 ! total energy tensor
 type(operator_real_order_N),public,protected,save :: energy
+! translate the energy from a matrix * a coeff**N
+real(kind=8), public, protected, allocatable, dimension(:,:,:) :: translator
 ! flags for the writting and reading of the Hamiltonian
 logical :: write_ham=.false.
 logical :: read_ham=.false.
@@ -69,6 +71,9 @@ if (ham_tot_TB%i_exist) number_hamiltonian=number_hamiltonian+1
 ! get the magnetoelectric coefficients
 call get_ham_ME(fname,dim_ham)
 if (ME%i_exist) number_hamiltonian=number_hamiltonian+1
+
+! get the Hamiltonian for the summerfeld expansion
+call get_Temperature_H(dim_ham)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!! put all the Hamiltonians into a big matrix
@@ -137,7 +142,7 @@ implicit none
 real(kind=8), intent(in) :: D(:,:,:)
 integer, intent(in) :: indexNN(:,:)
 ! internal variables
-integer :: n_ham,N_shell,dim_ham,n_ham_shell,N_atom_shell,n_order,i_order
+integer :: n_ham,N_shell,dim_ham,n_ham_shell,N_atom_shell,n_order,i_order,avant
 !slopes
 integer :: i,j,l,k
 ! position in the matrices for the DMI
@@ -359,6 +364,22 @@ do i=1,n_ham
     enddo
   endif
 enddo
+
+! prepare the translator for the summerfeld expansion
+if (temperature_strasbourg%i_exist) then
+    N_shell=size(total_hamiltonian%shell_num)
+    n_ham_shell=sum(indexNN(1:N_shell-1,1))+1
+    allocate(translator(dim_ham,dim_ham,n_ham_shell))
+    translator=0.0d0
+    translator(:,:,1)=temperature_strasbourg%ham(1)%H
+    avant=1
+    do i=2,N_shell
+      do j=1,indexNN(i-1,1)
+        translator(:,:,avant+j)=temperature_strasbourg%ham(i)%H
+      enddo
+      avant=avant+indexNN(i-1,1)
+    enddo
+endif
 
 form=convert('(',dim_ham,'(2x,f12.8))')
 io_input=open_file_read('input')

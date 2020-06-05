@@ -86,11 +86,6 @@ call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
 !     Start main procedures:
 !     *****************************************************************
 
-!!!!!!!! part that does the tight-binging from a frozen spin configuration
-
-!if (my_simu%name == 'tight-binding') then
-!           call tightbinding(spin,shape_spin)
-!endif
 !!!!!!!! part of the parallel tempering
 
 !if (my_simu%name == 'parallel-tempering') then
@@ -118,7 +113,7 @@ if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_s
 !---------------------------------
 !  Part which does Entropic Sampling
 !---------------------------------
-if (my_simu%name == 'entropics') call entropic(all_lattices,motif,io_simu,ext_param)
+if (my_simu%name == 'entropic') call entropic(all_lattices,motif,io_simu,ext_param)
 
 
 !---------------------------------

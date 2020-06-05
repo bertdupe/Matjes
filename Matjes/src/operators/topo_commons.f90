@@ -151,6 +151,7 @@ integer :: i,j
 
 lattice_size=shape(my_lattice%l_modes)
 N_site=product(lattice_size)
+n_corner=0
 
 if (.not.my_lattice%boundary(3)) then
    write(6,'(a)') 'no z-periodic boundary conditions'

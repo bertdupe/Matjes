@@ -2,6 +2,8 @@ module m_total_Heisenberg_Ham
 use m_exchange_heisenberg
 use m_anisotropy_heisenberg
 use m_zeeman
+use m_anisotropy_heisenberg
+use m_summer_exp
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 
 type(coeff_ham_inter_spec), target, public, protected :: ham_tot_heisenberg
@@ -32,6 +34,8 @@ call get_ham_anisotropy(fname,dim_ham)
 call get_ham_zeeman(fname,dim_ham,Ms)
 ! get the exchange Hamiltonian
 call get_ham_exchange(fname,dim_ham)
+! get the temperature Strasbourg Hamiltonian
+!call get_Temperature_H(fname,dim_ham)
 
 n_shell=size(exchange%ham)+1
 
@@ -59,6 +63,12 @@ if (Zeeman%i_exist) ham_tot_heisenberg%ham(1)%H=ham_tot_heisenberg%ham(1)%H+zeem
 if (exchange%i_exist) then
   do i=2,n_shell
     ham_tot_heisenberg%ham(i)%H=ham_tot_heisenberg%ham(i)%H+exchange%ham(i-1)%H
+  enddo
+endif
+
+if (temperature_strasbourg%i_exist) then
+  do i=1,n_shell
+    ham_tot_heisenberg%ham(i)%H=ham_tot_heisenberg%ham(i)%H+temperature_strasbourg%ham(i)%H
   enddo
 endif
 
