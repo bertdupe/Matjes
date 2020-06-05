@@ -135,11 +135,9 @@ if (my_simu%name == 'tight-binding') then
              call tightbinding(all_lattices,motif,io_simu,ext_param)
 endif
 
-
 if (my_simu%name == 'minimization') call minimize(all_lattices,io_simu)
 
-
-
+if (my_simu%name == 'minimize_infdamp') call minimize_infdamp(all_lattices,io_simu)
 !---------------------------------
 !  Part which does the GNEB
 !---------------------------------

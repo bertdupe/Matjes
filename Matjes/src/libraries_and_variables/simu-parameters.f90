@@ -15,14 +15,15 @@ use m_basic_types
 !!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-type(var_name),dimension(8),parameter :: type_simu= [ var_name('magnet-dynamics'),           &
+type(var_name),dimension(9),parameter :: type_simu= [ var_name('magnet-dynamics'),           &
                                                       var_name('spin-dynamics'),           &
                                                       var_name('metropolis'),        &
                                                       var_name('GNEB'),              &
                                                       var_name('parallel-tempering'),          &
                                                       var_name('minimization'),      &
                                                       var_name('entropic'),          &
-                                                      var_name('tight-binding') ]
+                                                      var_name('tight-binding'),      &
+                                                      var_name('minimize_infdamp') ]
 
 type(var_name),dimension(4),parameter :: type_excitations= [ var_name('rampe'),           &
                                                       var_name('heavyside'),          &

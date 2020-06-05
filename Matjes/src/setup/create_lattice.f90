@@ -3,9 +3,9 @@ use m_basic_types, only : var_name
 use m_derived_types, only : order_parameter
 
 ! array that stores what are the order parameter used
-type(order_parameter),protected,allocatable,save,target :: my_order_parameters(:)
+type(order_parameter), protected, allocatable, save, target :: my_order_parameters(:)
 ! Array of spins on the lattice (matrix)
-real(kind=8),allocatable,save,target :: modes(:,:,:,:,:)
+real(kind=8), allocatable, save, target :: modes(:,:,:,:,:)
 
 
 !!!!!!

@@ -10,7 +10,7 @@ interface minimize
 end interface
 
 private
-public :: minimize
+public :: minimize,minimize_infdamp
 
 contains
 
@@ -243,6 +243,86 @@ call kill_B_matrix()
 call kill_E_matrix()
 
 end subroutine
+
+
+
+
+
+
+
+
+!!
+!
+! infinite damping method
+!
+!!
+subroutine minimize_infdamp(my_lattice,io_simu)
+use m_derived_types, only : io_parameter,lattice
+use m_basic_types, only : vec_point
+use m_constants, only : pi
+use m_write_spin
+use m_createspinfile
+use m_vector, only : cross,norm
+use m_eval_Beff
+use m_lattice, only : my_order_parameters
+use m_operator_pointer_utils
+implicit none
+type(io_parameter), intent(in) :: io_simu
+type(lattice), intent(inout) :: my_lattice
+! internal
+real(kind=8) :: dummy_norm,torque
+real(kind=8), allocatable :: F_eff(:)
+type(vec_point), allocatable, dimension(:) :: all_mode,mode_magnetic
+integer :: N_cell,iomp,i
+logical :: i_magnetic
+
+write(6,'(/,a,/)') 'entering the infinite damping minimization routine'
+
+N_cell=product(my_lattice%dim_lat)
+
+allocate(F_eff(my_lattice%dim_mode))
+F_eff=0.0d0
+
+allocate(all_mode(N_cell))
+call associate_pointer(all_mode,my_lattice)
+
+! magnetization
+do i=1,size(my_order_parameters)
+  if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_magnetic(N_cell))
+   call dissociate(mode_magnetic,N_cell)
+   call associate_pointer(mode_magnetic,all_mode,'magnetic',i_magnetic)
+
+   exit
+  endif
+enddo
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Prepare the calculation of the energy and the effective field
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+call get_B_matrix(my_lattice%dim_mode)
+
+do iomp=1,N_cell
+
+   call calculate_Beff(F_eff,iomp,all_mode)
+
+  if (norm(F_eff(1:3)).lt.1.0d-8) stop 'problem in the infinite damping minimization routine'
+  write(*,*) cross(mode_magnetic(iomp)%w,F_eff,1,3)
+
+  mode_magnetic(iomp)%w=F_eff(1:3)/ norm(F_eff(1:3))
+
+enddo
+
+end subroutine
+
+
+
+
+
+
+
+
+
 
 
 !!
