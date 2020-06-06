@@ -59,6 +59,15 @@ module m_energy_k
             ! Internal variable
             integer :: i
 
+            integer :: N, LDA, LDVL, LDVR, LWORK, RWORK, INFO
+            complex(kind=16), allocatable :: W(:), VL(:,:), VR(:,:), WORK(:), H_complex(:,:)
+
+            N = size(all_E_k, 1)
+            allocate( W(N), VL(N,N), VR(N,N), WORK(4*N), H_complex(N,N))
+            ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
+            H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
+
+            ! diagonalising the Hamiltonian
             ! JOBVL: left eigenvec of A are computed ('V') or not ('N')
             ! JOBVR: right eigenvec of A are computed ('V') or not ('N')
             ! N: order of matrix A
@@ -74,20 +83,11 @@ module m_energy_k
             ! RWORK: real array of dimension 2*N
             ! INFO: computation information
             ! CGEEV(JOBVL, JOBVR, N, A, LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
-            integer :: N, LDA, LDVL, LDVR, LWORK, RWORK, INFO
-            complex(kind=16), allocatable :: W(:), VL(:,:), VR(:,:), WORK(:), H_complex(:,:)
-
-            N = size(all_E_k, 1)
-            allocate( W(N), VL(N,N), VR(N,N), WORK(4*N), H_complex(N,N))
-            ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
-            H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
-
-#ifdef CPP_BLAS
-            ! diagonalising the Hamiltonian
+            LDA = size(H_complex, 1)
+            LDVL = size(VL, 1)
+            LDVR = size(VR, 1)
+            LWORK = size(WORK, 1)
             call CGEEV('N', 'V', N, H_complex , LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
-#endif
-
-            deallocate( W, VL, VR, WORK )
         end subroutine diagonalise_H_k
 
 

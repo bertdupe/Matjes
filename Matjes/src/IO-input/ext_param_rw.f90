@@ -14,7 +14,7 @@ implicit none
 type(simulation_parameters), intent(inout) :: ext_param
 ! internal variables
 integer :: io_input
-real(kind=8) :: kt
+real(kind=8) :: kt=0.0d0
 
 io_input=open_file_read('input')
 

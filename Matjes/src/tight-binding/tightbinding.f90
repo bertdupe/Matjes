@@ -51,10 +51,11 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8), allocatable :: eps_nk(:)
 
     complex(kind=16), allocatable :: dispersion(:), input_energy(:), DOS(:)
-    integer :: io, i, nb_kpoints, N_electrons
+    integer :: io, i, nb_kpoints
+    real(kind=8) :: N_electrons
 
     kt=0.0d0
-    N_electrons=0
+    N_electrons=0.0d0
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
@@ -75,7 +76,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     pos=reshape( start_positions, (/3, N_cell/) )
     deallocate(start_positions)
     call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
-    deallocate(pos)
+!    deallocate(pos)
 
     call associate_pointer(all_mode,my_lattice)
     call set_E_bandstructure(my_lattice%dim_mode,distances)
@@ -92,35 +93,28 @@ call compute_DOS(dispersion, input_energy, DOS, N_cell)
 !    write(*,*) ''
 !    write(*,*) ''
 !enddo
-call check_norm_wavefct(all_mode, my_lattice%dim_mode)
+N_electrons = check_norm_wavefct(all_mode, my_lattice%dim_mode, N_electrons)
 
-!io=open_file_write('dispersion_energy.txt')
+!io=open_file_write('dispersion_energy_BCC_3D.txt')
 !do i=1,nb_kpoints
 !  write(io,'(2(f16.10,2x))') real(dispersion(i)),aimag(dispersion(i))
 !enddo
-!call close_file('dispersion_energy.txt',io)
-!io=open_file_write('input_energy_DOS.txt')
+!call close_file('dispersion_energy_BCC_3D.txt',io)
+!io=open_file_write('input_energy_DOS_BCC_3D.txt')
 !do i=1,size(input_energy)
 !  write(io,'(2(f16.10,2x))') real(input_energy(i)),aimag(input_energy(i))
 !enddo
-!call close_file('input_energy_DOS.txt',io)
-!io=open_file_write('DOS.txt')
+!call close_file('input_energy_DOS_BCC_3D.txt',io)
+!io=open_file_write('DOS_BCC_3D.txt')
 !do i=1,size(DOS)
 !  write(io,'(2(f16.10,2x))') real(DOS(i)),aimag(DOS(i))
 !enddo
-!call close_file('DOS.txt',io)
+!call close_file('DOS_BCC_3D.txt',io)
 call rewrite_H_k(my_lattice%dim_mode)
 
 !The function "diagonalise_H_k" in file energy_k.f90 diagonalises the Hamiltonian
 !for a given k-vector (it calls the function "Fourier_transform_H" inside)
 !==> we need to loop over all the k-vectors to have the eigenenergies for
 !all wavevectors
-!do i = 1, nb_kpoints
-!    call diagonalise_H_k(i, pos, my_lattice%dim_mode, -1.0d0)
-!enddo
-allocate( eps_nk(N_cell) )
-Etot = 0.0d0
-call compute_Etot(Etot, input_energy, eps_nk, kt, N_electrons)
-deallocate( eps_nk )
-
+call diagonalise_H_k(1, pos, my_lattice%dim_mode, -1.0d0)
 end subroutine tightbinding

@@ -297,23 +297,19 @@ module m_fftw
             complex(kind=16) :: Fourier_transform_H( size(all_E_k, 1), size(all_E_k, 2) )
 
             ! Internal variable
-            integer :: i, j, nblines_n_lines, nbcols_n_lines
-            integer, allocatable, dimension(:,:) :: n_lines
+            integer :: i, j, nblines_energy, nbcols_energy, tmp
             real(kind=8) :: alpha
+            nblines_energy = size(energy%line, 1)
+            nbcols_energy = size(energy%line, 2)
 
-            nblines_n_lines = size(energy%line, 1)
-            nbcols_n_lines = size(energy%line, 2)
-            allocate( n_lines(nblines_n_lines, nbcols_n_lines) )
-            do i=1, nbcols_n_lines
-                do j=1, nblines_n_lines
-                    alpha = dot_product( pos(:, n_lines(j,i)), kmesh(:, pos_k) )
-                    all_E_k( (i-1)*dim_mode+1:i*dim_mode, (n_lines(j,i)-1)*dim_mode+1:n_lines(j,i)*dim_mode)\
-                        =\
-                        all_E_k( (i-1)*dim_mode+1:i*dim_mode, (n_lines(j,i)-1)*dim_mode+1:n_lines(j,i)*dim_mode)*complex( cos(sense*alpha), sin(sense*alpha) )
+            do i=1, nbcols_energy !loop over the neighbours
+                do j=1, nblines_energy !loop over the cells
+                    tmp = energy%line(j,i)
+                    alpha = dot_product( pos(:, energy%line(j,i)), kmesh(:, pos_k) )
+                    all_E_k( (i-1)*dim_mode+1:i*dim_mode, (tmp-1)*dim_mode+1:tmp*dim_mode)=all_E_k( (i-1)*dim_mode+1:i*dim_mode, (tmp-1)*dim_mode+1:tmp*dim_mode)*complex( cos(sense*alpha), sin(sense*alpha) )
                 enddo
             enddo
             Fourier_transform_H = all_E_k
-write(*,*) Fourier_transform_H
         end function Fourier_transform_H
 
 
