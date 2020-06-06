@@ -264,19 +264,22 @@ use m_write_spin
 use m_createspinfile
 use m_vector, only : cross,norm
 use m_eval_Beff
+use m_local_energy
 use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
 implicit none
 type(io_parameter), intent(in) :: io_simu
 type(lattice), intent(inout) :: my_lattice
 ! internal
-real(kind=8) :: dummy_norm,torque
+real(kind=8) :: dummy_norm,torque(3),max_torque,test_torque,F_norm,Edy,Et
 real(kind=8), allocatable :: F_eff(:)
 type(vec_point), allocatable, dimension(:) :: all_mode,mode_magnetic
-integer :: N_cell,iomp,i
+integer :: N_cell,iomp,i,iter
 logical :: i_magnetic
 
 write(6,'(/,a,/)') 'entering the infinite damping minimization routine'
+
+call init_variables()
 
 N_cell=product(my_lattice%dim_lat)
 
@@ -301,17 +304,53 @@ enddo
 ! Prepare the calculation of the energy and the effective field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_B_matrix(my_lattice%dim_mode)
+call get_E_matrix(my_lattice%dim_mode)
 
+Edy=0.0d0
 do iomp=1,N_cell
+    call local_energy(Et,iomp,all_mode)
+    Edy=Edy+Et
+enddo
+write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell)
 
-   call calculate_Beff(F_eff,iomp,all_mode)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!           Begin minimization
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+iter=0
+max_torque=10.0d0
+do while (max_torque.gt.conv_torque)
+    max_torque=0.0d0
+    do iomp=1,N_cell
 
-  if (norm(F_eff(1:3)).lt.1.0d-8) stop 'problem in the infinite damping minimization routine'
-  write(*,*) cross(mode_magnetic(iomp)%w,F_eff,1,3)
+      call calculate_Beff(F_eff,iomp,all_mode)
 
-  mode_magnetic(iomp)%w=F_eff(1:3)/ norm(F_eff(1:3))
+      !we don't divide by 0
+      F_norm=norm(F_eff(1:3))
+      if (F_norm.lt.1.0d-8) stop 'problem in the infinite damping minimization routine'
+
+      torque=cross(mode_magnetic(iomp)%w,F_eff,1,3)
+      test_torque=maxval(torque)
+      if ( dabs(test_torque).gt.max_torque ) max_torque=test_torque
+
+      !align the moments onto normalized field
+      mode_magnetic(iomp)%w=F_eff(1:3)/F_norm
+
+    enddo
+
+    iter=iter+1
+    !print max_torque every 100 iterations
+    if (mod(iter,100).eq.0) write(*,*) 'Max torque =',max_torque
 
 enddo
+
+write(*,*) 'Max_torque=',max_torque,' tolerance reached, minimization completed in ',iter,' iterations.'
+
+Edy=0.0d0
+do iomp=1,N_cell
+    call local_energy(Et,iomp,all_mode)
+    Edy=Edy+Et
+enddo
+write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell)
 
 end subroutine
 
