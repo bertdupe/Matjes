@@ -10,8 +10,10 @@ module m_DOS
     integer :: n_pt = 1000
     character(len=20) :: smearing_type = 'gaussian'
 
+    complex(kind=16), allocatable :: DOS(:),E_DOS(:)
+
     private
-    public :: read_params_DOS, init_Evector_DOS, compute_DOS
+    public :: read_params_DOS, init_Evector_DOS, compute_DOS, print_DOS
     contains
         subroutine read_params_DOS(fname)
             implicit none
@@ -40,9 +42,8 @@ module m_DOS
 
 
         ! Subroutine initialising the energy vector required by the DOS
-        subroutine init_Evector_DOS(E_DOS)
+        subroutine init_Evector_DOS()
             implicit none
-            complex(kind=16), allocatable, intent(inout) :: E_DOS(:)
 
             ! Internal variable
             integer :: i
@@ -60,11 +61,10 @@ module m_DOS
 
 
         ! Function computing the DOS
-        subroutine compute_DOS(disp_en, E_DOS, DOS, N_cell)
+        subroutine compute_DOS(disp_en, N_cell)
             implicit none
             integer, intent(in) :: N_cell
-            complex(kind=16), intent(in) :: disp_en(:), E_DOS(:)
-            complex(kind=16), allocatable, intent(inout) :: DOS(:)
+            complex(kind=16), intent(in) :: disp_en(:)
 
             ! Internal variable
             integer :: i, j
@@ -82,4 +82,22 @@ module m_DOS
             enddo
             DOS = DOS/cmplx(N_cell, kind=16)
         end subroutine compute_DOS
+
+        ! Function printing the DOS
+        subroutine print_DOS(fname)
+        use m_io_utils
+        use m_io_files_utils
+        implicit none
+        character(len=*), intent(in) :: fname
+        ! internal
+        integer :: io_DOS,i,N_k
+
+        io_DOS=open_file_write(fname)
+        do i=1,n_pt
+           write(io_DOS,'(3(E20.12E3,3x))') real(E_DOS(i)),real(DOS(i)),aimag(DOS(i))
+        enddo
+        call close_file(fname,io_DOS)
+
+        end subroutine
+
 end module m_DOS

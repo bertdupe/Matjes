@@ -23,6 +23,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_DOS
     use m_wavefunction
     use m_energy_k
+    use m_lattice, only : my_order_parameters
 
     implicit none
     ! internal parameter
@@ -40,7 +41,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     integer :: shape_lattice(4)
     ! all_mode is an array of custom type vec_point that will
     ! contain all the modes present in the simulation
-    type(vec_point),allocatable :: all_mode(:)
+    type(vec_point),allocatable :: all_mode(:), mode_magnetic(:), mode_TB(:)
     ! sense gives the sense of the FFT transform
     real(kind=8) :: sense
     ! array containing all the positions in the lattice
@@ -50,11 +51,15 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! eps_nk is a vector containing all the eigenvalues
     real(kind=8), allocatable :: eps_nk(:)
 
-    complex(kind=16), allocatable :: dispersion(:), input_energy(:), DOS(:)
-    integer :: io, i, nb_kpoints, N_electrons
+    complex(kind=16), allocatable :: dispersion(:), input_energy(:)
+    integer :: io, i, nb_kpoints, TB_pos_start, TB_pos_end
+    real(kind=8) :: N_electrons
+    logical :: i_magnetic, i_TB
 
     kt=0.0d0
-    N_electrons=0
+    N_electrons=0.0d0
+
+    call read_params_DOS('input')
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
@@ -75,52 +80,57 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     pos=reshape( start_positions, (/3, N_cell/) )
     deallocate(start_positions)
     call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
-    deallocate(pos)
+!    deallocate(pos)
 
+!
+! Allocating the different variables
+!
     call associate_pointer(all_mode,my_lattice)
-    call set_E_bandstructure(my_lattice%dim_mode,distances)
+! magnetization
+do i=1,size(my_order_parameters)
+  if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_magnetic(N_cell))
+   call dissociate(mode_magnetic,N_cell)
+   call associate_pointer(mode_magnetic,all_mode,'magnetic',i_magnetic)
+  endif
 
-    call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
+  if ('Tight-binding'.eq.trim(my_order_parameters(i)%name)) then
+   allocate(mode_TB(N_cell))
+   call dissociate(mode_TB,N_cell)
+   call associate_pointer(mode_TB,all_mode,'Tight-binding',i_TB)
 
-!allocate(input_energy(10*size(dispersion)), DOS(10*size(dispersion)))
-call read_params_DOS('input')
-call init_Evector_DOS(input_energy)
-call compute_DOS(dispersion, input_energy, DOS, N_cell)
-!do i=1, N_cell
-!    write(*,*) 'all_mode(', i, ')%w(:) = ', all_mode(i)%w(:)
-!    write(*,*) 'my_lattice%dim_mode = ', my_lattice%dim_mode
-!    write(*,*) ''
-!    write(*,*) ''
-!enddo
-call check_norm_wavefct(all_mode, my_lattice%dim_mode)
+   TB_pos_start=my_order_parameters(i)%start
+   TB_pos_end=my_order_parameters(i)%end
 
-!io=open_file_write('dispersion_energy.txt')
-!do i=1,nb_kpoints
-!  write(io,'(2(f16.10,2x))') real(dispersion(i)),aimag(dispersion(i))
-!enddo
-!call close_file('dispersion_energy.txt',io)
-!io=open_file_write('input_energy_DOS.txt')
-!do i=1,size(input_energy)
-!  write(io,'(2(f16.10,2x))') real(input_energy(i)),aimag(input_energy(i))
-!enddo
-!call close_file('input_energy_DOS.txt',io)
-!io=open_file_write('DOS.txt')
-!do i=1,size(DOS)
-!  write(io,'(2(f16.10,2x))') real(DOS(i)),aimag(DOS(i))
-!enddo
-!call close_file('DOS.txt',io)
-call rewrite_H_k(my_lattice%dim_mode)
+  endif
+enddo
+
+
+
+    call rewrite_H_k(size(mode_TB(1)%w),TB_pos_start,TB_pos_end)
 
 !The function "diagonalise_H_k" in file energy_k.f90 diagonalises the Hamiltonian
 !for a given k-vector (it calls the function "Fourier_transform_H" inside)
 !==> we need to loop over all the k-vectors to have the eigenenergies for
 !all wavevectors
-!do i = 1, nb_kpoints
-!    call diagonalise_H_k(i, pos, my_lattice%dim_mode, -1.0d0)
-!enddo
-allocate( eps_nk(N_cell) )
-Etot = 0.0d0
-call compute_Etot(Etot, input_energy, eps_nk, kt, N_electrons)
-deallocate( eps_nk )
+! les états vides ET les états pleins sont pris en compte
+     call diagonalise_H_k(1, pos, size(mode_TB(1)%w), -1.0d0)
+
+
+     N_electrons = check_norm_wavefct(all_mode, my_lattice%dim_mode, N_electrons)
+
+
+! diagonlisation uniquement avec les états
+    call set_E_bandstructure(my_lattice%dim_mode,distances)
+    call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
+    call print_band_struct('bands.dat',dispersion)
+
+! faire la DOS
+!allocate(input_energy(10*size(dispersion)), DOS(10*size(dispersion)))
+    call init_Evector_DOS()
+    call compute_DOS(dispersion, N_cell)
+    call print_DOS('DOS.dat')
+
+
 
 end subroutine tightbinding
