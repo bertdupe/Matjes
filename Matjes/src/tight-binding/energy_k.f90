@@ -10,18 +10,17 @@ module m_energy_k
     private
     public :: rewrite_H_k, diagonalise_H_k, fermi_distrib, compute_Etot
     contains
-        subroutine rewrite_H_k(dim_mode)
+        subroutine rewrite_H_k(dim_mode,TB_pos_start,TB_pos_end)
             implicit none
-            integer, intent(in) :: dim_mode
+            integer, intent(in) :: dim_mode,TB_pos_start,TB_pos_end
 
             ! Internal variables
             integer :: i, j, k, N_neighbours, N_cells
 
             N_neighbours = size( energy%line, 1 )
             N_cells = size( energy%line, 2 )
-            allocate(all_E_k(dim_mode*N_cells, dim_mode*N_cells), n_lines(N_neighbours, N_cells))
+            allocate(all_E_k(dim_mode*N_cells, dim_mode*N_cells))
             all_E_k = cmplx(0.0d0, kind=16)
-            n_lines = energy%line !contains the columns of the non-zero Hamiltonians
 
             do i=1, N_cells
                 do j=1, N_neighbours
@@ -39,18 +38,16 @@ module m_energy_k
                     !   [.............................]
                     !   [H1 H2 0 ...........0 H2 H1 H0]
 !                    all_E_k( (k-1)*dim_mode+1:k*dim_mode, (i-1)*dim_mode+1:i*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
-                    all_E_k( (i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
-!write(*,*) 'all_E_k(', (i-1)*dim_mode+1, ':', i*dim_mode, ',', (k-1)*dim_mode+1, ':', k*dim_mode, ') = ', all_E_k( (i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode )
-!write(*,*) ''
-!write(*,*) ''
-!write(*,*) ''
+                    all_E_k( (i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc(TB_pos_start:TB_pos_end,TB_pos_start:TB_pos_end) ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
+
                 enddo
             enddo
         end subroutine rewrite_H_k
 
 
-
+#ifdef CPP_LAPACK
         subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense)
+            use m_matrix, only : invert
             implicit none
             integer :: kvector_pos, dim_mode
             real(kind=8) :: sense
@@ -61,12 +58,15 @@ module m_energy_k
 
             integer :: N, LDA, LDVL, LDVR, LWORK, RWORK, INFO
             complex(kind=16), allocatable :: W(:), VL(:,:), VR(:,:), WORK(:), H_complex(:,:)
+            complex(kind=16) :: DET
 
             N = size(all_E_k, 1)
+            write(*,*) N
             allocate( W(N), VL(N,N), VR(N,N), WORK(4*N), H_complex(N,N))
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
             H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
 
+            pause
             ! diagonalising the Hamiltonian
             ! JOBVL: left eigenvec of A are computed ('V') or not ('N')
             ! JOBVR: right eigenvec of A are computed ('V') or not ('N')
@@ -87,9 +87,42 @@ module m_energy_k
             LDVL = size(VL, 1)
             LDVR = size(VR, 1)
             LWORK = size(WORK, 1)
-            call CGEEV('N', 'V', N, H_complex , LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
-        end subroutine diagonalise_H_k
 
+            call CGEEV('N', 'V', N, H_complex , LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
+
+        end subroutine diagonalise_H_k
+#endif
+
+#ifdef CPP_INTERNAL
+        subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense)
+            use m_matrix, only : invert,determinant
+            implicit none
+            integer :: kvector_pos, dim_mode
+            real(kind=8) :: sense
+            real(kind=8), intent(in) :: pos(:,:)
+
+            ! Internal variable
+            integer :: i,N
+
+            complex(kind=16), allocatable ::  H_complex(:,:), VL(:,:)
+            complex(kind=16) :: DET,DET_apres
+
+            N = size(all_E_k, 1)
+            allocate(VL(N,N),H_complex(N,N))
+            VL=0.0d0
+            ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
+            H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
+
+            ! renormalise by the determinant before diagonalization (to avoid too small or too large numbers)
+            DET=determinant(1.0d-22,N,H_complex)
+            H_complex=H_complex/abs(DET)
+
+            call invert(N,N,H_complex,VL,DET_apres)
+            if (abs(DET_apres-1.0d0).lt.1.0d8) write(6,'(a)') 'WARNING: DET might be different from 1 in matrix inversion'
+            H_complex=H_complex/abs(DET)
+
+        end subroutine diagonalise_H_k
+#endif
 
 
         ! Subroutine computing the total energy contained in the system

@@ -67,7 +67,7 @@ end function
 real(kind=8) FUNCTION BESSYP (N,X)
 IMPLICIT NONE
 INTEGER N
-real(kind=8) ::  X,BESSY
+real(kind=8) ::  X
 
 BESSYP=0.0d0
 IF (N.EQ.0) THEN

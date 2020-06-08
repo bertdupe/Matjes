@@ -14,7 +14,7 @@ module m_bandstructure
     ! first shell Hamiltonian, column "i+2" is the 2nd shell Hamiltonian, etc.
     complex(kind=16), allocatable, dimension(:,:) :: all_E
 
-    public :: set_E_bandstructure,calculate_dispersion
+    public :: set_E_bandstructure,calculate_dispersion,print_band_struct
 
     contains
         subroutine set_E_bandstructure(dim_mode,pos)
@@ -79,4 +79,26 @@ module m_bandstructure
                 in_en(i) = complex( (i-1)*0.75*fermi_energy/(size(in_en)-1), 0.0d0)
             enddo
         end subroutine initiate_input_E
+
+        ! print band structure
+        subroutine print_band_struct(fname,dispersion)
+        use m_io_utils
+        use m_io_files_utils
+        implicit none
+        complex(kind=16), intent(inout) :: dispersion(:)
+        character(len=*), intent(in) :: fname
+        ! internal
+        integer :: io_band,i,N_k
+
+        N_k=size(dispersion)
+
+        io_band=open_file_write(fname)
+
+        do i=1,N_k
+           write(io_band,'(2(E20.12E3,3x))') real(dispersion(i)),aimag(dispersion(i))
+        enddo
+        call close_file(fname,io_band)
+
+        end subroutine
+
 end module m_bandstructure
