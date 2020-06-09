@@ -305,7 +305,7 @@ module m_fftw
             do i=1, nbcols_energy !loop over the neighbours
                 do j=1, nblines_energy !loop over the cells
                     tmp = energy%line(j,i)
-                    alpha = dot_product( pos(:, energy%line(j,i)), kmesh(:, pos_k) )
+                    alpha = dot_product( pos(:, j), kmesh(:, pos_k) )
                     all_E_k( (i-1)*dim_mode+1:i*dim_mode, (tmp-1)*dim_mode+1:tmp*dim_mode)=all_E_k( (i-1)*dim_mode+1:i*dim_mode, (tmp-1)*dim_mode+1:tmp*dim_mode)*complex( cos(sense*alpha), sin(sense*alpha) )
                 enddo
             enddo

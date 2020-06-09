@@ -80,7 +80,6 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     pos=reshape( start_positions, (/3, N_cell/) )
     deallocate(start_positions)
     call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
-!    deallocate(pos)
 
 !
 ! Allocating the different variables
@@ -105,9 +104,11 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
+!   initializing band structure and H(k)
+call set_E_bandstructure(my_lattice%dim_mode,distances)
+call rewrite_H_k(size(mode_TB(1)%w),TB_pos_start,TB_pos_end,distances)
+deallocate(distances)
 
-
-    call rewrite_H_k(size(mode_TB(1)%w),TB_pos_start,TB_pos_end)
 
 !The function "diagonalise_H_k" in file energy_k.f90 diagonalises the Hamiltonian
 !for a given k-vector (it calls the function "Fourier_transform_H" inside)
@@ -121,7 +122,6 @@ enddo
 
 
 ! diagonlisation uniquement avec les états
-    call set_E_bandstructure(my_lattice%dim_mode,distances)
     call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
     call print_band_struct('bands.dat',dispersion)
 

@@ -6,21 +6,28 @@ module m_energy_k
 
     ! This matrix will contain all the Hamiltonians at the right places
     complex(kind=16), allocatable, dimension(:,:) :: all_E_k
+    real(kind=8), allocatable :: all_positions(:,:) ! array containing the coordinates of all r-r'
 
     private
     public :: rewrite_H_k, diagonalise_H_k, fermi_distrib, compute_Etot
     contains
-        subroutine rewrite_H_k(dim_mode,TB_pos_start,TB_pos_end)
+        subroutine rewrite_H_k(dim_mode,TB_pos_start,TB_pos_end,pos)
             implicit none
             integer, intent(in) :: dim_mode,TB_pos_start,TB_pos_end
+            real(kind=8), intent(in) :: pos(:,:)
 
             ! Internal variables
             integer :: i, j, k, N_neighbours, N_cells
 
             N_neighbours = size( energy%line, 1 )
             N_cells = size( energy%line, 2 )
-            allocate(all_E_k(dim_mode*N_cells, dim_mode*N_cells))
+            allocate(all_E_k(dim_mode*N_cells, dim_mode*N_cells),all_positions(3,N_neighbours))
             all_E_k = cmplx(0.0d0, kind=16)
+
+            do j=1, N_neighbours
+               k = energy%line(j, 1)
+               all_positions(:,j) = pos(:,k)
+            enddo
 
             do i=1, N_cells
                 do j=1, N_neighbours
@@ -39,7 +46,6 @@ module m_energy_k
                     !   [H1 H2 0 ...........0 H2 H1 H0]
 !                    all_E_k( (k-1)*dim_mode+1:k*dim_mode, (i-1)*dim_mode+1:i*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
                     all_E_k( (i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc(TB_pos_start:TB_pos_end,TB_pos_start:TB_pos_end) ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
-
                 enddo
             enddo
         end subroutine rewrite_H_k
@@ -111,8 +117,7 @@ module m_energy_k
             allocate(VL(N,N),H_complex(N,N))
             VL=0.0d0
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
-            H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
-
+            H_complex=get_FFT(all_E_k, all_positions, kvector_pos, dim_mode, sense)
             ! renormalise by the determinant before diagonalization (to avoid too small or too large numbers)
             DET=determinant(1.0d-22,N,H_complex)
             H_complex=H_complex/abs(DET)
