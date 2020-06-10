@@ -60,7 +60,7 @@ tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-posit
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 DOS.o: io_files_utils.o io-utils.o
 wavefunction.o: basic_types.o
-energy_k.o: energy_commons.o fftw.o
+energy_k.o: energy_commons.o fftw.o sort.o
 tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o energy_k.o
 
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
