@@ -46,18 +46,20 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8) :: sense
     ! array containing all the positions in the lattice
     real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
-    ! Etot gives the total energy contained in the system
+    ! Etot gives the total energy contained in the system, kt is the thermal energy
     real(kind=8) :: Etot, kt
+    ! E_F gives the Fermi energy
+    real(kind=8) :: E_F
     ! eps_nk is a vector containing all the eigenvalues
-    real(kind=8), allocatable :: eps_nk(:)
+    complex(kind=16), allocatable :: eps_nk(:)
 
-    complex(kind=16), allocatable :: dispersion(:), input_energy(:)
+    complex(kind=16), allocatable :: dispersion(:), input_energy(:), eigval(:)
     integer :: io, i, nb_kpoints, TB_pos_start, TB_pos_end
     real(kind=8) :: N_electrons
     logical :: i_magnetic, i_TB
 
     kt=0.0d0
-    N_electrons=0.0d0
+!    N_electrons=0.0d0
 
     call read_params_DOS('input')
 
@@ -100,7 +102,8 @@ do i=1,size(my_order_parameters)
 
    TB_pos_start=my_order_parameters(i)%start
    TB_pos_end=my_order_parameters(i)%end
-
+    allocate( eigval(N_cell*(TB_pos_end-TB_pos_start+1)) )
+    eigval = 0.0d0
   endif
 enddo
 
@@ -115,11 +118,14 @@ deallocate(distances)
 !==> we need to loop over all the k-vectors to have the eigenenergies for
 !all wavevectors
 ! les états vides ET les états pleins sont pris en compte
-     call diagonalise_H_k(1, pos, size(mode_TB(1)%w), -1.0d0)
+     call diagonalise_H_k(1, pos, size(mode_TB(1)%w), -1.0d0, eigval)
 
 
-     N_electrons = check_norm_wavefct(all_mode, my_lattice%dim_mode, N_electrons)
+    N_electrons = check_norm_wavefct(all_mode, TB_pos_start, TB_pos_end, N_electrons)
+    write(*,*) 'Line ', __LINE__, ' in file ', __FILE__, ' N_electrons = ', N_electrons
 
+    E_F = 0.0d0
+    call compute_Fermi_level(eigval, N_electrons, E_F, kt)
 
 ! diagonlisation uniquement avec les états
     call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)

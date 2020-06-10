@@ -3,13 +3,13 @@ module m_energy_k
     use m_fftw
 
     integer, allocatable, dimension(:,:) :: n_lines
-
+    
     ! This matrix will contain all the Hamiltonians at the right places
     complex(kind=16), allocatable, dimension(:,:) :: all_E_k
     real(kind=8), allocatable :: all_positions(:,:) ! array containing the coordinates of all r-r'
 
     private
-    public :: rewrite_H_k, diagonalise_H_k, fermi_distrib, compute_Etot
+    public :: rewrite_H_k, diagonalise_H_k, fermi_distrib, compute_Etot, compute_Fermi_level
     contains
         subroutine rewrite_H_k(dim_mode,TB_pos_start,TB_pos_end,pos)
             implicit none
@@ -100,12 +100,13 @@ module m_energy_k
 #endif
 
 #ifdef CPP_INTERNAL
-        subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense)
+        subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense, eigval)
             use m_matrix, only : invert,determinant
             implicit none
             integer :: kvector_pos, dim_mode
             real(kind=8) :: sense
             real(kind=8), intent(in) :: pos(:,:)
+            complex(kind=16), intent(out) :: eigval(:)
 
             ! Internal variable
             integer :: i,N
@@ -130,6 +131,9 @@ module m_energy_k
             if (abs(DET_apres-1.0d0).lt.1.0d8) write(6,'(a)') 'WARNING: DET might be different from 1 in matrix inversion'
 !            H_complex=H_complex/abs(DET)
 
+            do i = 1, N
+                eigval(i) = H_complex(i, i)
+            enddo            
         end subroutine diagonalise_H_k
 #endif
 
@@ -165,32 +169,41 @@ module m_energy_k
 
         end subroutine compute_Etot
 
-! Function computing the Fermi energy of the system
-!        subroutine compute_Fermi_level(eps_nk, N_electrons, fermi_level, kt)
-!            use m_sort
-!            implicit none
-!            real(kind=8), intent(out) :: fermi_level
-!            complex(kind=16), intent(in) :: eps_nk(:)
-!            integer, intent(in) :: N_electrons
-!            ! Internal variable
-!            integer :: i,size_ham
-!            real(kind=8) :: precision_Ef, tmp_sum
-!            real(kind=16), allocatable :: eps_nk_real(:)
-!
-!            size_ham=size(eps_nk)
-!            allocate(eps_nk_real(size_ham))
-!            eps_nk_real=real(eps_nk)
-!            eps_nk_real=sort(eps_nk_real)
-!
-!            fermi_level = real(eps_nk_real(1),kind=8)
-!            precision_Ef = 1.0d-3
-!
-!            tmp_sum = 0.0d0
-!            while (abs(tmp_sum-real(N_electrons).)
-!            do i=1, size_ham
-!                tmp_sum = tmp_sum + fermi_distrib(fermi_level, eps_nk(i), kt)
-!            enddo
-!        end subroutine compute_Fermi_level
+!        Function computing the Fermi energy of the system
+        subroutine compute_Fermi_level(eps_nk, N_electrons, fermi_level, kt)
+            use m_sort
+            implicit none
+            real(kind=8), intent(out) :: fermi_level
+            real(kind=8), intent(in) :: kt
+            complex(kind=16), intent(in) :: eps_nk(:)
+            real(kind=8), intent(in) :: N_electrons
+
+            ! Internal variable
+            integer :: i,size_ham,j
+            integer, allocatable :: indices(:)
+            real(kind=8) :: precision_Ef, tmp_sum
+            real(kind=8), allocatable :: eps_nk_real(:)
+
+            size_ham=size(eps_nk)
+            allocate( eps_nk_real(size_ham), indices(size_ham) )
+            eps_nk_real=real(eps_nk, kind=8)
+            call sort(size_ham, eps_nk_real, indices, 1.0d-5)
+
+            tmp_sum = 0.0d0
+            i=0
+            do while ( i .le. size_ham )
+              i=i+1
+              fermi_level = real(eps_nk_real(i),kind=8)
+              tmp_sum = 0.0d0
+              do j=1,i
+                tmp_sum = tmp_sum + fermi_distrib(fermi_level, real(eps_nk_real(j), kind=8), kt)
+              enddo
+              if (real(N_electrons) .ge. tmp_sum) exit
+            enddo
+            fermi_level = real(eps_nk_real(i),kind=8)
+            write(*,*) 'fermi_level = ',  fermi_level, '[eV]'
+            write(*,*) 'eps_nk_real = ', eps_nk_real
+        end subroutine compute_Fermi_level
 
 
 
@@ -206,9 +219,9 @@ module m_energy_k
 
             fermi_distrib=0.0d0
             if (kt.lt.1.0d-8) then
-              if (energy.lt.E_F) fermi_distrib=1.0d0
+                if (energy.le.E_F) fermi_distrib=1.0d0
             else
-              fermi_distrib = 1.0d0/( 1.0d0 + exp((E_F-energy)/kt ) )
+                fermi_distrib = 1.0d0/( 1.0d0 + exp((E_F-energy)/kt ) )
             endif
         end function fermi_distrib
 
