@@ -116,15 +116,19 @@ module m_energy_k
             N = size(all_E_k, 1)
             allocate(VL(N,N),H_complex(N,N))
             VL=0.0d0
+            do i=1,N
+               VL(i,i)=cmplx(1.0d0,0.0d0)
+            enddo
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
             H_complex=get_FFT(all_E_k, all_positions, kvector_pos, dim_mode, sense)
+            
             ! renormalise by the determinant before diagonalization (to avoid too small or too large numbers)
-            DET=determinant(1.0d-22,N,H_complex)
-            H_complex=H_complex/abs(DET)
+!            DET=determinant(1.0d-22,N,H_complex)
+!            H_complex=H_complex/abs(DET)
 
             call invert(N,N,H_complex,VL,DET_apres)
             if (abs(DET_apres-1.0d0).lt.1.0d8) write(6,'(a)') 'WARNING: DET might be different from 1 in matrix inversion'
-            H_complex=H_complex/abs(DET)
+!            H_complex=H_complex/abs(DET)
 
         end subroutine diagonalise_H_k
 #endif
