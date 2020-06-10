@@ -1,5 +1,7 @@
 module m_spline
 
+private
+public :: hermite_fit,spline_hermite_val
 contains
 
 subroutine spline_hermite_set ( ndata, tdata, c )

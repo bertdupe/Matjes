@@ -68,19 +68,19 @@ module m_DOS
 
             ! Internal variable
             integer :: i, j
+            real(kind=8) :: lower_bound,upper_bound
 
             allocate( DOS(n_pt) )
             DOS = 0.0d0
 
             do i = 1, size(disp_en)
                 do j = 1, size( E_DOS )
-                    if( ((real(E_DOS(j)) .le. 1.3*real(disp_en(i)*exp( -((E_DOS(j)-disp_en(i))**2)/(2*smearing**2)))))\
-                        .and.\
-                        ((real(E_DOS(j)) .ge. real(0.7*disp_en(i)*exp( -((E_DOS(j)-disp_en(i))**2)/(2*smearing**2))))) )\
-                            DOS(j)=DOS(j)+1
+                    lower_bound=0.7*real(disp_en(i))*exp( -real(E_DOS(j)-disp_en(i))**2/(2*smearing**2))
+                    upper_bound=1.3*real(disp_en(i))*exp( -real(E_DOS(j)-disp_en(i))**2/(2*smearing**2))
+                    if( ((real(E_DOS(j)) .le. upper_bound)).and.((real(E_DOS(j)) .ge. lower_bound)) )  DOS(j)=DOS(j)+1.0d0
                 enddo
             enddo
-            DOS = DOS/cmplx(N_cell, kind=16)
+            DOS = DOS/real(N_cell)
         end subroutine compute_DOS
 
         ! Function printing the DOS

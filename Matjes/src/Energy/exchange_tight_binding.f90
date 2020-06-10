@@ -44,7 +44,11 @@ module m_exchange_TB
             call get_parameter(io_param,fname,'c_tij',exc_ham_TB%c_ham)
 
             nb_shell=TB_params%nb_shell
-            if (nb_shell.ne.0) exc_ham_TB%i_exist=.true.
+            if (nb_shell.ne.0) then
+               exc_ham_TB%i_exist=.true.
+            else
+               return
+            endif
 
 
             do i=1, size(my_order_parameters)

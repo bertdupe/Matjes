@@ -6,6 +6,7 @@ use m_createspinfile
 use m_derived_types
 use m_initialize_path
 use m_torques, only : get_torques
+use m_spline
 
 implicit none
 type(lattice), intent(in) :: my_lattice
@@ -54,12 +55,12 @@ if (do_gneb=='Y') then
    write (6,'(a)') "Done!"
 end if
       
-!if (do_gneb_ci=='Y') then
-!   write (6,'(a)') "CI-GNEB calculation in progress..."
-!   call find_path_ci(nim,N_cell,vpodt,vpomass,spring,path,mepftol_ci,mepitrmax,meptraj_step,my_lattice,rx,ene,dene,ci)
-!   write(6,'(a)') *,'ci:',ci
-!   write (6,'(a)') "Done!"
-!end if
+if (do_gneb_ci=='Y') then
+   write (6,'(a)') "CI-GNEB calculation in progress..."
+   call find_path_ci(nim,N_cell,vpodt,vpomass,spring,mepftol_ci,mepitrmax,meptraj_step,rx,ene,dene,ci,path,my_lattice,io_simu)
+   write(6,'(a,I3)') 'ci:',ci
+   write (6,'(a)') "Done!"
+end if
       
 call write_en(nim,rx,ene,dene,rx(nim),'en_path.out',do_norm_rx)
 call write_path(path)

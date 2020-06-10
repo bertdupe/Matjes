@@ -4,7 +4,7 @@ use m_basic_types, only : vec_point
 
 interface get_charge
   module procedure :: get_charge_2D   ! take only one int argument (iomp)
-  module procedure :: get_all_charge
+   module procedure :: get_all_charge
 end interface
 
 type(vec_point),allocatable,protected,save,public :: Q_topo(:,:)

@@ -28,6 +28,8 @@ LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,u
 #LAPACK
 #INCLUDES=-I/usr/local/Cellar/openblas/0.3.9/include/
 #LIBRARIES=-L/usr/local/Cellar/openblas/0.3.9/lib/ -lopenblas -L/usr/local/Cellar/lapack/3.9.0/lib/ -llapack
+# ordi ULG
+LIBRARIES=-L/usr/lib/x86_64-linux-gnu/ -lblas -llapack
 #FFTW
 #INCLUDES=-I/usr/local/include
 #LIBRARIES= -L/usr/local/lib/ -lfftw3

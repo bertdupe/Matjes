@@ -34,8 +34,6 @@ call get_ham_anisotropy(fname,dim_ham)
 call get_ham_zeeman(fname,dim_ham,Ms)
 ! get the exchange Hamiltonian
 call get_ham_exchange(fname,dim_ham)
-! get the temperature Strasbourg Hamiltonian
-!call get_Temperature_H(fname,dim_ham)
 
 n_shell=size(exchange%ham)+1
 

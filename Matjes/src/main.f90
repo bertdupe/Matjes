@@ -61,10 +61,6 @@ call init_variables(io_simu)
 call get_parameter(io_param,'input',my_simu)
 call close_file('input',io_param)
 
-! prepare the different lattices for the simulations
-!call setup_lattice(my_simu,all_lattices,io_simu)
-
-
 ! read the input and prepare the lattices, the Hamitlonian and all this mess
 call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param)
 
@@ -135,11 +131,9 @@ if (my_simu%name == 'tight-binding') then
              call tightbinding(all_lattices,motif,io_simu,ext_param)
 endif
 
-
 if (my_simu%name == 'minimization') call minimize(all_lattices,io_simu)
 
-
-
+if (my_simu%name == 'minimize_infdamp') call minimize_infdamp(all_lattices,io_simu)
 !---------------------------------
 !  Part which does the GNEB
 !---------------------------------
