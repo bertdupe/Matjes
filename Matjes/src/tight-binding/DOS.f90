@@ -25,15 +25,10 @@ module m_DOS
             io_input=open_file_read(fname)
 
             call get_parameter(io_input, fname, 'E_F', E_F)
-
             call get_parameter(io_input, fname, 'n_pt', n_pt)
-
             call get_parameter(io_input, fname, 'from', from)
-
             call get_parameter(io_input, fname, 'to', to)
-
             call get_parameter(io_input, fname, 'smearing_type', smearing_type)
-
             call get_parameter(io_input, fname, 'smearing', smearing)
 
             call close_file(fname, io_input)

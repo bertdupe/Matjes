@@ -668,7 +668,7 @@ Subroutine TSRGT(eps, n, A, it, C, Kp, Lp)
     end if
   end do
   if (it==1.and.dabs(C(n,n))<eps)  it=0
-  return
+
 End !TSRGT
 
 !*****************************************************************
@@ -741,7 +741,7 @@ End !TSRGT
       end if
     end do
     if (it==1.and.ABS(C(N,N)) < eps)  it=0
-    return
+
   End  !TSCGT
 
 end module m_matrix
