@@ -53,7 +53,7 @@ module m_energy_k
 
 #ifdef CPP_LAPACK
         subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense)
-            use m_matrix, only : invert
+            use m_invert
             implicit none
             integer :: kvector_pos, dim_mode
             real(kind=8) :: sense
@@ -101,7 +101,8 @@ module m_energy_k
 
 #ifdef CPP_INTERNAL
         subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense, eigval)
-            use m_matrix, only : invert,determinant
+            use m_eigen_val_vec
+            use m_invert
             implicit none
             integer :: kvector_pos, dim_mode
             real(kind=8) :: sense
@@ -111,29 +112,17 @@ module m_energy_k
             ! Internal variable
             integer :: i,N
 
-            complex(kind=16), allocatable ::  H_complex(:,:), VL(:,:)
-            complex(kind=16) :: DET,DET_apres
+            complex(kind=16), allocatable ::  H_complex(:,:), U(:,:)
 
             N = size(all_E_k, 1)
-            allocate(VL(N,N),H_complex(N,N))
-            VL=0.0d0
-            do i=1,N
-               VL(i,i)=cmplx(1.0d0,0.0d0)
-            enddo
+            allocate(H_complex(N,N),U(N,N))
+            U=0.0d0
+
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
             H_complex=get_FFT(all_E_k, all_positions, kvector_pos, dim_mode, sense)
             
-            ! renormalise by the determinant before diagonalization (to avoid too small or too large numbers)
-!            DET=determinant(1.0d-22,N,H_complex)
-!            H_complex=H_complex/abs(DET)
+            call Jacobi(1.0d-7,N,H_complex,N,eigval,U,N,0)
 
-            call invert(N,N,H_complex,VL,DET_apres)
-            if (abs(DET_apres-1.0d0).lt.1.0d8) write(6,'(a)') 'WARNING: DET might be different from 1 in matrix inversion'
-!            H_complex=H_complex/abs(DET)
-
-            do i = 1, N
-                eigval(i) = H_complex(i, i)
-            enddo            
         end subroutine diagonalise_H_k
 #endif
 
@@ -189,20 +178,24 @@ module m_energy_k
             eps_nk_real=real(eps_nk, kind=8)
             call sort(size_ham, eps_nk_real, indices, 1.0d-5)
 
+            write(6,'(/a,2x,2(f12.8,2x)/)') 'higher and lower eigenval',eps_nk_real(1),eps_nk_real(size_ham)
+
             tmp_sum = 0.0d0
             i=0
             do while ( i .le. size_ham )
               i=i+1
-              fermi_level = real(eps_nk_real(i),kind=8)
+              fermi_level = eps_nk_real(i)
               tmp_sum = 0.0d0
               do j=1,i
                 tmp_sum = tmp_sum + fermi_distrib(fermi_level, real(eps_nk_real(j), kind=8), kt)
               enddo
-              if (real(N_electrons) .ge. tmp_sum) exit
+              if (real(N_electrons) .le. tmp_sum) exit
             enddo
-            fermi_level = real(eps_nk_real(i),kind=8)
-            write(*,*) 'fermi_level = ',  fermi_level, '[eV]'
-            write(*,*) 'eps_nk_real = ', eps_nk_real
+            fermi_level = eps_nk_real(i)
+
+            write(6,'(/a,2x,f12.6,2x,a/)') 'fermi_level = ',  fermi_level, '[eV]'
+
+
         end subroutine compute_Fermi_level
 
 

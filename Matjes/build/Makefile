@@ -6,11 +6,11 @@ OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o rw_TB.o tightbin
  total_Hamiltonian_TB.o envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
- operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o \
+ operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o \
  Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o energy_k.o wavefunction.o DOS.o bandstructure.o \
  fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
- create_lattice.o forces.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o \
+ create_lattice.o forces.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o eigen_val_vec.o invert.o determinant.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o plot_FFT.o sort.o \
@@ -46,6 +46,10 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+precision.o:
+eigen_val_vec.o:
+invert.o:
+determinant.o:
 rw_TB.o: io_files_utils.o io-utils.o
 tbessk.o:
 tbessj.o:
@@ -60,7 +64,7 @@ tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-posit
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 DOS.o: io_files_utils.o io-utils.o
 wavefunction.o: basic_types.o
-energy_k.o: energy_commons.o fftw.o sort.o
+energy_k.o: invert.o eigen_val_vec.o energy_commons.o fftw.o sort.o
 tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o energy_k.o
 
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
@@ -71,7 +75,7 @@ matrix_power.o:
 matrix.o: basic_types.o
 Hamiltonian_variables.o: basic_types.o
 modes_variables.o: basic_types.o
-tracker.o: envelope.o sort.o topoplot.o topo_commons.o convert.o io_files_utils.o cal_local_energy.o derived_types.o derivative.o
+tracker.o: invert.o envelope.o sort.o topoplot.o topo_commons.o convert.o io_files_utils.o cal_local_energy.o derived_types.o derivative.o
 solver_order.o: convert.o
 plot_FFT.o: io-utils.o io_files_utils.o convert.o fftw.o
 derivative.o: basic_types.o operator_pointer_utils.o io-utils.o io_files_utils.o
@@ -92,7 +96,7 @@ couplage_ME.o: create_lattice.o io-utils.o io_files_utils.o symmetry_operators.o
 propagator.o: BTeff_sd.o io-utils.o io_files_utils.o constant.o vector.o torques.o
 solver_commun.o: solver_order.o update_time.o propagator.o Beff_sd.o solver.o derived_types.o info-dynamics.o
 init_constant.o:
-symmetry_operators.o: arrange_neihg.o basic_types.o matrix.o pointgrp.o derived_types.o
+symmetry_operators.o: invert.o arrange_neihg.o basic_types.o matrix.o pointgrp.o derived_types.o
 info-dynamics.o:
 torques.o: derived_types.o vector.o io-utils.o io_files_utils.o
 EMwave.o: constant.o vector.o io-utils.o io_files_utils.o
@@ -193,7 +197,7 @@ initialize_temperature.o:
 cal_local_energy.o: energy_commons.o dipolar-energy.o
 arrange_neihg.o: rotation.o matrix_power.o create_lattice.o inp_rw.o sym_utils.o constant.o
 MCstep.o: choosespin.o cal_local_energy.o main.o create_lattice.o inp_rw.o rw_lattice.o  sampling.o relaxationtype.o mtprng.o
-solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
+solver.o: precision.o torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
 setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o

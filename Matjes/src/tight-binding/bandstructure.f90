@@ -14,6 +14,10 @@ module m_bandstructure
     ! first shell Hamiltonian, column "i+2" is the 2nd shell Hamiltonian, etc.
     complex(kind=16), allocatable, dimension(:,:) :: all_E
 
+
+    interface print_band_struct
+      module procedure print_band_struct_1e,print_band_struct_Ne
+    end interface print_band_struct
     public :: set_E_bandstructure,calculate_dispersion,print_band_struct
 
     contains
@@ -23,7 +27,7 @@ module m_bandstructure
             real(kind=8), intent(in) :: pos(:,:)
 
             ! Internal variables
-            integer :: N,i,j,i_vois
+            integer :: N,i,i_vois
 
             ! Gives the number of sites in the lattice
             N=size(energy%line(:,1))
@@ -67,21 +71,8 @@ module m_bandstructure
             dispersion = dispersion/real(N_cell)
         end subroutine calculate_dispersion
 
-        subroutine initiate_input_E(fermi_energy, in_en)
-            implicit none
-            real(kind=8), intent(in) :: fermi_energy
-            complex(kind=16), intent(inout) :: in_en(:)
-
-            ! Internal variables
-            integer :: i
-
-            do i=1, size(in_en)
-                in_en(i) = complex( (i-1)*0.75*fermi_energy/(size(in_en)-1), 0.0d0)
-            enddo
-        end subroutine initiate_input_E
-
         ! print band structure
-        subroutine print_band_struct(fname,dispersion)
+        subroutine print_band_struct_1e(fname,dispersion)
         use m_io_utils
         use m_io_files_utils
         implicit none
@@ -101,4 +92,29 @@ module m_bandstructure
 
         end subroutine
 
+
+        ! print band structure
+        subroutine print_band_struct_Ne(fname,dispersion)
+        use m_io_utils
+        use m_io_files_utils
+        use m_convert
+        implicit none
+        complex(kind=16), intent(inout) :: dispersion(:,:)
+        character(len=*), intent(in) :: fname
+        ! internal
+        integer :: io_band,i,N_k,j,N_e
+        character(len=30) :: form
+
+        N_k=size(dispersion,2)
+        N_e=size(dispersion,1)
+        form=convert('(',N_e,'(E20.12E3,3x))')
+
+        io_band=open_file_write(fname)
+
+        do i=1,N_k
+           write(io_band,form) (real(dispersion(j,i)),j=1,N_e)
+        enddo
+        call close_file(fname,io_band)
+
+        end subroutine
 end module m_bandstructure

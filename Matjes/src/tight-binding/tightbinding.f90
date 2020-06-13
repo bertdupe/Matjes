@@ -53,7 +53,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! eps_nk is a vector containing all the eigenvalues
     complex(kind=16), allocatable :: eps_nk(:)
 
-    complex(kind=16), allocatable :: dispersion(:), input_energy(:), eigval(:)
+    complex(kind=16), allocatable :: dispersion(:), input_energy(:), eigval(:,:)
     integer :: io, i, nb_kpoints, TB_pos_start, TB_pos_end
     real(kind=8) :: N_electrons
     logical :: i_magnetic, i_TB
@@ -102,7 +102,7 @@ do i=1,size(my_order_parameters)
 
    TB_pos_start=my_order_parameters(i)%start
    TB_pos_end=my_order_parameters(i)%end
-    allocate( eigval(N_cell*(TB_pos_end-TB_pos_start+1)) )
+    allocate( eigval(N_cell*(TB_pos_end-TB_pos_start+1),nb_kpoints) )
     eigval = 0.0d0
   endif
 enddo
@@ -118,14 +118,19 @@ deallocate(distances)
 !==> we need to loop over all the k-vectors to have the eigenenergies for
 !all wavevectors
 ! les états vides ET les états pleins sont pris en compte
-     call diagonalise_H_k(1, pos, size(mode_TB(1)%w), -1.0d0, eigval)
+     do i=1,nb_kpoints
+        call diagonalise_H_k(i, pos, size(mode_TB(1)%w), -1.0d0, eigval(:,i))
+     enddo
 
 
     N_electrons = check_norm_wavefct(all_mode, TB_pos_start, TB_pos_end, N_electrons)
-    write(*,*) 'Line ', __LINE__, ' in file ', __FILE__, ' N_electrons = ', N_electrons
+    write(6,'(a,2x,f10.4)') ' N_electrons = ', N_electrons
 
-    E_F = 0.0d0
-    call compute_Fermi_level(eigval, N_electrons, E_F, kt)
+    do i=1,N_cell
+       E_F = 0.0d0
+       call compute_Fermi_level(eigval(i,:), N_electrons, E_F, kt)
+    enddo
+    call print_band_struct('N_bands.dat',eigval)
 
 ! diagonlisation uniquement avec les états
     call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)

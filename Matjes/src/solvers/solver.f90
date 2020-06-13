@@ -1,5 +1,6 @@
 module m_solver
 use m_derived_types
+use m_precision
 
    interface minimization
       module procedure euler_minimization
@@ -90,6 +91,8 @@ do i=1,size_mode/3
    norm_int=norm(euler_int(start:end))
    if (norm(euler_int(start:end)).gt.1.0d-8) euler(start:end)=euler_int(start:end)*norm_mode/norm_int
 enddo
+
+call truncate(euler,size_mode)
 
 end function euler
 

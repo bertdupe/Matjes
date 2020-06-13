@@ -10,7 +10,7 @@ module m_DOS
     integer :: n_pt = 1000
     character(len=20) :: smearing_type = 'gaussian'
 
-    complex(kind=16), allocatable :: DOS(:),E_DOS(:)
+    real(kind=8), allocatable :: DOS(:),E_DOS(:)
 
     private
     public :: read_params_DOS, init_Evector_DOS, compute_DOS, print_DOS
@@ -42,14 +42,15 @@ module m_DOS
 
             ! Internal variable
             integer :: i
-            real(kind=8) :: range_values
+            real(kind=8) :: range_values,N
 
             allocate( E_DOS(n_pt) )
             E_DOS = 0.0d0
 
             range_values = to - from
+            N=real(n_pt - 1)
             do i=1, n_pt
-                E_DOS(i) = cmplx(from, kind=16) + cmplx( (i-1)*range_values/(n_pt - 1), kind=16)
+                E_DOS(i) =from +  real(i-1)*range_values/N
             enddo
         end subroutine init_Evector_DOS
 
@@ -63,16 +64,23 @@ module m_DOS
 
             ! Internal variable
             integer :: i, j
-            real(kind=8) :: lower_bound,upper_bound
+            real(kind=8) :: lower_bound,upper_bound,energy,tmp
 
             allocate( DOS(n_pt) )
             DOS = 0.0d0
 
             do i = 1, size(disp_en)
+                energy=real(disp_en(i),kind=8)
                 do j = 1, size( E_DOS )
-                    lower_bound=0.7*real(disp_en(i))*exp( -real(E_DOS(j)-disp_en(i))**2/(2*smearing**2))
-                    upper_bound=1.3*real(disp_en(i))*exp( -real(E_DOS(j)-disp_en(i))**2/(2*smearing**2))
-                    if( ((real(E_DOS(j)) .le. upper_bound)).and.((real(E_DOS(j)) .ge. lower_bound)) )  DOS(j)=DOS(j)+1.0d0
+                    tmp=(E_DOS(j)-energy)**2/(2.0d0*smearing**2)
+                    if (tmp.gt.50.0) then
+                       lower_bound=energy-1.0d-8
+                       upper_bound=energy+1.0d-8
+                    else
+                       lower_bound=0.7d0*energy*exp( tmp )
+                       upper_bound=1.3d0*energy*exp( tmp )
+                    endif
+                    if((E_DOS(j) .le. upper_bound).and.(E_DOS(j) .ge. lower_bound))  DOS(j)=DOS(j)+1.0d0
                 enddo
             enddo
             DOS = DOS/real(N_cell)
@@ -89,7 +97,7 @@ module m_DOS
 
         io_DOS=open_file_write(fname)
         do i=1,n_pt
-           write(io_DOS,'(3(E20.12E3,3x))') real(E_DOS(i)),real(DOS(i)),aimag(DOS(i))
+           write(io_DOS,'(2(E20.12E3,3x))') E_DOS(i),DOS(i)
         enddo
         call close_file(fname,io_DOS)
 

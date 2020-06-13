@@ -259,7 +259,7 @@ end subroutine
 subroutine convoluate_Op_sym_file(k,H_in,H_out,x_start,x_end,y_start,y_end,file)
 use m_basic_types, only : symop
 use m_grp_sym
-use m_matrix
+use m_invert
 implicit none
 integer, intent(in) :: k,x_start,x_end,y_start,y_end
 real(kind=8), intent(in) :: H_in(:,:)

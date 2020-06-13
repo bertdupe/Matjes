@@ -350,6 +350,7 @@ do j=1,duration
         call update_EMT_of_r(iomp,mode_excitation_field)
         call update_EMT_of_r(iomp,lattice_ini_excitation_field)
       endif
+
 ! call routine normal which is very slow
       call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
 ! call routine optimized which is very slow

@@ -189,7 +189,7 @@ end subroutine
 !
 subroutine find_boundary(Nsites,i_pat,field,N_cell,real_vec)
 use m_vector, only : norm
-use m_matrix, only : invert
+use m_invert
 use m_sort
 use m_constants, only : pi
 use m_envelope
