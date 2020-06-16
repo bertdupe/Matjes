@@ -303,6 +303,7 @@ do j=1,duration
 
    call init_temp_measure(check,check1,check2,check3)
 
+   call truncate(all_mode_1,mag_lattice%dim_mode)
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0
