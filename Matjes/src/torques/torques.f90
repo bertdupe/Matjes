@@ -57,8 +57,6 @@ if (Slonczewski%on) then
     nullify(Slonczewski%distribution(i)%w)
   enddo
 
-  deallocate(pos)
-
   call get_parameter(io,fname,'Slonczewski_AFL',Slonczewski%torque_AFL)
   call get_parameter(io,fname,'Slonczewski_FL',Slonczewski%torque_FL)
 endif

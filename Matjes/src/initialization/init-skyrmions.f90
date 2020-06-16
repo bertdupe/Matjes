@@ -216,7 +216,6 @@ If (R0.gt. 0.0d0) then
            cycle
           endif
 
-
              if (MinDist.gt.dist) then
                  minIndex = (/i_x,i_y/)
                  MinDist = dist
@@ -228,7 +227,6 @@ If (R0.gt. 0.0d0) then
    enddo
 
 Endif
-deallocate(position)
 
 end subroutine get_skyrmion
 

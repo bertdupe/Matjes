@@ -12,7 +12,7 @@ integer, intent(in) :: integtype
 
 
 select case (integtype)
-       case(3)
+       case(2)
 !-----------------------
 ! Heun
 #ifdef CPP_MPI
@@ -20,7 +20,7 @@ select case (integtype)
 #else
         write(6,'(a)') 'Heun integration method selected'
 #endif
-       case(2)
+       case(3)
 !-----------------------
 ! SIA
 #ifdef CPP_MPI

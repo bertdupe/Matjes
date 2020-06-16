@@ -32,6 +32,7 @@ use m_io_files_utils
 use m_tracker
 use m_print_Beff
 use omp_lib
+use m_precision
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -353,7 +354,8 @@ do j=1,duration
 
 ! call routine normal which is very slow
       call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
-! call routine optimized which is very slow
+
+! call routine optimized which
 !      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
 
 !
@@ -394,6 +396,7 @@ do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call copy_lattice(all_mode_2,all_mode)
+call truncate(all_mode,mag_lattice%dim_mode)
 
 !
 !!!!!! Measure the temperature if the users wish
