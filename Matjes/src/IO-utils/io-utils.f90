@@ -910,8 +910,15 @@ integer :: N
 ! internal
 integer :: ncol,io,i
 character(len=400) :: str
+logical :: test
 
 ncol=0
+N=0
+inquire(FILE=fname,EXIST=test)
+if (.not.test) then
+  write(6,'(a,2x,a,2x,a)') 'file',fname,'not found'
+  return
+endif
 
 open(newunit=io,file=fname,form='formatted',status='old',action='read')
 rewind(io)

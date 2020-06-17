@@ -49,12 +49,15 @@ character(len=*), intent(in) :: fname
 logical :: i_file
 integer :: io,error
 
+open_file_read=-10
 io=-1
 i_file=inquire_file(fname)
 
 if (i_file) then
 ! find unit of the file that is alread
   io=inquire_file_open(fname)
+else
+  return
 endif
 ! find a new unit for the file
 

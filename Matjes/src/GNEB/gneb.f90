@@ -5,7 +5,6 @@ use m_write_spin
 use m_createspinfile
 use m_derived_types
 use m_initialize_path
-use m_torques, only : get_torques
 use m_spline
 
 implicit none
@@ -27,11 +26,6 @@ ci=1
 
 call set_gneb_defaults()
 call read_gneb_parameters()
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! initialize the different torques
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_torques('input')
 
 allocate(path(size_order,N_cell,nim),spinsp(size_order,N_cell),rx(nim),ene(nim),dene(nim))
 path=0.0d0

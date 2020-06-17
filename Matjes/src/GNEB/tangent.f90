@@ -24,7 +24,7 @@ real(kind=8) :: u1, u2, u3,dumin,dumax,tmp,tau_tmp(3)
 real(kind=8), allocatable :: taup(:,:),taum(:,:)
 integer :: i,N_cell
 
-N_cell=size(coo,1)
+N_cell=size(coo,2)
 allocate(taup(3,N_cell),taum(3,N_cell))
 
 u1=u(im-1)
@@ -77,11 +77,7 @@ do i=1,N_cell
 
 end do
 
-tmp = dsqrt(tmp)
-! print *,'tmp:',tmp
-do i=1,N_cell
-   tau(:,i) = tau(:,i)/tmp
-enddo
+tau=tau/sqrt(tmp)
 
 end subroutine tang_spec
 
@@ -97,7 +93,7 @@ real(kind=8), intent(out) :: tau(:,:)
 real(kind=8) :: tmp
 integer :: i,N_cell,u1,u2
 
-N_cell=size(coo,1)
+N_cell=size(coo,2)
 
 if (im==1) then
    u1=im+1
@@ -118,10 +114,7 @@ do i=1,N_cell
    tmp = tmp+norm(tau(:,i))**2
 end do
 
-tmp = dsqrt(tmp)
-do i=1,N_cell
-   tau(:,i) = tau(:,i)/tmp
-enddo
+tau = tau/sqrt(tmp)
 
 end subroutine tang_oneimage
 

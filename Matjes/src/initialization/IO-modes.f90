@@ -52,6 +52,14 @@ order=0
 
 io=open_file_read(fname)
 
+!
+! if fname does not exists, return with the defaut configuration in line 42 to 45
+!
+if (io.lt.0) then
+  write(6,'(10a)') fname,' does not exist'
+  return
+endif
+
 ! read the position in cartesian coordinates
 ! the default is x,y,z in this order
 do i_z=1,dim_lat(3)
@@ -226,6 +234,7 @@ else
 
 endif
 
+n_column=get_cols(fname)
 ! Read the configurations
 io=open_file_read(fname)
 
