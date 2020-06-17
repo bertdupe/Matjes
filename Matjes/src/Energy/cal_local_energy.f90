@@ -109,6 +109,12 @@ integer :: N,i,j
 
 N=size(energy%line(:,1))
 
+!
+! check if the variables were already allocated
+!
+
+if (allocated(all_E).and.allocated(all_vectors)) return
+
 allocate(all_vectors(dim_mode*N),all_E(dim_mode,dim_mode*N))
 all_vectors=0.0d0
 all_E=0.0d0

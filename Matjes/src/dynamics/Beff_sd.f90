@@ -150,6 +150,13 @@ logical :: high_order_ham
 high_order_ham=.false.
 max_order=1
 N=size(B_total%line(:,1))
+
+!
+! check if the variables were already allocated
+!
+
+if (allocated(all_B).and.allocated(all_vectors)) return
+
 allocate(order(N))
 
 do i=1,N
