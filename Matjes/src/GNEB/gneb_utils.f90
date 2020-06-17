@@ -161,7 +161,7 @@ open(99,file = 'force_mep.txt',access = 'sequential',action='write',status='repl
 close(99)
       
 open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-write(99,'(i12,a,es16.8E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
+write(99,'(i12,a,E20.12E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
       
 close(99)
 call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.in',do_norm_rx)
@@ -176,7 +176,7 @@ call write_path(path)
 !
 write(6,'(/a)') 'Main loop'
 write(6,'(2(a,I8))') 'maximum iteration  ', itrmax, ' iteration number', itr
-write(6,'(2(a,f16.12)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
+write(6,'(2(a,E20.12E3)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
 
 do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    do i_nim=2,nim-1
@@ -285,7 +285,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
       call prn_gneb_progress(itr, itrmax, fchk, imax,'N',0)
       
       open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-      write(99,'(i12,a,es16.8E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
+      write(99,'(i12,a,E20.12E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
       close(99)
             
       call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.out',do_norm_rx)
@@ -293,6 +293,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
             
          
    end if
+
 end do
 
 if (itr>itrmax) then
@@ -469,7 +470,7 @@ open(99,file = 'force_mep.txt',access = 'sequential',action='write',status='repl
 close(99)
 
 open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-write(99,'(i12,a,es16.8E3,2(a,i3))',advance = 'no') itr,'   ',fchk,'   ',imax,'   ',ci
+write(99,'(i12,a,E20.12E3,2(a,i3))',advance = 'no') itr,'   ',fchk,'   ',imax,'   ',ci
 
 close(99)
 call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.in',do_norm_rx)
@@ -484,7 +485,7 @@ call write_path(path)
 !
 write(6,'(/a)') 'Main loop'
 write(6,'(2(a,I8))') 'maximum iteration  ', itrmax, ' iteration number', itr
-write(6,'(2(a,f16.12)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
+write(6,'(2(a,E20.12E3)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
 
 do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    ci=1
@@ -604,7 +605,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
       call prn_gneb_progress(itr, itrmax, fchk, imax,'Y',ci)
 
       open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-      write(99,'(i12,a,es16.8E3,2(a,i3))',advance = 'no') itr,'   ',fchk,'   ',imax, '   ',ci
+      write(99,'(i12,a,E20.12E3,2(a,i3))',advance = 'no') itr,'   ',fchk,'   ',imax, '   ',ci
       close(99)
 
       call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.out',do_norm_rx)
