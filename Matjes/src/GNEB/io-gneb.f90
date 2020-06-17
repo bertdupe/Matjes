@@ -151,7 +151,7 @@ integer, intent(in) :: imax,ci
 character(len=1), intent(in) :: do_ci
 
 if (do_ci.eq.'Y') then
-   write(6,'(a,3(f14.10,a),f14.10)') 'MP  ',real(itr)/real(itrmax)*100d0,'% of itrmax.   fchk: ',fchk,'   imax: ',imax,'   ci: ',ci
+   write(6,'(a,2(f14.10,a),I8,a,I8)') 'MP  ',real(itr)/real(itrmax)*100d0,'% of itrmax.   fchk: ',fchk,'   imax: ',imax,'   ci: ',ci
 else
    write(6,'(a,2(f14.10,a),I8)') 'MP  ',real(itr)/real(itrmax)*100d0,'% of itrmax.   fchk: ',fchk,'   imax: ',imax
 end if

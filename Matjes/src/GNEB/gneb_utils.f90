@@ -107,7 +107,6 @@ do i_nim=1,nim
 enddo
    
 
-                        
 if (en_zero=='I') then
       u0 = u(1)
 elseif (en_zero=='F') then
@@ -214,7 +213,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
       enddo
 
    end do
-         
+
          
    call the_path(nim,magnetic_mode_path,pathlen)
          
@@ -224,7 +223,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    do i_nim=2,nim-1
      call tang(i_nim,coo,u,tau)
      call tang(nim,i_nim,coo,tau_i)
-         
+
      fp = 0d0
      fpp(i_nim) = 0d0
 
@@ -234,6 +233,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
      do iomp=1,N_cell
        fxyz2(:,iomp,i_nim) = fxyz2(:,iomp,i_nim) - tau(:,iomp)*fp + kappa*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
      enddo
+
    enddo
    !stop
 
@@ -270,8 +270,6 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    fchk=maxval( abs(fxyz1) )
    maximum=maxloc(fxyz1)
    imax=maximum(3)
-         
-         
          
    call tang(nim,1,coo,tau_i)
    fpp(1) = sum( fxyz1(:,:,1)*tau_i )
@@ -591,13 +589,13 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    imax=maximum(3)
 
 
-
    call tang(nim,1,coo,tau_i)
    fpp(1) = sum( fxyz1(:,:,1)*tau_i )
 
 
    call tang(nim,nim,coo,tau_i)
    fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
+
 
 
    itr=itr+1
@@ -614,6 +612,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
 
 
    end if
+
 end do
 
 if (itr>itrmax) then

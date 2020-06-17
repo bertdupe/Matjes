@@ -41,15 +41,15 @@ dene=0.0d0
 call path_initialization(path,io_simu)
 
 call write_path(path)
-      
-if (do_gneb=='Y') then
+
+if (do_gneb) then
    write (6,'(a)') "GNEB calculation in progress..."
    call find_path(nim,N_cell,vpodt,vpomass,spring,mepftol,mepitrmax,meptraj_step,rx,ene,dene,path,my_lattice,io_simu)
          
    write (6,'(a)') "Done!"
 end if
       
-if (do_gneb_ci=='Y') then
+if (do_gneb_ci) then
    write (6,'(a)') "CI-GNEB calculation in progress..."
    call find_path_ci(nim,N_cell,vpodt,vpomass,spring,mepftol_ci,mepitrmax,meptraj_step,rx,ene,dene,ci,path,my_lattice,io_simu)
    write(6,'(a,I3)') 'ci:',ci
@@ -70,7 +70,7 @@ call hermite_fit(nim,sample_num,rx,ene,dene,xx,yy,dyy,c)
 call write_en(sample_num,xx,yy,dyy,rx(nim),'enfit_path.out',do_norm_rx)
       
       
-if (do_gneb_ci=='Y') then
+if (do_gneb_ci) then
    rx0(1) = rx(ci)
    do i=1,N_cell
       spinsp(:,i) = path(:,i,ci)

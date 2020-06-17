@@ -19,8 +19,8 @@ integer :: mepitrmax                                         !< Maximum number o
 real(kind=8) :: mepftol                                     !< Convergence criterion in the GNEB method, in mRy
 real(kind=8) :: mepftol_ci                                  !< Convergence criterion in the CI-GNEB method, in mRy
 integer :: meptraj_step                                      !< Save configuration every 'meptraj_step' step during MEP finding procedure
-character(len=1) :: do_gneb                                  !< Do GNEB calculations (Y/N)
-character(len=1) :: do_gneb_ci                               !< Do CI-GNEB calculations (Y/N)
+logical :: do_gneb=.False.                                !< Do GNEB calculations (Y/N)
+logical :: do_gneb_ci=.False.                             !< Do CI-GNEB calculations (Y/N)
 character(len=1) :: do_norm_rx                               !< Normalize reaction coordinate (Y/N)
 character(len=1) :: en_zero                                  !< Level of zero energy. 'I' - initial state; 'F' - final state; 'N' - 0.0
 integer :: sample_num                                         !< Number of samples in the interpolated curve
@@ -94,8 +94,6 @@ mepftol = 0.001d0
 mepftol_ci = 0.00001d0
 mepitrmax = 10000000
 meptraj_step = 10
-do_gneb = 'Y'
-do_gneb_ci = 'N'
 do_norm_rx = 'N'
 en_zero = 'N'
 nim = 10
