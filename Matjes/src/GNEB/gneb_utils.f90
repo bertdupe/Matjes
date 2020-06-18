@@ -135,7 +135,6 @@ do i_nim=2,nim-1
    fpp(i_nim)=sum( fxyz1(:,:,i_nim) *tau_i )
    fp = sum( fxyz1(:,:,i_nim) * tau )
 
-         
    do iomp=1,N_cell
      fxyz1(:,iomp,i_nim) = fxyz1(:,iomp,i_nim) - tau(:,iomp)*fp + kappa*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
    end do
@@ -251,8 +250,8 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    fv = 0d0
    fd = 0d0
 
-   fv= sum( vel * fxyz2 )
-   fd= sum( fxyz2**2 )
+   fv= sum( vel * fxyz2 )/real(nim)
+   fd= sum( fxyz2**2 )/real(nim)
          
    if (fv<0d0) then
      vel = 0d0
@@ -569,8 +568,8 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    fv = 0d0
    fd = 0d0
 
-   fv= sum( vel * fxyz2 )
-   fd= sum( fxyz2**2 )
+   fv= sum( vel * fxyz2 )/real(nim)
+   fd= sum( fxyz2**2 )/real(nim)
 
    if (fv<0d0) then
      vel = 0d0
