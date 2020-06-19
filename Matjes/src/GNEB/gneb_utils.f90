@@ -128,9 +128,6 @@ do i_nim=2,nim-1
    call tang(i_nim,coo,u,tau)
 
    call tang(nim,i_nim,coo,tau_i)
-         
-   fp = 0d0
-   fpp(i_nim) = 0d0
 
    fpp(i_nim)=sum( fxyz1(:,:,i_nim) *tau_i )
    fp = sum( fxyz1(:,:,i_nim) * tau )
@@ -143,16 +140,13 @@ end do
 
 call tang(nim,nim,coo,tau_i)
 fpp(nim) = 0d0
-
 fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
 
-      
 fchk=0d0
 imax = 1
 fchk=maxval( abs(fxyz1) )
 maximum=maxloc(fxyz1)
 imax=maximum(3)
-
 
 itr=1
       
@@ -164,7 +158,6 @@ write(99,'(i12,a,E20.12E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
       
 close(99)
 call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.in',do_norm_rx)
-      
 call write_path(path)
       
       
@@ -179,13 +172,12 @@ write(6,'(2(a,E20.12E3)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
 
 do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    do i_nim=2,nim-1
-      u(i_nim) = 0d0
       do iomp=1,N_cell
             
          !print *,'i)nim:',i_nim
          ax(:,iomp,i_nim) = rotation_axis(coo(:,iomp,i_nim),fxyz1(:,iomp,i_nim))
                         
-         coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w+vel(:,iomp,i_nim)*dt+0.5d0*fxyz1(:,iomp,i_nim)/mass*dt*dt
+         coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w+vel(:,iomp,i_nim)*dt+0.5d0*fxyz1(:,iomp,i_nim)/mass*dt**2
 
          norm_local=norm(coo(:,iomp,i_nim))
          coo(:,iomp,i_nim)=coo(:,iomp,i_nim)/norm_local
@@ -203,7 +195,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
 
          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
+         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
 
          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
@@ -215,8 +207,6 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
 
          
    call the_path(nim,magnetic_mode_path,pathlen)
-         
-   !print *,'pathlen:',pathlen
 
 
    do i_nim=2,nim-1
@@ -276,8 +266,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
          
    call tang(nim,nim,coo,tau_i)
    fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
-         
-         
+
    itr=itr+1
 
    if (mod(itr,every).eq.0) then
@@ -489,7 +478,7 @@ write(6,'(2(a,E20.12E3)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
 do while ((fchk.gt.ftol).and.(itr.le.itrmax))
    ci=1
    do i_nim=2,nim-1
-      u(i_nim) = 0d0
+
       do iomp=1,N_cell
 
          !print *,'i)nim:',i_nim
@@ -513,7 +502,7 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
 
          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
+         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
 
          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
@@ -521,9 +510,8 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
 
       enddo
 
-      if (u(i_nim).gt.u(ci)) then
-         ci = i_nim
-      end if
+      if (u(i_nim).gt.u(ci)) ci = i_nim
+
    end do
 
 
