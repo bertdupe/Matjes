@@ -29,6 +29,29 @@ N_cell=shape_path(2)
 
 select case (initpath)
 
+ case(3)
+
+   write (6,'(a)') "Initial guess for the path from file"
+   call read_path(restartfile_path,amp_rnd_path,path,exists)
+   if (.not.exists) stop
+   momfile_i = convert(restartfile_path,'_1.dat')
+   momfile_f = convert(restartfile_path,'_',nim,'.dat')
+   call read_inifin(momfile_i,momfile_f,amp_rnd,path)
+   call WriteSpinAndCorrFile(path(:,:,1),'SpinSTM_GNEB_ini.dat')
+   call CreateSpinFile(path(:,:,1),'povray_GNEB_ini.dat')
+   call WriteSpinAndCorrFile(path(:,:,nim),'SpinSTM_GNEB_fin.dat')
+   call CreateSpinFile(path(:,:,nim),'povray_GNEB_fin.dat')
+
+   write (6,'(a)') "Relaxing the first image via the infinite damping method..."
+
+   call minimize_infdamp(path(:,:,1),io_simu)
+   write (6,'(a)') "Done!"
+
+   write (6,'(a)') "Relaxing the first image via the infinite damping method..."
+   call minimize_infdamp(path(:,:,nim),io_simu)
+   write (6,'(a)') "Done!"
+
+
  case(2)
 
    write (6,'(a)') "Initial guess for the path from file"
@@ -42,14 +65,14 @@ select case (initpath)
    call WriteSpinAndCorrFile(path(:,:,nim),'SpinSTM_GNEB_fin.dat')
    call CreateSpinFile(path(:,:,nim),'povray_GNEB_fin.dat')
 
-   write (*,'(a)') "Relaxing the first image..."
+   write (6,'(a)') "Relaxing the first image..."
 
    call minimize(path(:,:,1),io_simu)
-   write (*,'(a)') "Done!"
+   write (6,'(a)') "Done!"
 
-   write (*,'(a)') "Relaxing the last image..."
+   write (6,'(a)') "Relaxing the last image..."
    call minimize(path(:,:,nim),io_simu)
-   write (*,'(a)') "Done!"
+   write (6,'(a)') "Done!"
 
 
  case(1)

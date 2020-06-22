@@ -9,6 +9,10 @@ interface minimize
   module procedure minimize_2Dlattice,minimize_lattice
 end interface
 
+interface minimize_infdamp
+  module procedure minimize_infdamp_2Dlattice,minimize_infdamp_lattice
+end interface
+
 private
 public :: minimize,minimize_infdamp
 
@@ -251,13 +255,69 @@ end subroutine
 
 
 
+
+
+
+!
+!
+! Small subroutine that reads the actual lattice
+! and send it into minimize_2Dlattice
+!
+!
+subroutine minimize_infdamp_lattice(my_lattice,io_simu)
+use m_derived_types, only : io_parameter,lattice
+implicit none
+type(io_parameter), intent(in) :: io_simu
+type(lattice), intent(inout) :: my_lattice
+! internal
+real(kind=8), allocatable, dimension(:,:) :: internal_matrix
+integer :: shape_lattice(4),dim_mode,N_cell,i,j,k,l,n
+
+shape_lattice=shape(my_lattice%l_modes)
+dim_mode=my_lattice%dim_mode
+N_cell=product(shape_lattice)
+
+allocate(internal_matrix(dim_mode,N_cell))
+internal_matrix=0.0d0
+
+n=0
+do l=1,shape_lattice(4)
+ do k=1,shape_lattice(3)
+   do j=1,shape_lattice(2)
+     do i=1,shape_lattice(1)
+
+     n=n+1
+     internal_matrix(:,n)=my_lattice%l_modes(i,j,k,l)%w
+
+     enddo
+   enddo
+ enddo
+enddo
+
+call minimize_infdamp_2Dlattice(internal_matrix,io_simu)
+
+n=0
+do l=1,shape_lattice(4)
+ do k=1,shape_lattice(3)
+   do j=1,shape_lattice(2)
+     do i=1,shape_lattice(1)
+
+     n=n+1
+     my_lattice%l_modes(i,j,k,l)%w=internal_matrix(:,n)
+
+     enddo
+   enddo
+ enddo
+enddo
+
+end subroutine
 !!
 !
 ! infinite damping method
 !
 !!
-subroutine minimize_infdamp(my_lattice,io_simu)
-use m_derived_types, only : io_parameter,lattice
+subroutine minimize_infdamp_2Dlattice(matrix,io_simu)
+use m_derived_types, only : io_parameter
 use m_basic_types, only : vec_point
 use m_constants, only : pi
 use m_write_spin
@@ -269,25 +329,26 @@ use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
 implicit none
 type(io_parameter), intent(in) :: io_simu
-type(lattice), intent(inout) :: my_lattice
+real(kind=8), intent(inout) :: matrix(:,:)
 ! internal
 real(kind=8) :: dummy_norm,torque(3),max_torque,test_torque,F_norm,Edy,Et
 real(kind=8), allocatable :: F_eff(:)
 type(vec_point), allocatable, dimension(:) :: all_mode,mode_magnetic
-integer :: N_cell,iomp,i,iter
+integer :: N_cell,iomp,i,iter,N_dim
 logical :: i_magnetic
 
 write(6,'(/,a,/)') 'entering the infinite damping minimization routine'
 
 call init_variables()
 
-N_cell=product(my_lattice%dim_lat)
+N_cell=size(matrix,2)
+N_dim=size(matrix,1)
 
-allocate(F_eff(my_lattice%dim_mode))
+allocate(F_eff(N_dim))
 F_eff=0.0d0
 
 allocate(all_mode(N_cell))
-call associate_pointer(all_mode,my_lattice)
+call associate_pointer(all_mode,matrix)
 
 ! magnetization
 do i=1,size(my_order_parameters)
@@ -303,8 +364,8 @@ enddo
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Prepare the calculation of the energy and the effective field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_B_matrix(my_lattice%dim_mode)
-call get_E_matrix(my_lattice%dim_mode)
+call get_B_matrix(N_dim)
+call get_E_matrix(N_dim)
 
 Edy=0.0d0
 do iomp=1,N_cell
