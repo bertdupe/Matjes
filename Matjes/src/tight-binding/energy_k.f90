@@ -69,7 +69,7 @@ module m_energy_k
 
             N = size(all_E_k, 1)
 
-            allocate( H_complex(N,N), RWORK(2*N), WORK(2*N))
+            allocate( H_complex(N,N), RWORK(max(1,3*N-2)), WORK(2*N))
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
             H_complex=get_FFT(all_E_k, all_positions, kvector_pos, dim_mode, sense)
             RWORK=0.0d0
@@ -136,9 +136,7 @@ module m_energy_k
 !                form did not converge to zero.
 !
 !  =====================================================================
-
             call ZHEEV( 'N', 'U', N, H_complex, N, eigval, WORK, 2*N, RWORK, INFO )
-            ! SUBROUTINE ZHEEV( JOBZ, UPLO, N, A, LDA, W, WORK, LWORK, RWORK, INFO )
 
         end subroutine diagonalise_H_k
 #endif

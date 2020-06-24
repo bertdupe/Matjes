@@ -122,11 +122,11 @@ deallocate(distances)
      do i=1,nb_kpoints
         call diagonalise_H_k(i, size(mode_TB(1)%w), -1.0d0, eigval(:,i))
      enddo
-     open(946,file='eigen.tmp')
-     do i=1,nb_kpoints
-        write(946,'(I6,3F16.8)') i,eigval(:,i)
-     enddo
-     close(946)
+     !open(946,file='eigen.tmp')
+     !do i=1,nb_kpoints
+     !   write(946,'(I6,3F16.8)') i,eigval(:,i)
+     !enddo
+     !close(946)
 
 
 !    N_electrons = check_norm_wavefct(all_mode, TB_pos_start, TB_pos_end, N_electrons)

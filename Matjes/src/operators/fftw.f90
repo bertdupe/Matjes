@@ -307,7 +307,7 @@ module m_fftw
             do i=1, nbcols_energy !loop over the neighbours
                do j=1, nblines_energy !loop over the cells
                     tmp = energy%line(j,i)
-                    alpha = dot_product( pos(:, j), kmesh(:, pos_k) )/
+                    alpha = dot_product( pos(:, j), kmesh(:, pos_k) )
                     aa=(i-1)*dim_mode+1
                     ab=i*dim_mode
                     ba=(tmp-1)*dim_mode+1
