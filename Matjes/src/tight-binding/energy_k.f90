@@ -48,65 +48,107 @@ module m_energy_k
                     all_E_k( (i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode ) = energy%value(j,k)%order_op(1)%Op_loc(TB_pos_start:TB_pos_end,TB_pos_start:TB_pos_end) ! energy%value(j,k) is the "k" Hamiltonian (non-zero) in the "j" shell
                 enddo
             enddo
+
         end subroutine rewrite_H_k
 
 
 #ifdef CPP_LAPACK
-        subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense)
-            use m_invert
+        subroutine diagonalise_H_k(kvector_pos, dim_mode, sense, eigval)
             implicit none
-            integer :: kvector_pos, dim_mode
-            real(kind=8) :: sense
-            real(kind=8), intent(in) :: pos(:,:)
+            integer, intent(in) :: kvector_pos, dim_mode
+            real(kind=8), intent(in) :: sense
+            real(kind=8), intent(out) :: eigval(:)
 
             ! Internal variable
             integer :: i
 
-            integer :: N, LDA, LDVL, LDVR, LWORK, RWORK, INFO
-            complex(kind=16), allocatable :: W(:), VL(:,:), VR(:,:), WORK(:), H_complex(:,:)
-            complex(kind=16) :: DET
+            integer :: N, INFO, N_val
+            complex(kind=16), allocatable :: VL(:,:), VR(:,:), WORK(:), H_complex(:,:)
+            real(kind=8), allocatable :: RWORK(:)
+            real(kind=16), allocatable :: dbl_eigval(:)
 
             N = size(all_E_k, 1)
-            write(*,*) N
-            allocate( W(N), VL(N,N), VR(N,N), WORK(4*N), H_complex(N,N))
+            N_val = size(eigval)
+
+            allocate( VL(N,N), H_complex(N,N), RWORK(2*N-1), WORK(2*N-1), dbl_eigval(N_val))
             ! Before diagonalising the Hamiltonian, we first have to Fourier transform it
-            H_complex=get_FFT(all_E_k, pos, kvector_pos, dim_mode, sense)
+            H_complex=get_FFT(all_E_k, all_positions, kvector_pos, dim_mode, sense)
 
-            pause
             ! diagonalising the Hamiltonian
-            ! JOBVL: left eigenvec of A are computed ('V') or not ('N')
-            ! JOBVR: right eigenvec of A are computed ('V') or not ('N')
-            ! N: order of matrix A
-            ! A: N-by-N input matrix. Is overwritten at output
-            ! LDA: leading dimension of A
-            ! W: eigenvalues of A
-            ! VL: left eigenvec if JOVL is 'V'. Not referenced otherwise
-            ! LDVL: leading dimension of array VL
-            ! VR: right eigenvec if JOVL is 'V'. Not referenced otherwise
-            ! LDVR: leading dimension of array VR
-            ! WORK: ???
-            ! LWORK: dimension of array WORK
-            ! RWORK: real array of dimension 2*N
-            ! INFO: computation information
-            ! CGEEV(JOBVL, JOBVR, N, A, LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
-            LDA = size(H_complex, 1)
-            LDVL = size(VL, 1)
-            LDVR = size(VR, 1)
-            LWORK = size(WORK, 1)
+!  =======
+!
+!  ZHPEV computes all the eigenvalues and, optionally, eigenvectors of a
+!  complex Hermitian matrix in packed storage.
+!
+!  Arguments
+!  =========
+!
+!  JOBZ    (input) CHARACTER*1
+!          = 'N':  Compute eigenvalues only;
+!          = 'V':  Compute eigenvalues and eigenvectors.
+!
+!  UPLO    (input) CHARACTER*1
+!          = 'U':  Upper triangle of A is stored;
+!          = 'L':  Lower triangle of A is stored.
+!
+!  N       (input) INTEGER
+!          The order of the matrix A.  N >= 0.
+!
+!  AP      (input/output) COMPLEX*16 array, dimension (N*(N+1)/2)
+!          On entry, the upper or lower triangle of the Hermitian matrix
+!          A, packed columnwise in a linear array.  The j-th column of A
+!          is stored in the array AP as follows:
+!          if UPLO = 'U', AP(i + (j-1)*j/2) = A(i,j) for 1<=i<=j;
+!          if UPLO = 'L', AP(i + (j-1)*(2*n-j)/2) = A(i,j) for j<=i<=n.
+!
+!          On exit, AP is overwritten by values generated during the
+!          reduction to tridiagonal form.  If UPLO = 'U', the diagonal
+!          and first superdiagonal of the tridiagonal matrix T overwrite
+!          the corresponding elements of A, and if UPLO = 'L', the
+!          diagonal and first subdiagonal of T overwrite the
+!          corresponding elements of A.
+!
+!  W       (output) DOUBLE PRECISION array, dimension (N)
+!          If INFO = 0, the eigenvalues in ascending order.
+!
+!  Z       (output) COMPLEX*16 array, dimension (LDZ, N)
+!          If JOBZ = 'V', then if INFO = 0, Z contains the orthonormal
+!          eigenvectors of the matrix A, with the i-th column of Z
+!          holding the eigenvector associated with W(i).
+!          If JOBZ = 'N', then Z is not referenced.
+!
+!  LDZ     (input) INTEGER
+!          The leading dimension of the array Z.  LDZ >= 1, and if
+!          JOBZ = 'V', LDZ >= max(1,N).
+!
+!  WORK    (workspace) COMPLEX*16 array, dimension (max(1, 2*N-1))
+!
+!  RWORK   (workspace) DOUBLE PRECISION array, dimension (max(1, 3*N-2))
+!
+!  INFO    (output) INTEGER
+!          = 0:  successful exit.
+!          < 0:  if INFO = -i, the i-th argument had an illegal value.
+!          > 0:  if INFO = i, the algorithm failed to converge; i
+!                off-diagonal elements of an intermediate tridiagonal
+!                form did not converge to zero.
+!
+!  =====================================================================
 
-            call CGEEV('N', 'V', N, H_complex , LDA, W, VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO)
+            call ZHPEV( 'N', 'U', N, H_complex, dbl_eigval, VL, N, WORK, RWORK, INFO )
+
+            write(*,*) dbl_eigval
+            pause
 
         end subroutine diagonalise_H_k
 #endif
 
 #ifdef CPP_INTERNAL
-        subroutine diagonalise_H_k(kvector_pos, pos, dim_mode, sense, eigval)
+        subroutine diagonalise_H_k(kvector_pos, dim_mode, sense, eigval)
             use m_eigen_val_vec
             use m_invert
             implicit none
             integer :: kvector_pos, dim_mode
             real(kind=8) :: sense
-            real(kind=8), intent(in) :: pos(:,:)
             complex(kind=16), intent(out) :: eigval(:)
 
             ! Internal variable

@@ -26,8 +26,8 @@ LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,u
 #LAPACK Werllinghton
 #LIBRARIES=-L/cm/shared/apps/lapack/gcc/64/3.3.0/ -llapack -L/cm/shared/apps/blas/gcc/1/lib64/ -lblas
 #LAPACK Mac
-INCLUDES=-I/usr/local/Cellar/openblas/0.3.9/include/
-LIBRARIES=-L/usr/local/Cellar/openblas/0.3.9/lib/ -lopenblas -L/usr/local/Cellar/lapack/3.9.0/lib/ -llapack
+INCLUDES=-I/usr/local/Cellar/openblas/0.3.10/include/
+LIBRARIES=-L/usr/local/Cellar/openblas/0.3.10/lib/ -lopenblas -L/usr/local/Cellar/lapack/3.9.0/lib/ -llapack
 # ordi ULG
 #LIBRARIES=-L/usr/lib/x86_64-linux-gnu/ -lblas -llapack
 #FFTW
@@ -36,7 +36,8 @@ LIBRARIES=-L/usr/local/Cellar/openblas/0.3.9/lib/ -lopenblas -L/usr/local/Cellar
 
 #CPPS= -DCPP_MRG -DCPP_BRUTDIP -DCPP_OPENMP
 #CPPS= -DCPP_MRG -DCPP_BRUTDIP
-CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL
+#CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL
+CPPS= -DCPP_BRUTDIP -DCPP_LAPACK
 #CPPS= -DCPP_MRG -DCPP_FFTW
 #CPPS= -DCPP_MRG -DCPP_SUM
 
