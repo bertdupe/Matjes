@@ -60,7 +60,7 @@ module m_DOS
         subroutine compute_DOS(disp_en, N_cell)
             implicit none
             integer, intent(in) :: N_cell
-            complex(kind=16), intent(in) :: disp_en(:)
+            complex(kind=8), intent(in) :: disp_en(:)
 
             ! Internal variable
             integer :: i, j

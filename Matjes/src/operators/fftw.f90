@@ -5,7 +5,7 @@ module m_fftw
     real(kind=8), protected, public, allocatable :: kmesh(:,:)
 
     ! FFT of the dipolar martix D(r)
-    complex(kind=16), allocatable, protected, public :: FFT_pos_D(:,:,:)
+    complex(kind=8), allocatable, protected, public :: FFT_pos_D(:,:,:)
 
     interface calculate_fft
       module procedure calculate_fft_vec_point,calculate_FFT_matrix
@@ -92,7 +92,7 @@ module m_fftw
         subroutine calculate_fft_vec_point(field,pos,sense,dim_mode,FFT)
             use m_derived_types, only : vec_point
             implicit none
-            complex(kind=16), intent(inout) :: FFT(:,:)
+            complex(kind=8), intent(inout) :: FFT(:,:)
             type(vec_point), intent(in) :: field(:)
             real(kind=8), intent(in) :: sense       ! should be + or - one
             real(kind=8), intent(in) :: pos(:,:)
@@ -118,7 +118,7 @@ module m_fftw
             implicit none
             real(kind=8), intent(in) :: field(:,:),pos(:,:)
             real(kind=8), intent(in) :: sense       ! should be + or - one
-            complex(kind=16), intent(inout) :: FFT(:,:)
+            complex(kind=8), intent(inout) :: FFT(:,:)
 
             ! Internal variables
             integer :: i,N_k,N(2)
@@ -175,7 +175,7 @@ module m_fftw
             integer, intent(in) :: Nsize,dim_mode
             real(kind=8), intent(in) :: kvec(:),pos(:,:),sense
             type(vec_point), intent(in) :: field(:)
-            complex(kind=16) :: get_FFT_vec_point(dim_mode)
+            complex(kind=8) :: get_FFT_vec_point(dim_mode)
 
             ! Internal variables
             real(kind=8) :: phase,r(3)
@@ -200,7 +200,7 @@ module m_fftw
             implicit none
             integer, intent(in) :: Nsize
             real(kind=8), intent(in) :: pos_D(:,:,:),sense,kvec(:),real_dist(:,:)
-            complex(kind=16) :: get_FFT_Dr_matrix(3,3)
+            complex(kind=8) :: get_FFT_Dr_matrix(3,3)
 
             ! Internal variables
             integer :: i,l,m
@@ -227,7 +227,7 @@ module m_fftw
             implicit none
             real(kind=8), intent(in) :: field(:,:),sense,kvec(:),real_dist(:,:)
             integer, intent(in) :: dim_mode
-            complex(kind=16) :: get_FFT_matrix(dim_mode)
+            complex(kind=8) :: get_FFT_matrix(dim_mode)
 
             ! Internal variables
             integer :: shape_pos(2),i,l
@@ -257,13 +257,13 @@ module m_fftw
             implicit none
             integer :: pos_k, dim_mode
             integer :: size_all_vectors
-            complex(kind=16) :: all_energy(:,:), all_vectors(:), X_site(:)
+            complex(kind=8) :: all_energy(:,:), all_vectors(:), X_site(:)
             real(kind=8) :: pos(:,:), sense !pos is the array of all r-r'
-            complex(kind=16) :: get_E_k_local
+            complex(kind=8) :: get_E_k_local
             
             ! Internal variable
             integer :: i
-            complex(kind=16) :: intermediate_sum(size_all_vectors)
+            complex(kind=8) :: intermediate_sum(size_all_vectors)
             real(kind=8) :: alpha
             
             get_E_k_local=0.0d0
@@ -288,29 +288,34 @@ module m_fftw
         !   _ sense: gives the sense of the transform (-1.0d0 ==> direct, +1.0d0 ==> indirect)
         ! Output:
         !   _ Fourier transform of the input all_E_k
-        function Fourier_transform_H(all_E_k, pos, pos_k, dim_mode, sense)
+        function Fourier_transform_H(all_E_k, pos, pos_k, dim_mode, sense)result(FT)
             use m_energy_commons, only : energy
             implicit none
             integer :: pos_k, dim_mode
             real(kind=8) :: pos(:, :), sense !pos is the array of all r-r'
-            complex(kind=16) :: all_E_k(:, :)
-            complex(kind=8) :: Fourier_transform_H( size(all_E_k, 1), size(all_E_k, 2) )
+            complex(kind=8) :: all_E_k(:, :)
+            complex(kind=8) :: FT( size(all_E_k, 1), size(all_E_k, 2) )
 
             ! Internal variable
             integer :: i, j, nblines_energy, nbcols_energy, tmp
             real(kind=8) :: alpha
+            integer :: aa,ab,ba,bb
             nblines_energy = size(energy%line, 1)
             nbcols_energy = size(energy%line, 2)
 
+            FT = cmplx(0.0d0,0.0d0,kind=8)
             do i=1, nbcols_energy !loop over the neighbours
                do j=1, nblines_energy !loop over the cells
                     tmp = energy%line(j,i)
-                    alpha = dot_product( pos(:, j), kmesh(:, pos_k) )
-                    all_E_k( (i-1)*dim_mode+1:i*dim_mode, (tmp-1)*dim_mode+1:tmp*dim_mode)=all_E_k( (i-1)*dim_mode+1:i*dim_mode, (tmp-1)*dim_mode+1:tmp*dim_mode)*cmplx( cos(sense*alpha), sin(sense*alpha) )
+                    alpha = dot_product( pos(:, j), kmesh(:, pos_k) )/
+                    aa=(i-1)*dim_mode+1
+                    ab=i*dim_mode
+                    ba=(tmp-1)*dim_mode+1
+                    bb=tmp*dim_mode
+                    FT( aa:ab, ba:bb)=FT(aa:ab,ba:bb)+all_E_k(aa:ab,ba:bb)*cmplx(cos(sense*alpha), sin(sense*alpha))
                 enddo
             enddo
 
-            Fourier_transform_H = cmplx(all_E_k,kind=8)
         end function Fourier_transform_H
 
 
@@ -348,6 +353,7 @@ module m_fftw
             inquire(file='kpoints',exist=i_file)
             if (i_file) then
                 io_input=open_file_read('kpoints')
+                !PB: this will only read up to Nkpoint from kpoints which might be unexpected
                 do iomp=1,Nkpoint
                     read(io_input,*) (kmesh(i,iomp),i=1,3)
                 enddo

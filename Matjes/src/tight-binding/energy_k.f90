@@ -5,7 +5,7 @@ module m_energy_k
     integer, allocatable, dimension(:,:) :: n_lines
     
     ! This matrix will contain all the Hamiltonians at the right places
-    complex(kind=16), allocatable, dimension(:,:) :: all_E_k
+    complex(kind=8), allocatable, dimension(:,:) :: all_E_k
     real(kind=8), allocatable :: all_positions(:,:) ! array containing the coordinates of all r-r'
 
     private
@@ -22,7 +22,7 @@ module m_energy_k
             N_neighbours = size( energy%line, 1 )
             N_cells = size( energy%line, 2 )
             allocate(all_E_k(dim_mode*N_cells, dim_mode*N_cells),all_positions(3,N_neighbours))
-            all_E_k = cmplx(0.0d0, kind=16)
+            all_E_k = cmplx(0.0d0, kind=8)
 
             do j=1, N_neighbours
                k = energy%line(j, 1)
@@ -150,12 +150,12 @@ module m_energy_k
             implicit none
             integer :: kvector_pos, dim_mode
             real(kind=8) :: sense
-            complex(kind=16), intent(out) :: eigval(:)
+            complex(kind=8), intent(out) :: eigval(:)
 
             ! Internal variable
             integer :: i,N
 
-            complex(kind=16), allocatable ::  H_complex(:,:), U(:,:)
+            complex(kind=8), allocatable ::  H_complex(:,:), U(:,:)
 
             N = size(all_E_k, 1)
             allocate(H_complex(N,N),U(N,N))
@@ -183,7 +183,7 @@ module m_energy_k
         !   _ Etot is the total energy contained in the system
         subroutine compute_Etot( Etot, E, eps_nk , kt, N_electrons)
             implicit none
-            complex(kind=16), intent(in) :: E(:)
+            complex(kind=8), intent(in) :: E(:)
             integer, intent(in) :: N_electrons
             real(kind=8), intent(in) :: eps_nk(:), kt
             real(kind=8), intent(out) :: Etot

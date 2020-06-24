@@ -66,7 +66,7 @@ use m_vector, only : norm
 implicit none
 integer, intent(in) :: io
 real(kind=8), intent(in) :: kv0(:,:),mesh(:,:,:)
-complex(kind=16), intent(in) :: fftcoef(:,:,:)
+complex(kind=8), intent(in) :: fftcoef(:,:,:)
 ! internale variables
 real(kind=8) :: kk(3)
 Integer :: j_lat,i_lat,k

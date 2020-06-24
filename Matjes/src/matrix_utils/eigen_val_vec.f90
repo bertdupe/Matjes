@@ -112,14 +112,14 @@ subroutine eigenvalvec_cmplx(EPS, n, A,ldA, d, U,ldU, sort)
 implicit none
 integer, intent(in) :: n, ldA, ldU, sort
 real(kind=8), intent(in) :: EPS
-complex(kind=16), intent(inout) :: A(:,:) ! size lda,N
-complex(kind=16), intent(out) :: U(:,:), d(:)  ! size ldU,N
+complex(kind=8), intent(inout) :: A(:,:) ! size lda,N
+complex(kind=8), intent(out) :: U(:,:), d(:)  ! size ldU,N
 ! internal
 integer :: p, q, j
 real(kind=8) :: red, thresh, norm, off
-complex(kind=16) :: delta, t, s, invc, sx, sy, tx, ty
-complex(kind=16) :: x, y
-complex(kind=16) :: ev(2,n)
+complex(kind=8) :: delta, t, s, invc, sx, sy, tx, ty
+complex(kind=8) :: x, y
+complex(kind=8) :: ev(2,n)
 integer :: sweep
 
 do p = 1, n

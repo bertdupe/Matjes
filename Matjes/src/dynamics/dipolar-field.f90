@@ -7,7 +7,7 @@ use m_fftw
 !
 
 ! matrix that contains the FFT of the modes
-complex(kind=16), allocatable :: FFT_mode(:,:)
+complex(kind=8), allocatable :: FFT_mode(:,:)
 
 ! matrix that contains all the distances between the spins
 real(kind=8), public, protected, allocatable, dimension(:,:) :: distances
@@ -173,7 +173,7 @@ real(kind=8), intent(inout) :: B(:)
 ! internal
 integer :: i,N_k
 real(kind=8) :: phase
-complex(kind=16) :: D_int(3,3),B_int(3)
+complex(kind=8) :: D_int(3,3),B_int(3)
 
 N_k=product(N_kpoint)
 
