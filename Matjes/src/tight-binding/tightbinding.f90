@@ -17,10 +17,11 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
     use m_bandstructure
     use m_operator_pointer_utils
-    use  m_get_position
+    use m_get_position
     use m_io_utils
     use m_io_files_utils
     use m_DOS
+    use m_fftw
     use m_wavefunction
     use m_energy_k
     use m_lattice, only : my_order_parameters
@@ -126,13 +127,13 @@ deallocate(distances)
     N_electrons = check_norm_wavefct(all_mode, TB_pos_start, TB_pos_end, N_electrons)
     write(6,'(a,2x,f10.4)') ' N_electrons = ', N_electrons
 
-!    do i=1,N_cell
-!       E_F = 0.0d0
-!       call compute_Fermi_level(eigval(i,:), N_electrons, E_F, kt)
-!    enddo
-!    call print_band_struct('N_bands.dat',eigval)
-stop 'toto'
-! diagonlisation uniquement avec les états
+    do i=1,N_cell
+       E_F = 0.0d0
+       call compute_Fermi_level(eigval(i,:), N_electrons, E_F, kt)
+    enddo
+    call print_band_struct('N_bands.dat',eigval)
+
+    ! diagonlisation uniquement avec les états
     call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
     call print_band_struct('bands.dat',dispersion)
 

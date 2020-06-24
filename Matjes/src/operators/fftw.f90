@@ -294,7 +294,7 @@ module m_fftw
             integer :: pos_k, dim_mode
             real(kind=8) :: pos(:, :), sense !pos is the array of all r-r'
             complex(kind=16) :: all_E_k(:, :)
-            complex(kind=16) :: Fourier_transform_H( size(all_E_k, 1), size(all_E_k, 2) )
+            complex(kind=8) :: Fourier_transform_H( size(all_E_k, 1), size(all_E_k, 2) )
 
             ! Internal variable
             integer :: i, j, nblines_energy, nbcols_energy, tmp
@@ -310,7 +310,7 @@ module m_fftw
                 enddo
             enddo
 
-            Fourier_transform_H = all_E_k
+            Fourier_transform_H = cmplx(all_E_k,kind=8)
         end function Fourier_transform_H
 
 

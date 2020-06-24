@@ -18,6 +18,7 @@ module m_bandstructure
     interface print_band_struct
       module procedure print_band_struct_1e,print_band_struct_Ne
     end interface print_band_struct
+    private
     public :: set_E_bandstructure,calculate_dispersion,print_band_struct
 
     contains
@@ -99,7 +100,7 @@ module m_bandstructure
         use m_io_files_utils
         use m_convert
         implicit none
-        complex(kind=16), intent(inout) :: dispersion(:,:)
+        real(kind=8), intent(inout) :: dispersion(:,:)
         character(len=*), intent(in) :: fname
         ! internal
         integer :: io_band,i,N_k,j,N_e
@@ -112,9 +113,10 @@ module m_bandstructure
         io_band=open_file_write(fname)
 
         do i=1,N_k
-           write(io_band,form) (real(dispersion(j,i)),j=1,N_e)
+           write(io_band,form) (dispersion(j,i),j=1,N_e)
         enddo
         call close_file(fname,io_band)
 
         end subroutine
+
 end module m_bandstructure
