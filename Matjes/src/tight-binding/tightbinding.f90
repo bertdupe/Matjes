@@ -43,8 +43,6 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! all_mode is an array of custom type vec_point that will
     ! contain all the modes present in the simulation
     type(vec_point),allocatable :: all_mode(:), mode_magnetic(:), mode_TB(:)
-    ! sense gives the sense of the FFT transform
-    real(kind=8) :: sense
     ! array containing all the positions in the lattice
     real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
     ! Etot gives the total energy contained in the system, kt is the thermal energy
@@ -122,11 +120,6 @@ deallocate(distances)
      do i=1,nb_kpoints
         call diagonalise_H_k(i, size(mode_TB(1)%w), -1.0d0, eigval(:,i))
      enddo
-     !open(946,file='eigen.tmp')
-     !do i=1,nb_kpoints
-     !   write(946,'(I6,3F16.8)') i,eigval(:,i)
-     !enddo
-     !close(946)
 
 
 !    N_electrons = check_norm_wavefct(all_mode, TB_pos_start, TB_pos_end, N_electrons)
@@ -136,8 +129,8 @@ deallocate(distances)
 !       E_F = 0.0d0
 !       call compute_Fermi_level(eigval(i,:), N_electrons, E_F, kt)
 !    enddo
-!    call print_band_struct('N_bands.dat',eigval)
-!
+    call print_band_struct('N_bands.dat',eigval)
+
 !    ! diagonlisation uniquement avec les états
 !    call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)
 !    call print_band_struct('bands.dat',dispersion)

@@ -312,7 +312,7 @@ module m_fftw
                     ab=i*dim_mode
                     ba=(tmp-1)*dim_mode+1
                     bb=tmp*dim_mode
-                    FT( aa:ab, ba:bb)=FT(aa:ab,ba:bb)+all_E_k(aa:ab,ba:bb)*cmplx(cos(sense*alpha), sin(sense*alpha))
+                    FT( aa:ab, ba:bb)=FT(aa:ab,ba:bb)+all_E_k(aa:ab,ba:bb)*cmplx(cos(sense*alpha), sin(sense*alpha),kind=8)
                 enddo
             enddo
 
