@@ -5,8 +5,6 @@ use m_basic_types
 ! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
 type cell
      type(atom), allocatable :: atomic(:)
-     real(kind=8), allocatable :: mom(:), pos(:,:)
-     logical, allocatable :: i_mom(:)
 end type cell
 
 ! variable that defines the lattice

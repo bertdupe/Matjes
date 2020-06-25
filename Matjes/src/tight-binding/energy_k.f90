@@ -214,7 +214,7 @@ module m_energy_k
 
             ! Internal variable
             integer     ::  Nk,Ns
-            integer     :: i
+            integer     :: i,shape_eigen(2)
             integer, allocatable :: indices(:)
             real(kind=8),allocatable :: tmp_E(:) !sorted energy array
 

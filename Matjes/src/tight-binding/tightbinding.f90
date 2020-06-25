@@ -131,10 +131,13 @@ deallocate(distances)
      enddo
 
 
-!    N_electrons = check_norm_wavefct(all_mode, TB_pos_start, TB_pos_end, N_electrons)
-!    write(6,'(a,2x,f10.4)') ' N_electrons = ', N_electrons
+    Call check_norm_wavefct(mode_TB, N_electrons)
+
+    write(*,*) N_electrons
+    write(6,'(a,2x,f10.4)') ' N_electrons = ', N_electrons
 !
     call compute_Fermi_level(eigval, N_electrons, E_F, kt)
+
     call print_band_struct('N_bands.dat',eigval)
 
 !    ! diagonlisation uniquement avec les états

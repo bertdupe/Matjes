@@ -107,7 +107,7 @@ logical :: if_present,exists
 natom=size(my_motif%atomic)
 exists=.false.
 
-n_at_mag=count(my_motif%i_mom(:),1)
+n_at_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
 n_at_nonmag=natom-n_at_mag
 get_DM_vectors=0.0d0
 
