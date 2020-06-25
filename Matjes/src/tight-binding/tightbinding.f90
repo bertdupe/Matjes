@@ -133,7 +133,6 @@ deallocate(distances)
 
     Call check_norm_wavefct(mode_TB, N_electrons)
 
-    write(*,*) N_electrons
     write(6,'(a,2x,f10.4)') ' N_electrons = ', N_electrons
 !
     call compute_Fermi_level(eigval, N_electrons, E_F, kt)
