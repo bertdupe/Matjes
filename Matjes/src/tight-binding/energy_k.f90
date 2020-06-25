@@ -205,32 +205,36 @@ module m_energy_k
             implicit none
             real(kind=8), intent(out) :: fermi_level
             real(kind=8), intent(in) :: kt
-            real(kind=8), intent(in) :: eps_nk(:)
+            real(kind=8), intent(in) :: eps_nk(:,:)
             real(kind=8), intent(in) :: N_electrons
 
             ! Internal variable
-            integer :: i,size_ham,j
+            integer :: i,size_ham,j,shape_eigen(2)
             integer, allocatable :: indices(:)
+            real(kind=8), allocatable :: eigenvalues(:)
             real(kind=8) :: precision_Ef, tmp_sum
 
-            size_ham=size(eps_nk)
-            allocate( indices(size_ham) )
-            call sort(size_ham, eps_nk, indices, 1.0d-5)
+            shape_eigen=shape(eps_nk)
+            size_ham=product(shape_eigen)
+            allocate( indices(size_ham), eigenvalues(size_ham) )
+            eigenvalues=reshape(eps_nk,(/size_ham/))
 
-            write(6,'(/a,2x,2(f12.8,2x)/)') 'higher and lower eigenval',eps_nk(1),eps_nk(size_ham)
+            call sort(size_ham, eigenvalues, indices, 1.0d-5)
+
+            write(6,'(/a,2x,2(f12.8,2x)/)') 'higher and lower eigenval',eigenvalues(1),eigenvalues(size_ham)
 
             tmp_sum = 0.0d0
             i=0
             do while ( i .le. size_ham )
               i=i+1
-              fermi_level = eps_nk(i)
+              fermi_level = eigenvalues(i)
               tmp_sum = 0.0d0
               do j=1,i
-                tmp_sum = tmp_sum + fermi_distrib(fermi_level, eps_nk(j), kt)
+                tmp_sum = tmp_sum + fermi_distrib(fermi_level, eigenvalues(j), kt)
               enddo
               if (real(N_electrons) .le. tmp_sum) exit
             enddo
-            fermi_level = eps_nk(i)
+            fermi_level = eigenvalues(i)
 
             write(6,'(/a,2x,f12.6,2x,a/)') 'fermi_level = ',  fermi_level, '[eV]'
 

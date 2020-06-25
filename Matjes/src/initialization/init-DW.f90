@@ -40,8 +40,6 @@ do i_x=1,Nx
             do i_z=1,Nz
                do i_m=1,size_mag
 
-           if (.not.(my_motif%i_mom(i_m))) cycle
-
            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start)=sin(alpha)
            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start+1)=0.0d0
            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end)=-1.0d0*cos(alpha)
@@ -55,8 +53,6 @@ do i_x=1,Nx
             do i_z=1,Nz
                do i_m=1,size_mag
 
-           if (.not.(my_motif%i_mom(i_m))) cycle
-
            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end)=-1.0d0
 
@@ -68,8 +64,6 @@ do i_x=1,Nx
          do i_y=1,Ny
             do i_z=1,Nz
                do i_m=1,size_mag
-
-           if (.not.(my_motif%i_mom(i_m))) cycle
 
            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end)=1.0d0

@@ -4,9 +4,9 @@
       implicit none
       type(lattice), intent(in) :: my_lattice
       type(cell), intent(in) :: motif
-      real(kind=8), intent(inout) :: spins(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%i_mom))
+      real(kind=8), intent(inout) :: spins(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0))
 ! local variables
-      real(kind=8) :: save_spin(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%i_mom))
+      real(kind=8) :: save_spin(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0))
       integer :: i_x,i_y,i_z,n_x,n_y,n_z,dim_lat(3)
       real(kind=8) :: r_old(3,3),pos(3),min_dist(3),origin(3),denominator,r_u,r_v,r(3,3)
 
@@ -59,11 +59,11 @@
          ! new indices
          r_u=(((save_spin(2,i_x,i_y,i_z,1)-origin(2))/norm(r_old(2,:))*r(2,1)- &
           (save_spin(1,i_x,i_y,i_z,1)-origin(1))/norm(r_old(1,:))*r(2,2))/denominator) &
-          -motif%pos(1,1)+1
+          -motif%atomic(1)%position(1)+1
 
          r_v=((-(save_spin(2,i_x,i_y,i_z,1)-origin(2))/norm(r_old(2,:))*r(1,1)+ &
           (save_spin(1,i_x,i_y,i_z,1)-origin(1))/norm(r_old(1,:))*r(1,2))/denominator) &
-          -motif%pos(1,2)+1
+          -motif%atomic(1)%position(2)+1
 
 
          n_z=i_z
@@ -71,8 +71,8 @@
          n_y=mod(nint(r_v)-1+dim_lat(2),dim_lat(2))+1
 
          !update the positions
-         save_spin(i_x,i_y,i_z,1,1:3)=r(1,:)*(dble(n_x-1)+motif%pos(1,1))+r(2,:)*(dble(n_y-1)+motif%pos(1,2))+ &
-          r(3,:)*(dble(n_z-1)+motif%pos(1,3))
+         save_spin(i_x,i_y,i_z,1,1:3)=r(1,:)*(dble(n_x-1)+motif%atomic(1)%position(1))+r(2,:)*(dble(n_y-1)+motif%atomic(1)%position(2))+ &
+          r(3,:)*(dble(n_z-1)+motif%atomic(1)%position(3))
 
          ! transfer of the new spin lattice
          spins(n_x,n_y,n_z,:,:)=save_spin(i_x,i_y,i_z,:,:)

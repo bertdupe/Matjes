@@ -219,14 +219,6 @@ endif
        allocate(corners(1,1))
 !endif
 
-! setup the energy operator
-call user_info(6,time,'dealing with the z-direction',.false.)
-
-!! check the z direction structure
-!      call setup_zdir(phase,tot_N_Nneigh,motif)
-
-call user_info(6,time,'done',.true.)
-
 ! do a first FFT for the initial magnetic configuration
 !call fft(my_lattice,my_motif)
 
