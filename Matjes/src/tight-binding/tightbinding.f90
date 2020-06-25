@@ -20,6 +20,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_get_position
     use m_io_utils
     use m_io_files_utils
+    use m_rw_TB, only : TB_params
     use m_DOS
     use m_fftw
     use m_wavefunction
@@ -46,7 +47,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! array containing all the positions in the lattice
     real(kind=8), allocatable :: start_positions(:,:,:,:,:),pos(:,:),distances(:,:)
     ! Etot gives the total energy contained in the system, kt is the thermal energy
-    real(kind=8) :: Etot, kt
+    real(kind=8) :: Etot
     ! E_F gives the Fermi energy
     real(kind=8) :: E_F
     ! eps_nk is a vector containing all the eigenvalues
@@ -59,16 +60,6 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     logical :: i_magnetic, i_TB
     integer :: io_input
 
-
-    !PB: we should probably create some module where all the tight binding parameters are stored/initialized 
-    !PB: Number of electrons per site make more sense to me, but so far there seems to be only one state per site
-    N_electrons=1.0d0 !default one electron ?
-    io_input=open_file_read('input') 
-    call get_parameter(io_input, 'input', 'N_electrons', N_electrons)
-    kt=1.0d-3 !more sensible default value, and is there a better way to do this here
-    call get_parameter(io_input, 'input', 'fermi_kt', kt)
-    call close_file('input', io_input)
-    write(*,'(A,F16.8)') "Number of electrons:",N_electrons
 
     call read_params_DOS('input')
 
@@ -92,50 +83,45 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     deallocate(start_positions)
     call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
 
-! Allocating the different variables
-!
-    call associate_pointer(all_mode,my_lattice)
-! magnetization
-do i=1,size(my_order_parameters)
-  if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
-   allocate(mode_magnetic(N_cell))
-   call dissociate(mode_magnetic,N_cell)
-   call associate_pointer(mode_magnetic,all_mode,'magnetic',i_magnetic)
-  endif
-
-  if ('Tight-binding'.eq.trim(my_order_parameters(i)%name)) then
-   allocate(mode_TB(N_cell))
-   call dissociate(mode_TB,N_cell)
-   call associate_pointer(mode_TB,all_mode,'Tight-binding',i_TB)
-
-   TB_pos_start=my_order_parameters(i)%start
-   TB_pos_end=my_order_parameters(i)%end
-    allocate( eigval(N_cell*(TB_pos_end-TB_pos_start+1),nb_kpoints) )
-    eigval = 0.0d0
-  endif
-enddo
-
-!   initializing band structure and H(k)
-call set_E_bandstructure(my_lattice%dim_mode,distances)
-call rewrite_H_k(size(mode_TB(1)%w),TB_pos_start,TB_pos_end,distances)
-deallocate(distances)
-
-
-!The function "diagonalise_H_k" in file energy_k.f90 diagonalises the Hamiltonian
-!for a given k-vector (it calls the function "Fourier_transform_H" inside)
-!==> we need to loop over all the k-vectors to have the eigenenergies for
-!all wavevectors
-! les états vides ET les états pleins sont pris en compte
-     do i=1,nb_kpoints
+    ! Allocating the different variables
+    !
+        call associate_pointer(all_mode,my_lattice)
+    ! magnetization
+    do i=1,size(my_order_parameters)
+      if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
+       allocate(mode_magnetic(N_cell))
+       call dissociate(mode_magnetic,N_cell)
+       call associate_pointer(mode_magnetic,all_mode,'magnetic',i_magnetic)
+      endif
+    
+      if ('Tight-binding'.eq.trim(my_order_parameters(i)%name)) then
+       allocate(mode_TB(N_cell))
+       call dissociate(mode_TB,N_cell)
+       call associate_pointer(mode_TB,all_mode,'Tight-binding',i_TB)
+    
+       TB_pos_start=my_order_parameters(i)%start
+       TB_pos_end=my_order_parameters(i)%end
+        allocate( eigval(N_cell*(TB_pos_end-TB_pos_start+1),nb_kpoints) )
+        eigval = 0.0d0
+      endif
+    enddo
+    
+    !   initializing band structure and H(k)
+    call set_E_bandstructure(my_lattice%dim_mode,distances)
+    call rewrite_H_k(size(mode_TB(1)%w),TB_pos_start,TB_pos_end,distances)
+    deallocate(distances)
+    
+    
+    !The function "diagonalise_H_k" in file energy_k.f90 diagonalises the Hamiltonian
+    !for a given k-vector (it calls the function "Fourier_transform_H" inside)
+    !==> we need to loop over all the k-vectors to have the eigenenergies for
+    !all wavevectors
+    ! les états vides ET les états pleins sont pris en compte
+    do i=1,nb_kpoints
         call diagonalise_H_k(i, size(mode_TB(1)%w), -1.0d0, eigval(:,i))
-     enddo
+    enddo
 
-
-    Call check_norm_wavefct(mode_TB, N_electrons)
-
-    write(6,'(a,2x,f10.4)') ' N_electrons = ', N_electrons
-!
-    call compute_Fermi_level(eigval, N_electrons, E_F, kt)
+    call compute_Fermi_level(eigval, TB_params%N_electrons, E_F, TB_params%kt)
 
     call print_band_struct('N_bands.dat',eigval)
 

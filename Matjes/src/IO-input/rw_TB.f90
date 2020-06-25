@@ -10,6 +10,9 @@ module m_rw_TB
         integer :: nb_orbitals=-1
         integer :: nb_spin=1
         real(kind=8) :: Jsd=0.0d0
+
+        real(kind=8) :: N_electrons  !total number of electrons 
+        real(kind=8) :: kt     !smearing of fermi-dirac distribution for fermi-energy
     end type
 
     type(parameters_TB), public, protected :: TB_params
@@ -40,6 +43,12 @@ module m_rw_TB
             logical :: activate_mag_TB
 
             io_input=open_file_read(fname)
+
+
+            TB_params%N_electrons=1.0d0 !might want to change default
+            call get_parameter(io_input, 'input', 'N_electrons', TB_params%N_electrons)
+            TB_params%kt=1.0d-3 !might want to change default
+            call get_parameter(io_input, 'input', 'fermi_kt',TB_params%kt)
 
             ! Check if magnetism is activated
             activate_mag_TB=.false.
