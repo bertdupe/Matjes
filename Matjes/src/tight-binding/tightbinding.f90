@@ -59,16 +59,18 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     logical :: i_magnetic, i_TB
     integer :: io_input
 
-    kt=0.0d0
 
     !PB: we should probably create some module where all the tight binding parameters are stored/initialized 
     !PB: Number of electrons per site make more sense to me, but so far there seems to be only one state per site
     N_electrons=1.0d0 !default one electron ?
     io_input=open_file_read('input') 
     call get_parameter(io_input, 'input', 'N_electrons', N_electrons)
+    kt=1.0d-3 !more sensible default value, and is there a better way to do this here
+    call get_parameter(io_input, 'input', 'fermi_kt', kt)
     call close_file('input', io_input)
-    call read_params_DOS('input')
     write(*,'(A,F16.8)') "Number of electrons:",N_electrons
+
+    call read_params_DOS('input')
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
