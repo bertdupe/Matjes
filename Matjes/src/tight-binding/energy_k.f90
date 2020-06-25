@@ -200,44 +200,54 @@ module m_energy_k
         end subroutine compute_Etot
 
 !        Function computing the Fermi energy of the system
-        subroutine compute_Fermi_level(eps_nk, N_electrons, fermi_level, kt)
+        subroutine compute_Fermi_level(eps_nk, N_electrons, E_f, kt)
             use m_sort
             implicit none
-            real(kind=8), intent(out) :: fermi_level
+            real(kind=8), intent(out) :: E_f
             real(kind=8), intent(in) :: kt
             real(kind=8), intent(in) :: eps_nk(:,:)
             real(kind=8), intent(in) :: N_electrons
 
+            integer     ::  Nk,Ns
+
             ! Internal variable
             integer :: i,size_ham,j,shape_eigen(2)
             integer, allocatable :: indices(:)
-            real(kind=8), allocatable :: eigenvalues(:)
+            real(kind=8),allocatable :: tmp_E(:)
             real(kind=8) :: precision_Ef, tmp_sum
 
-            shape_eigen=shape(eps_nk)
-            size_ham=product(shape_eigen)
-            allocate( indices(size_ham), eigenvalues(size_ham) )
-            eigenvalues=reshape(eps_nk,(/size_ham/))
+            E_f=0.0d0 
+            Ns=size(eps_nk(:,0))
+            Nk=size(eps_nk(0,:))
+            !size_ham=size(eps_nk)
 
-            call sort(size_ham, eigenvalues, indices, 1.0d-5)
+            !get sorted eigenvalues in tmp_E
+            allocate(tmp_E(Nk*Ns))
+            tmp_E=reshape(eps_nk,[Nk*Ns])
+            allocate(indices(Nk*Ns))
+            call sort(Ns*Nk, tmp_E, indices, 1.0d-5)
 
-            write(6,'(/a,2x,2(f12.8,2x)/)') 'higher and lower eigenval',eigenvalues(1),eigenvalues(size_ham)
+            !trivial guess for fermi energy
+            if(Nk*N_electrons+1 > size(tmp_E)) STOP 'Too many electrons to calculate fermi energy, reduce N_electrons?'
+            E_f=(tmp_E(Nk*N_electrons)+tmp_E(Nk*N_electrons+1))*0.5d0
 
-            tmp_sum = 0.0d0
-            i=0
-            do while ( i .le. size_ham )
-              i=i+1
-              fermi_level = eigenvalues(i)
-              tmp_sum = 0.0d0
-              do j=1,i
-                tmp_sum = tmp_sum + fermi_distrib(fermi_level, eigenvalues(j), kt)
-              enddo
-              if (real(N_electrons) .le. tmp_sum) exit
-            enddo
-            fermi_level = eigenvalues(i)
 
-            write(6,'(/a,2x,f12.6,2x,a/)') 'fermi_level = ',  fermi_level, '[eV]'
+            !write(6,'(/a,2x,2(f12.8,2x)/)') 'higher and lower eigenval',eps_nk(1),eps_nk(size_ham)
 
+            !tmp_sum = 0.0d0
+            !i=0
+            !do while ( i .le. size_ham )
+            !  i=i+1
+            !  Ef = eps_nk(i)
+            !  tmp_sum = 0.0d0
+            !  do j=1,i
+            !    tmp_sum = tmp_sum + fermi_distrib(fermi_level, eps_nk(j), kt)
+            !  enddo
+            !  if (real(N_electrons) .le. tmp_sum) exit
+            !enddo
+            !fermi_level = eps_nk(i)
+
+            write(6,'(/a,2x,f12.6,2x,a/)') 'fermi_level = ',  E_f, '[eV]'
 
         end subroutine compute_Fermi_level
 

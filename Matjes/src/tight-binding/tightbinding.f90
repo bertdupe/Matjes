@@ -51,17 +51,24 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8) :: E_F
     ! eps_nk is a vector containing all the eigenvalues
     complex(kind=8), allocatable :: eps_nk(:)
-    real(kind=8), allocatable :: eigval(:,:)
+    real(kind=8), allocatable :: eigval(:,:) !eigen values (N_state,N_k)
 
     complex(kind=8), allocatable :: dispersion(:), input_energy(:)
     integer :: io, i, nb_kpoints, TB_pos_start, TB_pos_end
     real(kind=8) :: N_electrons
     logical :: i_magnetic, i_TB
+    integer :: io_input
 
     kt=0.0d0
-!    N_electrons=0.0d0
 
+    !PB: we should probably create some module where all the tight binding parameters are stored/initialized 
+    !PB: Number of electrons per site make more sense to me, but so far there seems to be only one state per site
+    N_electrons=1.0d0 !default one electron ?
+    io_input=open_file_read('input') 
+    call get_parameter(io_input, 'input', 'N_electrons', N_electrons)
+    call close_file('input', io_input)
     call read_params_DOS('input')
+    write(*,'(A,F16.8)') "Number of electrons:",N_electrons
 
     shape_lattice=shape(my_lattice%l_modes)
     N_cell=product(shape_lattice)
@@ -124,7 +131,7 @@ deallocate(distances)
 
     N_electrons = check_norm_wavefct(mode_TB, N_electrons)
     write(6,'(a,2x,f10.4)') ' N_electrons = ', N_electrons
-
+!
     call compute_Fermi_level(eigval, N_electrons, E_F, kt)
 
     call print_band_struct('N_bands.dat',eigval)
