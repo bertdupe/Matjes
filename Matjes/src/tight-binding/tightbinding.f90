@@ -26,6 +26,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_wavefunction
     use m_energy_k
     use m_lattice, only : my_order_parameters
+    use m_highsym, only: plot_highsym_kpts
 
     implicit none
     ! internal parameter
@@ -121,9 +122,12 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
         call diagonalise_H_k(i, size(mode_TB(1)%w), -1.0d0, eigval(:,i))
     enddo
 
+    E_F=0.0d0
     call compute_Fermi_level(eigval, TB_params%N_electrons, E_F, TB_params%kt)
 
     call print_band_struct('N_bands.dat',eigval)
+
+    Call plot_highsym_kpts(my_lattice,size(mode_TB(1)%w),E_F) 
 
 !    ! diagonlisation uniquement avec les états
 !    call calculate_dispersion(all_mode, dispersion, my_lattice%dim_mode, nb_kpoints, N_cell)

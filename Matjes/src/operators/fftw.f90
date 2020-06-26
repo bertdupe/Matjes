@@ -12,11 +12,11 @@ module m_fftw
     end interface
 
     interface get_FFT
-      module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix,get_E_k_local, Fourier_transform_H
+      module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix,get_E_k_local, Fourier_transform_H,Fourier_H_at_k
     end interface
 
     private
-    public :: get_k_mesh,calculate_fft,calculate_FFT_Dr,get_FFT
+    public :: get_k_mesh,calculate_fft,calculate_FFT_Dr,get_FFT, Fourier_H_at_k
     contains
 #ifdef CPP_FFTW
         !!!!!!!!!!!!!!!!!!!!!!
@@ -291,10 +291,36 @@ module m_fftw
         function Fourier_transform_H(all_E_k, pos, pos_k, dim_mode, sense)result(FT)
             use m_energy_commons, only : energy
             implicit none
-            integer :: pos_k, dim_mode
-            real(kind=8) :: pos(:, :), sense !pos is the array of all r-r'
-            complex(kind=8) :: all_E_k(:, :)
-            complex(kind=8) :: FT( size(all_E_k, 1), size(all_E_k, 2) )
+            integer,intent(in)         :: pos_k, dim_mode
+            real(kind=8),intent(in)    :: pos(:, :), sense !pos is the array of all r-r'
+            complex(kind=8),intent(in) :: all_E_k(:, :)
+            complex(kind=8)            :: FT( size(all_E_k, 1), size(all_E_k, 2) )
+
+            FT=Fourier_H_at_k(all_E_k, pos,kmesh(:, pos_k), dim_mode, sense)
+
+        end function Fourier_transform_H
+
+
+
+
+        ! Function computing the Fourier transform of an input Hamiltonian
+        ! Input:
+        !   _ all_E_k: input Hamiltonian that will be Fourier transformed
+        !   _ n_lines: non-zero elements in all_E_k
+        !   _ pos: vector containing the position of all non-zero elements in the Hamiltonian
+        !   _ kpt: k-point
+        !   _ dim_mode: length of the order parameter
+        !   _ sense: gives the sense of the transform (-1.0d0 ==> direct, +1.0d0 ==> indirect)
+        ! Output:
+        !   _ Fourier transform of the input all_E_k
+        function Fourier_H_at_k(all_E_k, pos, kpt, dim_mode, sense)result(FT)
+            use m_energy_commons, only : energy
+            implicit none
+            integer          :: dim_mode
+            real(kind=8)     :: kpt(3)
+            real(kind=8)     :: pos(:, :), sense !pos is the array of all r-r'
+            complex(kind=8)  :: all_E_k(:, :)
+            complex(kind=8)  :: FT( size(all_E_k, 1), size(all_E_k, 2) )
 
             ! Internal variable
             integer :: i, j, nblines_energy, nbcols_energy, tmp
@@ -307,7 +333,7 @@ module m_fftw
             do i=1, nbcols_energy !loop over the neighbours
                do j=1, nblines_energy !loop over the cells
                     tmp = energy%line(j,i)
-                    alpha = dot_product( pos(:, j), kmesh(:, pos_k) )
+                    alpha = dot_product( pos(:, j), kpt )
                     aa=(i-1)*dim_mode+1
                     ab=i*dim_mode
                     ba=(tmp-1)*dim_mode+1
@@ -316,7 +342,8 @@ module m_fftw
                 enddo
             enddo
 
-        end function Fourier_transform_H
+        end function 
+
 
 
 

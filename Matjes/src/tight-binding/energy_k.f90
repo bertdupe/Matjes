@@ -3,14 +3,12 @@ module m_energy_k
     use m_fftw
     implicit none
 
-    integer, allocatable, dimension(:,:) :: n_lines
-    
     ! This matrix will contain all the Hamiltonians at the right places
     complex(kind=8), allocatable, dimension(:,:) :: all_E_k
     real(kind=8), allocatable :: all_positions(:,:) ! array containing the coordinates of all r-r'
 
     private
-    public :: rewrite_H_k, diagonalise_H_k, fermi_distrib, compute_Etot, compute_Fermi_level
+    public :: rewrite_H_k, diagonalise_H_k,diagonalise_H_k_list, fermi_distrib, compute_Etot, compute_Fermi_level
     contains
         subroutine rewrite_H_k(dim_mode,TB_pos_start,TB_pos_end,pos)
             implicit none
@@ -54,6 +52,31 @@ module m_energy_k
 
 
 #ifdef CPP_LAPACK
+
+        subroutine diagonalise_H_k_list(kpts,dim_mode,sense,eigval)
+            external :: ZHEEV
+            real(8),intent(in)      ::  kpts(:,:)
+            integer, intent(in) :: dim_mode
+            real(kind=8), intent(in) :: sense
+            real(kind=8), intent(inout),allocatable :: eigval(:,:)
+
+            integer :: i
+            integer :: N,Nkpt, INFO
+            complex(kind=8), allocatable :: WORK(:), H_complex(:,:)
+            real(kind=8), allocatable :: RWORK(:)
+
+            Nkpt=size(kpts,2)
+            N = size(all_E_k, 1)
+            if(.not. allocated(eigval)) allocate(eigval(N,Nkpt),source=0.0d0)
+            if(size(eigval,2)/= Nkpt) STOP "eigval array does not have correct dimension(Nkpts)"
+            allocate( H_complex(N,N), RWORK(max(1,3*N-2)), WORK(2*N))
+            do i=1,Nkpt
+                H_complex=get_FFT(all_E_k, all_positions, kpts(:,i), dim_mode, sense)
+                call ZHEEV( 'N', 'U', N, H_complex, N, eigval(:,i), WORK, size(Work), RWORK, INFO )
+            enddo
+
+        end subroutine
+
         subroutine diagonalise_H_k(kvector_pos, dim_mode, sense, eigval)
             implicit none
             external :: ZHEEV
@@ -62,9 +85,7 @@ module m_energy_k
             real(kind=8), intent(inout) :: eigval(:)
 
             ! Internal variable
-            integer :: i
-
-            integer :: N, INFO, N_val
+            integer :: N, INFO
             complex(kind=8), allocatable :: WORK(:), H_complex(:,:)
             real(kind=8), allocatable :: RWORK(:)
 
@@ -140,6 +161,8 @@ module m_energy_k
             call ZHEEV( 'N', 'U', N, H_complex, N, eigval, WORK, 2*N, RWORK, INFO )
 
         end subroutine diagonalise_H_k
+
+
 #endif
 
 #ifdef CPP_INTERNAL
@@ -214,7 +237,7 @@ module m_energy_k
 
             ! Internal variable
             integer     ::  Nk,Ns
-            integer     :: i,shape_eigen(2)
+            integer     :: i
             integer, allocatable :: indices(:)
             real(kind=8),allocatable :: tmp_E(:) !sorted energy array
 
@@ -248,8 +271,8 @@ module m_energy_k
             call sort(Ns*Nk, tmp_E, indices, 1.0d-5)
 
             !trivial guess for fermi energy
-            if(Nk*N_electrons+1 > size(tmp_E)) STOP 'Too many electrons to calculate fermi energy, reduce N_electrons?'
-            E_f=(tmp_E(Nk*N_electrons)+tmp_E(Nk*N_electrons+1))*0.5d0
+            if(nint(Nk*N_electrons+1) > size(tmp_E)) STOP 'Too many electrons to calculate fermi energy, reduce N_electrons?'
+            E_f=(tmp_E(nint(Nk*N_electrons))+tmp_E(nint(Nk*N_electrons)+1))*0.5d0
 
             !Use Fermi-dirac distribution
             !!prepare considered energy range
@@ -257,14 +280,14 @@ module m_energy_k
             min_E=E_F-cutoff_kt*kt
             max_E=E_F+cutoff_kt*kt
             min_ind=1
-            do i=Nk*N_electrons+1,1,-1
+            do i=nint(Nk*N_electrons)+1,1,-1
                 if(tmp_E(i) <= min_E)then !could be done faster with an temporary array
                     min_ind=i
                     exit
                 endif
             enddo
             max_ind=Nk*Ns
-            do i=Nk*N_electrons,Nk*Ns
+            do i=nint(Nk*N_electrons),Nk*Ns
                 if(tmp_E(i) >= max_E)then
                     max_ind=i
                     exit
