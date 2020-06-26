@@ -47,9 +47,10 @@ module m_highsym
         call close_file(fname//".dat",io)
         io=open_file_write(fname//".gnu")
         write(io,'(A)') 'set xtics( \'
-        do i=1,size(highs_dist,1)
+        do i=1,size(highs_dist,1)-1
             write(io,"(A,E16.8,A)") '"label"',highs_dist(i),', \'
         enddo
+        write(io,"(A,E16.8,A)") '"label"',highs_dist(size(highs_dist,1)), '\'
         write(io,'(A)') ')'
         write(io,'(A)') 'set grid x linetype -1'
         write(io,'(A)') 'set ylabel "E-E_F"'
@@ -66,7 +67,7 @@ module m_highsym
         deallocate(kpts_dist)
         deallocate(highs_dist)
     end subroutine 
-    
+
     subroutine set_path(my_lattice)
         type(lattice), intent(in) :: my_lattice
 
@@ -75,7 +76,7 @@ module m_highsym
         real(8),allocatable     ::  k_highs(:,:)
         integer,allocatable     ::  k_highs_frac(:)
         real(8)                 ::  aim_dist
-   
+
         !local tmp variables 
         integer                 ::  io_input
         integer                 ::  i,j
@@ -85,7 +86,7 @@ module m_highsym
         integer                 ::  i_k
         real(8)                 ::  diff_vec(3)
         integer,allocatable     ::  highs_ind(:)
-    
+
         !read input from file
         io_input=open_file_read('input')
         N_highsym=0
@@ -103,7 +104,7 @@ module m_highsym
         aim_dist=0.01
         call get_parameter(io_input,'input','k_highs_dist',aim_dist)
         call close_file('input',io_input)
-    
+
         !set high symmetry kpoints in correct units
         do i=1,N_highsym
             k_highs(:,i)=k_highs(:,i)/k_highs_frac(i)
@@ -112,7 +113,7 @@ module m_highsym
         do i=1,N_highsym
             k_highs(:,i)=matmul(k_highs(:,i),my_lattice%astar)
         enddo
-    
+
         !set kpts array with all kpoints along the path
         allocate(Npath_k(N_highsym-1),source=1)
         do i=1,N_highsym-1 
@@ -140,9 +141,8 @@ module m_highsym
         enddo
         allocate(highs_dist(N_highsym))
         highs_dist=kpts_dist(highs_ind)
-        
-        
+
     end subroutine 
-    
-    
+
+
 end module m_highsym
