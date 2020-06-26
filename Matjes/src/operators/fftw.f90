@@ -342,23 +342,37 @@ module m_fftw
             call get_parameter(io_input,fname,'write_kmesh',i_plot)
             call close_file(fname,io_input)
 
-            Nkpoint=product(N_kpoint)
-
-            ! Check if the variable kmesh is allocated
-            allocate(kmesh(3,Nkpoint),stat=test)
-            if (test.ne.0) return
-            kmesh=0.0d0
+            if(allocated(kmesh))then
+                write(*,*) "WARNING: kmesh is already allocated"
+                return
+            endif
 
             i_file=.false.
             inquire(file='kpoints',exist=i_file)
             if (i_file) then
+                write(*,'(A)') "Reading kpoint mesh from file: kpoints"
                 io_input=open_file_read('kpoints')
-                !PB: this will only read up to Nkpoint from kpoints which might be unexpected
+                Nkpoint=0
+                do 
+                    read(io_input,*,iostat=test) 
+                    if(test/=0) exit
+                    Nkpoint=Nkpoint+1
+                enddo
+                rewind(io_input)
+                allocate(kmesh(3,Nkpoint),stat=test)
+                if (test.ne.0) return
                 do iomp=1,Nkpoint
                     read(io_input,*) (kmesh(i,iomp),i=1,3)
                 enddo
                 call close_file('kpoints',io_input)
+                !PB it might make sense to write the gridsize into the kpoints file...
+                N_kpoint=[Nkpoint,1,1]
             else
+                Nkpoint=product(N_kpoint)
+                ! Check if the variable kmesh is allocated
+                allocate(kmesh(3,Nkpoint),stat=test)
+                if (test.ne.0) return
+                kmesh=0.0d0
                 call get_kmesh(N_kpoint,kmesh,i_plot)
             endif
 
