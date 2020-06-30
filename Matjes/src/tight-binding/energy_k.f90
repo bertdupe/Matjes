@@ -3,14 +3,14 @@ module m_energy_k
     use m_fftw
     use m_J_sd_exchange
 
-    integer, allocatable, dimension(:,:) :: n_lines
-    
+    implicit none
+
     ! This matrix will contain all the Hamiltonians at the right places
     complex(kind=8), allocatable, dimension(:,:) :: all_E_k
     real(kind=8), allocatable :: all_positions(:,:) ! array containing the coordinates of all r-r'
 
     private
-    public :: rewrite_H_k, diagonalise_H_k, fermi_distrib, compute_Etot, compute_Fermi_level
+    public :: rewrite_H_k, diagonalise_H_k,diagonalise_H_k_list, fermi_distrib, compute_Etot, compute_Fermi_level
     contains
         subroutine rewrite_H_k(dim_mode,TB_pos_start,TB_pos_end,pos)
             implicit none
@@ -54,6 +54,31 @@ module m_energy_k
 
 
 #ifdef CPP_LAPACK
+
+        subroutine diagonalise_H_k_list(kpts,dim_mode,sense,eigval)
+            external :: ZHEEV
+            real(8),intent(in)      ::  kpts(:,:)
+            integer, intent(in) :: dim_mode
+            real(kind=8), intent(in) :: sense
+            real(kind=8), intent(inout),allocatable :: eigval(:,:)
+
+            integer :: i
+            integer :: N,Nkpt, INFO
+            complex(kind=8), allocatable :: WORK(:), H_complex(:,:)
+            real(kind=8), allocatable :: RWORK(:)
+
+            Nkpt=size(kpts,2)
+            N = size(all_E_k, 1)
+            if(.not. allocated(eigval)) allocate(eigval(N,Nkpt),source=0.0d0)
+            if(size(eigval,2)/= Nkpt) STOP "eigval array does not have correct dimension(Nkpts)"
+            allocate( H_complex(N,N), RWORK(max(1,3*N-2)), WORK(2*N))
+            do i=1,Nkpt
+                H_complex=get_FFT(all_E_k, all_positions, kpts(:,i), dim_mode, sense)
+                call ZHEEV( 'N', 'U', N, H_complex, N, eigval(:,i), WORK, size(Work), RWORK, INFO )
+            enddo
+
+        end subroutine
+
         subroutine diagonalise_H_k(kvector_pos, dim_mode, sense, eigval)
             implicit none
             external :: ZHEEV
@@ -62,9 +87,7 @@ module m_energy_k
             real(kind=8), intent(inout) :: eigval(:)
 
             ! Internal variable
-            integer :: i
-
-            integer :: N, INFO, N_val
+            integer :: N, INFO
             complex(kind=8), allocatable :: WORK(:), H_complex(:,:)
             real(kind=8), allocatable :: RWORK(:)
 
@@ -140,6 +163,8 @@ module m_energy_k
             call ZHEEV( 'N', 'U', N, H_complex, N, eigval, WORK, 2*N, RWORK, INFO )
 
         end subroutine diagonalise_H_k
+
+
 #endif
 
 #ifdef CPP_INTERNAL
@@ -202,25 +227,44 @@ module m_energy_k
 
 !        Function computing the Fermi energy of the system
         subroutine compute_Fermi_level(eps_nk, N_electrons, E_f, kt)
+            !subroutine which calculates the Fermi energy
+            !first guess is zero temperature, difference between lowest unoccupied and higher occupied energy
+            !then iterate to achieve the aimed occupation using the fermi-dirac distribution
             use m_sort
             implicit none
             real(kind=8), intent(out) :: E_f
-            real(kind=8), intent(in) :: kt
-            real(kind=8), intent(in) :: eps_nk(:,:)
-            real(kind=8), intent(in) :: N_electrons
-
-            integer     ::  Nk,Ns
+            real(kind=8), intent(in) :: kt          !k_b*T for fermi dirac distribution
+            real(kind=8), intent(in) :: eps_nk(:,:) !assume [Ns,Nk] with Nk=number of k-points, Ns=number of states
+            real(kind=8), intent(in) :: N_electrons !number of states to be occupied at each k
 
             ! Internal variable
-            integer :: i,size_ham,j,shape_eigen(2)
+            integer     ::  Nk,Ns
+            integer     :: i
             integer, allocatable :: indices(:)
-            real(kind=8),allocatable :: tmp_E(:)
-            real(kind=8) :: precision_Ef, tmp_sum
+            real(kind=8),allocatable :: tmp_E(:) !sorted energy array
 
-            E_f=0.0d0 
-            Ns=size(eps_nk(:,0))
-            Nk=size(eps_nk(0,:))
-            !size_ham=size(eps_nk)
+            !fermi-dirac temporary variables
+            !!variables determine considered energy range
+            real(8),parameter     ::  cutoff_kt=10.0d0 !how many instances of kt are included in the considered energy range
+                                      !arbitraily choose 10 times kt, which should be large enough n_f(-10)=0.99995
+            real(8)               ::  min_E,max_E !minimal/maximal energy for calculating the fermi energy
+            integer               ::  min_ind,max_ind
+            !!variables within occupation convergence loop
+            integer     ::  weight_ind  
+            real(8)     ::  weight_aim !fermi dirac occupation aim ( in numbers of occupied states in tmp_E(min_ind:max_ind)
+            real(8)     ::  dE
+            !!parameters for convergence loop control
+            integer,parameter     ::  fd_loop_max=50 !maximal number of fermi-dirac iterations
+            real(8),parameter     ::  occ_cutoff=1.0d-4 !accurancy of the fermi dirac occupation  
+            !components for first derivative:
+            real(8),parameter     ::  c_deriv(7)=[1.0d0,-9.0d0,45.0d0,0.0d0,-45.0d0,9.0d0,-1.0d0]/60.0d0 
+            !temporary iteration parameters for obtaining the fermi energy from the fermi-dirac distribution
+            real(8)    :: E_F_ext(2),weight_ext(2)
+            real(8)    :: E_F_tmp,weight_tmp
+
+            write(*,'(A)') "Start compute fermi level"
+            Ns=size(eps_nk(:,1))
+            Nk=size(eps_nk(1,:))
 
             !get sorted eigenvalues in tmp_E
             allocate(tmp_E(Nk*Ns))
@@ -229,31 +273,103 @@ module m_energy_k
             call sort(Ns*Nk, tmp_E, indices, 1.0d-5)
 
             !trivial guess for fermi energy
-            if(Nk*N_electrons+1 > size(tmp_E)) STOP 'Too many electrons to calculate fermi energy, reduce N_electrons?'
-            E_f=(tmp_E(Nk*N_electrons)+tmp_E(Nk*N_electrons+1))*0.5d0
+            if(nint(Nk*N_electrons+1) > size(tmp_E)) STOP 'Too many electrons to calculate fermi energy, reduce N_electrons?'
+            E_f=(tmp_E(nint(Nk*N_electrons))+tmp_E(nint(Nk*N_electrons)+1))*0.5d0
 
+            !Use Fermi-dirac distribution
+            !!prepare considered energy range
+            !!will assume all states below min_ind are fully occupied and above max_ind are not occupied
+            min_E=E_F-cutoff_kt*kt
+            max_E=E_F+cutoff_kt*kt
+            min_ind=1
+            do i=nint(Nk*N_electrons)+1,1,-1
+                if(tmp_E(i) <= min_E)then !could be done faster with an temporary array
+                    min_ind=i
+                    exit
+                endif
+            enddo
+            max_ind=Nk*Ns
+            do i=nint(Nk*N_electrons),Nk*Ns
+                if(tmp_E(i) >= max_E)then
+                    max_ind=i
+                    exit
+                endif
+            enddo
+            weight_aim=real(Nk*N_electrons-min_ind+1,kind=8)
 
-            !write(6,'(/a,2x,2(f12.8,2x)/)') 'higher and lower eigenval',eps_nk(1),eps_nk(size_ham)
+            !Get initial fermi energy guesses and weights 
+            weight_ind=floor(weight_aim)
+            if (weight_ind-3<1 .or. weight_ind+3> Nk*Ns)then
+                write(*,'(A)') "Warning, very few energy values above or below the aimed occupied state"
+                write(*,'(A)') "Fermi-Dirac implementation not sensible, will use initial guess Fermi energy"
+                write(6,'(/a,2x,f12.6,2x,a/)') 'fermi_level = ',  E_f, '[eV]'
+                return
+            endif
+            dE=max(dot_product(c_deriv,tmp_E(weight_ind-3:weight_ind+3)),1.0e-2)
+            E_F_ext=[E_F-dE,E_F+dE]
+            weight_ext(1)=fermi_weight_sum(E_F_ext(1),tmp_E(min_ind:max_ind),kt)-weight_aim
+            weight_ext(2)=fermi_weight_sum(E_F_ext(2),tmp_E(min_ind:max_ind),kt)-weight_aim
+            weight_ext=weight_ext
 
-            !tmp_sum = 0.0d0
-            !i=0
-            !do while ( i .le. size_ham )
-            !  i=i+1
-            !  Ef = eps_nk(i)
-            !  tmp_sum = 0.0d0
-            !  do j=1,i
-            !    tmp_sum = tmp_sum + fermi_distrib(fermi_level, eps_nk(j), kt)
-            !  enddo
-            !  if (real(N_electrons) .le. tmp_sum) exit
-            !enddo
-            !fermi_level = eps_nk(i)
+            !make sure the E_F_ext correspond to weights below and above the aim
+            do while (weight_ext(1)>0.0d0 .or. weight_ext(2)<0.0d0)
+                if(weight_ext(1)>0.0d0)then
+                    weight_tmp=weight_ext(1)
+                    E_F_tmp=E_F_ext(1)
+                    E_F_ext(1)=E_F_ext(1)-(E_F_ext(2)-E_F_ext(1))*(weight_ext(1)+2.0d0)
+                    weight_ext(1)=fermi_weight_sum(E_F_ext(1),tmp_E(min_ind:max_ind),kt)-weight_aim
+                    weight_ext(2)=weight_tmp
+                    E_F_ext(2)=E_F_tmp
+                endif
+                if(weight_ext(2)<0.0d0)then
+                    weight_tmp=weight_ext(2)
+                    E_F_tmp=E_F_ext(2)
+                    E_F_ext(2)=E_F_ext(2)+(E_F_ext(2)-E_F_ext(1))*(-weight_ext(2)+2.0d0)
+                    weight_ext(2)=fermi_weight_sum(E_F_ext(2),tmp_E(min_ind:max_ind),kt)-weight_aim
+                    weight_ext(1)=weight_tmp
+                    E_F_ext(1)=E_F_tmp
+                endif
+            end do
 
+            !sucessively divide E_F and update E_F_ext and the weights until weight threshold is reached
+            i=1
+            weight_tmp=occ_cutoff+1.0d0
+            do while (abs(weight_tmp)>occ_cutoff)
+                E_F_tmp=sum(E_F_ext)*0.5d0
+                weight_tmp=fermi_weight_sum(E_F_tmp,tmp_E(min_ind:max_ind),kt)-weight_aim
+                if(weight_tmp<0.0d0)then
+                    weight_ext(1)=weight_tmp
+                    E_F_ext(1)=E_F_tmp
+                else
+                    weight_ext(2)=weight_tmp
+                    E_F_ext(2)=E_F_tmp
+                endif
+                i=i+1
+                if(i>fd_loop_max)then
+                    write(*,'(A)') "warning, fermi dirac occupation has not reached the wanted cutoff"
+                    write(*,'(A,E16.8)') "weight-difference",weight_tmp
+                    write(*,'(A)') "Possibly continuing with wrong Fermi energy"
+                    exit
+                endif
+            end do 
+            E_f=E_F_tmp
             write(6,'(/a,2x,f12.6,2x,a/)') 'fermi_level = ',  E_f, '[eV]'
 
         end subroutine compute_Fermi_level
 
 
+        function fermi_weight_sum(E_F,energy,kt)result(weight)
+            real(8)     :: weight
+            real(8)     :: E_F
+            real(8)     :: kt
+            real(8)     :: energy(:)
 
+            integer     ::  i
+            weight=0.0d0
+            do i=1,size(energy)
+                weight=weight+fermi_distrib(E_F, energy(i), kt)
+            end do
+        end function
 
 
 
@@ -268,7 +384,7 @@ module m_energy_k
             if (kt.lt.1.0d-8) then
                 if (energy.le.E_F) fermi_distrib=1.0d0
             else
-                fermi_distrib = 1.0d0/( 1.0d0 + exp((E_F-energy)/kt ) )
+                fermi_distrib = 1.0d0/( 1.0d0 + exp((energy-E_F)/kt ) )
             endif
         end function fermi_distrib
 

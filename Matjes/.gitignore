@@ -1,5 +1,4 @@
 /.ptp-sync/
-build
 # Prerequisites
 *.d
 
@@ -32,3 +31,6 @@ build
 *.exe
 *.out
 *.app
+
+# Ignores the file called make.sys
+make.sys
