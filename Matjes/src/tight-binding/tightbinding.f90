@@ -27,6 +27,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_energy_k
     use m_lattice, only : my_order_parameters
     use m_highsym, only: plot_highsym_kpts
+    use m_energy_r, only: get_eigenval_r 
 
     implicit none
     ! internal parameter
@@ -60,6 +61,8 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     real(kind=8) :: N_electrons
     logical :: i_magnetic, i_TB
     integer :: io_input
+    integer :: dimH
+    real(8),allocatable ::  eigval_r(:)
 
 
     call read_params_DOS('input')
@@ -75,12 +78,14 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! We have access to the variable 'N_kpoint' because it is in the module
     ! m_fftw
     nb_kpoints = product(N_kpoint)
-    allocate( dispersion(nb_kpoints) )
+    allocate(dispersion(nb_kpoints))
     dispersion=0.0d0
 
     allocate( start_positions(3, my_lattice%dim_lat(1), my_lattice%dim_lat(2), my_lattice%dim_lat(3), size(my_motif%atomic)) )
     call get_position( start_positions, my_lattice%dim_lat, my_lattice%areal, my_motif )
     pos=reshape( start_positions, (/3, N_cell/) )
+
+
     deallocate(start_positions)
     call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
 
@@ -102,10 +107,16 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     
        TB_pos_start=my_order_parameters(i)%start
        TB_pos_end=my_order_parameters(i)%end
-        allocate( eigval(N_cell*(TB_pos_end-TB_pos_start+1),nb_kpoints) )
-        eigval = 0.0d0
+       dimH=N_cell*(TB_pos_end-TB_pos_start+1)
+       allocate( eigval(N_cell*(TB_pos_end-TB_pos_start+1),nb_kpoints) )
+       eigval = 0.0d0
       endif
     enddo
+
+    !diagonalize hamiltonian in real spac
+    allocate(eigval_r(dimH),source=0.0d0)
+    Call get_eigenval_r(dimH,[TB_pos_start,Tb_pos_end],eigval_r)
+
     
     !   initializing band structure and H(k)
     call set_E_bandstructure(my_lattice%dim_mode,distances)
