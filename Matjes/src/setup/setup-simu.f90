@@ -111,6 +111,8 @@ time=0.0d0
 
 call create_lattice(my_lattice,my_motif,ext_param,nb_orbitals)
 
+!stop 'toto'
+! note for Bertrand: Continue from here
 dim_lat=my_lattice%dim_lat
 n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
 

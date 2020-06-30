@@ -21,7 +21,7 @@ module m_exchange_TB
             ! internal
             integer :: io_param,nb_shell
             character(len=50) :: form
-            integer :: i, j
+            integer :: i, j, k
             integer :: x_start, x_end
             real(kind=8), allocatable :: t_local(:)
             
@@ -66,12 +66,14 @@ module m_exchange_TB
             enddo
 
             allocate(t_local(x_end-x_start+1))
-            t_local=reshape( TB_params%hopping, (/x_end-x_start+1/) )
 
             ! Put the hopping parameters on the diagonal
             do j=1,nb_shell
+                t_local=reshape( TB_params%hopping(:,:,j), (/x_end-x_start+1/) )
+                k=0
                 do i=x_start,x_end
-                    exc_ham_TB%ham(j)%H(i,i)=exc_ham_TB%c_ham*t_local(j)
+                    k=k+1
+                    exc_ham_TB%ham(j)%H(i,i)=exc_ham_TB%c_ham*t_local(k)
                 enddo
             enddo
 

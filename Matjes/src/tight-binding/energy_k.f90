@@ -1,6 +1,7 @@
 module m_energy_k
     use m_energy_commons, only : energy
     use m_fftw
+    use m_J_sd_exchange
 
     integer, allocatable, dimension(:,:) :: n_lines
     

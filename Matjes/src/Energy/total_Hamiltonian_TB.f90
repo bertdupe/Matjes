@@ -3,6 +3,7 @@ module m_total_Hamiltonian_TB
     use m_chem_pot_TB
     use m_Hamiltonian_variables, only: coeff_ham_inter_spec
     use m_convert
+    use m_J_sd_exchange
 
     type(coeff_ham_inter_spec), target, public, protected :: ham_tot_TB
 
@@ -23,6 +24,7 @@ module m_total_Hamiltonian_TB
 
             call get_onsite_ham_TB(fname,dim_ham)
             call get_exc_ham_TB(fname,dim_ham)
+            call get_Jsd_ham_TB(fname,dim_ham)
 
             if (.not. (onsite_ham_TB%i_exist .or. exc_ham_TB%i_exist) ) return
 
@@ -51,6 +53,7 @@ module m_total_Hamiltonian_TB
                  ham_tot_TB%ham(i)%H = ham_tot_TB%ham(i)%H + exc_ham_TB%ham(i-1)%H
               enddo
             endif
+            !if (Jsd_ham_TB%i_exist) ham_tot_TB%ham(1)%H = ham_tot_TB%ham(1)%H + Jsd_ham_TB%ham(1)%H
             
             form=convert('(',dim_ham,'(f12.8,2x))')
             write(6,'(a)') ''

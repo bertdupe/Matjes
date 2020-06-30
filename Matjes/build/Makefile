@@ -8,7 +8,7 @@ OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o rw_TB.o tightbin
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o \
  Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o energy_k.o wavefunction.o DOS.o bandstructure.o \
- fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
+ fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o J_sd_exchange.o \
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
  create_lattice.o forces.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o eigen_val_vec.o invert.o determinant.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
@@ -46,6 +46,7 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+J_sd_exchange.o: Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 precision.o:
 eigen_val_vec.o:
 invert.o:
@@ -59,7 +60,7 @@ random_lib.o:
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
-total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
+total_Hamiltonian_TB.o: J_sd_exchange.o exchange_tight_binding.o chemical_potential_TB.o
 tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o energy_k.o
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 DOS.o: io_files_utils.o io-utils.o
