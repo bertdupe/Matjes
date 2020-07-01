@@ -9,8 +9,8 @@ module m_EMwave
 !!!!!!!!!!!!!!!!!!!!!!!!!
 
 type EMwave
-    real(kind=8) :: omega_l,Tau,E_0,t_0
-    integer :: t_start,t_cut
+    real(kind=8) :: omega_l,Tau,E_0,t_0,t_start,t_cut
+    !integer :: t_start,t_cut
 end type EMwave
 
 type(EMwave) :: EM_Pulse
@@ -34,8 +34,8 @@ integer, intent(in) :: io
 real(kind=8), parameter :: alpha=2.744923727d-6
 real(kind=8) :: I_0,lambda_l
 
-EM_Pulse%t_start=-200
-EM_Pulse%t_cut=-800
+EM_Pulse%t_start=-200.0d0
+EM_Pulse%t_cut=-800.0d0
 lambda_l=25.0d0
 EM_Pulse%Tau=100.0d0
 I_0=1.0d7
@@ -49,10 +49,8 @@ call get_parameter(io,fname,'I_0',I_0)
 call get_parameter(io,fname,'t_0',EM_Pulse%t_0)
 
 ! en fs-1
-EM_Pulse%omega_l=pi(2.0d0)*c/lambda_l
-write(*,*)'get_parameter_EMwave the weird pi thing'
-write(*,*)pi(2.0d0)
-
+!EM_Pulse%omega_l=pi(2.0d0)*c/lambda_l
+EM_Pulse%omega_l=pi(2.0d0)/lambda_l
 
 if (EM_Pulse%t_start.lt.0) then
    write(6,'(a)') 't_start is negative or not read in input'
@@ -86,13 +84,13 @@ real(kind=8), intent(inout) :: field(:)
 
 field=0.0d0
 
-field(1)=EM_Pulse%E_0 *cos(EM_Pulse%omega_l*time) * exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
+if ( (time.ge.EM_Pulse%t_start).and.(time.le.EM_Pulse%t_cut) ) then !during wave
+	field(3)=EM_Pulse%E_0 *cos(EM_Pulse%omega_l*time) * exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
+	!if (field(3).lt.1.0d-8) field=0.0d0
+else !before and after wave
+	field(3)=0.0d0
+endif
 
-write(*,*)'in update_EMwave field='
-write(*,*) field(:)
-write(*,*)EM_Pulse%E_0,exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
-write(*,*)cos(EM_Pulse%omega_l*time)
-write(*,*)EM_Pulse%E_0 *cos(EM_Pulse%omega_l*time) * exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
 
 end subroutine update_EMwave
 
