@@ -1,8 +1,9 @@
 module m_highsym
+    use m_basic_types, only : vec_point
     use m_io_utils, only: get_parameter
     use m_io_files_utils, only: open_file_read,close_file,open_file_write
     use m_derived_types, only : lattice
-    use m_energy_k,only : diagonalise_H_k_list
+    use m_energy_k,only : get_energy_kpts
     implicit none
     private 
     public :: plot_highsym_kpts
@@ -15,21 +16,23 @@ module m_highsym
     contains
 
 
-    subroutine plot_highsym_kpts(my_lattice,dim_mode,E_F)
-        type(lattice), intent(in) :: my_lattice
-        integer,intent(in)        :: dim_mode
-        real(8),intent(in)        :: E_F !fermi energy
+    subroutine plot_highsym_kpts(dimH,TB_ext,pos,mode_mag,my_lattice,E_F)
+        integer,intent(in)          :: dimH,TB_ext(2)
+        real(8),intent(in)          :: pos(:,:)
+        type(vec_point),intent(in)  :: mode_mag(dimH)
+        type(lattice), intent(in)   :: my_lattice
+        real(8),intent(in)          :: E_F !fermi energy
+
         real(8),allocatable :: eigval(:,:)
 
-
+        integer             ::  dim_mode
 
         Call set_path(my_lattice)
         if(.not. allocated(kpts)) return
-        Call diagonalise_H_k_list(kpts,dim_mode,-1.0d0,eigval)
+        Call get_energy_kpts(kpts,dimH,tb_ext,pos,mode_mag,eigval)
         eigval=eigval-E_F
         Call print_highsym('highs_plot',eigval)
         Call highsym_clear_path()
-
 
     end subroutine
 

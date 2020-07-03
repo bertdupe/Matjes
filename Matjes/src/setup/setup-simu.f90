@@ -276,7 +276,7 @@ if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'
 write(6,'(/,a,/)') 'the setup of the simulation is over'
 #endif
 
-if (io_simu%io_fft_Xstruct) call get_k_mesh('input',my_lattice)
+if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
 
 !!!!!!!!!!!!!! end of the setup
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

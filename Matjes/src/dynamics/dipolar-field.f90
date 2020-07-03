@@ -310,7 +310,7 @@ call calculate_distances(distances,positions,r,my_lattice%dim_lat,my_lattice%bou
 !
 !
 #ifdef CPP_BRUTDIP
-call get_k_mesh('input',my_lattice)
+call set_k_mesh('input',my_lattice)
 call calculate_FFT_Dr(distances,-1.0d0,my_lattice%dim_lat)
 
 #endif

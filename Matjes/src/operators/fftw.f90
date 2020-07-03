@@ -16,7 +16,7 @@ module m_fftw
     end interface
 
     private
-    public :: get_k_mesh,calculate_fft,calculate_FFT_Dr,get_FFT, Fourier_H_at_k
+    public :: set_k_mesh,calculate_fft,calculate_FFT_Dr,get_FFT, Fourier_H_at_k
     contains
 #ifdef CPP_FFTW
         !!!!!!!!!!!!!!!!!!!!!!
@@ -313,14 +313,16 @@ module m_fftw
         !   _ sense: gives the sense of the transform (-1.0d0 ==> direct, +1.0d0 ==> indirect)
         ! Output:
         !   _ Fourier transform of the input all_E_k
-        function Fourier_H_at_k(all_E_k, pos, kpt, dim_mode, sense)result(FT)
+        function Fourier_H_at_k(Hr, pos, kpt, dim_mode, sense)result(FT)
+            !most basic implementation which does not work for interactions larger than the unit-cell size
+            !and which has to loop over the entire Hr matrix
             use m_energy_commons, only : energy
             implicit none
             integer          :: dim_mode
             real(kind=8)     :: kpt(3)
-            real(kind=8)     :: pos(:, :), sense !pos is the array of all r-r'
-            complex(kind=8)  :: all_E_k(:, :)
-            complex(kind=8)  :: FT( size(all_E_k, 1), size(all_E_k, 2) )
+            real(kind=8)     :: pos(:, :), sense !pos is positions(3,Ncell)
+            complex(kind=8)  :: Hr(:, :)
+            complex(kind=8)  :: FT( size(Hr, 1), size(Hr, 2) )
 
             ! Internal variable
             integer :: i, j, nblines_energy, nbcols_energy, tmp
@@ -330,15 +332,15 @@ module m_fftw
             nbcols_energy = size(energy%line, 2)
 
             FT = cmplx(0.0d0,0.0d0,kind=8)
-            do i=1, nbcols_energy !loop over the neighbours
-               do j=1, nblines_energy !loop over the cells
-                    tmp = energy%line(j,i)
-                    alpha = dot_product( pos(:, j), kpt )
+            do i=1, nbcols_energy
+               do j=1, nblines_energy
+					tmp = energy%line(j,i)
+                    alpha = sense*dot_product( pos(:, j), kpt )
                     aa=(i-1)*dim_mode+1
                     ab=i*dim_mode
                     ba=(tmp-1)*dim_mode+1
                     bb=tmp*dim_mode
-                    FT( aa:ab, ba:bb)=FT(aa:ab,ba:bb)+all_E_k(aa:ab,ba:bb)*cmplx(cos(sense*alpha), sin(sense*alpha),kind=8)
+                    FT( aa:ab, ba:bb)=FT(aa:ab,ba:bb)+Hr(aa:ab,ba:bb)*cmplx(cos(alpha), sin(alpha),kind=8)
                 enddo
             enddo
 
@@ -348,7 +350,7 @@ module m_fftw
 
 
         ! Get the mesh for the Fourrier transform
-        subroutine get_k_mesh(fname,my_lattice)
+        subroutine set_k_mesh(fname,my_lattice)
             use m_kmesh
             use m_derived_types, only : lattice
             use m_io_utils
@@ -407,6 +409,6 @@ module m_fftw
             do iomp=1,Nkpoint
                 kmesh(:,iomp)=matmul(kmesh(:,iomp),my_lattice%astar)
             enddo
-        end subroutine get_k_mesh
+        end subroutine set_k_mesh
 
 end module m_fftw
