@@ -43,7 +43,7 @@ real(kind=8), allocatable, dimension(:,:) :: tau_i,tau,ang
 real(kind=8), allocatable, dimension(:) :: ftmp,veltmp
 real(kind=8) :: fchk,u0,u(nim),fpp(nim)
 real(kind=8) :: pathlen(nim)
-real(kind=8) :: fv,fd,fp,E_int,norm_local
+real(kind=8) :: fv,fd,fp,E_int,norm_local,norm_Beff
 integer :: i,imax,dim_mode,dim_mode_mag,maximum(3)
 logical :: found
 !!!!!!!!!!! allocate the pointers to find the path
@@ -78,6 +78,7 @@ coo=0.0d0
 ang=0.0d0
 tau_i=0.0d0
 tau=0.0d0
+norm_Beff=0.0d0
 
 fchk=1d0+ftol
 itr=1
@@ -97,7 +98,8 @@ do i_nim=1,nim
 
       call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-      call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
+      norm_Beff=norm(ftmp(1:3))
+      call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
 
       call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
@@ -195,7 +197,8 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
 
          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
+         norm_Beff=norm(ftmp(1:3))
+         call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
 
          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
@@ -328,7 +331,7 @@ real(kind=8), allocatable, dimension(:,:) :: tau_i,tau,ang
 real(kind=8), allocatable, dimension(:) :: ftmp,veltmp
 real(kind=8) :: fchk,u0,u(nim),fpp(nim)
 real(kind=8) :: pathlen(nim)
-real(kind=8) :: fv,fd,fp,E_int,norm_local
+real(kind=8) :: fv,fd,fp,E_int,norm_local,norm_Beff
 integer :: i,imax,dim_mode,dim_mode_mag,maximum(3)
 logical :: found
 !!!!!!!!!!! allocate the pointers to find the path
@@ -364,6 +367,7 @@ ang=0.0d0
 tau_i=0.0d0
 tau=0.0d0
 ci=1
+norm_Beff=0.0d0
 
 fchk=1d0+ftol
 itr=1
@@ -383,7 +387,8 @@ do i_nim=1,nim
 
       call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-      call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
+      norm_Beff=norm(ftmp(1:3))
+      call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
 
       call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
@@ -502,7 +507,8 @@ do while ((fchk.gt.ftol).and.(itr.le.itrmax))
 
          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
 
-         call project_force(ftmp(1:3),magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
+         norm_Beff=norm(ftmp(1:3))
+         call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
 
          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
 
