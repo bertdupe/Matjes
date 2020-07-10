@@ -61,7 +61,7 @@ void reduce_all(const int n,
 
 int main(){
 
-	const int n=9; //the hamiltonian has dimension n x n^p, this should be passed from Fortran
+	const int n=100; //the hamiltonian has dimension n x n^p, this should be passed from Fortran
 	const int p=2;
 
 	// --- Eigen types--- //
@@ -79,7 +79,7 @@ int main(){
 	clock_start = clock();
 	for(int i=0;i<n;i++){
 		for(int j=0;j<pow(n,p);j++){
-			if((i*j)%3==0){
+			if(i==j){
 
 				row.push_back(i+j);
 			}
@@ -109,16 +109,16 @@ int main(){
 
 
 	clock_end = clock();
-	exe_time = (clock_end - clock_start)/CLOCKS_PER_SEC;
-	cout << "Done, execution time = " << exe_time  << " s."<<endl;
+	exe_time = (clock_end - clock_start);
+	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
 
 	// --- build sparse matrix --- //
 	cout << "Building sparse matrix..." << endl;
 	clock_start = clock();
 	build_sparse_matrix(matrix_large,matrix_sparse_in);
 	clock_end = clock();
-	exe_time = (clock_end - clock_start)/CLOCKS_PER_SEC;
-	cout << "Done, execution time = " << exe_time  << " s."<<endl;
+	exe_time = (clock_end - clock_start);
+	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
 
 
 	// --- call reduce all --- //
@@ -155,6 +155,7 @@ void build_sparse_matrix(vectoroflines &A_dense,
 	}
 	A_dense.clear();
 	A_sparse.setFromTriplets(tripletList.begin(), tripletList.end()); //use triplet to fill it
+ 	cout <<"Sparce matrix has "<<  A_sparse.nonZeros() << " non-zero elements."<< endl;
 }
 
 //_____________________________________________________________________________________|
@@ -243,8 +244,8 @@ void reduce_all(const int n,
 	build_sparse_vector(x_in,x_sparse);
 	//cout << "x_sparse=" << endl << VectorXd(x_sparse) << endl;
 	clock_end = clock();
-	exe_time = (clock_end - clock_start)/CLOCKS_PER_SEC;
-	cout << "Done, execution time = " << exe_time  << " s."<<endl;
+	exe_time = (clock_end - clock_start);
+	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
 
 	// reduce recursively
 	cout << "Beginning reduction..." << endl;
@@ -256,10 +257,10 @@ void reduce_all(const int n,
 	//convert back to dense view
 	A_dense_out= MatrixXd(A_sparse_out_2);
 	clock_end = clock();
-	exe_time = (clock_end - clock_start)/CLOCKS_PER_SEC;
-	cout << "Done, execution time = " << exe_time  << " s."<<endl;
+	exe_time = (clock_end - clock_start);
+	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
 	//cout << "A_dense_out=" << endl << A_dense_out << endl;
-	cout << "A_dense_out has" << endl <<A_dense_out.rows() << " rows and " <<  A_dense_out.cols() << " column(s). " << endl;
+	cout << "A_dense_out has " <<A_dense_out.rows() << " row(s) and " <<  A_dense_out.cols() << " column(s). " << endl;
 
 }
 
