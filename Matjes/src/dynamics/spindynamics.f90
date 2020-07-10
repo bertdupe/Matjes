@@ -224,6 +224,13 @@ enddo
 call get_B_matrix(mag_lattice%dim_mode)
 call get_E_matrix(mag_lattice%dim_mode)
 
+#ifdef __direct_mult__
+Call set_large_H(mag_lattice%dim_mode)
+#endif
+#ifdef __sparse_mkl__
+Call set_H_sparse(mag_lattice%dim_mode)
+#endif
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -425,12 +432,32 @@ if (j.eq.1) check3=test_torque
 
 !!!$omp do private(iomp,Et,dumy) reduction(+:Edy,Mdy,q_plus,q_moins,vx,vy,vz) schedule(auto)
 
+!#ifdef __direct_mult__
+Call energy_H(Edy,mag_lattice%dim_mode)
+write(*,*) Edy
+Edy=0.0d0
+!#elif defined __sparse_mkl__
+Call energy_sparse(Edy,dimH)
+write(*,*) Edy
+Edy=0.0d0
+!#else
 do iomp=1,N_cell
-
-! très lent
     call local_energy(Et,iomp,all_mode,mag_lattice%dim_mode)
 ! optimisé
 !    call local_energy(Et,iomp,all_mode)
+
+    Edy=Edy+Et
+enddo
+write(*,*) Edy
+Edy=0.0d0
+do iomp=1,N_cell
+    call local_energy(Et,iomp,all_mode)
+    Edy=Edy+Et
+enddo
+write(*,*) Edy
+STOP
+!#endif
+do iomp=1,N_cell
 
     Edy=Edy+Et
 
