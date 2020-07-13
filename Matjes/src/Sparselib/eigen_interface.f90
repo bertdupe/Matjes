@@ -25,11 +25,26 @@ interface
     real( kind = c_double )        :: H(*)
   end subroutine
 
+
+  subroutine eigen_set_B(Nentry,dimH,ind1,ind2,B ) bind( c, name="eigen_set_B" )
+    use, intrinsic :: iso_c_binding
+    integer( kind = c_int ), value :: Nentry,dimH
+    integer( kind = c_int )        :: ind1(*),ind2(*)
+    real( kind = c_double )        :: B(*)
+  end subroutine
+
   subroutine eigen_eval_H(dimH,vec,res ) bind( c, name="eigen_eval_H" )
     use, intrinsic :: iso_c_binding
     integer( kind = c_int ), intent(in),value  :: dimH
     real( kind = c_double ), intent(in)        :: vec(*)
     real( kind = c_double ), intent(out)       :: res
+  end subroutine
+
+  subroutine eigen_eval_B(dimH,vec,res ) bind( c, name="eigen_eval_B" )
+    use, intrinsic :: iso_c_binding
+    integer( kind = c_int ), intent(in),value  :: dimH
+    real( kind = c_double ), intent(in)        :: vec(*)
+    real( kind = c_double ), intent(out)       :: res(dimH)
   end subroutine
 end interface
 

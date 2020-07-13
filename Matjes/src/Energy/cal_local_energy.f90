@@ -23,13 +23,17 @@ real(kind=8), allocatable, dimension(:,:) :: all_E
 !sparse format full matrix
 real(8),allocatable :: val(:)
 integer,allocatable :: rowind(:),colind(:)
-integer                         :: dimH
+integer             :: dimH
+
+
+real(8),allocatable :: val_csr(:)
+integer,allocatable :: i_csr(:),j_csr(:)
 public :: set_H_sparse,energy_sparse,dimH
 #endif
 
 private
 public :: local_energy,get_E_matrix,kill_E_matrix
-#ifdef __direct_mult__
+#ifdef __direct_mult_EIGEN__
 public :: set_large_H,energy_H
 #endif
 
@@ -80,7 +84,7 @@ use m_energy_commons, only : energy
 use m_dipole_energy
 use m_dipolar_field, only : i_dip
 use m_matrix, only : reduce
-#ifdef __EIGEN__
+#ifdef __EIGEN_sparse_matmul__
 use m_eigen_interface, only: eigen_matmul_allE
 #endif
 implicit none
@@ -105,7 +109,7 @@ do i=1,N
    j=energy%line(i,iomp)
    all_vectors((i-1)*dim_mode+1:i*dim_mode)=spin(j)%w
 enddo
-#ifdef __EIGEN__
+#ifdef __EIGEN_sparse_matmul__
 Call eigen_matmul_allE(size(spin(iomp)%w),spin(iomp)%w,size(all_vectors),all_vectors,E_int)
 #else
 E_int=dot_product( spin(iomp)%w , matmul( all_E , all_vectors ) )
@@ -145,7 +149,7 @@ do i=1,N
    all_E(:,(i-1)*dim_mode+1:i*dim_mode)=transpose(energy%value(i,1)%order_op(1)%Op_loc)
 enddo
 
-#ifdef __EIGEN__
+#ifdef __EIGEN_sparse_matmul__
 Call eigen_set_all_E(size(all_E,1),size(all_E,2),all_E) !also do with get_E_matrix_T???
 #endif
 end subroutine get_E_matrix_normal
@@ -180,8 +184,24 @@ end subroutine kill_E_matrix
 #ifdef __sparse_mkl__
 subroutine set_H_sparse(dim_mode)
     integer,intent(in)      ::  dim_mode
+    integer                 ::  nnz
+    integer                 ::  tmp,info
+    integer,parameter       ::  job(8)=[2,1,1,0,0,0,0,0]
+    external mkl_dcsrcoo
 
     Call set_matrix_sparse(dim_mode,val,rowind,colind,dimH)
+#ifdef __mkl_csr__
+    nnz=size(val)
+    allocate(val_csr(nnz),source=0.0d0)
+    allocate(j_csr(nnz),source=0)
+    allocate(i_csr(dimH+1),source=0)
+    tmp=0
+    info=0
+    Call mkl_dcsrcoo(job,dimH,val_csr,j_csr,i_csr,nnz,val,rowind,colind,tmp,info)
+    deallocate(val,rowind,colind)
+#endif
+
+
 end subroutine
 
 subroutine energy_sparse(E,dimH)
@@ -196,8 +216,11 @@ subroutine energy_sparse(E,dimH)
    
     nnz=size(rowind)
     mode(1:dimH)=>modes
+#ifdef __mkl_csr__
+    Call mkl_dcsrgemv('N',dimH,val_csr,i_csr,j_csr,mode,tmp)
+#else
     Call mkl_dcoogemv('N',dimH,val,rowind,colind,nnz,mode,tmp)
-    !Call mkl_dcoogemv('N',dimH,val,colind,rowind,nnz,mode,tmp)
+#endif
     E=dot_product(tmp,mode)
 end subroutine
 #endif
@@ -247,7 +270,7 @@ end subroutine
 
 
 
-#ifdef __direct_mult__
+#ifdef __direct_mult_EIGEN__
 subroutine set_large_H(dim_mode)
     use m_eigen_interface, only: eigen_set_H
     integer,intent(in)  :: dim_mode

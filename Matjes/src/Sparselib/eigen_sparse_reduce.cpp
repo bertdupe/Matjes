@@ -117,9 +117,7 @@ void reduce_A(const int n,
 }
 
 
-//SparseMatrix<double> all_E;
 MatrixXd all_E;
-
 
 void eigen_set_all_E(
     int m_in,
@@ -127,7 +125,6 @@ void eigen_set_all_E(
     double arr_in[]){
     Map<MatrixXd,RowMajor> m(arr_in,m_in,n_in);
     all_E = m;
-    //all_E = m.sparseView();
     cout <<"set all_E matrix" << endl;
 }
 
@@ -153,37 +150,48 @@ void eigen_set_H(
 	H=tmp;
  	cout <<"Set H in eigen" << endl;
 }
-
-
 void eigen_eval_H(int dimH,double vec_in[],double* result)
 {
     Map<VectorXd> vec(vec_in,dimH);
-    //VectorXd A= H * vec ;
-    //*result = vec.dot(A);
     *result = vec.dot(H * vec);
 }
+
+
+SparseMatrix<double> B;
+void eigen_set_B(
+    int Nentry,
+    int Hdim,
+    int ind1[],
+    int ind2[],
+    double arr_in[]){
+	typedef Eigen::Triplet<double> T;
+
+	std::vector<T> tripletList;
+	tripletList.reserve(Nentry);
+	for(int i=0; i < Nentry; i++ ){
+		tripletList.push_back(T(ind1[i],ind2[i],arr_in[i]));
+	}
+	
+	SparseMatrix<double> tmp(Hdim,Hdim);
+	tmp.setFromTriplets(tripletList.begin(), tripletList.end());
+	B=tmp;
+ 	cout <<"Set B in eigen" << endl;
+}
+
+void eigen_eval_B(int dimH,double vec_in[],double result[])
+{
+    Map<VectorXd> vec(vec_in,dimH);
+    Map<VectorXd> vec_out(result,dimH);
+    vec_out= B * vec ;
+}
+
+
 
 void eigen_matmul_allE(int size_1,double vec_1[],int size_2,double vec_2[],double* result)
 {
     Map<RowVectorXd> v1(vec_1,size_1);
     Map<VectorXd> v2(vec_2,size_2);
     *result = v1 * (all_E *v2);
-//    VectorXd A= all_E * v2 ;
-    //result = v1* (all_E *v2);
 }
-
-
-//void get_sparse_matrix(
-//    double arr_in[],
-//    const int m_in,
-//    const int n_in){
-//
-//    float data[] = {1,2,3,4};
-//    Map<MatrixXf> m(data,2,2);
-//
-//
-// 	cout <<"reduced matrix has " <<  m.rows() << " row(s) and " << m.cols() << " column(s)." << endl;
-//
-//}
 
 }
