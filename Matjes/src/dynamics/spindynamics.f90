@@ -43,7 +43,8 @@ type(simulation_parameters), intent(in) :: ext_param
 logical :: gra_log,io_stochafield
 integer :: i,j,gra_freq,i_loop,input_excitations
 ! lattices that are used during the calculations
-real(kind=8),allocatable,dimension(:,:,:,:,:,:) :: spinafter
+real(kind=8),allocatable,dimension(:,:,:,:,:,:),target :: spinafter
+real(8),pointer     ::  spinafter_1(:)
 real(kind=8),allocatable,dimension(:,:) :: D_T,Bini,BT
 real(kind=8),allocatable,dimension(:,:,:) :: D_mode
 real(kind=8),allocatable,dimension(:) :: D_mode_int
@@ -224,6 +225,16 @@ enddo
 call get_B_matrix(mag_lattice%dim_mode)
 call get_E_matrix(mag_lattice%dim_mode)
 
+#ifdef __direct_mult_EIGEN__
+Call set_large_H(mag_lattice%dim_mode)
+Call set_large_B(mag_lattice%dim_mode)
+spinafter_1(1:dimB)=>spinafter(:,:,:,:,:,1)
+#elif defined __sparse_mkl__
+Call set_H_sparse(mag_lattice%dim_mode)
+Call set_B_sparse(mag_lattice%dim_mode)
+spinafter_1(1:dimB)=>spinafter(:,:,:,:,:,1)
+#endif
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! start the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -294,8 +305,7 @@ call get_torques('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if (io_simu%io_tracker) call init_tracking(mag_lattice)
 
-!$omp parallel
-
+!!$OMP parallel
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! beginning of the
 do j=1,duration
@@ -319,13 +329,13 @@ do j=1,duration
    test_torque=0.0d0
    ave_torque=0.0d0
    Mdy=0.0d0
-!$omp do private(iomp) schedule(auto)
+!!$OMP do private(iomp) schedule(auto)
    do iomp=1,N_cell
      Bini(:,iomp)=0.0d0
      D_mode(:,iomp,:)=0.0d0
      BT(:,iomp)=0.0d0
    enddo
-!$omp end do
+!!$OMP end do
    dt=timestep_int
 
    call update_ext_EM_fields(real_time,check)
@@ -339,33 +349,47 @@ do j=1,duration
 !
 ! loop over the integration order
 !
-!$omp do ordered private(i_loop,iomp) schedule(auto)
+!!$OMP do ordered private(i_loop,iomp) schedule(auto)
   do i_loop=1,N_loop
 
 !
 ! loop that get all the fields
 !
-
     do iomp=1,N_cell
-
       if (i_excitation) then
         call update_EMT_of_r(iomp,mode_excitation_field)
         call update_EMT_of_r(iomp,lattice_ini_excitation_field)
       endif
+    enddo 
 
+#ifdef __direct_mult_EIGEN__
+    Call energy_B(Bini,size(Bini,1),size(Bini,2),spinafter_1)
+#elif defined __sparse_mkl__
+    Call B_sparse(Bini,size(Bini,1),size(Bini,2),spinafter_1) 
+#elif defined __SLOW__
+    Bini=0.0d0
+    do iomp=1,N_cell
 ! call routine normal which is very slow
       call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
-
 ! call routine optimized which
 !      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
+    enddo 
+#else
+    Bini=0.0d0
+    do iomp=1,N_cell
+! call routine normal which is very slow
+!      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
+! call routine optimized which
+      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
+    enddo 
+#endif
 
 !
 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
 !
+    do iomp=1,N_cell
       if (i_temperature) call get_temperature_field(mode_temp(iomp)%w(1),damping,mode_magnetic(iomp)%w,BT_mag(iomp)%w,D_T_mag(iomp)%w,size(mode_magnetic(iomp)%w))
-
       if (i_magnetic) D_mode_mag(iomp,i_loop)%w=get_propagator_field(B_mag(iomp)%w,damping,mode_magnetic(iomp)%w,size(mode_magnetic(iomp)%w))
-
     enddo
 
 !
@@ -391,8 +415,8 @@ do j=1,duration
    call copy_lattice(all_mode_2,all_mode_1)
 
   enddo
-!$omp end do
-!$omp single
+!!$OMP end do
+!!$OMP single
 !!!!!!!!!!!!!!! copy the final configuration in my_lattice
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -415,7 +439,7 @@ check(1)=check(1)+check1
 check(2)=check(2)+check2
 
 #ifdef CPP_OPENMP
-!$OMP end parallel
+!!$OMP end parallel
 #endif
 
 
@@ -425,14 +449,28 @@ if (j.eq.1) check3=test_torque
 
 !!!$omp do private(iomp,Et,dumy) reduction(+:Edy,Mdy,q_plus,q_moins,vx,vy,vz) schedule(auto)
 
+#ifdef __direct_mult_EIGEN__
+Call energy_H(Edy,mag_lattice%dim_mode)
+#elif defined __sparse_mkl__
+Call energy_sparse(Edy,dimH)
+#elif defined __SLOW__
 do iomp=1,N_cell
-
-! très lent
+!trop lent
     call local_energy(Et,iomp,all_mode,mag_lattice%dim_mode)
 ! optimisé
 !    call local_energy(Et,iomp,all_mode)
-
     Edy=Edy+Et
+enddo
+#else
+do iomp=1,N_cell
+!trop lent
+!    call local_energy(Et,iomp,all_mode,mag_lattice%dim_mode)
+! optimisé
+    call local_energy(Et,iomp,all_mode)
+    Edy=Edy+Et
+enddo
+#endif
+do iomp=1,N_cell
 
     Mdy=Mdy+mode_magnetic(iomp)%w
 
@@ -529,10 +567,11 @@ check(2)=0.0d0
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!! end of a timestep
 real_time=real_time+timestep_int !increment time counter
-enddo
+enddo 
 
-!$omp end parallel
-
+#ifdef CPP_OPENMP
+!!$OMP end parallel
+#endif
 !!!!!!!!!!!!!!! end of a timestep
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

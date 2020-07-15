@@ -39,6 +39,7 @@ void build_sparse_matrix(vectoroflines &A_dense,
 void build_sparse_vector(oneline &x_dense,
 			 SpVec &x_sparse);
 
+extern "C"{
 void reduce_A(const int n,
 	      int m_out,
 	      SpVec &x_sparse,
@@ -52,6 +53,10 @@ void reduce_all(const int n,
 		oneline &A_reduced);
 
 
+void get_sparse_matrix(
+    double* arr_in,
+    const int m_in,
+    const int n_in);
 
 //_____________________________________________________________________________________|
 //										       |
@@ -216,7 +221,89 @@ void reduce_A(const int n,
 
 
 }
+  
+  
+  
 
+MatrixXd all_E;
+
+void eigen_set_all_E(
+    int m_in,
+    int n_in,
+    double arr_in[]){
+    Map<MatrixXd,RowMajor> m(arr_in,m_in,n_in);
+    all_E = m;
+    cout <<"set all_E matrix" << endl;
+}
+
+
+
+SparseMatrix<double> H;
+void eigen_set_H(
+    int Nentry,
+    int Hdim,
+    int ind1[],
+    int ind2[],
+    double arr_in[]){
+	typedef Eigen::Triplet<double> T;
+
+	std::vector<T> tripletList;
+	tripletList.reserve(Nentry);
+	for(int i=0; i < Nentry; i++ ){
+		tripletList.push_back(T(ind1[i],ind2[i],arr_in[i]));
+	}
+	
+	SparseMatrix<double> tmp(Hdim,Hdim);
+	tmp.setFromTriplets(tripletList.begin(), tripletList.end());
+	H=tmp;
+ 	cout <<"Set H in eigen" << endl;
+}
+void eigen_eval_H(int dimH,double vec_in[],double* result)
+{
+    Map<VectorXd> vec(vec_in,dimH);
+    *result = vec.dot(H * vec);
+}
+
+
+SparseMatrix<double> B;
+void eigen_set_B(
+    int Nentry,
+    int Hdim,
+    int ind1[],
+    int ind2[],
+    double arr_in[]){
+	typedef Eigen::Triplet<double> T;
+
+	std::vector<T> tripletList;
+	tripletList.reserve(Nentry);
+	for(int i=0; i < Nentry; i++ ){
+		tripletList.push_back(T(ind1[i],ind2[i],arr_in[i]));
+	}
+	
+	SparseMatrix<double> tmp(Hdim,Hdim);
+	tmp.setFromTriplets(tripletList.begin(), tripletList.end());
+	B=tmp;
+ 	cout <<"Set B in eigen" << endl;
+}
+
+void eigen_eval_B(int dimH,double vec_in[],double result[])
+{
+    Map<VectorXd> vec(vec_in,dimH);
+    Map<VectorXd> vec_out(result,dimH);
+    vec_out= B * vec ;
+}
+
+
+
+void eigen_matmul_allE(int size_1,double vec_1[],int size_2,double vec_2[],double* result)
+{
+    Map<RowVectorXd> v1(vec_1,size_1);
+    Map<VectorXd> v2(vec_2,size_2);
+    *result = v1 * (all_E *v2);
+}
+
+}
+=======
 //_____________________________________________________________________________________|
 //										       |
 // 					reduce all				       |
@@ -263,4 +350,3 @@ void reduce_all(const int n,
 	cout << "A_dense_out has " <<A_dense_out.rows() << " row(s) and " <<  A_dense_out.cols() << " column(s). " << endl;
 
 }
-
