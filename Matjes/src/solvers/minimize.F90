@@ -334,8 +334,8 @@ real(kind=8), intent(inout) :: matrix(:,:)
 real(kind=8) :: dummy_norm,torque(3),max_torque,test_torque,F_norm,Edy,Et
 real(kind=8), allocatable :: F_eff(:)
 type(vec_point), allocatable, dimension(:) :: all_mode,mode_magnetic
-integer :: N_cell,iomp,i,iter,N_dim
-logical :: i_magnetic
+integer :: N_cell,iomp,i,iter,N_dim,gra_freq
+logical :: i_magnetic,gra_log
 
 write(6,'(/,a,/)') 'entering the infinite damping minimization routine'
 
@@ -360,6 +360,9 @@ do i=1,size(my_order_parameters)
    exit
   endif
 enddo
+
+gra_log=io_simu%io_Xstruct
+gra_freq=io_simu%io_frequency
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Prepare the calculation of the energy and the effective field
@@ -401,6 +404,13 @@ do while (max_torque.gt.conv_torque)
     iter=iter+1
     !print max_torque every 100 iterations
     if (mod(iter,100).eq.0) write(*,*) 'Max torque =',max_torque
+
+    !write config to files
+    if ((gra_log).and.(mod(iter,gra_freq).eq.0)) then
+         call CreateSpinFile(iter/gra_freq,all_mode)
+         call WriteSpinAndCorrFile(iter/gra_freq,all_mode,'SpinSTM_')
+         write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq
+      endif
 
 enddo
 
