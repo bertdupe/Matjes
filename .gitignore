@@ -1,3 +1,5 @@
 
 .project
 Matjes/make.sys
+*.swp
+Matjes/make.sys

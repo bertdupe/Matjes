@@ -49,6 +49,8 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+eigen_interface.o:
+eigen_sparse_reduce.o:
 precision.o:
 eigen_val_vec.o:
 invert.o:

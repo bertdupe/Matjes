@@ -32,14 +32,13 @@ double exe_time;						//execution time
 //										       |				      
 //_____________________________________________________________________________________|
 
-
+extern "C"{
 void build_sparse_matrix(vectoroflines &A_dense,
 			 SpMat &A_sparse);
 
 void build_sparse_vector(oneline &x_dense,
 			 SpVec &x_sparse);
 
-extern "C"{
 void reduce_A(const int n,
 	      int m_out,
 	      SpVec &x_sparse,
@@ -303,7 +302,7 @@ void eigen_matmul_allE(int size_1,double vec_1[],int size_2,double vec_2[],doubl
 }
 
 }
-=======
+
 //_____________________________________________________________________________________|
 //										       |
 // 					reduce all				       |
