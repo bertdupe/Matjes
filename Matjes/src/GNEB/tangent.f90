@@ -65,6 +65,7 @@ else
    end if
 end if
 
+!project tangent onto tangent space and normalize it
 tmp = 0d0
 do i=1,N_cell
    tau_tmp(:) = tau(:,i)
