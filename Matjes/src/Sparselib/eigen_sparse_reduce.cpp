@@ -63,7 +63,7 @@ void get_sparse_matrix(
 //										       |				      
 //_____________________________________________________________________________________|
 
-int main(){
+/*int main(){
 
 	const int n=100; //the hamiltonian has dimension n x n^p, this should be passed from Fortran
 	const int p=2;
@@ -98,19 +98,6 @@ int main(){
 		M_int.push_back(i*i);
 	}
 
-	/*cout << "matrix_large =" << endl;
-	for(int i=0;i<n;i++){
-		for(int j=0;j<pow(n,p);j++){
-			cout << "\t" << matrix_large[i][j];
-		}
-		cout << endl;		
-	}
-
-	cout << "M_int = " << endl;
-	for(int i=0;i<n;i++){
-		cout << M_int[i] << endl;
-	}*/
-
 
 	clock_end = clock();
 	exe_time = (clock_end - clock_start);
@@ -127,7 +114,7 @@ int main(){
 
 	// --- call reduce all --- //
 	reduce_all(n,p,matrix_sparse_in,M_int,matrix_reduced);
-}
+}*/
 
 
 //_____________________________________________________________________________________|

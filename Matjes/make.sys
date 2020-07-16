@@ -15,7 +15,8 @@ CXX=g++
 #debugging flags
 #
 FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none  
-LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#LDFLAGS= -dylib -arch x86_64
 
 #
 # profiling with gprof
@@ -26,9 +27,9 @@ LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,u
 #LAPACK Werllinghton
 #LIBRARIES=-L/cm/shared/apps/lapack/gcc/64/3.3.0/ -llapack -L/cm/shared/apps/blas/gcc/1/lib64/ -lblas
 #LAPACK Mac
-INCLUDES=-I/usr/local/Cellar/openblas/0.3.10_1/include/ -I/usr/local/include/eigen3
-LIBRARIES=-L/usr/local/Cellar/openblas/0.3.10_1/lib/ -lopenblas -L/usr/local/Cellar/lapack/3.9.0_1/lib/ -llapack -L/
-C_INCLUDES=-I/usr/local/Cellar/eigen/3.3.7/include/eigen3/
+INCLUDES= -I/usr/local/include/
+LIBRARIES= -L/usr/lib/ -lstdc++ -lc++ -lblas -llapack
+C_INCLUDES= -I/usr/local/opt/eigen/include/eigen3
 # ordi ULG
 #LIBRARIES=-L/usr/lib/x86_64-linux-gnu/ -lblas -llapack
 #FFTW
