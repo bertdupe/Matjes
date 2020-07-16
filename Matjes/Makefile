@@ -6,7 +6,7 @@ serial: copy
 	cd build && make Matjes
 
 copy:
-	cp src/*.f90 src/*/*.f* src/*/*.F* build/.
+	cp src/*.f90 src/*/*.f* src/*/*.F* src/*/*cpp build/.
 
 install:  clean serial
 	+@(cd build && mv Matjes ../bin/.)

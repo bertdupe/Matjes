@@ -1,4 +1,6 @@
 *.o
-*.f90
+*.mod
 *.F90
+*.f90
+*.cpp
 Matjes

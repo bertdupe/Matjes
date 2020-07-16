@@ -90,8 +90,8 @@ N_cell=shape_path(2)
 
 do i_nim = 1,nim
    fname=convert(fname_part,'_',i_nim,'.dat')
-
    io=open_file_read(fname)
+
    if (io.gt.0) then
       exists=.true.
       do i=1,N_cell

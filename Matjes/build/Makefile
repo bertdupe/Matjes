@@ -1,9 +1,9 @@
 include ../make.sys
 
-.SUFFIXES: .o .f90 .F90 .f
+.SUFFIXES: .o .f90 .F90 .f *cpp
 
 OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o rw_TB.o tightbinding.o exchange_tight_binding.o chemical_potential_TB.o \
- total_Hamiltonian_TB.o envelope.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
+ total_Hamiltonian_TB.o envelope.o eigen_interface.o eigen_sparse_reduce.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o \
@@ -33,6 +33,9 @@ Matjes: $(OBJS)
 %.o: %.f
 	$(FC) -cpp $(CPPS) -c $< $(FFLAGS) $(INCLUDES) -o $@
 	
+%.o: %.cpp
+	$(CXX) -cpp $(CPPS) -c $< $(C_INCLUDES) -o $@
+
 .f.a:
 	$(FC) -c $(FFLAGS) $<
 	$(AR) $(ARFLAGS) $@ $*.o
@@ -47,6 +50,8 @@ clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
 J_sd_exchange.o: Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
+eigen_interface.o:
+eigen_sparse_reduce.o:
 precision.o:
 eigen_val_vec.o:
 invert.o:

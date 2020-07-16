@@ -45,7 +45,7 @@ do while (test.ne.0)
     j=mod(i-1,ncolumn)+1
     k=(i-1)/ncolumn+1
     matrix_int(j,k)=dot_product( matrix_int(:,i) , S_int )
-  enddo
+  enddo 
 
   nline=test
   test=nline/ncolumn
