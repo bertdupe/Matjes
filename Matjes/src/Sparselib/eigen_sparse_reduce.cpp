@@ -63,104 +63,104 @@ void get_sparse_matrix(
 //										       |				      
 //_____________________________________________________________________________________|
 
-int main(){
-
-	const int n=100; //the hamiltonian has dimension n x n^p, this should be passed from Fortran
-	const int p=2;
-
-	// --- Eigen types--- //
-	 SpMat matrix_sparse_in(n,pow(n,p));
-
-	// ---- std vector types -----//
-
-	vectoroflines matrix_large; 				//hamiltonian
-	oneline row;
-	oneline M_int;						//order parameter
-	oneline matrix_reduced; 				//reduced hamiltonian
-
-	// ---- fill test vectors -----//
-	cout << "Filling test matrix of dimensions " << n << " x " << pow(n,p) << " and vector of dim " << n << "..." << endl;
-	clock_start = clock();
-	for(int i=0;i<n;i++){
-		for(int j=0;j<pow(n,p);j++){
-			if(i==j){
-
-				row.push_back(i+j);
-			}
-			else
-				row.push_back(0.0);
-			}
-		matrix_large.push_back(row);
-		row.clear();
-	}
-	
-	for(int i=0;i<n;i++){	
-		M_int.push_back(i*i);
-	}
-
-	/*cout << "matrix_large =" << endl;
-	for(int i=0;i<n;i++){
-		for(int j=0;j<pow(n,p);j++){
-			cout << "\t" << matrix_large[i][j];
-		}
-		cout << endl;		
-	}
-
-	cout << "M_int = " << endl;
-	for(int i=0;i<n;i++){
-		cout << M_int[i] << endl;
-	}*/
-
-
-	clock_end = clock();
-	exe_time = (clock_end - clock_start);
-	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
-
-	// --- build sparse matrix --- //
-	cout << "Building sparse matrix..." << endl;
-	clock_start = clock();
-	build_sparse_matrix(matrix_large,matrix_sparse_in);
-	clock_end = clock();
-	exe_time = (clock_end - clock_start);
-	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
-
-
-	// --- call reduce all --- //
-	reduce_all(n,p,matrix_sparse_in,M_int,matrix_reduced);
-}
-
-
-//_____________________________________________________________________________________|
-//										       |
-// 					Build Sparse matrix			       |
-//										       |				      
-//_____________________________________________________________________________________|
-
-//takes a dense matrix as std vector of rows and outputs eigen sparse matrix
-
-void build_sparse_matrix(vectoroflines &A_dense,
-			 SpMat &A_sparse){
-
-	// ----------------- variables---------------------- //
-
-	vector<Trplt> tripletList; 				// std vector for triplet list: row index, column index, value.
-	const int n_1=A_dense.size(); 				//number of rows
-	const int n_2=A_dense[0].size(); 			//number of columns
-	//tripletList.reserve(10* n_2); 				//reserve room for non-zero elements (here 10/column)
-
-	// --- fill triplet list and fill sparse matrix A--- //
-
-	for(int i=0;i<n_1;i++){
-		for(int j=0;j<n_2;j++){ 
-			if (A_dense[i][j]!=0.0){ 
-	  			tripletList.push_back(Trplt(i,j,A_dense[i][j]));
-			}
-		}	
-	}
-	A_dense.clear();
-	A_sparse.setFromTriplets(tripletList.begin(), tripletList.end()); //use triplet to fill it
- 	cout <<"Sparce matrix has "<<  A_sparse.nonZeros() << " non-zero elements."<< endl;
-}
+//int main(){
+//
+//	const int n=100; //the hamiltonian has dimension n x n^p, this should be passed from Fortran
+//	const int p=2;
+//
+//	// --- Eigen types--- //
+//	 SpMat matrix_sparse_in(n,pow(n,p));
+//
+//	// ---- std vector types -----//
+//
+//	vectoroflines matrix_large; 				//hamiltonian
+//	oneline row;
+//	oneline M_int;						//order parameter
+//	oneline matrix_reduced; 				//reduced hamiltonian
+//
+//	// ---- fill test vectors -----//
+//	cout << "Filling test matrix of dimensions " << n << " x " << pow(n,p) << " and vector of dim " << n << "..." << endl;
+//	clock_start = clock();
+//	for(int i=0;i<n;i++){
+//		for(int j=0;j<pow(n,p);j++){
+//			if(i==j){
+//
+//				row.push_back(i+j);
+//			}
+//			else
+//				row.push_back(0.0);
+//			}
+//		matrix_large.push_back(row);
+//		row.clear();
+//	}
+//	
+//	for(int i=0;i<n;i++){	
+//		M_int.push_back(i*i);
+//	}
+//
+//	/*cout << "matrix_large =" << endl;
+//	for(int i=0;i<n;i++){
+//		for(int j=0;j<pow(n,p);j++){
+//			cout << "\t" << matrix_large[i][j];
+//		}
+//		cout << endl;		
+//	}
+//
+//	cout << "M_int = " << endl;
+//	for(int i=0;i<n;i++){
+//		cout << M_int[i] << endl;
+//	}*/
+//
+//
+//	clock_end = clock();
+//	exe_time = (clock_end - clock_start);
+//	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
+//
+//	// --- build sparse matrix --- //
+//	cout << "Building sparse matrix..." << endl;
+//	clock_start = clock();
+//	build_sparse_matrix(matrix_large,matrix_sparse_in);
+//	clock_end = clock();
+//	exe_time = (clock_end - clock_start);
+//	cout << "Done, execution time = " << exe_time  << " CPS. " << endl;
+//
+//
+//	// --- call reduce all --- //
+//	reduce_all(n,p,matrix_sparse_in,M_int,matrix_reduced);
+//}
+//
+//
+////_____________________________________________________________________________________|
+////										       |
+//// 					Build Sparse matrix			       |
+////										       |				      
+////_____________________________________________________________________________________|
+//
+////takes a dense matrix as std vector of rows and outputs eigen sparse matrix
+//
+//void build_sparse_matrix(vectoroflines &A_dense,
+//			 SpMat &A_sparse){
+//
+//	// ----------------- variables---------------------- //
+//
+//	vector<Trplt> tripletList; 				// std vector for triplet list: row index, column index, value.
+//	const int n_1=A_dense.size(); 				//number of rows
+//	const int n_2=A_dense[0].size(); 			//number of columns
+//	//tripletList.reserve(10* n_2); 				//reserve room for non-zero elements (here 10/column)
+//
+//	// --- fill triplet list and fill sparse matrix A--- //
+//
+//	for(int i=0;i<n_1;i++){
+//		for(int j=0;j<n_2;j++){ 
+//			if (A_dense[i][j]!=0.0){ 
+//	  			tripletList.push_back(Trplt(i,j,A_dense[i][j]));
+//			}
+//		}	
+//	}
+//	A_dense.clear();
+//	A_sparse.setFromTriplets(tripletList.begin(), tripletList.end()); //use triplet to fill it
+// 	cout <<"Sparce matrix has "<<  A_sparse.nonZeros() << " non-zero elements."<< endl;
+//}
 
 //_____________________________________________________________________________________|
 //										       |
