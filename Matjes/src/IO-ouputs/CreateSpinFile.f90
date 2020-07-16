@@ -92,7 +92,7 @@ real(kind=8) :: r(3,3)
 
 
 N=shape(my_lattice%l_modes)
-Natom_motif=size(my_motif%i_mom)
+Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
 r=my_lattice%areal
 
 allocate(position(3,N(1),N(2),N(3),N(4)))
@@ -124,7 +124,7 @@ integer :: N(4),Natom_motif,io
 real(kind=8) :: r(3,3)
 
 N=shape(my_lattice%l_modes)
-Natom_motif=size(my_motif%i_mom)
+Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
 r=my_lattice%areal
 
 allocate(position(3,N(1),N(2),N(3),N(4)))

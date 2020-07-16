@@ -112,14 +112,14 @@ subroutine eigenvalvec_cmplx(EPS, n, A,ldA, d, U,ldU, sort)
 implicit none
 integer, intent(in) :: n, ldA, ldU, sort
 real(kind=8), intent(in) :: EPS
-complex(kind=16), intent(inout) :: A(:,:) ! size lda,N
-complex(kind=16), intent(out) :: U(:,:), d(:)  ! size ldU,N
+complex(kind=8), intent(inout) :: A(:,:) ! size lda,N
+complex(kind=8), intent(out) :: U(:,:), d(:)  ! size ldU,N
 ! internal
 integer :: p, q, j
 real(kind=8) :: red, thresh, norm, off
-complex(kind=16) :: delta, t, s, invc, sx, sy, tx, ty
-complex(kind=16) :: x, y
-complex(kind=16) :: ev(2,n),UL(ldU,n)
+complex(kind=8) :: delta, t, s, invc, sx, sy, tx, ty
+complex(kind=8) :: x, y
+complex(kind=8) :: ev(2,n)
 integer :: sweep
 
 do p = 1, n
@@ -134,8 +134,6 @@ do p = 1, n
    enddo
    U(p,p) = 1.0d0
 enddo
-
-UL=U
 
 red = .01D0/n**4
 
@@ -203,11 +201,11 @@ do sweep = 1, 50
             A(q,p) = 0.0d0
 
             do j = 1, n
-              x = UL(p,j)
-              y = UL(q,j)
+              x = U(p,j)
+              y = U(q,j)
 
-              UL(p,j) = x + sx*(y - tx*x)
-              UL(q,j) = y - sy*(x + ty*y)
+              U(p,j) = x + sx*(y - tx*x)
+              U(q,j) = y - sy*(x + ty*y)
 
             enddo
 
@@ -228,11 +226,11 @@ enddo
 do p = 1, n
    norm = 0.0d0
    do q = 1, n
-      norm = norm + abs(UL(p,q))**2
+      norm = norm + abs(U(p,q))**2
    enddo
    norm = 1/sqrt(norm)
    do q = 1, n
-      UL(p,q) = UL(p,q)*norm
+      U(p,q) = U(p,q)*norm
    enddo
 enddo
 
@@ -253,9 +251,9 @@ do p = 1, n - 1
       d(j) = d(p)
       d(p) = t
       do q = 1, n
-         x = UL(p,q)
-         UL(p,q) = UL(j,q)
-         UL(j,q) = x
+         x = U(p,q)
+         U(p,q) = U(j,q)
+         U(j,q) = x
       enddo
    endif
 enddo

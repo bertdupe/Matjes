@@ -83,9 +83,9 @@ End
     implicit none
     real(kind=8) :: eps
     integer :: N
-    Complex(kind=16) :: A(:,:), det
-    Complex(kind=16) :: C0,Z1
-    Complex(kind=16) :: C(N,N)
+    complex(kind=8) :: A(:,:), det
+    complex(kind=8) :: C0,Z1
+    complex(kind=8) :: C(N,N)
     integer :: KP(N), LP(N),it,k,l
 
     Z1 = 1.
@@ -198,11 +198,11 @@ End !TSRGT
     implicit none
     real(kind=8), intent(in) :: eps
     integer, intent(in) :: N
-    Complex(kind=16), intent(in) ::  A(:,:)
-    Complex(kind=16), intent(out) :: C(:,:)
+    complex(kind=8), intent(in) ::  A(:,:)
+    complex(kind=8), intent(out) :: C(:,:)
     Integer, intent(out) :: KP(:), LP(:), it
     ! internal
-    Complex(kind=16) :: C0,C1,P0,T0
+    complex(kind=8) :: C0,C1,P0,T0
     integer :: k,i,j,k0,l0
 
 

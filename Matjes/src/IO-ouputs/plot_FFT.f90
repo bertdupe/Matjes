@@ -23,7 +23,7 @@ contains
 !integer, intent(in) :: dim_mode,tag
 !! internal
 !integer :: i,Nsize,N_k
-!complex(kind=16), allocatable :: FFT(:,:)
+!complex(kind=8), allocatable :: FFT(:,:)
 !character(len=50) :: fname
 !
 !fname=convert('FFT_',tag,'.dat')
@@ -55,7 +55,7 @@ logical, intent(in) :: boundary(:)
 ! internal
 integer :: N
 real(kind=8), allocatable :: positions(:,:),distances(:,:)
-complex(kind=16), allocatable :: FFT(:,:)
+complex(kind=8), allocatable :: FFT(:,:)
 character(len=50) :: fname
 
 N=size(all_mode)
@@ -94,7 +94,7 @@ use m_io_files_utils
 use m_convert
 implicit none
 character(len=*), intent(in) :: fname
-complex(kind=16), intent(in) :: FFT(:,:)
+complex(kind=8), intent(in) :: FFT(:,:)
 ! internal
 integer :: io_out,shape_FFT(2),i,k
 character(len=50) :: form
@@ -116,7 +116,7 @@ use m_io_files_utils
 use m_convert
 implicit none
 character(len=*), intent(in) :: fname
-complex(kind=16), intent(in) :: FFT(:,:,:)
+complex(kind=8), intent(in) :: FFT(:,:,:)
 ! internal
 integer :: io_out,shape_FFT(3),i,k,l
 character(len=50) :: form

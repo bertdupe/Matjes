@@ -51,10 +51,10 @@ my_lattice%boundary=Periodic_log
 
 ! build up the reciprocal lattice vectors
 
-volume=dot_product(net(1,:),cross(net(2,:),net(3,:),1,3))
-kv0(1,:) = pi(2.0d0)*cross(net(2,:),net(3,:),1,3)/volume
-kv0(2,:) = pi(2.0d0)*cross(net(3,:),net(1,:),1,3)/volume
-kv0(3,:) = pi(2.0d0)*cross(net(1,:),net(2,:),1,3)/volume
+volume=dot_product(net(1,:),cross(net(2,:),net(3,:)))
+kv0(1,:) = pi(2.0d0)*cross(net(2,:),net(3,:))/volume
+kv0(2,:) = pi(2.0d0)*cross(net(3,:),net(1,:))/volume
+kv0(3,:) = pi(2.0d0)*cross(net(1,:),net(2,:))/volume
 
 my_lattice%astar=kv0
 

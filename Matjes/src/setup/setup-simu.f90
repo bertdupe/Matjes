@@ -111,6 +111,8 @@ time=0.0d0
 
 call create_lattice(my_lattice,my_motif,ext_param,nb_orbitals)
 
+!stop 'toto'
+! note for Bertrand: Continue from here
 dim_lat=my_lattice%dim_lat
 n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
 
@@ -219,14 +221,6 @@ endif
        allocate(corners(1,1))
 !endif
 
-! setup the energy operator
-call user_info(6,time,'dealing with the z-direction',.false.)
-
-!! check the z direction structure
-!      call setup_zdir(phase,tot_N_Nneigh,motif)
-
-call user_info(6,time,'done',.true.)
-
 ! do a first FFT for the initial magnetic configuration
 !call fft(my_lattice,my_motif)
 
@@ -282,7 +276,7 @@ if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'
 write(6,'(/,a,/)') 'the setup of the simulation is over'
 #endif
 
-if (io_simu%io_fft_Xstruct) call get_k_mesh('input',my_lattice)
+if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
 
 !!!!!!!!!!!!!! end of the setup
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

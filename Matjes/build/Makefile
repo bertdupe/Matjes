@@ -7,15 +7,15 @@ OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o rw_TB.o tightbin
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o \
- Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o energy_k.o wavefunction.o DOS.o bandstructure.o \
- fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o \
+ Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_r.o tightbinding_k.o wavefunction.o DOS.o bandstructure.o \
+ highsymmetry.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o J_sd_exchange.o \
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
  create_lattice.o forces.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o eigen_val_vec.o invert.o determinant.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
  SkX_utils.o  CreateSpinFile.o spstm.o inp_rw.o rw_dyna.o randist.o spindynamics.o setup_DM.o \
  mtprng.o  MCstep.o InitSpin.o Table_dist.o total_Energy.o Relaxation.o topoplot.o plot_FFT.o sort.o \
  print_Beff.o setup-simu.o arrange_neihg.o mapping.o indexation.o order_lattice.o qorien.o path.o \
- stdtypes.o Energy_distrib.o error.o setup_zdir.o rw_efield.o energy_commons.o excitations.o rotation.o projection.o spline.o \
+ stdtypes.o Energy_distrib.o error.o rw_efield.o energy_commons.o excitations.o rotation.o projection.o spline.o \
  rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o torques.o tangent.o gneb.o io-gneb.o gneb_utils.o gneb_parameters.o initialize_path.o \
  initialize_temperature.o cal_local_energy.o user_information.o parallel_tempering.o paratemp.o  mpi_prop.o \
  initial-configuration.o init-spiral.o init_random_config.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o get-position.o \
@@ -49,13 +49,14 @@ Matjes: $(OBJS)
 clean:
 	$(RM) $(OBJS) *.mod core *.f90 *.F90 *.f
 
+J_sd_exchange.o: Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 eigen_interface.o:
 eigen_sparse_reduce.o:
 precision.o:
 eigen_val_vec.o:
 invert.o:
 determinant.o:
-rw_TB.o: io_files_utils.o io-utils.o
+tightbinding_r.o rw_TB.o: io_files_utils.o io-utils.o
 tbessk.o:
 tbessj.o:
 tbessy.o:
@@ -64,13 +65,15 @@ random_lib.o:
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
-total_Hamiltonian_TB.o: exchange_tight_binding.o chemical_potential_TB.o
-tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o energy_k.o
+total_Hamiltonian_TB.o: J_sd_exchange.o exchange_tight_binding.o chemical_potential_TB.o
+fermi.o:  energy_commons.o sort.o
+tightbinding_k.o: basic_types.o get-position.o derived_types.o rw_TB.o energy_k.o highsymmetry.o energy_r.o fermi.o
+tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_k.o tightbinding_r.o highsymmetry.o
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 DOS.o: io_files_utils.o io-utils.o
 wavefunction.o: basic_types.o
 energy_k.o: invert.o eigen_val_vec.o energy_commons.o fftw.o sort.o
-tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o energy_k.o
+tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o energy_k.o highsymmetry.o
 
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  
 print_Beff.o: convert.o io_files_utils.o
@@ -204,7 +207,6 @@ arrange_neihg.o: rotation.o matrix_power.o create_lattice.o inp_rw.o sym_utils.o
 MCstep.o: choosespin.o cal_local_energy.o main.o create_lattice.o inp_rw.o rw_lattice.o  sampling.o relaxationtype.o mtprng.o
 solver.o: torques.o constant.o create_lattice.o vector.o mtprng.o randist.o rw_dyna.o
 Relaxation1000.o: main.o  inp_rw.o create_lattice.o mtprng.o topocharge_all.o
-setup_zdir.o: rw_lattice.o create_lattice.o
 inp_rw.o: rw_zdir.o rw_lattice.o constant.o mpi_prop.o
 spindynamics.o: precision.o print_Beff.o tracker.o solver_order.o plot_FFT.o forces.o solver_commun.o info-dynamics.o torques.o BTeff_sd.o update_time.o excitations.o measure_temp.o dyna-utils.o Energy_distrib.o createSpinFile.o topocharge_sd.o rw_lattice.o create_lattice.o inp_rw.o rw_dyna.o vector.o randist.o solver.o Beff_sd.o  mtprng.o cal_local_energy.o
 total_Energy.o: energy_commons.o vector.o

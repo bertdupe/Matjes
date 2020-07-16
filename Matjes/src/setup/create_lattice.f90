@@ -37,6 +37,7 @@ dim_lat=mag_lattice%dim_lat
 nmag=1
 
 N_mode=get_num_mode(motif,ext_param,nb_orbitals)
+
 allocate(my_order_parameters(N_mode))
 ! initialize the data
 do i=1,N_mode
@@ -55,7 +56,7 @@ N_dim_order_param=get_dim_mode(motif,ext_param,nb_orbitals)
 ! ......
 !
 !!!!!!!!!!!!!!!!!!!!!!
-allocate(modes(N_dim_order_param,dim_lat(1),dim_lat(2),dim_lat(3),nmag))
+allocate(modes(N_dim_order_param,dim_lat(1),dim_lat(2),dim_lat(3),1))
 
 !allocate(modes(3,dim_lat(1),dim_lat(2),dim_lat(3),nmag))
 modes=0.0d0
@@ -158,6 +159,7 @@ integer :: N_mode,nmag
 real(kind=8) :: Field(3)
 
 N_mode=0
+! counts one mode per magnetic atom in the unit cell
 nmag=count(motif%atomic(:)%moment.gt.0.0d0)
 N_mode=N_mode+nmag
 ! electric field

@@ -204,7 +204,7 @@ real(kind=8), allocatable :: local_lattice(:,:,:,:,:)
 
 dim_lat=my_lattice%dim_lat
 n_column=get_cols(fname)
-nmag=count(motif%i_mom)
+nmag=count(motif%atomic(:)%moment.gt.0.0d0)
 lattice_vec=my_lattice%areal
 Ilat=0
 
