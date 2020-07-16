@@ -28,6 +28,7 @@ module m_highsym
         integer             ::  dim_mode
 
         Call set_path(my_lattice)
+        write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         if(.not. allocated(kpts)) return
         Call get_energy_kpts(kpts,dimH,tb_ext,pos,mode_mag,eigval)
         eigval=eigval-E_F
