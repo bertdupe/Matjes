@@ -29,7 +29,7 @@ subroutine tightbinding_k(dimH,TB_pos_ext,mode_mag,my_lattice,my_motif)
     real(kind=8), allocatable :: eigval(:,:) !eigen values(N_state,N_k)
     real(kind=8), allocatable :: dist_neigh(:,:) !neighbor distances for fourier transform
 
-    integer :: i, nb_kpoints
+    integer :: nb_kpoints
 
     N_cell=product(shape(my_lattice%l_modes))
 

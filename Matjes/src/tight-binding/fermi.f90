@@ -64,7 +64,7 @@ module m_fermi
             !get sorted eigenvalues in tmp_E
             N_eig=size(eig)
             allocate(tmp_E(N_eig),source=eig)
-            allocate(indices(N_eig))
+            allocate(indices(N_eig),source=0)
             call sort(N_eig, tmp_E, indices, 1.0d-5)
 
             !trivial guess for fermi energy
@@ -173,11 +173,16 @@ module m_fermi
             real(kind=8),intent(in) :: kt
             real(kind=8),intent(in) :: energy
 
-            fermi_distrib=0.0d0
-            if (kt.lt.1.0d-8) then
-                if (energy.le.E_F) fermi_distrib=1.0d0
+            real(8)                 ::  exp_val
+            real(8)                 ::  cutoff=30.0d0
+
+            exp_val=(energy-E_F)/kt
+            if(exp_val>cutoff)then
+                fermi_distrib=0.0d0
+            elseif(exp_val<cutoff)then
+                fermi_distrib=1.0d0
             else
-                fermi_distrib = 1.0d0/( 1.0d0 + exp((energy-E_F)/kt ) )
+                fermi_distrib = 1.0d0/( 1.0d0 + exp(exp_val ) )
             endif
         end function fermi_distrib
 

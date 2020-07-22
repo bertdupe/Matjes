@@ -25,8 +25,6 @@ module m_highsym
 
         real(8),allocatable :: eigval(:,:)
 
-        integer             ::  dim_mode
-
         Call set_path(my_lattice)
         write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         if(.not. allocated(kpts)) return

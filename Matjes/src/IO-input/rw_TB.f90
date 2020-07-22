@@ -10,6 +10,7 @@ module m_rw_TB
         integer :: nb_orbitals=-1
         integer :: nb_spin=1
         real(kind=8), allocatable :: Jsd(:)  !1: orbital
+        complex(kind=8), allocatable :: delta(:)  !1: orbital   !super conductivity delta
         real(kind=8) :: N_electrons  !total number of electrons 
         real(kind=8) :: kt     !smearing of fermi-dirac distribution for fermi-energy
     end type
@@ -131,6 +132,7 @@ module m_rw_TB
             TB_params%hopping=0.0d0
             TB_params%onsite=0.0d0
             TB_params%Jsd=0.0d0
+            allocate(TB_params%delta(TB_params%nb_orbitals),source=cmplx(0.0d0,0.0d0,8))
 
 
             ! Storage:
@@ -173,6 +175,7 @@ module m_rw_TB
             endif
 
             call get_coeff(io_input,fname,'J_sd_',TB_params%Jsd)
+            call get_parameter(io_input,fname,'SC_delta',TB_params%nb_orbitals,TB_params%delta)
 
             call close_file(fname,io_input)
 

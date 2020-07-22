@@ -46,6 +46,21 @@ interface
     real( kind = c_double ), intent(in)        :: vec(*)
     real( kind = c_double ), intent(out)       :: res(dimH)
   end subroutine
+
+
+  subroutine eigen_set_H_e(Nentry,dimH,ind1,ind2,H ) bind( c, name="eigen_set_H_e" )
+    use, intrinsic :: iso_c_binding
+    integer( kind = c_int ), value          :: Nentry,dimH
+    integer( kind = c_int )                 :: ind1(*),ind2(*)
+    complex( kind = c_double_complex )      :: H(*)
+  end subroutine
+
+  subroutine eigen_set_H_e_jsd(Nentry,dimH,ind1,ind2,H ) bind( c, name="eigen_set_H_e_jsd" )
+    use, intrinsic :: iso_c_binding
+    integer( kind = c_int ), value          :: Nentry,dimH
+    integer( kind = c_int )                 :: ind1(*),ind2(*)
+    complex( kind = c_double_complex )      :: H(*)
+  end subroutine
 end interface
 
 end module 

@@ -49,16 +49,19 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
        dimH=N_cell*(TB_pos_ext(2)-TB_pos_ext(1)+1)
       endif
     enddo
+#if CPP_SC
+    if(.true.) dimH=dimH*2  !SC
+#endif
 
     io_input=open_file_read('input')
     do_TB_r=.False.
     do_TB_k=.False.
     call get_parameter(io_input,'input','do_TB_k',do_TB_k)
     call get_parameter(io_input,'input','do_TB_r',do_TB_r)
+    call close_file('input',io_input)
     !do some initial testing real-space tight binding stuff
     if(do_TB_r) Call tightbinding_r(dimH,TB_pos_ext,mode_magnetic)   
     !do some initial testing reciprocal-space tight binding stuff
     if(do_TB_k) Call tightbinding_k(dimH,TB_pos_ext,mode_magnetic,my_lattice,my_motif)
-    call close_file('input',io_input)
 
 end subroutine tightbinding

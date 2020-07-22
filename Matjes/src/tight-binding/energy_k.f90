@@ -4,13 +4,9 @@ module m_energy_k
     use m_rw_TB, only : TB_params
     use m_fftw, only: get_FFT
     use m_J_sd_exchange
-    use m_energy_set_real, only: set_Hr, H_add_Jsd
+    use m_energy_set_real, only: set_Hr, get_Hr
 
     implicit none
-
-    ! This matrix will contain all the Hamiltonians at the right places
-    complex(kind=8), allocatable, dimension(:,:) :: all_E_k
-    real(kind=8), allocatable :: all_positions(:,:) ! array containing the coordinates of all r-r'
 
     private
     public :: diagonalise_H_k_list,set_dist_neigh,get_energy_kpts !, fermi_distrib, compute_Etot
@@ -29,10 +25,8 @@ module m_energy_k
             
             !set real space Hamiltonian
             !if used more often, set this in advance
-            Call set_Hr(dimH,Hr,tb_ext)
-            if(any(TB_params%Jsd /= 0.0d0))then
-                Call H_add_Jsd(dimH,Hr,tb_ext,mode_mag,TB_params%Jsd)
-            endif
+            Call set_Hr(dimH,tb_ext,mode_mag)
+            Call get_Hr(dimH,Hr)
             !get actual eigenvalues
             allocate( eigval(dimH,size(klist,2)),source=0.0d0)
             dim_mode=TB_ext(2)-TB_ext(1)+1

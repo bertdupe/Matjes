@@ -2,7 +2,13 @@ module m_energy_r
     use m_basic_types, only : vec_point
     use m_fermi,only: fermi_distrib
     use m_rw_TB, only : TB_params
-    use m_energy_set_real, only: set_Hr,H_add_Jsd
+#ifdef CPP_SPARSE_HE__
+    use m_energy_set_real_sparse, only: set_Hr,set_Jsd,Hr_eigval,Hr_eigvec
+#elif CPP_SC
+    use m_energy_set_real_sc, only: set_Hr,Hr_eigval,Hr_eigvec
+#else
+    use m_energy_set_real, only: set_Hr,Hr_eigval,Hr_eigvec
+#endif
 
     implicit none
 
@@ -17,16 +23,12 @@ module m_energy_r
         real(8),intent(in)          :: E_f
         type(vec_point),intent(in)  :: mode_mag(dimH)
 
+        complex(8)                  :: eigvec(dimH,dimH)
         real(8)                     :: eigval(dimH)
-        complex(8)                  :: Hr(dimH,dimH)
         
-        Call set_Hr(dimH,Hr,tb_ext)
-        if(any(TB_params%Jsd /= 0.0d0))then
-            Call H_add_Jsd(dimH,Hr,tb_ext,mode_mag,TB_params%Jsd)
-        endif
-
-        Call get_eigvec(dimH,Hr,eigval)
-        Call calc_occupation(dimH,Hr,eigval,E_f,TB_params%kt,occ)
+        Call set_Hr(dimH,tb_ext,mode_mag)
+        Call Hr_eigvec(dimH,eigvec,eigval)
+        Call calc_occupation(dimH,eigvec,eigval,E_f,TB_params%kt,occ)
     end subroutine 
 
     subroutine calc_occupation(dimH,eigvec,eigval,E_f,kt,occ)
@@ -50,41 +52,11 @@ module m_energy_r
         real(8),intent(out)         :: eigval(dimH)
         type(vec_point),intent(in)  :: mode_mag(:)
 
-        complex(8)          :: Hr(dimH,dimH)
-        
-        Call set_Hr(dimH,Hr,tb_ext)
-        if(any(TB_params%Jsd /= 0.0d0))then
-            Call H_add_Jsd(dimH,Hr,tb_ext,mode_mag,TB_params%Jsd)
-        endif
-        Call get_eigval(dimH,Hr,eigval)
+        Call set_Hr(dimH,tb_ext,mode_mag)
+        Call Hr_eigval(dimH,eigval)
     end subroutine
 
 
-    subroutine get_eigval(dimH,Hr,eigval)
-        integer,intent(in)          ::  dimH
-        complex(8),intent(inout)    ::  Hr(dimH,dimH)
-        real(8),intent(out)         ::  eigval(dimH)
-
-        complex(kind=8)             :: WORK(2*dimH)
-        real(kind=8)                :: RWORK(3*dimH-2)
-        integer                     :: info
-
-        call ZHEEV( 'N', 'U', dimH, Hr, dimH, eigval, WORK, size(Work), RWORK, INFO )
-
-    end subroutine
-
-    subroutine get_eigvec(dimH,Hr,eigval)
-        integer,intent(in)          ::  dimH
-        complex(8),intent(inout)    ::  Hr(dimH,dimH)
-        real(8),intent(out)         ::  eigval(dimH)
-
-        complex(kind=8)             :: WORK(2*dimH)
-        real(kind=8)                :: RWORK(3*dimH-2)
-        integer                     :: info
-
-        call ZHEEV( 'V', 'U', dimH, Hr, dimH, eigval, WORK, size(Work), RWORK, INFO )
-
-    end subroutine 
 
 
 end module m_energy_r
