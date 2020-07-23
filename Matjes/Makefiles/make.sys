@@ -1,11 +1,53 @@
-
 LD=gfortran
 FC=gfortran
-CC=cc
 
-#FFLAGS= -O3 -ffree-form -fimplicit-none -ffree-line-length-none
+CC=gcc
+CXX=g++
 
-FFLAGS= -O0 -g -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#
+# normal flags
+#
+#FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none #-march=native -ffast-math -m64  -I${MKLROOT}/include 
+#LDFLAGS= -O4  -m64 -I${MKLROOT}/include
 
-CPPS= -DCPP_MRG -DCPP_BRUTDIP
+#
+#debugging flags
+#
+FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none  
+#LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#LDFLAGS= -dylib -arch x86_64
 
+#
+# profiling with gprof
+#
+#FFLAGS= -O0 -g -lprofiler -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
+#LDFLAGS= -O0 -g
+
+#LAPACK Werllinghton
+#LIBRARIES=-L/cm/shared/apps/lapack/gcc/64/3.3.0/ -llapack -L/cm/shared/apps/blas/gcc/1/lib64/ -lblas
+#LAPACK Mac
+INCLUDES= -I/usr/local/include/
+LIBRARIES= -L/usr/lib/ -lstdc++ -lc++ -lblas -llapack
+C_INCLUDES= -I/usr/local/opt/eigen/include/eigen3
+# ordi ULG
+#LIBRARIES=-L/usr/lib/x86_64-linux-gnu/ -lblas -llapack
+#FFTW
+#INCLUDES=-I/usr/local/include
+#LIBRARIES= -L/usr/local/lib/ -lfftw3
+#PATRICK LAPTOP
+#LIBRARIES=-lblas -llapack  -lstdc++  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
+#INCLUDES=-I/usr/include/eigen3
+#C_INCLUDES=-I/usr/include/eigen3
+
+#CPPS= -DCPP_MRG -DCPP_BRUTDIP -DCPP_OPENMP
+#CPPS= -DCPP_MRG -DCPP_BRUTDIP
+#CPPS= -DCPP_MRG -DCPP_FFTW
+#CPPS= -DCPP_MRG -DCPP_SUM
+
+
+#CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__sparse_mkl__ -D__mkl_csr__
+#CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__sparse_mkl__ 
+#CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__direct_mult_EIGEN__
+#CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__EIGEN_sparse_matmul__ 
+CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__SLOW__ 
+#CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL
