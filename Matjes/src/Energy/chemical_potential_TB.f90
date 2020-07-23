@@ -23,7 +23,7 @@ module m_chem_pot_TB
             character(len=50) :: form
             integer :: i, j, x_start, x_end
             real(kind=8), allocatable :: chem_pot_local(:)
-            
+
             x_start=-1
             x_end=-1
 
@@ -50,11 +50,10 @@ module m_chem_pot_TB
             ! c_Ei and put its value in the variable onsite_ham_TB%c_ham
             call get_parameter(io_param,fname,'c_Ei',onsite_ham_TB%c_ham)
 
-            if (chem_pot_count.ne.0) then
-              onsite_ham_TB%i_exist=.true.
-            else
-              return
-            endif
+            call close_file(fname,io_param)
+
+            if (chem_pot_count.le.0) return
+            onsite_ham_TB%i_exist=.true.
 
             ! Allocate the different blocs in the total Hamiltonian
             allocate(onsite_ham_TB%ham(1))

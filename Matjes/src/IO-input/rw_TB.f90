@@ -104,11 +104,11 @@ module m_rw_TB
             
             ! If magnetism IS NOT activated but there are some t_up and/or t_down,
             ! is is wrong ===> stop the execution
-            if ((.not.activate_mag_TB) .and. (nb_t_tot_spin.ne.0)) return
+            if ((.not.activate_mag_TB) .and. (nb_t_tot_spin.le.0)) return
             
             ! If magnetism IS NOT activated but there are some mu_up and/or mu_down,
             ! is is wrong ===> stop the execution
-            if ((.not.activate_mag_TB) .and. (nb_mu_tot_spin.ne.0)) return
+            if ((.not.activate_mag_TB) .and. (nb_mu_tot_spin.le.0)) return
 
             call get_parameter(io_input,fname,'nb_shell',TB_params%nb_shell)
             call get_parameter(io_input,fname,'nb_orbitals',TB_params%nb_orbitals)

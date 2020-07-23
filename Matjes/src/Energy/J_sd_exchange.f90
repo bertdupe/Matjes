@@ -37,11 +37,10 @@ Jsd_ham_TB%N_shell=-1
 ! Order of the Hamiltonian (tensor of rank "order")
 Jsd_ham_TB%order=2
 
-if (count(abs(TB_params%Jsd).gt.1.0d-8).ne.0) then
-    Jsd_ham_TB%i_exist=.true.
-else
-    return
-endif
+if (.not. allocated(TB_params%Jsd)) return
+if (count(abs(TB_params%Jsd).gt.1.0d-8).eq.0) return
+
+Jsd_ham_TB%i_exist=.true.
 
 call get_borders('magnetic',x_start,x_end,'Tight-binding',y_start,y_end,my_order_parameters)
 
