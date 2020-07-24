@@ -10,6 +10,12 @@ complex(8),allocatable  ::  Hr(:,:)
 
 !setup is now a bit stupid in that Hr has to be saved and copied for the lapack routines, which doubles their memory at some points...
 
+
+!basis of Hamiltonian is as follows
+!  inner index -> outer index
+!  spin -> orbital ->lattice-site -> electron/hole
+! basis is c_up, c_down,c_up^+,c_down^+ for the right basis part
+
 contains
 
     subroutine get_Hr(dimH,Hr_out)
@@ -110,13 +116,7 @@ contains
         call ZHEEV( 'V', 'U', dimH, eigvec, dimH, eigval, init_WORK, -1, RWORK, INFO )
         l_work=int(init_work(1))
         allocate(work(l_work),source=cmplx(0.0d0,0.0d0,8))
-        open(525,file='derp',form='unformatted')
-        write(525) dimH
-        write(525) eigvec
-        write(525) l_work
-        close(535)
         call ZHEEV( 'V', 'U', dimH, eigvec, dimH, eigval, WORK, l_work, RWORK, INFO )
-
     end subroutine 
 
 end module

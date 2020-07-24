@@ -89,8 +89,8 @@ contains
         do i=1,N_cells
             add_Jsd=cmplx(0.0d0,0.0d0,8)
             do j=1,dim_mode_red
-                i1=j
-                i2=j+dim_mode_red
+                i1=j*2-1
+                i2=j*2
                 !could be done be elegant with pauli matrices...
                 add_Jsd(i1,i1)=Jsd(j)*cmplx( mode_mag(i)%w(3), 0.0d0           ,8)
                 add_Jsd(i2,i1)=Jsd(j)*cmplx( mode_mag(i)%w(1), mode_mag(i)%w(2),8)
