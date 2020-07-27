@@ -5,6 +5,7 @@ module m_energy_r
 #ifdef CPP_SPARSE_HE__
     use m_energy_set_real_sparse, only: set_Hr,set_Jsd,Hr_eigval,Hr_eigvec
 #elif CPP_SC
+    use m_dos_sc, only : write_dos_sc 
     use m_energy_set_real_sc, only: set_Hr,Hr_eigval,Hr_eigvec
 #else
     use m_energy_set_real, only: set_Hr,Hr_eigval,Hr_eigvec
@@ -28,6 +29,9 @@ module m_energy_r
         
         Call set_Hr(dimH,tb_ext,mode_mag)
         Call Hr_eigvec(dimH,eigvec,eigval)
+#if CPP_SC
+        Call write_dos_sc(eigval,eigvec,'dos_r_sc.dat')
+#endif
         Call calc_occupation(dimH,eigvec,eigval,E_f,TB_params%kt,occ)
     end subroutine 
 

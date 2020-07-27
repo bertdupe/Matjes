@@ -82,7 +82,7 @@ subroutine gauss_dist(val,mu,sigma,res)
     res(i_min:i_max)=(val(i_min:i_max)-mu)*(val(i_min:i_max)-mu)
     res(i_min:i_max)=-res(i_min:i_max)*0.5d0/sigma/sigma
     res(i_min:i_max)=exp(res(i_min:i_max))
-    res=res/sqrt(2.0d0*3.14159265359d0*sigma*sigma)
+    res=res/sqrt(2.0d0*3.14159265359d0)/sigma
 
 end subroutine
 end module
