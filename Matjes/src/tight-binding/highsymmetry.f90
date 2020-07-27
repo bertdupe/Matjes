@@ -115,6 +115,10 @@ module m_highsym
         do i=1,N_highsym
             k_highs(:,i)=matmul(k_highs(:,i),my_lattice%astar)
         enddo
+        !adjust with dimension of real-space cell decreasing BZ
+        do i=1,N_highsym
+            k_highs(:,i)=k_highs(:,i)/real(my_lattice%dim_lat,8)
+        enddo
 
         !set kpts array with all kpoints along the path
         allocate(Npath_k(N_highsym-1),source=1)
