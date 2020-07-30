@@ -403,6 +403,10 @@ module m_fftw
                 if (test.ne.0) return
                 kmesh=0.0d0
                 call get_kmesh(N_kpoint,kmesh,i_plot)
+                !PB: rescale Bz with lattice size !might fail with hexagonal unit cell??? <- CHECK THAT
+                do iomp=1,Nkpoint
+                    kmesh(:,iomp)=kmesh(:,iomp)/my_lattice%dim_lat
+                enddo
             endif
 
             ! Convert the kmesh in internal units

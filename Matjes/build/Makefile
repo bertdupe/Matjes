@@ -72,7 +72,7 @@ fermi.o:  energy_commons.o sort.o
 energy_set_real.o: energy_commons.o basic_types.o eigen_interface.o
 energy_set_real_sc.o: energy_commons.o basic_types.o eigen_interface.o energy_set_real.o
 energy_r.o: basic_types.o fermi.o rw_TB.o energy_set_real_sparse.o energy_set_real.o energy_set_real_sc.o dos_sc.o 
-tightbinding_k.o: basic_types.o get-position.o derived_types.o rw_TB.o energy_k.o highsymmetry.o energy_r.o fermi.o
+tightbinding_k.o: basic_types.o get-position.o derived_types.o rw_TB.o energy_k.o highsymmetry.o energy_r.o fermi.o dos.o
 tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_k.o tightbinding_r.o highsymmetry.o
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 DOS.o: io_files_utils.o io-utils.o

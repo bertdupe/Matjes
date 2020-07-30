@@ -8,6 +8,7 @@ contains
 subroutine calc_dos(eigval,E_F,E_ext,dE,sigma,fname)
     !subroutine to calculate the density of states
     !so far E_F has no effect... maybe add Eval=Eval-E_f, but not sure if I really want that
+    !eigval input has to be sorted
     use m_io_files_utils, only: close_file,open_file_write
     real(8),intent(in)  ::  eigval(:),E_F
     real(8),intent(in)  ::  E_ext(2),sigma,dE

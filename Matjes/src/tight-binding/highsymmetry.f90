@@ -29,7 +29,7 @@ module m_highsym
         write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         if(.not. allocated(kpts)) return
         Call get_energy_kpts(kpts,dimH,tb_ext,pos,mode_mag,eigval)
-        eigval=eigval-E_F
+        !eigval=eigval-E_F !adjust by calculated fermi energy only confuses comparison with analytic calculations
         Call print_highsym('highs_plot',eigval)
         Call highsym_clear_path()
 

@@ -9,6 +9,9 @@ use m_energy_k ,only: set_dist_neigh, get_energy_kpts
 use m_fftw, only: set_k_mesh, kmesh, N_kpoint
 use m_highsym, only: plot_highsym_kpts
 use m_fermi, only: get_fermi_k
+use m_dos, only: calc_dos
+use m_io_files_utils, only: close_file,open_file_write,open_file_read
+use m_io_utils, only: get_parameter
 implicit none
 private
 public :: tightbinding_k
@@ -42,6 +45,7 @@ subroutine tightbinding_k(dimH,TB_pos_ext,mode_mag,my_lattice,my_motif)
     Call get_energy_kpts(kmesh,dimH,TB_pos_ext,dist_neigh,mode_mag,eigval)
     E_F=0.0d0
     call get_fermi_k(eigval, TB_params%N_electrons,N_cell, TB_params%kt, E_F)
+    Call write_dos(eigval,E_F,'dos_k.dat')
     Call plot_highsym_kpts(dimH,TB_pos_ext,dist_neigh,mode_mag,my_lattice,E_F) 
 end subroutine 
 
@@ -64,6 +68,39 @@ subroutine get_dist_neigh(N_cell,my_lattice,my_motif,dist_neigh)
     deallocate(start_positions)
     call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
     Call set_dist_neigh(dist_neigh,distances)
+
+end subroutine
+
+subroutine write_dos(eigval,E_F,fname)
+    use m_sort
+    real(8),intent(in)  ::  eigval(:,:)
+    real(8),intent(in)  ::  E_F
+    character(len=*)    ::  fname
+
+    real(8),allocatable         :: eigval_sort(:)
+    integer,allocatable         :: indices(:)
+    integer                     :: io_input
+    logical                     :: do_dos
+    real(8)                     :: E_ext(2),sigma,dE
+
+    io_input=open_file_read('input')
+    do_dos=.False.
+    call get_parameter(io_input,'input','do_dos_k',do_dos)
+    if(do_dos)then
+        E_ext=[-1.0d0,1.0d0]
+        dE=0.01d0
+        sigma=0.01d0
+        call get_parameter(io_input,'input','dos_sigma',sigma)
+        call get_parameter(io_input,'input','dos_E_ext',2,E_ext)
+        call get_parameter(io_input,'input','dos_dE',dE)
+        call close_file('input',io_input)
+        !sort because the calc_dos input has to be sorted
+        allocate(indices(size(eigval)),source=0)
+        allocate(eigval_sort(size(eigval)))
+        eigval_sort=reshape(eigval,[size(eigval)])
+        call sort(size(eigval_sort), eigval_sort, indices, 1.0d-5)
+        Call calc_dos(eigval_sort,E_f,E_ext,dE,sigma,fname)
+    endif
 
 end subroutine
 
