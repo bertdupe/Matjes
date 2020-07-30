@@ -26,8 +26,8 @@ module m_highsym
         real(8),allocatable :: eigval(:,:)
 
         Call set_path(my_lattice)
-        write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         if(.not. allocated(kpts)) return
+        write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         Call get_energy_kpts(kpts,dimH,tb_ext,pos,mode_mag,eigval)
         !eigval=eigval-E_F !adjust by calculated fermi energy only confuses comparison with analytic calculations
         Call print_highsym('highs_plot',eigval)
@@ -74,6 +74,7 @@ module m_highsym
         type(lattice), intent(in) :: my_lattice
 
         !input to read from file
+        logical                 ::  do_highs_k
         integer                 ::  N_highsym
         real(8),allocatable     ::  k_highs(:,:)
         integer,allocatable     ::  k_highs_frac(:)
@@ -92,6 +93,9 @@ module m_highsym
         !read input from file
         io_input=open_file_read('input')
         N_highsym=0
+        do_highs_k=.False.
+        call get_parameter(io_input,'input','do_highs_k',do_highs_k)
+        if(.not. do_highs_k) return
         call get_parameter(io_input,'input','N_highsym',N_highsym)
         if(N_highsym < 1)then
             return
