@@ -1,13 +1,12 @@
 
 subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
+    use m_tb_params, only: TB_params, set_TB_params
     use m_basic_types, only : vec_point
     use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
     use m_operator_pointer_utils
     use m_lattice, only : my_order_parameters
     use m_tightbinding_r, only: tightbinding_r
     use m_tightbinding_k, only: tightbinding_k
-    use m_io_files_utils, only: open_file_read,close_file
-    use m_io_utils, only: get_parameter
 
     implicit none
     ! internal parameter
@@ -27,7 +26,9 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     logical :: i_magnetic, i_TB
     integer :: dimH
     logical :: do_TB_r,do_TB_k
-    
+   
+    Call set_TB_params()
+
     !get magnetization everywhere and set some pointers and control integers
     N_cell=product(shape(my_lattice%l_modes))
     allocate( all_mode(N_cell))
@@ -49,19 +50,11 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
        dimH=N_cell*(TB_pos_ext(2)-TB_pos_ext(1)+1)
       endif
     enddo
-#if CPP_SC
-    if(.true.) dimH=dimH*2  !SC
-#endif
+    if(TB_params%io_H%is_sc) dimH=dimH*2
 
-    io_input=open_file_read('input')
-    do_TB_r=.False.
-    do_TB_k=.False.
-    call get_parameter(io_input,'input','do_TB_k',do_TB_k)
-    call get_parameter(io_input,'input','do_TB_r',do_TB_r)
-    call close_file('input',io_input)
     !do some initial testing real-space tight binding stuff
-    if(do_TB_r) Call tightbinding_r(dimH,TB_pos_ext,mode_magnetic)   
+    if(TB_params%flow%do_r) Call tightbinding_r(dimH,TB_pos_ext,mode_magnetic)   
     !do some initial testing reciprocal-space tight binding stuff
-    if(do_TB_k) Call tightbinding_k(dimH,TB_pos_ext,mode_magnetic,my_lattice,my_motif)
+    if(TB_params%flow%do_k) Call tightbinding_k(dimH,TB_pos_ext,mode_magnetic,my_lattice,my_motif)
 
 end subroutine tightbinding

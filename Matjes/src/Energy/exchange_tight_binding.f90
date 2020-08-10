@@ -43,7 +43,7 @@ module m_exchange_TB
             ! c_tij and put its value in the variable exc_ham_TB%c_ham
             call get_parameter(io_param,fname,'c_tij',exc_ham_TB%c_ham)
 
-            nb_shell=TB_params%nb_shell
+            nb_shell=TB_params%io_H%nb_shell
             if (nb_shell.ne.0) then
                exc_ham_TB%i_exist=.true.
             else
@@ -69,7 +69,7 @@ module m_exchange_TB
 
             ! Put the hopping parameters on the diagonal
             do j=1,nb_shell
-                t_local=reshape( TB_params%hopping(:,:,j), (/x_end-x_start+1/) )
+                t_local=reshape( TB_params%io_H%hopping(:,:,j), (/x_end-x_start+1/) )
                 k=0
                 do i=x_start,x_end
                     k=k+1

@@ -37,7 +37,7 @@ Jsd_ham_TB%N_shell=-1
 ! Order of the Hamiltonian (tensor of rank "order")
 Jsd_ham_TB%order=2
 
-if (count(abs(TB_params%Jsd).gt.1.0d-8).ne.0) then
+if (count(abs(TB_params%io_H%Jsd).gt.1.0d-8).ne.0) then
     Jsd_ham_TB%i_exist=.true.
 else
     return
@@ -53,14 +53,14 @@ Jsd_mat=cmplx(0.0d0)
 
 ! in this form the J_sd coupling is a rank 3 tensor
 
-do i=1,size(TB_params%Jsd)
-  Jsd_mat(x_start+2,3*dim_ham+y_start)=TB_params%Jsd(i)
-  Jsd_mat(x_start,3*dim_ham+y_start+1)=TB_params%Jsd(i)
-  Jsd_mat(x_start+1,3*dim_ham+y_start+1)=-cmplx(0.0d0,TB_params%Jsd(i))
+do i=1,size(TB_params%io_H%Jsd)
+  Jsd_mat(x_start+2,3*dim_ham+y_start)=TB_params%io_H%Jsd(i)
+  Jsd_mat(x_start,3*dim_ham+y_start+1)=TB_params%io_H%Jsd(i)
+  Jsd_mat(x_start+1,3*dim_ham+y_start+1)=-cmplx(0.0d0,TB_params%io_H%Jsd(i))
 
-  Jsd_mat(x_start,4*dim_ham+y_start)=TB_params%Jsd(i)
-  Jsd_mat(x_start+1,4*dim_ham+y_start)=cmplx(0.0d0,TB_params%Jsd(i))
-  Jsd_mat(x_start+2,4*dim_ham+y_start+1)=-TB_params%Jsd(i)
+  Jsd_mat(x_start,4*dim_ham+y_start)=TB_params%io_H%Jsd(i)
+  Jsd_mat(x_start+1,4*dim_ham+y_start)=cmplx(0.0d0,TB_params%io_H%Jsd(i))
+  Jsd_mat(x_start+2,4*dim_ham+y_start+1)=-TB_params%io_H%Jsd(i)
 enddo
 
 form=convert('(',dim_ham,'(f12.8,2x))')

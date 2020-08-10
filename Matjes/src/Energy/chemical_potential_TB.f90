@@ -34,7 +34,7 @@ module m_chem_pot_TB
                 endif
             enddo
 
-            chem_pot_count=TB_params%nb_orbitals
+            chem_pot_count=TB_params%io_H%nb_orbitals
 
             ! Multiplicative coefficient
             onsite_ham_TB%c_ham=1.0d0
@@ -62,7 +62,7 @@ module m_chem_pot_TB
             onsite_ham_TB%ham(1)%H=0.0d0
 
             allocate(chem_pot_local(x_end-x_start+1))
-            chem_pot_local=reshape( TB_params%onsite, (/x_end-x_start+1/) )
+            chem_pot_local=reshape( TB_params%io_H%onsite, (/x_end-x_start+1/) )
             j=0
             do i=x_start,x_end
                 j=j+1

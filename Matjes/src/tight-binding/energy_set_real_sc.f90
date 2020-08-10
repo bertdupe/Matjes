@@ -30,7 +30,7 @@ contains
     subroutine set_Hr(dimH,Tb_ext,mode_mag)
         !extract the real space Hamiltonian Hr from the electronic part in energy
         use m_energy_set_real, only: get_Hr_nc=>get_Hr, set_Hr_nc=>set_Hr
-        use m_rw_TB, only : TB_params
+        use m_tb_params, only : TB_params
         integer,intent(in)           ::  dimH
         integer,intent(in)           ::  TB_ext(2)
         type(vec_point),intent(in)   ::  mode_mag(:)
@@ -47,7 +47,7 @@ contains
         Call get_Hr_nc(dimH_nc,Hr(1:dimH_nc,1:dimH_nc))
         Hr(dimH_nc+1:dimH,dimH_nc+1:dimH)=-Hr(1:dimH_nc,1:dimH_nc)
         dim_mode=Tb_ext(2)-Tb_ext(1)+1
-        Call set_delta(TB_params%delta,dim_mode)
+        Call set_delta(TB_params%io_H%delta,dim_mode)
     end subroutine 
 
     subroutine set_delta(delta,dim_mode)

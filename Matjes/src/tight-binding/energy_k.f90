@@ -1,7 +1,6 @@
 module m_energy_k
     use m_basic_types, only : vec_point
     use m_energy_commons, only : energy
-    use m_rw_TB, only : TB_params
     use m_fftw, only: get_FFT
     use m_J_sd_exchange
     use m_energy_set_real, only: set_Hr, get_Hr

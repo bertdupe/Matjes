@@ -2,12 +2,12 @@ include ../make.sys
 
 .SUFFIXES: .o .f90 .F90 .f *cpp
 
-OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o rw_TB.o tightbinding.o exchange_tight_binding.o chemical_potential_TB.o \
+OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o TB_types.o rw_TB.o tightbinding.o exchange_tight_binding.o chemical_potential_TB.o \
  total_Hamiltonian_TB.o envelope.o eigen_interface.o eigen_sparse_reduce.o eigen_electron.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o \
- energy_set_real_sc.o energy_set_real_sparse.o dos.o dos_sc.o\
+ tb_params.o energy_set_real_sc.o energy_set_real_sparse.o dos.o dos_sc.o\
  Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_r.o tightbinding_k.o wavefunction.o DOS.o bandstructure.o \
  highsymmetry.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o J_sd_exchange.o \
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
@@ -57,8 +57,10 @@ precision.o:
 eigen_val_vec.o:
 invert.o:
 determinant.o:
-rw_TB.o: io_files_utils.o io-utils.o convert.o
-tightbinding_r.o: rw_TB.o io_files_utils.o io-utils.o energy_r.o basic_types.o dos.o fermi.o
+TB_types.o:
+tb_params.o: rw_TB.o
+rw_TB.o: io_files_utils.o io-utils.o convert.o TB_types.o
+tightbinding_r.o: tb_params.o io_files_utils.o io-utils.o energy_r.o basic_types.o dos.o fermi.o
 tbessk.o:
 tbessj.o:
 tbessy.o:
@@ -69,11 +71,11 @@ exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_vari
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
 total_Hamiltonian_TB.o: J_sd_exchange.o exchange_tight_binding.o chemical_potential_TB.o
 fermi.o:  energy_commons.o sort.o
-energy_set_real.o: energy_commons.o basic_types.o eigen_interface.o
-energy_set_real_sc.o: energy_commons.o basic_types.o eigen_interface.o energy_set_real.o
-energy_r.o: basic_types.o fermi.o rw_TB.o energy_set_real_sparse.o energy_set_real.o energy_set_real_sc.o dos_sc.o 
-tightbinding_k.o: basic_types.o get-position.o derived_types.o rw_TB.o energy_k.o highsymmetry.o energy_r.o fermi.o dos.o
-tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_k.o tightbinding_r.o highsymmetry.o
+energy_set_real.o: energy_commons.o basic_types.o eigen_interface.o tb_params.o
+energy_set_real_sc.o: energy_commons.o basic_types.o eigen_interface.o energy_set_real.o tb_params.o
+energy_r.o: basic_types.o fermi.o tb_params.o energy_set_real_sparse.o energy_set_real.o energy_set_real_sc.o dos_sc.o 
+tightbinding_k.o: basic_types.o get-position.o derived_types.o energy_k.o highsymmetry.o energy_r.o fermi.o dos.o
+tightbinding.o: basic_types.o tb_params.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_k.o tightbinding_r.o highsymmetry.o
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 DOS.o: io_files_utils.o io-utils.o
 wavefunction.o: basic_types.o

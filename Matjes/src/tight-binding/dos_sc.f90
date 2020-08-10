@@ -1,61 +1,35 @@
 module m_dos_sc
+use m_TB_types
 implicit none
 private
-public write_dos_sc
+public calc_dos_sc
 contains
 
 
-subroutine write_dos_sc(eigval,eigvec,fname)
-    use m_io_files_utils, only: open_file_read,close_file
-    use m_io_utils, only: get_parameter
-    real(8),intent(in)      ::  eigval(:)
-    complex(8),intent(in)   ::  eigvec(:,:)
-    character(len=*)        ::  fname
-
-    integer                     :: io_input
-    logical                     :: do_dos
-    real(8)                     :: E_ext(2),sigma,dE
-
-    io_input=open_file_read('input')
-    do_dos=.False.
-    call get_parameter(io_input,'input','do_dos_r',do_dos)
-    if(do_dos)then
-        E_ext=[-1.0d0,1.0d0]
-        dE=0.01d0
-        sigma=0.01d0
-        call get_parameter(io_input,'input','dos_sigma',sigma)
-        call get_parameter(io_input,'input','dos_E_ext',2,E_ext)
-        call get_parameter(io_input,'input','dos_dE',dE)
-        call close_file('input',io_input)
-        Call calc_dos_sc(eigval,eigvec,E_ext,dE,sigma,fname)
-    endif
-end subroutine
-
-
-subroutine calc_dos_sc(eigval,eigvec,E_ext,dE,sigma,fname)
+subroutine calc_dos_sc(eigval,eigvec,io_dos,fname)
     !subroutine to calculate the density of states
     use m_io_files_utils, only: close_file,open_file_write
-    real(8),intent(in)     ::  eigval(:)
-    complex(8),intent(in)  ::  eigvec(:,:)
-    real(8),intent(in)  ::  E_ext(2),sigma,dE
+    real(8),intent(in)                    ::  eigval(:)
+    complex(8),intent(in)                 ::  eigvec(:,:)
+    type(parameters_TB_IO_DOS),intent(in) ::  io_dos
     character(len=*)    ::  fname
 
     integer             ::  NE,iE
     real(8),allocatable ::  dos(:),Eval(:)
     integer             ::  dimH
 
-    integer                     :: i,io
+    integer             ::  i,io
 
     dimH=size(eigval)
 
-    Ne=int((E_ext(2)-E_ext(1))/dE)+1
+    Ne=int((io_dos%E_ext(2)-io_dos%E_ext(1))/io_dos%dE)+1
     allocate(dos(Ne),Eval(Ne),source=0.0d0)
     do iE=1,Ne
-        Eval(iE)=(iE-1)*dE+E_ext(1)
+        Eval(iE)=(iE-1)*io_dos%dE+io_dos%E_ext(1)
     enddo
 
     do i=dimH/2+1,dimH
-        Call add_dos(eigval(i),eigvec(:,i),Ne,Eval,E_ext,dE,sigma,dos)
+        Call add_dos(eigval(i),eigvec(:,i),Ne,Eval,io_dos,dos)
     enddo
     dos=dos/real(size(eigval,1)/2)
 
@@ -66,10 +40,11 @@ subroutine calc_dos_sc(eigval,eigvec,E_ext,dE,sigma,fname)
     call close_file(fname,io)
 end subroutine
 
-subroutine add_dos(val,eigvec,Ne,Eval,E_ext,dE,sigma,dos)
-    real(8),intent(in)      ::  val,sigma
+subroutine add_dos(val,eigvec,Ne,Eval,io_dos,dos)
+    real(8),intent(in)      ::  val
     integer,intent(in)      ::  Ne
-    real(8),intent(in)      ::  Eval(Ne),E_ext(2),dE
+    real(8),intent(in)      ::  Eval(Ne)
+    type(parameters_TB_IO_DOS),intent(in) :: io_dos
     complex(8),intent(in)   ::  eigvec(:)
     real(8),intent(inout)   ::  dos(Ne)
     
@@ -84,17 +59,17 @@ subroutine add_dos(val,eigvec,Ne,Eval,E_ext,dE,sigma,dos)
     dimH=size(eigvec)
 
     !u-part of BdG
-    i_min=int(((val-sigma*dist_inc)-E_ext(1))/dE)+1
-    i_max=int(((val+sigma*dist_inc)-E_ext(1))/dE)
+    i_min=int(((val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1
+    i_max=int(((val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)
     pref=dot_product(eigvec(1:dimH/2),eigvec(1:dimH/2))
-    Call add_gauss(val,pref,Eval(i_min:i_max),dos(i_min:i_max),sigma)
+    Call add_gauss(val,pref,Eval(i_min:i_max),dos(i_min:i_max),io_dos%sigma)
 
     
     !v-part of BdG
-    i_min=int(((-val-sigma*dist_inc)-E_ext(1))/dE)+1
-    i_max=int(((-val+sigma*dist_inc)-E_ext(1))/dE)
+    i_min=int(((-val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1
+    i_max=int(((-val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)
     pref=dot_product(eigvec(dimH/2+1:dimH),eigvec(dimH/2+1:dimH))
-    Call add_gauss(-val,pref,Eval(i_min:i_max),dos(i_min:i_max),sigma)
+    Call add_gauss(-val,pref,Eval(i_min:i_max),dos(i_min:i_max),io_dos%sigma)
 
 end subroutine
 

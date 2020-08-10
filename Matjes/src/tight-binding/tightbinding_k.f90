@@ -1,17 +1,15 @@
 
 module m_tightbinding_k
-use m_rw_TB, only : TB_params
 use m_basic_types, only : vec_point
 use m_derived_types, only : cell,lattice
 use m_get_position, only: calculate_distances,get_position
-use m_rw_TB, only : TB_params
+use m_tb_params, only : TB_params
 use m_energy_k ,only: set_dist_neigh, get_energy_kpts
 use m_fftw, only: set_k_mesh, kmesh, N_kpoint
-use m_highsym, only: plot_highsym_kpts
+use m_highsym, only: plot_highsym_kpts,set_highs_path
 use m_fermi, only: get_fermi_k
 use m_dos, only: calc_dos
-use m_io_files_utils, only: close_file,open_file_write,open_file_read
-use m_io_utils, only: get_parameter
+use m_TB_types
 implicit none
 private
 public :: tightbinding_k
@@ -32,21 +30,28 @@ subroutine tightbinding_k(dimH,TB_pos_ext,mode_mag,my_lattice,my_motif)
     real(kind=8), allocatable :: eigval(:,:) !eigen values(N_state,N_k)
     real(kind=8), allocatable :: dist_neigh(:,:) !neighbor distances for fourier transform
 
-    integer :: nb_kpoints
-
     N_cell=product(shape(my_lattice%l_modes))
 
     !get dist_neigh
     Call get_dist_neigh(N_cell,my_lattice,my_motif,dist_neigh)
 
-    call set_k_mesh('input',my_lattice) !this BZ should most probably be scaled by the inverse supercell size
-    nb_kpoints = product(N_kpoint)
-    !get kpoints on the grid
-    Call get_energy_kpts(kmesh,dimH,TB_pos_ext,dist_neigh,mode_mag,eigval)
-    E_F=0.0d0
-    call get_fermi_k(eigval, TB_params%N_electrons,N_cell, TB_params%kt, E_F)
-    Call write_dos(eigval,E_F,'dos_k.dat')
-    Call plot_highsym_kpts(dimH,TB_pos_ext,dist_neigh,mode_mag,my_lattice,E_F) 
+    if(TB_params%flow%dos_k.or.TB_params%flow%dos_k)then
+        !get kpoints on the grid
+        call set_k_mesh('input',my_lattice)
+        Call get_energy_kpts(kmesh,dimH,TB_pos_ext,dist_neigh,mode_mag,eigval)
+    endif
+
+    E_F=TB_params%io_ef%E_F_in
+    if(tb_params%flow%fermi_k)then
+        call get_fermi_k(eigval, TB_params%io_EF%N_electrons,N_cell, TB_params%io_EF%kt, E_F)
+    endif
+    if(TB_params%flow%dos_k)then
+        Call write_dos(eigval,TB_params%io_dos,'dos_k.dat')
+    endif
+    if(TB_params%flow%highs_k)then
+        Call set_highs_path(my_lattice,TB_params%io_highs)
+        Call plot_highsym_kpts(dimH,TB_pos_ext,dist_neigh,mode_mag,my_lattice,E_F) 
+    endif
 end subroutine 
 
 subroutine get_dist_neigh(N_cell,my_lattice,my_motif,dist_neigh)
@@ -71,36 +76,22 @@ subroutine get_dist_neigh(N_cell,my_lattice,my_motif,dist_neigh)
 
 end subroutine
 
-subroutine write_dos(eigval,E_F,fname)
+subroutine write_dos(eigval,io_dos,fname)
     use m_sort
     real(8),intent(in)  ::  eigval(:,:)
-    real(8),intent(in)  ::  E_F
+    type(parameters_TB_IO_DOS),intent(in)  :: io_dos
     character(len=*)    ::  fname
 
     real(8),allocatable         :: eigval_sort(:)
     integer,allocatable         :: indices(:)
     integer                     :: io_input
-    logical                     :: do_dos
-    real(8)                     :: E_ext(2),sigma,dE
 
-    io_input=open_file_read('input')
-    do_dos=.False.
-    call get_parameter(io_input,'input','do_dos_k',do_dos)
-    if(do_dos)then
-        E_ext=[-1.0d0,1.0d0]
-        dE=0.01d0
-        sigma=0.01d0
-        call get_parameter(io_input,'input','dos_sigma',sigma)
-        call get_parameter(io_input,'input','dos_E_ext',2,E_ext)
-        call get_parameter(io_input,'input','dos_dE',dE)
-        call close_file('input',io_input)
-        !sort because the calc_dos input has to be sorted
-        allocate(indices(size(eigval)),source=0)
-        allocate(eigval_sort(size(eigval)))
-        eigval_sort=reshape(eigval,[size(eigval)])
-        call sort(size(eigval_sort), eigval_sort, indices, 1.0d-5)
-        Call calc_dos(eigval_sort,E_f,E_ext,dE,sigma,fname)
-    endif
+    !sort because the calc_dos input has to be sorted
+    allocate(indices(size(eigval)),source=0)
+    allocate(eigval_sort(size(eigval)))
+    eigval_sort=reshape(eigval,[size(eigval)])
+    call sort(size(eigval_sort), eigval_sort, indices, 1.0d-5)
+    Call calc_dos(eigval_sort,io_dos,fname)
 
 end subroutine
 

@@ -22,7 +22,7 @@ contains
     end subroutine 
 
     subroutine set_Hr(dimH,Tb_ext,mode_mag)
-        use m_rw_TB, only : TB_params
+        use m_tb_params, only : TB_params
         integer,intent(in)           ::  dimH
         integer,intent(in)           ::  TB_ext(2)
         type(vec_point),intent(in)   ::  mode_mag(:)
@@ -33,8 +33,8 @@ contains
         if(size(Hr,1)/=dimH.or.size(Hr,2)/=dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
         Hr=cmplx(0.0d0,0.0d0, kind=8)
         Call set_Hr_ee(dimH,Tb_ext)
-        if(any(TB_params%Jsd /= 0.0d0))then
-            Call set_Jsd(dimH,tb_ext,mode_mag,TB_params%Jsd)
+        if(any(TB_params%io_H%Jsd /= 0.0d0))then
+            Call set_Jsd(dimH,tb_ext,mode_mag,TB_params%io_H%Jsd)
         endif
     end subroutine 
 

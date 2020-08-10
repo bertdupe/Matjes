@@ -1,17 +1,17 @@
 module m_dos
 !this module contains a badly designed dos calculation using a gauss smearing, but so far it was sufficiently fast
+use m_TB_types, only: parameters_TB_IO_DOS
 implicit none
 private
 public calc_dos
 contains
 
-subroutine calc_dos(eigval,E_F,E_ext,dE,sigma,fname)
+subroutine calc_dos(eigval,io_dos,fname)
     !subroutine to calculate the density of states
-    !so far E_F has no effect... maybe add Eval=Eval-E_f, but not sure if I really want that
     !eigval input has to be sorted
     use m_io_files_utils, only: close_file,open_file_write
-    real(8),intent(in)  ::  eigval(:),E_F
-    real(8),intent(in)  ::  E_ext(2),sigma,dE
+    real(8),intent(in)  ::  eigval(:)
+    type(parameters_TB_IO_DOS) :: io_dos
     character(len=*)    ::  fname
 
 
@@ -20,14 +20,14 @@ subroutine calc_dos(eigval,E_F,E_ext,dE,sigma,fname)
 
     integer                     :: i,io
 
-    Ne=int((E_ext(2)-E_ext(1))/dE)+1
+    Ne=int((io_dos%E_ext(2)-io_dos%E_ext(1))/io_dos%dE)+1
     allocate(dos(Ne),Eval(Ne),source=0.0d0)
     do iE=1,Ne
-        Eval(iE)=(iE-1)*dE+E_ext(1)
+        Eval(iE)=(iE-1)*io_dos%dE+io_dos%E_ext(1)
     enddo
 
     do iE=1,Ne
-        Call get_dos(eigval,Eval(iE),dos(iE),sigma)
+        Call get_dos(eigval,Eval(iE),dos(iE),io_dos%sigma)
     enddo
     dos=dos/real(size(eigval,1))
 
@@ -37,6 +37,7 @@ subroutine calc_dos(eigval,E_F,E_ext,dE,sigma,fname)
     enddo
     call close_file(fname,io)
 end subroutine
+
 
 subroutine get_dos(val,E,res,sigma)
     real(8),intent(in)  ::  val(:),E,sigma

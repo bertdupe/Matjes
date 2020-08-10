@@ -1,12 +1,13 @@
 module m_highsym
     use m_basic_types, only : vec_point
     use m_io_utils, only: get_parameter
-    use m_io_files_utils, only: open_file_read,close_file,open_file_write
+    use m_io_files_utils, only: close_file,open_file_write
     use m_derived_types, only : lattice
     use m_energy_k,only : get_energy_kpts
+    use m_tb_types
     implicit none
     private 
-    public :: plot_highsym_kpts
+    public :: plot_highsym_kpts,set_highs_path
 
     integer                 ::  N_kpts
     real(8),allocatable     ::  kpts(:,:)
@@ -25,7 +26,6 @@ module m_highsym
 
         real(8),allocatable :: eigval(:,:)
 
-        Call set_path(my_lattice)
         if(.not. allocated(kpts)) return
         write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         Call get_energy_kpts(kpts,dimH,tb_ext,pos,mode_mag,eigval)
@@ -70,56 +70,34 @@ module m_highsym
         deallocate(highs_dist)
     end subroutine 
 
-    subroutine set_path(my_lattice)
-        type(lattice), intent(in) :: my_lattice
+    subroutine set_highs_path(my_lattice,highs)
+        type(lattice), intent(in)                   :: my_lattice
+        type(parameters_TB_IO_highs),intent(in)     :: highs
 
-        !input to read from file
-        logical                 ::  do_highs_k
         integer                 ::  N_highsym
         real(8),allocatable     ::  k_highs(:,:)
-        integer,allocatable     ::  k_highs_frac(:)
-        real(8)                 ::  aim_dist
-
-        !local tmp variables 
-        integer                 ::  io_input
         integer                 ::  i,j
         integer,allocatable     ::  Npath_k(:)
         real(8)                 ::  distance
-        real(8),allocatable     ::  tmp(:,:)
         integer                 ::  i_k
         real(8)                 ::  diff_vec(3)
         integer,allocatable     ::  highs_ind(:)
 
-        !read input from file
-        io_input=open_file_read('input')
-        N_highsym=0
-        do_highs_k=.False.
-        call get_parameter(io_input,'input','do_highs_k',do_highs_k)
-        if(.not. do_highs_k) return
-        call get_parameter(io_input,'input','N_highsym',N_highsym)
-        if(N_highsym < 1)then
+        if(highs%N_highsym < 1)then
             return
         endif
-        allocate(k_highs(3,N_highsym),source=0.0d0)
-        allocate(tmp(N_highsym,3),source=0.0d0)  !necessary because the order of reading in get_parameter
-        call get_parameter(io_input,'input','k_highs_pts',N_highsym,3,tmp)
-        k_highs=transpose(tmp)
-        deallocate(tmp)
-        allocate(k_highs_frac(N_highsym),source=1)
-        call get_parameter(io_input,'input','k_highs_frac',N_highsym,k_highs_frac)
-        aim_dist=0.01
-        call get_parameter(io_input,'input','k_highs_dist',aim_dist)
-        call close_file('input',io_input)
 
+        N_highsym=highs%N_highsym
+        allocate(k_highs,source=highs%k_highs)
         !set high symmetry kpoints in correct units
         do i=1,N_highsym
-            k_highs(:,i)=k_highs(:,i)/k_highs_frac(i)
+            k_highs(:,i)=k_highs(:,i)/highs%k_highs_frac(i)
         enddo
-        deallocate(k_highs_frac)
         do i=1,N_highsym
             k_highs(:,i)=matmul(k_highs(:,i),my_lattice%astar)
         enddo
         !adjust with dimension of real-space cell decreasing BZ
+        !might only works for rectangular lattice?
         do i=1,N_highsym
             k_highs(:,i)=k_highs(:,i)/real(my_lattice%dim_lat,8)
         enddo
@@ -128,7 +106,7 @@ module m_highsym
         allocate(Npath_k(N_highsym-1),source=1)
         do i=1,N_highsym-1 
             distance=norm2(k_highs(:,i+1)-k_highs(:,i))
-            Npath_k(i)=max(nint(distance/aim_dist)-1,0)
+            Npath_k(i)=max(nint(distance/highs%aim_dist)-1,0)
         enddo
         N_kpts=N_highsym+sum(Npath_k)
         allocate(kpts(3,N_kpts),source=0.0d0)
