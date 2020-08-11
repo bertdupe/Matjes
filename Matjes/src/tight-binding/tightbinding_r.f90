@@ -1,5 +1,6 @@
 module m_tightbinding_r
 use m_tb_params, only : TB_params
+use m_tb_types
 use m_basic_types, only : vec_point
 use m_energy_r, only: get_eigenval_r,calc_occupation,get_eigenvec_r
 use m_fermi, only: calc_fermi 
@@ -10,9 +11,10 @@ private
 public :: tightbinding_r
 contains
 
-subroutine tightbinding_r(dimH,TB_pos_ext,mode_mag)
-    integer,intent(in)          ::  dimH
-    integer,intent(in)          ::  TB_pos_ext(2)
+subroutine tightbinding_r(Hsize,mode_mag)
+    type(parameters_TB_Hsize),intent(in)     ::  Hsize
+    !integer,intent(in)          ::  dimH
+    !integer,intent(in)          ::  TB_pos_ext(2)
     type(vec_point),intent(in)  ::  mode_mag(:)
     real(8),allocatable         ::  eigval(:)
     complex(8),allocatable      ::  eigvec(:,:)
@@ -30,14 +32,14 @@ subroutine tightbinding_r(dimH,TB_pos_ext,mode_mag)
 
     n_cell=size(mode_mag)
     if(calc_eigvec)then
-        allocate(eigval(dimH),source=0.0d0)
-        allocate(eigvec(dimH,dimH),source=cmplx(0.0d0,0.0d0,8))
+        allocate(eigval(hsize%dimH),source=0.0d0)
+        allocate(eigvec(hsize%dimH,hsize%dimH),source=cmplx(0.0d0,0.0d0,8))
         write(*,*) 'get eigenvec_r'
-        Call get_eigenvec_r(dimH,TB_pos_ext,eigval,eigvec,mode_mag)
+        Call get_eigenvec_r(hsize,eigval,eigvec,mode_mag)
     elseif(calc_eigval)then
-        allocate(eigval(dimH),source=0.0d0)
+        allocate(eigval(hsize%dimH),source=0.0d0)
         write(*,*) 'get eigenval_r'
-        Call get_eigenval_r(dimH,TB_pos_ext,eigval,mode_mag)
+        Call get_eigenval_r(hsize,eigval,mode_mag)
     endif
 
     !diagonalize hamiltonian in real spac
@@ -59,8 +61,8 @@ subroutine tightbinding_r(dimH,TB_pos_ext,mode_mag)
     if(TB_params%flow%occ_r)then
         !get the occupation
         write(*,*) 'get occupation'
-        allocate(occupation(dimH))
-        Call calc_occupation(dimH,eigvec,eigval,E_f,TB_params%io_Ef%kt,occupation) !maybe use different smearing than EF input
+        allocate(occupation(hsize%dimH))
+        Call calc_occupation(eigvec,eigval,E_f,TB_params%io_Ef%kt,occupation) !maybe use different smearing than EF input
         Call write_realarray('occupation.dat',occupation)
     endif
 

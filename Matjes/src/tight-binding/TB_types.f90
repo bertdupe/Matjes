@@ -1,7 +1,7 @@
 module m_TB_types
 implicit none
 public
-
+private upd_Hsize
 type parameters_TB_IO_H
     !parameters directly for the Hamiltonian
     real(kind=8), allocatable :: hopping(:,:,:)   ! 1: up or down, 2: orbital, 3: neighbor
@@ -32,6 +32,22 @@ type parameters_TB_IO_HIGHS
    real(8)                 ::  aim_dist=1.0d-2 !aimed k-space distance between neighboring points along high symmetry line
 end type
 
+type parameters_TB_Hsize
+    !basic parameters
+    integer         ::  nspin=1     !number of spins (1 or 2) for each orbital
+    integer         ::  ncell=-1    !overall number of cells
+    integer         ::  norb=-1     !number of orbitals in cell
+    integer         ::  nsc=1       !2 if doubling for BdG superconductivity
+    !set through upd
+    integer         ::  dimH=-1     !final size of Hamiltonian including all modifications
+    integer         ::  nsite=1     !overall number of states in each cells
+    !externally set for compatibility with Energy routines
+    integer         ::  pos_ext(2)  !values to access outside parameters 
+    contains
+    procedure :: upd => upd_Hsize
+
+end type
+
 type parameters_TB_IO_FLOW
     logical         ::  do_r=.False.
     logical         ::  dos_r=.False.
@@ -51,12 +67,17 @@ type parameters_TB
     type(parameters_TB_IO_DOS)    ::  io_dos
     type(parameters_TB_IO_HIGHS)  ::  io_highs
     type(parameters_TB_IO_flow)   ::  flow
+    type(parameters_TB_Hsize)     ::  H
     logical         ::  is_mag=.False. !Hamiltonian has spins
     logical         ::  is_sc=.False. !Hamiltonian is superconducting-> everything doubles to include creators and destructors
-    !integer         :: dimH
-    !real(8)         :: E_F
 end type
 
+contains
+subroutine upd_Hsize(this)
+    class(parameters_TB_Hsize) ::   this
 
+    this%nsite=this%nsc*this%nspin*this%norb
+    this%dimH=this%nsite*this%ncell
+end subroutine
 
 end module

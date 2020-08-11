@@ -1,6 +1,7 @@
 module m_energy_set_real
 use m_energy_commons, only : energy
 use m_basic_types, only : vec_point
+use m_tb_types
 
 private
 public set_Hr,Hr_eigval,Hr_eigvec,get_Hr
@@ -21,51 +22,48 @@ contains
         Hr_out=Hr
     end subroutine 
 
-    subroutine set_Hr(dimH,Tb_ext,mode_mag)
+    subroutine set_Hr(hsize,mode_mag)
         use m_tb_params, only : TB_params
-        integer,intent(in)           ::  dimH
-        integer,intent(in)           ::  TB_ext(2)
+        type(parameters_TB_Hsize),intent(in)     ::  Hsize
         type(vec_point),intent(in)   ::  mode_mag(:)
 
         if(.not. allocated(Hr))then
-           allocate(Hr(dimH,dimH))
+           allocate(Hr(hsize%dimH,hsize%dimH))
         endif
-        if(size(Hr,1)/=dimH.or.size(Hr,2)/=dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
+        if(size(Hr,1)/=hsize%dimH.or.size(Hr,2)/=hsize%dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
         Hr=cmplx(0.0d0,0.0d0, kind=8)
-        Call set_Hr_ee(dimH,Tb_ext)
+        Call set_Hr_ee(hsize)
         if(any(TB_params%io_H%Jsd /= 0.0d0))then
-            Call set_Jsd(dimH,tb_ext,mode_mag,TB_params%io_H%Jsd)
+            Call set_Jsd(hsize,mode_mag,TB_params%io_H%Jsd)
         endif
     end subroutine 
 
-    subroutine set_Hr_ee(dimH,Tb_ext)
+    subroutine set_Hr_ee(hsize)
         !extract the real space Hamiltonian Hr from the electronic part in energy
-        integer,intent(in)           ::  dimH
-        integer,intent(in)           ::  TB_ext(2)
+        type(parameters_TB_Hsize),intent(in)     ::  hsize
 
         integer                 ::  N_neighbours,N_cells,dim_mode
         integer                 ::  i,j,k
 
         N_neighbours = size( energy%line, 1 )
         N_cells = size( energy%line, 2 )
-        dim_mode=Tb_ext(2)-Tb_ext(1)+1
+        dim_mode=hsize%pos_ext(2)-hsize%pos_ext(1)+1
         if(.not. allocated(Hr))then
-           allocate(Hr(dimH,dimH))
+           allocate(Hr(Hsize%dimH,Hsize%dimH))
         endif
-        if(size(Hr,1)/=dimH.or.size(Hr,2)/=dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
+        if(size(Hr,1)/=Hsize%dimH.or.size(Hr,2)/=Hsize%dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
         Hr=cmplx(0.0d0,0.0d0, kind=8)
         do i=1, N_cells
             do j=1, N_neighbours
                 k = energy%line(j, i) 
-                Hr((i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode) = energy%value(j,k)%order_op(1)%Op_loc(TB_ext(1):TB_ext(2),TB_ext(1):TB_ext(2))
+                Hr((i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode) = energy%value(j,k)%order_op(1)%Op_loc(hsize%pos_ext(1):hsize%pos_ext(2),hsize%pos_ext(1):hsize%pos_ext(2))
             enddo
         enddo
     end subroutine 
 
-    subroutine set_Jsd(dimH,Tb_ext,mode_mag,Jsd)
+    subroutine set_Jsd(hsize,mode_mag,Jsd)
         !adds the Jsd coupling to a local real-space Hamiltonian Hr
-        integer,intent(in)           ::  dimH
-        integer,intent(in)           ::  TB_ext(2)
+        type(parameters_TB_Hsize),intent(in)     ::  hsize
         real(8),intent(in)           ::  Jsd(:)
         type(vec_point),intent(in)   ::  mode_mag(:)
 
@@ -79,10 +77,10 @@ contains
 
         N_neighbours = size(energy%line,1)
         N_cells = size(energy%line,2)
-        dim_mode=Tb_ext(2)-Tb_ext(1)+1
+        dim_mode=hsize%pos_ext(2)-hsize%pos_ext(1)+1
         dim_mode_red=dim_mode/2
 
-        if(size(Hr,1)/=dimH.or.size(Hr,2)/=dimH) STOP "Hr has wrong size" 
+        if(size(Hr,1)/=hsize%dimH.or.size(Hr,2)/=hsize%dimH) STOP "Hr has wrong size" 
         if(size(Jsd) /= dim_mode_red) STOP "JSD has wrong size"
 
         allocate(add_Jsd(dim_mode,dim_mode))

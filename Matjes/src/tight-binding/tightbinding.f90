@@ -27,10 +27,9 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     integer :: dimH
     logical :: do_TB_r,do_TB_k
    
-    Call set_TB_params()
+    N_cell=product(shape(my_lattice%l_modes))
 
     !get magnetization everywhere and set some pointers and control integers
-    N_cell=product(shape(my_lattice%l_modes))
     allocate( all_mode(N_cell))
     call associate_pointer(all_mode,my_lattice)
     ! magnetization
@@ -47,14 +46,13 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
        call associate_pointer(mode_TB,all_mode,'Tight-binding',i_TB)
        TB_pos_ext(1)=my_order_parameters(i)%start
        TB_pos_ext(2)=my_order_parameters(i)%end
-       dimH=N_cell*(TB_pos_ext(2)-TB_pos_ext(1)+1)
       endif
     enddo
-    if(TB_params%is_sc) dimH=dimH*2
+    Call set_TB_params(N_cell,TB_pos_ext)
 
     !do some initial testing real-space tight binding stuff
-    if(TB_params%flow%do_r) Call tightbinding_r(dimH,TB_pos_ext,mode_magnetic)   
+    if(TB_params%flow%do_r) Call tightbinding_r(TB_params%H,mode_magnetic)   
     !do some initial testing reciprocal-space tight binding stuff
-    if(TB_params%flow%do_k) Call tightbinding_k(dimH,TB_pos_ext,mode_magnetic,my_lattice,my_motif)
+    if(TB_params%flow%do_k) Call tightbinding_k(TB_params%H,mode_magnetic,my_lattice,my_motif)
 
 end subroutine tightbinding

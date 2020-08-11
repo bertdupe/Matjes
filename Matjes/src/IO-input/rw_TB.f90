@@ -229,7 +229,6 @@ module m_rw_TB
                     seed_name_mag=convert(seed_name,i,'_')
                     call get_coeff(io_input,fname,seed_name_mag,TB_params%hopping(j,i,:))
                   enddo
-
                 enddo
             else
                 do i=1,TB_params%nb_orbitals
@@ -237,7 +236,6 @@ module m_rw_TB
                   call get_coeff(io_input,fname,seed_name,TB_params%hopping(1,i,:))
                 enddo
             endif
-            
             if (nb_mu_tot_spin.ne.0) then
                 do j=1,2
                   if (j.eq.1) then
@@ -268,11 +266,6 @@ module m_rw_TB
         
         integer function get_nb_orbitals()
             implicit none
-            get_nb_orbitals=0
-            if (TB_params%is_mag) then
-                get_nb_orbitals=2*TB_params%io_H%nb_orbitals
-            else
-                get_nb_orbitals=TB_params%io_H%nb_orbitals
-            endif
+            get_nb_orbitals=TB_params%io_H%nb_spin*TB_params%io_H%nb_orbitals
         end function
 end module  m_rw_TB

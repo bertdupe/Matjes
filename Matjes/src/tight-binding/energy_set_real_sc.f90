@@ -1,6 +1,7 @@
 module m_energy_set_real_sc
 use m_energy_commons, only : energy
 use m_basic_types, only : vec_point
+use m_tb_types
 
 private
 public set_Hr,Hr_eigval,Hr_eigvec,get_Hr
@@ -27,28 +28,34 @@ contains
         Hr_out=Hr
     end subroutine 
 
-    subroutine set_Hr(dimH,Tb_ext,mode_mag)
+    subroutine set_Hr(Hsize,mode_mag)
         !extract the real space Hamiltonian Hr from the electronic part in energy
         use m_energy_set_real, only: get_Hr_nc=>get_Hr, set_Hr_nc=>set_Hr
         use m_tb_params, only : TB_params
-        integer,intent(in)           :: dimH
-        integer,intent(in)           :: TB_ext(2)
+        type(parameters_TB_Hsize),intent(in)     ::  Hsize
         type(vec_point),intent(in)   :: mode_mag(:)
-        complex(8)                   :: Hr_nc(dimH/2,dimH/2)
+        complex(8)                   :: Hr_nc(Hsize%dimH/2,Hsize%dimH/2)
 
+        type(parameters_TB_Hsize)     ::  Hsize_nc
         integer                 ::  dimH_nc,dim_mode
 
         if(.not. allocated(Hr))then
-           allocate(Hr(dimH,dimH))
+           allocate(Hr(Hsize%dimH,Hsize%dimH))
         endif
-        if(size(Hr,1)/=dimH.or.size(Hr,2)/=dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
+        if(size(Hr,1)/=Hsize%dimH.or.size(Hr,2)/=Hsize%dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
+
+        !get Hamiltonian without superconductivity
+        hsize_nc=hsize
+        hsize_nc%nsc=1
+        Call Hsize_nc%upd()
+        Call set_Hr_nc(hsize_nc,mode_mag)
+        Call get_Hr_nc(hsize_nc%dimH,Hr_nc)
+
+        !fill local Hamiltonian and add SC_delta
         Hr=cmplx(0.0d0,0.0d0, kind=8)
-        dimH_nc=dimH/2
-        Call set_Hr_nc(dimH_nc,tb_ext,mode_mag)
-        Call get_Hr_nc(dimH_nc,Hr_nc)
         Hr(1:dimH_nc,1:dimH_nc)=Hr_nc
-        Hr(dimH_nc+1:dimH,dimH_nc+1:dimH)=-Hr_nc
-        dim_mode=Tb_ext(2)-Tb_ext(1)+1
+        Hr(dimH_nc+1:Hsize%dimH,dimH_nc+1:Hsize%dimH)=-Hr_nc
+        dim_mode=Hsize%pos_ext(2)-Hsize%pos_ext(1)+1
         Call set_delta(TB_params%io_H%delta,dim_mode)
     end subroutine 
 
@@ -99,7 +106,7 @@ contains
         call ZHEEV( 'N', 'U', dimH, H_loc, dimH, eigval, WORK, l_work, RWORK, INFO )
 
     end subroutine
-#if 0
+#if 1
     subroutine Hr_eigvec(dimH,eigvec,eigval)
         integer,intent(in)          ::  dimH
         complex(8),intent(out)      ::  eigvec(dimH,dimH)

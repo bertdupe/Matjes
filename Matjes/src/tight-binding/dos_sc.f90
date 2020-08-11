@@ -59,15 +59,15 @@ subroutine add_dos(val,eigvec,Ne,Eval,io_dos,dos)
     dimH=size(eigvec)
 
     !u-part of BdG
-    i_min=int(((val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1
-    i_max=int(((val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)
+    i_min=max(int(((val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1,1)
+    i_max=min(int(((val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE),Ne)
     pref=dot_product(eigvec(1:dimH/2),eigvec(1:dimH/2))
     Call add_gauss(val,pref,Eval(i_min:i_max),dos(i_min:i_max),io_dos%sigma)
 
     
     !v-part of BdG
-    i_min=int(((-val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1
-    i_max=int(((-val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)
+    i_min=max(int(((-val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1,1)
+    i_max=min(int(((-val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE),Ne)
     pref=dot_product(eigvec(dimH/2+1:dimH),eigvec(dimH/2+1:dimH))
     Call add_gauss(-val,pref,Eval(i_min:i_max),dos(i_min:i_max),io_dos%sigma)
 
