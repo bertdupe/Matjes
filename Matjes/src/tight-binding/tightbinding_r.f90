@@ -26,7 +26,7 @@ subroutine tightbinding_r(dimH,TB_pos_ext,mode_mag)
 
 
     calc_eigval=TB_params%flow%dos_r.or.TB_params%flow%occ_r.or.TB_params%flow%spec_r.or.TB_params%flow%fermi_r
-    calc_eigvec=(TB_params%flow%dos_r.and.TB_params%io_H%is_sc).or.TB_params%flow%occ_r
+    calc_eigvec=(TB_params%flow%dos_r.and.TB_params%is_sc).or.TB_params%flow%occ_r
 
     n_cell=size(mode_mag)
     if(calc_eigvec)then
@@ -49,7 +49,7 @@ subroutine tightbinding_r(dimH,TB_pos_ext,mode_mag)
         Call calc_fermi(eigval, TB_params%io_EF%N_electrons*n_cell, TB_params%io_ef%kt, E_f)
     endif
     if(TB_params%flow%dos_r)then
-        if(TB_params%io_H%is_sc)then
+        if(TB_params%is_sc)then
             Call calc_dos_sc(eigval,eigvec,TB_params%io_dos,'dos_r_sc.dat')
         else
             Call calc_dos(eigval,TB_params%io_dos,'dos_r.dat')

@@ -31,9 +31,10 @@ contains
         !extract the real space Hamiltonian Hr from the electronic part in energy
         use m_energy_set_real, only: get_Hr_nc=>get_Hr, set_Hr_nc=>set_Hr
         use m_tb_params, only : TB_params
-        integer,intent(in)           ::  dimH
-        integer,intent(in)           ::  TB_ext(2)
-        type(vec_point),intent(in)   ::  mode_mag(:)
+        integer,intent(in)           :: dimH
+        integer,intent(in)           :: TB_ext(2)
+        type(vec_point),intent(in)   :: mode_mag(:)
+        complex(8)                   :: Hr_nc(dimH/2,dimH/2)
 
         integer                 ::  dimH_nc,dim_mode
 
@@ -44,8 +45,9 @@ contains
         Hr=cmplx(0.0d0,0.0d0, kind=8)
         dimH_nc=dimH/2
         Call set_Hr_nc(dimH_nc,tb_ext,mode_mag)
-        Call get_Hr_nc(dimH_nc,Hr(1:dimH_nc,1:dimH_nc))
-        Hr(dimH_nc+1:dimH,dimH_nc+1:dimH)=-Hr(1:dimH_nc,1:dimH_nc)
+        Call get_Hr_nc(dimH_nc,Hr_nc)
+        Hr(1:dimH_nc,1:dimH_nc)=Hr_nc
+        Hr(dimH_nc+1:dimH,dimH_nc+1:dimH)=-Hr_nc
         dim_mode=Tb_ext(2)-Tb_ext(1)+1
         Call set_delta(TB_params%io_H%delta,dim_mode)
     end subroutine 
@@ -97,7 +99,7 @@ contains
         call ZHEEV( 'N', 'U', dimH, H_loc, dimH, eigval, WORK, l_work, RWORK, INFO )
 
     end subroutine
-
+#if 0
     subroutine Hr_eigvec(dimH,eigvec,eigval)
         integer,intent(in)          ::  dimH
         complex(8),intent(out)      ::  eigvec(dimH,dimH)
@@ -107,7 +109,6 @@ contains
         real(kind=8)                :: RWORK(3*dimH-2)
         integer                     :: info,l_work
         complex(kind=8),allocatable :: WORK(:)
-
 
         if(.not.allocated(Hr)) STOP "Hr is not allocated but Hr_eigvec is called"
         if(dimH/=size(Hr,1)) STOP "dimensions of Hr seems to be wrong evaluating the eigenvectors"
@@ -119,4 +120,35 @@ contains
         call ZHEEV( 'V', 'U', dimH, eigvec, dimH, eigval, WORK, l_work, RWORK, INFO )
     end subroutine 
 
+
+#else
+    subroutine Hr_eigvec(dimH,eigvec,eigval)
+        integer,intent(in)          ::  dimH
+        complex(8),intent(out)      ::  eigvec(dimH,dimH)
+        real(8),intent(out)         ::  eigval(dimH)
+
+        integer                     :: info,lwork
+        integer                     :: lrwork,liwork
+        integer,allocatable         :: iwork(:)
+        complex(kind=8),allocatable :: WORK(:)
+        real(8),allocatable         :: RWORK(:)
+
+        integer                     :: tmp_iwork(1)
+        real(8)                     :: tmp_rwork(1)
+        complex(8)                  :: tmp_work(1)
+
+        if(.not.allocated(Hr)) STOP "Hr is not allocated but Hr_eigvec is called"
+        if(dimH/=size(Hr,1)) STOP "dimensions of Hr seems to be wrong evaluating the eigenvectors"
+        eigvec=Hr
+        eigval=0.0d0
+        call ZHEEVD( 'V', 'U', dimH, eigvec, dimH, eigval, tmp_WORK, -1, tmp_RWORK, -1,tmp_IWORK,-1,INFO )
+        lwork=int(tmp_work(1))
+        LIWORK=tmp_IWORK(1)
+        LRWORK=int(tmp_rwork(1))
+        allocate(work(lwork),source=cmplx(0.0d0,0.0d0,8))
+        allocate(iwork(liwork),source=0)
+        allocate(rwork(lrwork),source=0.0d0)
+        call ZHEEVD( 'V', 'U', dimH, eigvec, dimH, eigval, WORK, lwork, RWORK, LRWORK,IWORK,LIWORK,INFO )
+    end subroutine 
+#endif
 end module

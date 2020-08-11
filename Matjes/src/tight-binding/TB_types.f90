@@ -6,8 +6,6 @@ type parameters_TB_IO_H
     !parameters directly for the Hamiltonian
     real(kind=8), allocatable :: hopping(:,:,:)   ! 1: up or down, 2: orbital, 3: neighbor
     real(kind=8), allocatable :: onsite(:,:)     ! 1:up or down, 2: orbital
-    logical :: is_magnetic=.false.
-    logical :: is_sc=.false.
     integer :: nb_shell=-1
     integer :: nb_orbitals=-1
     integer :: nb_spin=1

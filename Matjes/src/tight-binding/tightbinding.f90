@@ -50,7 +50,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
        dimH=N_cell*(TB_pos_ext(2)-TB_pos_ext(1)+1)
       endif
     enddo
-    if(TB_params%io_H%is_sc) dimH=dimH*2
+    if(TB_params%is_sc) dimH=dimH*2
 
     !do some initial testing real-space tight binding stuff
     if(TB_params%flow%do_r) Call tightbinding_r(dimH,TB_pos_ext,mode_magnetic)   
