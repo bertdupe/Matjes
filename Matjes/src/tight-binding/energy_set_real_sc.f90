@@ -53,8 +53,8 @@ contains
 
         !fill local Hamiltonian and add SC_delta
         Hr=cmplx(0.0d0,0.0d0, kind=8)
-        Hr(1:dimH_nc,1:dimH_nc)=Hr_nc
-        Hr(dimH_nc+1:Hsize%dimH,dimH_nc+1:Hsize%dimH)=-Hr_nc
+        Hr(1:hsize_nc%dimH,1:hsize_nc%dimH)=Hr_nc
+        Hr(hsize_nc%dimH+1:Hsize%dimH,hsize_nc%dimH+1:Hsize%dimH)=-Hr_nc
         dim_mode=Hsize%pos_ext(2)-Hsize%pos_ext(1)+1
         Call set_delta(TB_params%io_H%delta,dim_mode)
     end subroutine 
