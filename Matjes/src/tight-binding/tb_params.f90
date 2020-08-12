@@ -21,13 +21,7 @@ subroutine set_TB_params(Ncell,TB_pos_ext)
         STOP "Unexpected value for TB_params%io_H%nb_spin"
     endif
 
-    if(any(TB_params%io_H%delta/=0.0d0))then
-#ifdef CPP_SC 
-        TB_params%is_sc=.True.
-#else
-        STOP "trying to use superconductivity but CPP_SC is not set" 
-#endif
-    endif
+    if(any(TB_params%io_H%delta/=0.0d0)) TB_params%is_sc=.True.
 
     if(TB_params%is_sc .and. .not. TB_params%is_mag) STOP "Trying to use SC without using the magnetic part"
 
@@ -38,6 +32,9 @@ subroutine set_TB_params(Ncell,TB_pos_ext)
     TB_params%H%norb=TB_params%io_H%nb_orbitals
     TB_params%H%pos_ext=TB_pos_ext
     Call TB_params%H%upd()
+
+    TB_params%H%sparse=TB_params%io_H%sparse
+    TB_params%H%i_diag=TB_params%io_H%i_diag
 end subroutine
 
 

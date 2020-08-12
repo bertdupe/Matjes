@@ -8,14 +8,16 @@ CXX=g++
 #
 # normal flags
 #
-FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none #-march=native -ffast-math -m64  -I${MKLROOT}/include 
-LDFLAGS= -O4  -m64 -I${MKLROOT}/include
+#FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none #-march=native -ffast-math -m64  -I${MKLROOT}/include 
+#LDFLAGS= -O4  -m64 -I${MKLROOT}/include
 
 #
 #debugging flags
 #
 #FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none  -m64 -I${MKLROOT}/include 
 #LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none  -m64 -I${MKLROOT}/include
+FFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffree-form -fimplicit-none -ffree-line-length-none  -m64 -I${MKLROOT}/include 
+LDFLAGS= -O0 -g -fcheck=all -Wall -fbacktrace -ffree-form -fimplicit-none -ffree-line-length-none  -m64 -I${MKLROOT}/include
 
 #
 # profiling with gprof
@@ -23,7 +25,10 @@ LDFLAGS= -O4  -m64 -I${MKLROOT}/include
 #FFLAGS= -O0 -g -lprofiler -fcheck=all -Wall -fbacktrace -ffpe-trap=invalid,overflow,zero,underflow,denormal -ffree-form -fimplicit-none -ffree-line-length-none
 #LDFLAGS= -O0 -g
 
-LIBRARIES=-lblas -llapack  -lstdc++  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
+LIBRARIES=-lstdc++  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
+#LIBRARIES=-lstdc++  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
+#LIBRARIES=-lstdc++  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl
+#LIBRARIES=-lstdc++  -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_tbb_thread -lmkl_core -ltbb -lstdc++ -lpthread -lm -ldl
 INCLUDES=-I/usr/include/eigen3
 C_INCLUDES=-I/usr/include/eigen3
 

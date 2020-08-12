@@ -1,7 +1,7 @@
 module m_TB_types
 implicit none
 public
-private upd_Hsize
+private upd_h_par
 type parameters_TB_IO_H
     !parameters directly for the Hamiltonian
     real(kind=8), allocatable :: hopping(:,:,:)   ! 1: up or down, 2: orbital, 3: neighbor
@@ -11,6 +11,8 @@ type parameters_TB_IO_H
     integer :: nb_spin=1
     real(kind=8), allocatable :: Jsd(:)  !1: orbital
     complex(kind=8), allocatable :: delta(:)  !1: orbital   !super conductivity delta
+    integer             ::  i_diag=1  !different diagonalization methods
+    logical             ::  sparse=.false.  !do calculation sparse
 end type 
 
 type parameters_TB_IO_EF
@@ -32,7 +34,7 @@ type parameters_TB_IO_HIGHS
    real(8)                 ::  aim_dist=1.0d-2 !aimed k-space distance between neighboring points along high symmetry line
 end type
 
-type parameters_TB_Hsize
+type parameters_TB_Hsolve
     !basic parameters
     integer         ::  nspin=1     !number of spins (1 or 2) for each orbital
     integer         ::  ncell=-1    !overall number of cells
@@ -43,8 +45,12 @@ type parameters_TB_Hsize
     integer         ::  nsite=1     !overall number of states in each cells
     !externally set for compatibility with Energy routines
     integer         ::  pos_ext(2)  !values to access outside parameters 
+    !which method to use
+    logical         ::  sparse=.False.
+    integer         ::  i_diag=1  !different diagonalization methods
+
     contains
-    procedure :: upd => upd_Hsize
+    procedure :: upd => upd_h_par
 
 end type
 
@@ -67,14 +73,14 @@ type parameters_TB
     type(parameters_TB_IO_DOS)    ::  io_dos
     type(parameters_TB_IO_HIGHS)  ::  io_highs
     type(parameters_TB_IO_flow)   ::  flow
-    type(parameters_TB_Hsize)     ::  H
+    type(parameters_TB_Hsolve)     ::  H
     logical         ::  is_mag=.False. !Hamiltonian has spins
     logical         ::  is_sc=.False. !Hamiltonian is superconducting-> everything doubles to include creators and destructors
 end type
 
 contains
-subroutine upd_Hsize(this)
-    class(parameters_TB_Hsize) ::   this
+subroutine upd_h_par(this)
+    class(parameters_TB_Hsolve) ::   this
 
     this%nsite=this%nsc*this%nspin*this%norb
     this%dimH=this%nsite*this%ncell

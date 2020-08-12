@@ -4,7 +4,7 @@ module m_energy_k
     use m_energy_commons, only : energy
     use m_fftw, only: get_FFT
     use m_J_sd_exchange
-    use m_energy_set_real, only: set_Hr, get_Hr
+    use m_energy_r, only: set_Hr
 
     implicit none
 
@@ -12,23 +12,23 @@ module m_energy_k
     public :: diagonalise_H_k_list,set_dist_neigh,get_energy_kpts !, fermi_distrib, compute_Etot
     contains
 
-        subroutine get_energy_kpts(klist,hsize,pos,mode_mag,eigval)
+        subroutine get_energy_kpts(klist,h_par,pos,mode_mag,eigval)
             real(8),intent(in)                      ::  klist(:,:)
-            type(parameters_TB_Hsize),intent(in)     ::  hsize
+            type(parameters_TB_Hsolve),intent(in)     ::  h_par
             real(8),intent(in)                      ::  pos(:,:)
             type(vec_point),intent(in)              ::  mode_mag(:)
             real(8),intent(inout),allocatable       ::  eigval(:,:)
 
-            complex(8)                  ::  Hr(hsize%dimH,hsize%dimH)
+            complex(8),allocatable      ::  Hr(:,:)
             integer                     ::  dim_mode
             
             !set real space Hamiltonian
             !if used more often, set this in advance
-            Call set_Hr(hsize,mode_mag)
-            Call get_Hr(hsize%dimH,Hr)
+            Call set_Hr(h_par,mode_mag,Hr)
+!            Call get_Hr(h_par%dimH,Hr)
             !get actual eigenvalues
-            allocate( eigval(hsize%dimH,size(klist,2)),source=0.0d0)
-            dim_mode=hsize%pos_ext(2)-hsize%pos_ext(1)+1
+            allocate( eigval(h_par%dimH,size(klist,2)),source=0.0d0)
+            dim_mode=h_par%pos_ext(2)-h_par%pos_ext(1)+1
             Call diagonalise_H_k_list(Hr,pos,klist,dim_mode,-1.0d0,eigval)
         end subroutine
 

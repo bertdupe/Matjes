@@ -17,8 +17,8 @@ public :: tightbinding_k
 contains
 
 
-subroutine tightbinding_k(Hsize,mode_mag,my_lattice,my_motif)
-    type(parameters_TB_Hsize),intent(in)     ::  Hsize
+subroutine tightbinding_k(h_par,mode_mag,my_lattice,my_motif)
+    type(parameters_TB_Hsolve),intent(in)     ::  h_par
     type(vec_point),intent(in)  :: mode_mag(:)
     type(lattice), intent(in)   :: my_lattice
     type(cell), intent(in)      :: my_motif
@@ -38,7 +38,7 @@ subroutine tightbinding_k(Hsize,mode_mag,my_lattice,my_motif)
     if(TB_params%flow%dos_k.or.TB_params%flow%dos_k)then
         !get kpoints on the grid
         call set_k_mesh('input',my_lattice)
-        Call get_energy_kpts(kmesh,Hsize,dist_neigh,mode_mag,eigval)
+        Call get_energy_kpts(kmesh,h_par,dist_neigh,mode_mag,eigval)
     endif
 
     E_F=TB_params%io_ef%E_F_in
@@ -50,7 +50,7 @@ subroutine tightbinding_k(Hsize,mode_mag,my_lattice,my_motif)
     endif
     if(TB_params%flow%highs_k)then
         Call set_highs_path(my_lattice,TB_params%io_highs)
-        Call plot_highsym_kpts(Hsize,dist_neigh,mode_mag,my_lattice,E_F) 
+        Call plot_highsym_kpts(h_par,dist_neigh,mode_mag,my_lattice,E_F) 
     endif
 end subroutine 
 

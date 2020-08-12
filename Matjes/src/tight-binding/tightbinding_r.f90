@@ -11,8 +11,8 @@ private
 public :: tightbinding_r
 contains
 
-subroutine tightbinding_r(Hsize,mode_mag)
-    type(parameters_TB_Hsize),intent(in)     ::  Hsize
+subroutine tightbinding_r(h_par,mode_mag)
+    type(parameters_TB_Hsolve),intent(in)     ::  h_par
     !integer,intent(in)          ::  dimH
     !integer,intent(in)          ::  TB_pos_ext(2)
     type(vec_point),intent(in)  ::  mode_mag(:)
@@ -32,14 +32,14 @@ subroutine tightbinding_r(Hsize,mode_mag)
 
     n_cell=size(mode_mag)
     if(calc_eigvec)then
-        allocate(eigval(hsize%dimH),source=0.0d0)
-        allocate(eigvec(hsize%dimH,hsize%dimH),source=cmplx(0.0d0,0.0d0,8))
+        allocate(eigval(h_par%dimH),source=0.0d0)
+        allocate(eigvec(h_par%dimH,h_par%dimH),source=cmplx(0.0d0,0.0d0,8))
         write(*,*) 'get eigenvec_r'
-        Call get_eigenvec_r(hsize,eigval,eigvec,mode_mag)
+        Call get_eigenvec_r(h_par,eigval,eigvec,mode_mag)
     elseif(calc_eigval)then
-        allocate(eigval(hsize%dimH),source=0.0d0)
+        allocate(eigval(h_par%dimH),source=0.0d0)
         write(*,*) 'get eigenval_r'
-        Call get_eigenval_r(hsize,eigval,mode_mag)
+        Call get_eigenval_r(h_par,eigval,mode_mag)
     endif
 
     !diagonalize hamiltonian in real spac
@@ -61,7 +61,7 @@ subroutine tightbinding_r(Hsize,mode_mag)
     if(TB_params%flow%occ_r)then
         !get the occupation
         write(*,*) 'get occupation'
-        allocate(occupation(hsize%dimH))
+        allocate(occupation(h_par%dimH))
         Call calc_occupation(eigvec,eigval,E_f,TB_params%io_Ef%kt,occupation) !maybe use different smearing than EF input
         Call write_realarray('occupation.dat',occupation)
     endif

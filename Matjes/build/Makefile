@@ -7,7 +7,7 @@ OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o TB_types.o rw_TB
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o \
- tb_params.o energy_set_real_sc.o energy_set_real_sparse.o dos.o dos_sc.o\
+ tb_params.o energy_set_real_sc.o energy_set_real_sparse.o dos.o dos_sc.o energy_solve_dense.o\
  Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_r.o tightbinding_k.o wavefunction.o DOS.o bandstructure.o \
  highsymmetry.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o J_sd_exchange.o \
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
@@ -73,13 +73,14 @@ total_Hamiltonian_TB.o: J_sd_exchange.o exchange_tight_binding.o chemical_potent
 fermi.o:  energy_commons.o sort.o
 energy_set_real.o: energy_commons.o basic_types.o eigen_interface.o tb_params.o
 energy_set_real_sc.o: energy_commons.o basic_types.o eigen_interface.o energy_set_real.o tb_params.o
-energy_r.o: basic_types.o fermi.o tb_params.o energy_set_real_sparse.o energy_set_real.o energy_set_real_sc.o dos_sc.o 
+energy_solve_dense.o:
+energy_r.o: basic_types.o fermi.o tb_params.o energy_set_real_sparse.o energy_set_real.o energy_set_real_sc.o dos_sc.o energy_solve_dense.o
 tightbinding_k.o: basic_types.o get-position.o derived_types.o energy_k.o highsymmetry.o energy_r.o fermi.o dos.o
 tightbinding.o: basic_types.o tb_params.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_k.o tightbinding_r.o highsymmetry.o
 bandstructure.o: basic_types.o derived_types.o fftw.o energy_commons.o
 DOS.o: io_files_utils.o io-utils.o
 wavefunction.o: basic_types.o
-energy_k.o: invert.o eigen_val_vec.o energy_commons.o fftw.o sort.o
+energy_k.o: invert.o eigen_val_vec.o energy_commons.o fftw.o sort.o energy_r.o
 tightbinding.o: basic_types.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o energy_k.o highsymmetry.o
 
 total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o exchange_Heisenberg.o  

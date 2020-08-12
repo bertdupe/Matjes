@@ -17,10 +17,10 @@ module m_highsym
     contains
 
 
-    subroutine plot_highsym_kpts(hsize,pos,mode_mag,my_lattice,E_F)
-        type(parameters_TB_Hsize),intent(in)     ::  hsize
+    subroutine plot_highsym_kpts(h_par,pos,mode_mag,my_lattice,E_F)
+        type(parameters_TB_Hsolve),intent(in)     ::  h_par
         real(8),intent(in)          :: pos(:,:)
-        type(vec_point),intent(in)  :: mode_mag(hsize%dimH)
+        type(vec_point),intent(in)  :: mode_mag(h_par%dimH)
         type(lattice), intent(in)   :: my_lattice
         real(8),intent(in)          :: E_F !fermi energy
 
@@ -28,7 +28,7 @@ module m_highsym
 
         if(.not. allocated(kpts)) return
         write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
-        Call get_energy_kpts(kpts,hsize,pos,mode_mag,eigval)
+        Call get_energy_kpts(kpts,h_par,pos,mode_mag,eigval)
         !eigval=eigval-E_F !adjust by calculated fermi energy only confuses comparison with analytic calculations
         Call print_highsym('highs_plot',eigval)
         Call highsym_clear_path()
