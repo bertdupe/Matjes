@@ -11,8 +11,9 @@ type parameters_TB_IO_H
     integer :: nb_spin=1
     real(kind=8), allocatable :: Jsd(:)  !1: orbital
     complex(kind=8), allocatable :: delta(:)  !1: orbital   !super conductivity delta
-    integer             ::  i_diag=1  !different diagonalization methods
+    integer             ::  i_diag=3  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
+    logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
 end type 
 
 type parameters_TB_IO_EF
@@ -48,6 +49,7 @@ type parameters_TB_Hsolve
     !which method to use
     logical         ::  sparse=.False.
     integer         ::  i_diag=1  !different diagonalization methods
+    logical         ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
 
     contains
     procedure :: upd => upd_h_par

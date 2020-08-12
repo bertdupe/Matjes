@@ -45,6 +45,8 @@ contains
         Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1:h_par%dimH)=-Hr_nc
         dim_mode=h_par%pos_ext(2)-h_par%pos_ext(1)+1
         Call set_delta(TB_params%io_H%delta,dim_mode,Hr)
+
+        if(h_par%rearrange) Call rearange_H(h_par%dimH,Hr)
     end subroutine 
 
     subroutine set_delta(delta,dim_mode,Hr)
@@ -74,8 +76,26 @@ contains
                 Hr(i_dn,i_up_dg)=Hr(i_dn,i_up_dg)-delta(i_orb)
             enddo
         enddo
-
     end subroutine
 
+    subroutine rearange_H(dimH,Hr)
+        !super stupid implementation to swap
+        integer,intent(in)              ::  dimH
+        complex(8),intent(inout)        ::  Hr(dimH,dimH)
+        complex(8)                      ::  tmp(dimH,dimH)
+
+        integer                         ::  i
+        integer                         ::  ind1,ind2
+    
+        tmp=Hr
+        do i=1,dimH/2
+            Hr(:,2*i-1)=tmp(:,i)
+            Hr(:,2*i)=tmp(:,i+dimH/2)
+        enddo
+        do i=1,dimH/2
+            Hr(2*i-1,:)=tmp(i,:)
+            Hr(2*i,:)=tmp(i+dimH/2,:)
+        enddo
+    end subroutine
 
 end module
