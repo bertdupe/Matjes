@@ -15,12 +15,11 @@ if(DEFINED ENV{MKLROOT})
 else()
   message( FATAL_ERROR "Did not find ${MKLROOT} environment variable" )
 endif()
-#set(add_lib "-llapack -lblas")
 
-set(CPP_flags ${CPP_flags}  CPP_BRUTDIP)
-set(CPP_flags ${CPP_flags}  CPP_INTERNAL)
-set(CPP_flags ${CPP_flags}  __sparse_mkl__)
-set(CPP_flags ${CPP_flags}  __mkl_csr__)
-#set(CPP_flags ${CPP_flags}  __direct_mult_EIGEN__)
-#set(CPP_flags ${CPP_flags}  __EIGEN_sparse_matmul__)
-#set(CPP_flags ${CPP_flags}  __SLOW__)
+#
+set(CPP_flags ${CPP_flags}  CPP_BRUTDIP CPP_INTERNAL)
+#possible flags from large multiplication
+set(CPP_flags ${CPP_flags}  __sparse_mkl__ __mkl_csr__)
+#set(CPP_flags ${CPP_flags}  __direct_mult_EIGEN__)     #multiplication using sparse energy matrix
+#set(CPP_flags ${CPP_flags}  __eigen_sparse_matmul__)   #matrix multiplication using Eigen (actually not sparse...)
+#set(CPP_flags ${CPP_flags}  __SLOW__)    #Bertrands algorithm

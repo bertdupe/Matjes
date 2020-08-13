@@ -89,24 +89,6 @@ src/solvers/solver_commun.f90
 src/solvers/solver.f90
 src/solvers/solver_order.f90
 src/solvers/update_time.f90
-src/tight-binding/bandstructure.f90
-src/tight-binding/dos.f90
-src/tight-binding/DOS.f90
-src/tight-binding/dos_sc.f90
-src/tight-binding/energy_k.f90
-src/tight-binding/energy_r.f90
-src/tight-binding/energy_set_real.f90
-src/tight-binding/energy_set_real_sc.f90
-src/tight-binding/energy_set_real_sparse.f90
-src/tight-binding/energy_solve_dense.f90
-src/tight-binding/fermi.f90
-src/tight-binding/highsymmetry.f90
-src/tight-binding/tb_params.f90
-src/tight-binding/TB_types.f90
-src/tight-binding/tightbinding.f90
-src/tight-binding/tightbinding_k.f90
-src/tight-binding/tightbinding_r.f90
-src/tight-binding/wavefunction.f90
 src/torques/torques.f90
 src/utilities/coordinatesv4.f90
 src/utilities/error.f90
@@ -124,11 +106,12 @@ src/vector_utils/vector.f90
 src/stdtypes.f90
 src/main.f90
 )
+include(src/tight-binding/CMakeLists.txt)
 include(src/Sparselib/CMakeLists.txt)
 include(src/solvers/CMakeLists.txt)
 include(src/IO-input/CMakeLists.txt)
 include(src/symmetries/CMakeLists.txt)
 include(src/Energy/CMakeLists.txt)
 include(src/setup/CMakeLists.txt)
-include(src/paratemp-MC/CMakeLists.txt)  #requires mpi
+include(src/paratemp-MC/CMakeLists.txt) 
 #include(src/parallelization/CMakeLists.txt)  #requires fftw,
