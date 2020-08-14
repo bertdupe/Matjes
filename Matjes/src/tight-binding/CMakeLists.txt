@@ -8,6 +8,7 @@ src/tight-binding/energy_r.f90
 src/tight-binding/energy_set_real.f90
 src/tight-binding/energy_set_real_sc.f90
 src/tight-binding/energy_set_real_sparse.f90
+src/tight-binding/energy_set_real_sparse_sc.f90
 src/tight-binding/energy_solve_dense.f90
 src/tight-binding/energy_solve_sparse.f90
 src/tight-binding/fermi.f90

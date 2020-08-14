@@ -56,13 +56,12 @@ contains
         integer,intent(in)          ::  dim_mode
         integer                     ::  n_cells
 
-        integer         ::  dimH_nc,dimH_mag,dim_mode_red
+        integer         ::  dimH_nc,dim_mode_red
         integer         ::  i_cell,i_orb
         integer         ::  i_up,i_dn,i_up_dg,i_dn_dg
 
         N_cells = size(energy%line,2)
         dim_mode_red=dim_mode/2
-        dimH_mag=dim_mode_red*N_cells
         dimH_nc=size(Hr,1)/2
         do i_cell=1,N_cells
             do i_orb=1,dim_mode_red

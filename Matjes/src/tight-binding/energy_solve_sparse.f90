@@ -13,7 +13,6 @@ contains
         complex(8),intent(out),allocatable :: eigvec(:,:)
         real(8),intent(out),allocatable    :: eigval(:)
 
-
         !export csr parameters
         integer(C_INT)                     :: nrows,ncols,indexing
         type(C_PTR)                        :: rows_start,rows_end,col_indx
@@ -37,9 +36,8 @@ contains
 
 
         stat=mkl_sparse_z_export_csr ( Hr , indexing , nrows , ncols , rows_start , rows_end , col_indx , values ) 
-        CAll C_F_POINTER(rows_start, tmp,[nrows] )
-        nnz=tmp(nrows)+indexing
-        write(*,*) 'nnz',nnz
+        CAll C_F_POINTER(rows_end, tmp,[nrows] )
+        nnz=tmp(nrows)-indexing
         CAll C_F_POINTER(values, a,[nnz]) 
         CAll C_F_POINTER(col_indx, ja,[nnz]) 
         CAll C_F_POINTER(rows_start, ia,[h_par%dimH+1])
@@ -50,7 +48,7 @@ contains
         emin=h_par%extE(1)
         emax=h_par%extE(2)
         m0=h_par%estNe
-        if(m0==0) m0=h_par%dimH
+        if(m0==0.or.m0>h_par%dimH) m0=h_par%dimH
         allocate(e(m0),source=0.0d0)
         allocate(x(h_par%dimh,m0),source=cmplx(0.0d0,0.0d0,8))
         allocate(res(h_par%dimH),source=0.0d0)

@@ -5,19 +5,10 @@ use m_energy_commons, only : energy
 use m_basic_types, only : vec_point
 use m_tb_types
 use MKL_SPBLAS
-!
-! THIS DOES NOT WORK SINCE I DIDN'T LINK A COMPLEX SPARSE EIGENVALUE SOLVER
-!
+USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX,C_PTR,C_F_POINTER   !<-delete
 
 private
 public set_Hr_sparse_nc!set_Jsd!,Hr_eigval,Hr_eigvec
-
-
-type sparsem_coord
-    
-
-end type
-
 
 
 contains
@@ -44,6 +35,8 @@ contains
         else
             H_r=H_ee
         endif
+        stat = mkl_sparse_order ( H_r )
+        !not sure if that enhances things
         desc%Type=SPARSE_MATRIX_TYPE_HERMITIAN
         desc%mode=SPARSE_FILL_MODE_UPPER
         desc%diag=SPARSE_DIAG_NON_UNIT
@@ -58,7 +51,6 @@ contains
 		!external SPARSE_MATRIX_T
         integer                 :: dimH
         integer                 :: TB_ext(2)
-        integer                 :: nnz
         integer                 :: N_persite
 
         integer                 :: N_neighbours,N_cells,dim_mode
@@ -66,8 +58,10 @@ contains
         integer                 :: i,j,k,ii,i2,k2
 
 !sparse Hamiltonian
-        complex(8),allocatable  :: val(:)
-        integer,allocatable     :: rowind(:),colind(:)
+        integer(C_INT)                          :: nnz
+        complex(C_DOUBLE_COMPLEX),allocatable   :: val(:)
+        integer(C_INT),allocatable              :: rowind(:),colind(:)
+        integer(C_INT)                          :: cols,rows
 
 
 		type(SPARSE_MATRIX_T)   ::  H_coo
@@ -94,7 +88,6 @@ contains
         do i=1, N_cells
             do j=1, N_neighbours
                 k = energy%line(j, i)
-                !if(i>=k)then
                 do i2=TB_ext(1),TB_ext(2)
                     do k2=TB_ext(1),TB_ext(2)
                         E=energy%value(j,k)%order_op(1)%Op_loc(i2,k2)
@@ -106,11 +99,10 @@ contains
                         endif
                     enddo
                 enddo
-                !endif
             enddo
         enddo
-        
-        stat = mkl_sparse_z_create_coo ( H_coo , SPARSE_INDEX_BASE_ONE , dimH , dimH , nnz , rowind , colind , val)
+        cols=dimH;rows=dimH
+        stat = mkl_sparse_z_create_coo ( H_coo , SPARSE_INDEX_BASE_ONE , rows , cols , nnz , rowind , colind , val)
         if(stat /= 0) STOP "error creating H_coo in sparse H_ee"
         stat = MKL_SPARSE_CONVERT_CSR(H_coo,SPARSE_OPERATION_NON_TRANSPOSE,H_csr)
         if(stat /= 0) STOP "error setting H_ee sparse to CSR"

@@ -4,6 +4,7 @@ module m_energy_r
     use m_tb_types
     use m_energy_solve_dense
     use m_energy_set_real_sparse, only: set_Hr_sparse_nc
+    use m_energy_set_real_sparse_sc, only: set_Hr_sparse_sc
     use m_energy_set_real_sc, only: set_Hr_dense_sc
     use m_energy_set_real, only: set_Hr_dense_nc
 #ifdef CPP_MKL
@@ -59,7 +60,7 @@ module m_energy_r
         type(vec_point),intent(in)               ::  mode_mag(:)
 
         if(h_par%nsc==2)then
-            STOP 'not implemented'
+            Call set_Hr_sparse_sc(h_par,mode_mag,Hr_set)
         else
             Call set_Hr_sparse_nc(h_par,mode_mag,Hr_set)
         endif
