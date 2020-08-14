@@ -19,7 +19,7 @@ contains
            allocate(Hr(h_par%dimH,h_par%dimH))
         endif
         if(size(Hr,1)/=h_par%dimH.or.size(Hr,2)/=h_par%dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
-        Hr=cmplx(0.0d0,0.0d0, kind=8)
+        Hr=cmplx(0.0d0,0.0d0, 8)
         Call set_Hr_ee(h_par,Hr)
         if(any(TB_params%io_H%Jsd /= 0.0d0))then
             Call set_Jsd(h_par,mode_mag,TB_params%io_H%Jsd,Hr)

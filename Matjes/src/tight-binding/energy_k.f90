@@ -4,7 +4,7 @@ module m_energy_k
     use m_energy_commons, only : energy
     use m_fftw, only: get_FFT
     use m_J_sd_exchange
-    use m_energy_r, only: set_Hr
+    use m_energy_r, only: set_Hr_dense
 
     implicit none
 
@@ -24,7 +24,7 @@ module m_energy_k
             
             !set real space Hamiltonian
             !if used more often, set this in advance
-            Call set_Hr(h_par,mode_mag,Hr)
+            Call set_Hr_dense(h_par,mode_mag,Hr)
 !            Call get_Hr(h_par%dimH,Hr)
             !get actual eigenvalues
             allocate( eigval(h_par%dimH,size(klist,2)),source=0.0d0)

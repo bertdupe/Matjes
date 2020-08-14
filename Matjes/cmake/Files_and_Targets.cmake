@@ -21,4 +21,8 @@ target_compile_options(Matjes BEFORE PRIVATE "${COMPADD_only_own}")
 if(DEFINED add_lib)
     target_link_libraries(Matjes ${add_lib})
 endif()
+if(DEFINED add_inc)
+    message(${add_inc})
+    target_include_directories(Matjes PUBLIC ${add_inc})
+endif()
 

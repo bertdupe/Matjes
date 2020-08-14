@@ -256,6 +256,9 @@ module m_rw_TB
             call get_parameter(io_input,fname,'TB_sparse',TB_params%sparse)
             call get_parameter(io_input,fname,'TB_diag',TB_params%i_diag)
             call get_parameter(io_input,fname,'TB_rearrange',TB_params%rearrange)
+            call get_parameter(io_input,fname,'TB_diag_Emin',TB_params%extE(1))
+            call get_parameter(io_input,fname,'TB_diag_Emax',TB_params%extE(2))
+            call get_parameter(io_input,fname,'TB_diag_estNe',TB_params%estNe)
             call close_file(fname,io_input)
 
         end subroutine

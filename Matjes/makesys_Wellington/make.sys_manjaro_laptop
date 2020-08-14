@@ -8,7 +8,7 @@ CXX=g++
 #
 # normal flags
 #
-#FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none #-march=native -ffast-math -m64  -I${MKLROOT}/include 
+#FFLAGS= -O4 -ffree-form -fimplicit-none -ffree-line-length-none
 #LDFLAGS= -O4  -m64 -I${MKLROOT}/include
 
 #
@@ -36,7 +36,7 @@ C_INCLUDES=-I/usr/include/eigen3
 #CPPS= -DCPP_MRG -DCPP_BRUTDIP
 #CPPS= -DCPP_MRG -DCPP_FFTW
 
-CPPS= -DCPP_LAPACK -DCPP_BRUTDIP -DCPP_INTERNAL -D__sparse_mkl__ -D__mkl_csr__
+CPPS= -DCPP_LAPACK -DCPP_BRUTDIP -DCPP_INTERNAL -D__sparse_mkl__ -D__mkl_csr__ -DCPP_MKL
 #CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__sparse_mkl__ 
 #CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__direct_mult_EIGEN__
 #CPPS= -DCPP_BRUTDIP -DCPP_INTERNAL -D__EIGEN_sparse_matmul__ 

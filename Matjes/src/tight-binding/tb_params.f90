@@ -35,6 +35,8 @@ subroutine set_TB_params(Ncell,TB_pos_ext)
 
     TB_params%H%sparse=TB_params%io_H%sparse
     TB_params%H%i_diag=TB_params%io_H%i_diag
+    TB_params%H%extE=TB_params%io_H%extE
+    TB_params%H%estNe=TB_params%io_H%estNe
     !TB_params%H%rearrange=TB_params%io_H%rearrange !this is not really implementend and most probably breakes dos or something else
 end subroutine
 

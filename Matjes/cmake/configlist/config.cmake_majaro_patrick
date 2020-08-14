@@ -11,13 +11,15 @@ set(com_deb_add "")						#add to debug
 
 if(DEFINED ENV{MKLROOT})
   set(MKLROOT $ENV{MKLROOT})
-  set(add_lib "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
+  #set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
+  set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl")
+  set(add_inc ${add_inc} "${MKLROOT}/include")
 else()
   message( FATAL_ERROR "Did not find ${MKLROOT} environment variable" )
 endif()
 
 #
-set(CPP_flags ${CPP_flags}  CPP_BRUTDIP CPP_INTERNAL)
+set(CPP_flags ${CPP_flags}  CPP_BRUTDIP CPP_INTERNAL CPP_MKL)
 #possible flags from large multiplication
 set(CPP_flags ${CPP_flags}  __sparse_mkl__ __mkl_csr__)
 #set(CPP_flags ${CPP_flags}  __direct_mult_EIGEN__)     #multiplication using sparse energy matrix

@@ -32,12 +32,9 @@ subroutine tightbinding_r(h_par,mode_mag)
 
     n_cell=size(mode_mag)
     if(calc_eigvec)then
-        allocate(eigval(h_par%dimH),source=0.0d0)
-        allocate(eigvec(h_par%dimH,h_par%dimH),source=cmplx(0.0d0,0.0d0,8))
         write(*,*) 'get eigenvec_r'
         Call get_eigenvec_r(h_par,eigval,eigvec,mode_mag)
     elseif(calc_eigval)then
-        allocate(eigval(h_par%dimH),source=0.0d0)
         write(*,*) 'get eigenval_r'
         Call get_eigenval_r(h_par,eigval,mode_mag)
     endif

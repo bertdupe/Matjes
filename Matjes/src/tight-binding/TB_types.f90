@@ -14,6 +14,8 @@ type parameters_TB_IO_H
     integer             ::  i_diag=3  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
     logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
+    real(8)             ::  extE(2)=[-1.0d1,1.0d1]     !minimal and maximal energy values to consider in restricted eigensolver routines
+    integer             ::  estNe=0                       !estimated number of eigenvalues in interval
 end type 
 
 type parameters_TB_IO_EF
@@ -50,6 +52,10 @@ type parameters_TB_Hsolve
     logical         ::  sparse=.False.
     integer         ::  i_diag=1  !different diagonalization methods
     logical         ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
+
+    !calculating only part of spectrum 
+    real(8)         ::  extE(2)=[-1.0d1,1.0d1]     !minimal and maximal energy values to consider in restricted eigensolver routines
+    integer         ::  estNe=0                    !estimated number of eigenvalues in interval  (0 correponds to dimH)
 
     contains
     procedure :: upd => upd_h_par
