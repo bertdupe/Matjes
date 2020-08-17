@@ -26,7 +26,6 @@ contains
         complex(8),allocatable                  :: Hr_nc(:,:)
 
         type(parameters_TB_Hsolve)     ::  h_par_nc
-        integer                 ::  dimH_nc,dim_mode
 
         if(.not. allocated(Hr))then
            allocate(Hr(h_par%dimH,h_par%dimH))
@@ -43,29 +42,26 @@ contains
         Hr=cmplx(0.0d0,0.0d0, kind=8)
         Hr(1:h_par_nc%dimH,1:h_par_nc%dimH)=Hr_nc
         Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1:h_par%dimH)=-Hr_nc
-        dim_mode=h_par%pos_ext(2)-h_par%pos_ext(1)+1
-        Call set_delta(TB_params%io_H%delta,dim_mode,Hr)
+        Call set_delta(h_par,TB_params%io_H%delta,Hr)
 
         if(h_par%rearrange) Call rearange_H(h_par%dimH,Hr)
     end subroutine 
 
-    subroutine set_delta(delta,dim_mode,Hr)
+    subroutine set_delta(h_par,delta,Hr)
+        type(parameters_TB_Hsolve),intent(in)     ::  h_par
         !use h_par as well
         complex(8),intent(in)       ::  delta(:)
         complex(8),intent(inout)    ::  Hr(:,:) !set checks here for dimension
-        integer,intent(in)          ::  dim_mode
-        integer                     ::  n_cells
 
-        integer         ::  dimH_nc,dim_mode_red
+        integer         ::  dimH_nc
         integer         ::  i_cell,i_orb
         integer         ::  i_up,i_dn,i_up_dg,i_dn_dg
 
-        N_cells = size(energy%line,2)
-        dim_mode_red=dim_mode/2
-        dimH_nc=size(Hr,1)/2
-        do i_cell=1,N_cells
-            do i_orb=1,dim_mode_red
-                i_up=2*(i_cell-1)*i_orb+2*i_orb-1
+        !dim_mode_red=dim_mode/2
+        dimH_nc=h_par%dimH/2
+        do i_cell=1,h_par%ncell
+            do i_orb=1,h_par%norb
+                i_up=2*h_par%norb*(i_cell-1)+2*i_orb-1
                 i_dn=i_up+1
                 i_up_dg=i_up+dimH_nc
                 i_dn_dg=i_dn+dimH_nc
@@ -84,7 +80,6 @@ contains
         complex(8)                      ::  tmp(dimH,dimH)
 
         integer                         ::  i
-        integer                         ::  ind1,ind2
     
         tmp=Hr
         do i=1,dimH/2

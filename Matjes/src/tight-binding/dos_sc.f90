@@ -9,29 +9,39 @@ contains
 subroutine calc_dos_sc(eigval,eigvec,io_dos,fname)
     !subroutine to calculate the density of states
     use m_io_files_utils, only: close_file,open_file_write
-    real(8),intent(in)                    ::  eigval(:)
+    real(8),intent(in)                    ::  eigval(:) !sorted eigenvalues
     complex(8),intent(in)                 ::  eigvec(:,:)
     type(parameters_TB_IO_DOS),intent(in) ::  io_dos
     character(len=*)    ::  fname
 
     integer             ::  NE,iE
     real(8),allocatable ::  dos(:),Eval(:)
-    integer             ::  dimH
+
+    integer             ::  n_state
 
     integer             ::  i,io
 
-    dimH=size(eigval)
 
     Ne=int((io_dos%E_ext(2)-io_dos%E_ext(1))/io_dos%dE)+1
     allocate(dos(Ne),Eval(Ne),source=0.0d0)
     do iE=1,Ne
         Eval(iE)=(iE-1)*io_dos%dE+io_dos%E_ext(1)
     enddo
-
-    do i=dimH/2+1,dimH
+    
+    !only consider the states below the zero energy
+    n_state=size(eigval)
+    do i=1,size(eigval)
+        if(eigval(i)>0.0d0)then
+            n_state=i-1 
+            exit
+        endif
+    enddo
+    if(n_state<1) STOP "n_state<1 in dos_sc, eigval not sorted or all possitive?"
+    
+    do i=1,n_state
         Call add_dos(eigval(i),eigvec(:,i),Ne,Eval,io_dos,dos)
     enddo
-    dos=dos/real(size(eigval,1)/2)
+    dos=dos/real(n_state)
 
     io=open_file_write(fname)
     do i=1,size(dos)
@@ -51,7 +61,6 @@ subroutine add_dos(val,eigvec,Ne,Eval,io_dos,dos)
     real(8)                 ::  pref
     real(8),parameter   ::  dist_inc=5.0d0
     integer             ::  i_min,i_max
-    integer             ::  i
     integer             ::  dimH
 
     !need to add correct prefactors from eigvec
@@ -61,14 +70,14 @@ subroutine add_dos(val,eigvec,Ne,Eval,io_dos,dos)
     !u-part of BdG
     i_min=max(int(((val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1,1)
     i_max=min(int(((val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE),Ne)
-    pref=dot_product(eigvec(1:dimH/2),eigvec(1:dimH/2))
+    pref=real(dot_product(eigvec(1:dimH/2),eigvec(1:dimH/2)),8)
     Call add_gauss(val,pref,Eval(i_min:i_max),dos(i_min:i_max),io_dos%sigma)
 
     
     !v-part of BdG
     i_min=max(int(((-val-io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE)+1,1)
     i_max=min(int(((-val+io_dos%sigma*dist_inc)-io_dos%E_ext(1))/io_dos%dE),Ne)
-    pref=dot_product(eigvec(dimH/2+1:dimH),eigvec(dimH/2+1:dimH))
+    pref=real(dot_product(eigvec(dimH/2+1:dimH),eigvec(dimH/2+1:dimH)),8)
     Call add_gauss(-val,pref,Eval(i_min:i_max),dos(i_min:i_max),io_dos%sigma)
 
 end subroutine

@@ -179,7 +179,7 @@ module m_fermi
             exp_val=(energy-E_F)/kt
             if(exp_val>cutoff)then
                 fermi_distrib=0.0d0
-            elseif(exp_val<cutoff)then
+            elseif(exp_val<-cutoff)then
                 fermi_distrib=1.0d0
             else
                 fermi_distrib = 1.0d0/( 1.0d0 + exp(exp_val ) )

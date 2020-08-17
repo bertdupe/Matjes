@@ -17,11 +17,10 @@ module m_highsym
     contains
 
 
-    subroutine plot_highsym_kpts(h_par,pos,mode_mag,my_lattice,E_F)
+    subroutine plot_highsym_kpts(h_par,pos,mode_mag,E_F)
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
         real(8),intent(in)          :: pos(:,:)
         type(vec_point),intent(in)  :: mode_mag(h_par%dimH)
-        type(lattice), intent(in)   :: my_lattice
         real(8),intent(in)          :: E_F !fermi energy
 
         real(8),allocatable :: eigval(:,:)

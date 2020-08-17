@@ -5,7 +5,8 @@ use m_energy_commons, only : energy
 use m_basic_types, only : vec_point
 use m_tb_types
 use MKL_SPBLAS
-USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX,C_PTR,C_F_POINTER   !<-delete
+use mkl_spblas_util, only: unpack_csr_to_coo ,unpack_csr
+USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX
 
 private
 public set_Hr_sparse_nc!set_Jsd!,Hr_eigval,Hr_eigvec
@@ -15,15 +16,16 @@ contains
 
     subroutine set_Hr_sparse_nc(h_par,mode_mag,H_r)
         use m_tb_params, only : TB_params
-        USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX
         type(parameters_TB_Hsolve),intent(in)   ::  h_par
-		type(SPARSE_MATRIX_T),intent(out)       ::  H_r
+        type(SPARSE_MATRIX_T),intent(out)       ::  H_r
         type(vec_point),intent(in)              ::  mode_mag(:)
 
-		type(SPARSE_MATRIX_T)        ::  H_ee
-		type(SPARSE_MATRIX_T)        ::  H_jsd
+        type(SPARSE_MATRIX_T)        :: H_ee
+        type(SPARSE_MATRIX_T)        :: H_jsd
         integer(C_int)               :: stat
         type(MATRIX_DESCR)           :: desc
+
+
 
         Call set_Hr_ee(h_par,H_ee)
         if(any(TB_params%io_H%Jsd /= 0.0d0))then
@@ -47,8 +49,8 @@ contains
 
    subroutine set_Hr_ee(h_par,H_csr)
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
-		type(SPARSE_MATRIX_T),intent(out)         ::  H_csr
-		!external SPARSE_MATRIX_T
+        type(SPARSE_MATRIX_T),intent(out)         ::  H_csr
+        !external SPARSE_MATRIX_T
         integer                 :: dimH
         integer                 :: TB_ext(2)
         integer                 :: N_persite
@@ -64,8 +66,8 @@ contains
         integer(C_INT)                          :: cols,rows
 
 
-		type(SPARSE_MATRIX_T)   ::  H_coo
-		integer(C_INT)		    ::	stat
+        type(SPARSE_MATRIX_T)   ::  H_coo
+        integer(C_INT)          ::  stat
 
         dimH=h_par%dimH
         TB_ext=h_par%pos_ext
@@ -107,20 +109,16 @@ contains
         stat = MKL_SPARSE_CONVERT_CSR(H_coo,SPARSE_OPERATION_NON_TRANSPOSE,H_csr)
         if(stat /= 0) STOP "error setting H_ee sparse to CSR"
         stat=MKL_SPARSE_DESTROY(H_coo)
-	end subroutine
+    end subroutine
 
     subroutine set_Hr_Jsd(h_par,mode_mag,Jsd,H_csr)
         !use m_eigen_interface, only : eigen_set_H_e_jsd
         !adds the Jsd coupling to a local real-space Hamiltonian Hr
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
-		type(SPARSE_MATRIX_T),intent(out)         ::  H_csr
-        integer                      ::  dimH
-        integer                      ::  TB_ext(2)
+        type(SPARSE_MATRIX_T),intent(out)         ::  H_csr
         real(8),intent(in)           ::  Jsd(:)
         type(vec_point),intent(in)   ::  mode_mag(:)
 
-        integer                 ::  N_neighbours,N_cells,dim_mode,dim_mode_red
-        
         integer                 :: nnz
         complex(8),allocatable  :: val(:)
         integer,allocatable     :: rowind(:),colind(:)
@@ -131,26 +129,17 @@ contains
         integer                 ::  i,j
         integer                 ::  i1,i2,ii
 
-		type(SPARSE_MATRIX_T)   ::  H_coo
-		integer(C_INT)		    ::	stat
+        type(SPARSE_MATRIX_T)   ::  H_coo
+        integer(C_INT)          ::  stat
 
-
-        dimH=h_par%dimH
-        TB_ext=h_par%pos_ext
-
-        N_neighbours = size(energy%line,1)
-        N_cells = size(energy%line,2)
-        dim_mode=Tb_ext(2)-Tb_ext(1)+1
-        dim_mode_red=dim_mode/2
-
-        nnz=N_cells*dim_mode_red*4
+        nnz=h_par%ncell*h_par%norb*4
         allocate(rowind(nnz),colind(nnz),source=0)
         allocate(val(nnz),source=cmplx(0.0d0,0.0d0,8))
 
         ii=1
-        do i=1,N_cells
-            do j=1,dim_mode_red
-                matind=[2*j-1,2*j]
+        do i=1,h_par%ncell
+            do j=1,h_par%norb
+                matind=[2*j-1,2*j]+(i-1)*h_par%norb*h_par%nspin
                 jsdmat(1,1)=Jsd(j)*cmplx( mode_mag(i)%w(3), 0.0d0           ,8)
                 jsdmat(2,1)=Jsd(j)*cmplx( mode_mag(i)%w(1), mode_mag(i)%w(2),8)
                 jsdmat(1,2)=Jsd(j)*cmplx( mode_mag(i)%w(1),-mode_mag(i)%w(2),8)
@@ -164,9 +153,9 @@ contains
                     enddo
                 enddo
             enddo
-        enddo 
+        enddo
 
-        stat = mkl_sparse_z_create_coo ( H_coo , SPARSE_INDEX_BASE_ONE , dimH , dimH , nnz , rowind , colind , val)
+        stat = mkl_sparse_z_create_coo ( H_coo , SPARSE_INDEX_BASE_ONE , h_par%dimH , h_par%dimH , nnz , rowind , colind , val)
         if(stat /= 0) STOP "error creating H_coo for sparse H_Jsd"
         stat = MKL_SPARSE_CONVERT_CSR(H_coo,SPARSE_OPERATION_NON_TRANSPOSE,H_csr)
         if(stat /= 0) STOP "error setting H_Jsd sparse to CSR"

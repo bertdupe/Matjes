@@ -5,6 +5,7 @@ use m_energy_commons, only : energy
 use m_basic_types, only : vec_point
 use m_tb_types
 use MKL_SPBLAS
+use mkl_spblas_util, only: unpack_csr 
 use  m_energy_set_real_sparse, only: set_Hr_sparse_nc
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX,C_PTR,C_F_POINTER
 
@@ -52,13 +53,9 @@ contains
 
 
         !export csr parameters
-        integer(C_INT)                     :: nrows,ncols,indexing
-        type(C_PTR)                        :: rows_start,rows_end,col_indx
-        type(C_PTR)                        :: values
         integer                            :: nnz
-        integer,pointer                    :: tmp(:)
-        complex(8),pointer                 :: acsr(:)
-        integer,pointer                    :: ia(:),ja(:)
+        complex(C_DOUBLE_COMPLEX),pointer  :: acsr(:)
+        integer(C_INT),pointer             :: ia(:),ja(:)
 
         !convert to coordinate representation
         integer                            :: job(6)
@@ -70,12 +67,7 @@ contains
         integer                            :: info
         
         !get csr matrix out of SPARSE_MATRIX_T
-        stat=mkl_sparse_z_export_csr ( H_nc , indexing , nrows , ncols , rows_start , rows_end , col_indx , values ) 
-        CAll C_F_POINTER(rows_end, tmp,[nrows] )
-        nnz=tmp(nrows)-indexing
-        CAll C_F_POINTER(values, acsr,[nnz]) 
-        CAll C_F_POINTER(col_indx, ja,[nnz]) 
-        CAll C_F_POINTER(rows_start, ia,[h_par_nc%dimH+1])
+        Call unpack_csr(h_par_nc%dimH,H_nc,nnz,ia,ja,acsr)
 
         !create coo sparse matrix and add negative branch in (2,2) quadrant
         job=[0,1,1,0,nnz*2,3]

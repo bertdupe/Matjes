@@ -50,7 +50,7 @@ subroutine tightbinding_k(h_par,mode_mag,my_lattice,my_motif)
     endif
     if(TB_params%flow%highs_k)then
         Call set_highs_path(my_lattice,TB_params%io_highs)
-        Call plot_highsym_kpts(h_par,dist_neigh,mode_mag,my_lattice,E_F) 
+        Call plot_highsym_kpts(h_par,dist_neigh,mode_mag,E_F) 
     endif
 end subroutine 
 
@@ -84,7 +84,6 @@ subroutine write_dos(eigval,io_dos,fname)
 
     real(8),allocatable         :: eigval_sort(:)
     integer,allocatable         :: indices(:)
-    integer                     :: io_input
 
     !sort because the calc_dos input has to be sorted
     allocate(indices(size(eigval)),source=0)

@@ -1,6 +1,5 @@
 module m_energy_r
     use m_basic_types, only : vec_point
-    use m_fermi,only: fermi_distrib
     use m_tb_types
     use m_energy_solve_dense
     use m_energy_set_real_sparse, only: set_Hr_sparse_nc
@@ -15,7 +14,7 @@ module m_energy_r
     implicit none
 
     private
-    public :: get_eigenval_r,get_eigenvec_r,calc_occupation,set_Hr,set_Hr_dense
+    public :: get_eigenval_r,get_eigenvec_r,set_Hr,set_Hr_dense
     !large electronic Hamiltonian
     complex(8),allocatable  ::  Hr(:,:)
 #ifdef CPP_MKL
@@ -24,18 +23,6 @@ module m_energy_r
 #endif
 
     contains
-
-    subroutine calc_occupation(eigvec,eigval,E_f,kt,occ)
-        real(8),intent(in)      ::   eigval(:),E_f,kt
-        complex(8),intent(in)   ::   eigvec(:,:)
-        real(8),intent(out)     ::   occ(size(eigval))
-        integer                 ::  i
-
-        occ=0.0d0
-        do i=1,size(eigval)
-            occ=occ+fermi_distrib(E_f,eigval(i),kt)*real(conjg(eigvec(:,i))*eigvec(:,i),kind=8)
-        enddo
-    end subroutine
 
     subroutine set_Hr(h_par,mode_mag)
         type(parameters_TB_Hsolve),intent(in)    ::  h_par

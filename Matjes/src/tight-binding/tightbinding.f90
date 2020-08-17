@@ -22,10 +22,8 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! contain all the modes present in the simulation
     type(vec_point),allocatable :: all_mode(:), mode_magnetic(:), mode_TB(:)
 
-    integer :: i, TB_pos_ext(2),io_input
+    integer :: i, TB_pos_ext(2)
     logical :: i_magnetic, i_TB
-    integer :: dimH
-    logical :: do_TB_r,do_TB_k
    
     N_cell=product(shape(my_lattice%l_modes))
 

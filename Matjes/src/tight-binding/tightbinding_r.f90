@@ -2,7 +2,8 @@ module m_tightbinding_r
 use m_tb_params, only : TB_params
 use m_tb_types
 use m_basic_types, only : vec_point
-use m_energy_r, only: get_eigenval_r,calc_occupation,get_eigenvec_r
+use m_energy_r, only: get_eigenval_r,get_eigenvec_r
+use m_occupation, only: calc_occupation,calc_occupation_sc
 use m_fermi, only: calc_fermi 
 use m_dos, only: calc_dos 
 use m_dos_sc, only: calc_dos_sc
@@ -13,24 +14,18 @@ contains
 
 subroutine tightbinding_r(h_par,mode_mag)
     type(parameters_TB_Hsolve),intent(in)     ::  h_par
-    !integer,intent(in)          ::  dimH
-    !integer,intent(in)          ::  TB_pos_ext(2)
-    type(vec_point),intent(in)  ::  mode_mag(:)
+    type(vec_point),intent(in)                ::  mode_mag(:)
+
     real(8),allocatable         ::  eigval(:)
     complex(8),allocatable      ::  eigvec(:,:)
+
     real(8)                     ::  E_f
-
-    real(8),allocatable         ::  occupation(:)
-    integer                     ::  n_cell
-
-    integer                     :: io_input
     logical                     :: calc_eigval,calc_eigvec
 
 
     calc_eigval=TB_params%flow%dos_r.or.TB_params%flow%occ_r.or.TB_params%flow%spec_r.or.TB_params%flow%fermi_r
     calc_eigvec=(TB_params%flow%dos_r.and.TB_params%is_sc).or.TB_params%flow%occ_r
 
-    n_cell=size(mode_mag)
     if(calc_eigvec)then
         write(*,*) 'get eigenvec_r'
         Call get_eigenvec_r(h_par,eigval,eigvec,mode_mag)
@@ -39,13 +34,19 @@ subroutine tightbinding_r(h_par,mode_mag)
         Call get_eigenval_r(h_par,eigval,mode_mag)
     endif
 
-    !diagonalize hamiltonian in real spac
+    !write spectrum
     if(TB_params%flow%spec_r)then
         Call write_realarray('eigval.dat',eigval)
     endif
+
+    !Calculate Fermi energy (only useful without SC)
     E_f=TB_params%io_ef%E_F_in
     if(TB_params%flow%fermi_r)then
-        Call calc_fermi(eigval, TB_params%io_EF%N_electrons*n_cell, TB_params%io_ef%kt, E_f)
+        if(TB_params%is_sc)then
+            STOP "calculation of Fermi energy doesn't work when using superconductivity"
+        else
+            Call calc_fermi(eigval, TB_params%io_EF%N_electrons*h_par%ncell, TB_params%io_ef%kt, E_f)
+        endif
     endif
     if(TB_params%flow%dos_r)then
         if(TB_params%is_sc)then
@@ -56,11 +57,7 @@ subroutine tightbinding_r(h_par,mode_mag)
     endif
 
     if(TB_params%flow%occ_r)then
-        !get the occupation
-        write(*,*) 'get occupation'
-        allocate(occupation(h_par%dimH))
-        Call calc_occupation(eigvec,eigval,E_f,TB_params%io_Ef%kt,occupation) !maybe use different smearing than EF input
-        Call write_realarray('occupation.dat',occupation)
+        Call calc_occupation(h_par,eigvec,eigval,E_f,TB_params%io_Ef%kt) !maybe use different smearing than EF input
     endif
 
 end subroutine 

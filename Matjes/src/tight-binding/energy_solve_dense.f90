@@ -17,13 +17,14 @@ contains
         real(kind=8)                :: RWORK(3*h_par%dimH-2)
         integer                     :: info,l_work
         complex(kind=8),allocatable :: WORK(:)
-        complex(8)                  :: init_WORK(1)
        
         dimH=h_par%dimH
         allocate(eigval(h_Par%dimH),source=0.0d0)
         H_loc=Hr
-        call ZHEEV( 'V', 'U', dimH, H_loc, dimH, eigval, init_WORK, -1, RWORK, INFO )
-        l_work=int(init_work(1))
+        allocate(WORK(1))
+        call ZHEEV( 'V', 'U', dimH, H_loc, dimH, eigval, WORK, -1, RWORK, INFO )
+        l_work=int(work(1))
+        deallocate(work)
         allocate(work(l_work),source=cmplx(0.0d0,0.0d0,8))
         call ZHEEV( 'N', 'U', dimH, H_loc, dimH, eigval, WORK, l_work, RWORK, INFO )
     end subroutine
@@ -119,28 +120,27 @@ contains
 
 
     subroutine Hr_eigvec_zheev(h_par,Hr,eigvec,eigval)
-        type(parameters_TB_Hsolve),intent(in)   :: h_par
+        type(parameters_TB_Hsolve),intent(in)   ::  h_par
         complex(8),intent(in)                   ::  Hr(h_par%dimH,h_par%dimH)
         complex(8),intent(out),allocatable      ::  eigvec(:,:)
         real(8),intent(out),allocatable         ::  eigval(:)
 
-        integer                     :: dimH
-        complex(kind=8)             :: init_WORK(2*h_par%dimH)
         real(kind=8)                :: RWORK(3*h_par%dimH-2)
         integer                     :: info,l_work
         complex(kind=8),allocatable :: WORK(:)
 
         allocate(eigvec,source=Hr)
         allocate(eigval(h_Par%dimH),source=0.0d0)
-        call ZHEEV( 'V', 'U', dimH, eigvec, dimH, eigval, init_WORK, -1, RWORK, INFO )
-        l_work=int(init_work(1))
+        allocate(work(1),source=cmplx(0.0d0,0.0d0,8))
+        call ZHEEV( 'V', 'U', h_Par%dimH, eigvec, h_Par%dimH, eigval, WORK, -1, RWORK, INFO )
+        l_work=int(work(1))
+        deallocate(work)
         allocate(work(l_work),source=cmplx(0.0d0,0.0d0,8))
-        call ZHEEV( 'V', 'U', dimH, eigvec, dimH, eigval, WORK, l_work, RWORK, INFO )
+        call ZHEEV( 'V', 'U', h_Par%dimH, eigvec, h_Par%dimH, eigval, WORK, l_work, RWORK, INFO )
     end subroutine 
 
     subroutine Hr_eigvec_zheevd(h_par,Hr,eigvec,eigval)
         type(parameters_TB_Hsolve),intent(in)     :: h_par
-        integer                     ::  dimH
         complex(8),intent(in)       ::  Hr(h_par%dimH,h_par%dimH)
         complex(8),intent(out),allocatable      ::  eigvec(:,:)
         real(8),intent(out),allocatable         ::  eigval(:)
@@ -157,14 +157,14 @@ contains
 
         allocate(eigvec,source=Hr)
         allocate(eigval(h_Par%dimH),source=0.0d0)
-        call ZHEEVD( 'V', 'U', dimH, eigvec, dimH, eigval, tmp_WORK, -1, tmp_RWORK, -1,tmp_IWORK,-1,INFO )
+        call ZHEEVD( 'V', 'U', h_par%dimH, eigvec, h_par%dimH, eigval, tmp_WORK, -1, tmp_RWORK, -1,tmp_IWORK,-1,INFO )
         lwork=int(tmp_work(1))
         LIWORK=tmp_IWORK(1)
         LRWORK=int(tmp_rwork(1))
         allocate(work(lwork),source=cmplx(0.0d0,0.0d0,8))
         allocate(iwork(liwork),source=0)
         allocate(rwork(lrwork),source=0.0d0)
-        call ZHEEVD( 'V', 'U', dimH, eigvec, dimH, eigval, WORK, lwork, RWORK, LRWORK,IWORK,LIWORK,INFO )
+        call ZHEEVD( 'V', 'U', h_par%dimH, eigvec, h_par%dimH, eigval, WORK, lwork, RWORK, LRWORK,IWORK,LIWORK,INFO )
     end subroutine 
 
     subroutine Hr_eigvec_feast(h_par,Hr,eigvec,eigval)

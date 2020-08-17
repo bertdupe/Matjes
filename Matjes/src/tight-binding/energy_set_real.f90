@@ -59,24 +59,20 @@ contains
 
         integer                 ::  i,j
         integer                 ::  i1,i2
-        integer                 ::  N_neighbours,N_cells,dim_mode
         integer                 ::  a,b
         
         complex(8),allocatable  ::  add_Jsd(:,:)
-        integer                 ::  dim_mode_red
 
-        N_neighbours = size(energy%line,1)
-        N_cells = size(energy%line,2)
-        dim_mode=h_par%pos_ext(2)-h_par%pos_ext(1)+1
-        dim_mode_red=dim_mode/2
-
+        !initial checks
+        if(h_par%nspin/=2) STOP "nspin has to be 2 to use Jsd-coupling"
+        if(h_par%nsc/=1) STOP "nsc/=1 in set_jsd"
         if(size(Hr,1)/=h_par%dimH.or.size(Hr,2)/=h_par%dimH) STOP "Hr has wrong size" 
-        if(size(Jsd) /= dim_mode_red) STOP "JSD has wrong size"
+        if(size(Jsd) /= h_par%norb) STOP "JSD has wrong size"
 
-        allocate(add_Jsd(dim_mode,dim_mode))
-        do i=1,N_cells
+        allocate(add_Jsd(h_par%nsite,h_par%nsite))
+        do i=1,h_par%ncell
             add_Jsd=cmplx(0.0d0,0.0d0,8)
-            do j=1,dim_mode_red
+            do j=1,h_par%norb
                 i1=j*2-1
                 i2=j*2
                 !could be done be elegant with pauli matrices...
@@ -85,8 +81,8 @@ contains
                 add_Jsd(i1,i2)=Jsd(j)*cmplx( mode_mag(i)%w(1),-mode_mag(i)%w(2),8)
                 add_Jsd(i2,i2)=Jsd(j)*cmplx(-mode_mag(i)%w(3), 0.0d0           ,8)
             enddo
-            a=(i-1)*dim_mode+1
-            b=i*dim_mode
+            a=(i-1)*h_par%nsite+1
+            b=i*h_par%nsite
             Hr(a:b,a:b) = Hr(a:b,a:b)+add_Jsd
         enddo 
     end subroutine 
