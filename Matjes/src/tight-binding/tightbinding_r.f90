@@ -7,6 +7,7 @@ use m_occupation, only: calc_occupation,calc_occupation_sc
 use m_fermi, only: calc_fermi 
 use m_dos, only: calc_dos 
 use m_dos_sc, only: calc_dos_sc
+use m_distribution, only: int_distrib,fermi_distrib,dE_fermi_distrib
 implicit none
 private
 public :: tightbinding_r
@@ -21,6 +22,8 @@ subroutine tightbinding_r(h_par,mode_mag)
 
     real(8)                     ::  E_f
     logical                     :: calc_eigval,calc_eigvec
+
+	procedure(int_distrib),pointer	:: dist_ptr => null()
 
 
     calc_eigval=TB_params%flow%dos_r.or.TB_params%flow%occ_r.or.TB_params%flow%spec_r.or.TB_params%flow%fermi_r
@@ -61,7 +64,11 @@ subroutine tightbinding_r(h_par,mode_mag)
 
     if(TB_params%flow%occ_r)then
         write(*,*) 'start calculate occupation'
-        Call calc_occupation(h_par,eigvec,eigval,E_f,TB_params%io_Ef%kt) !maybe use different smearing than EF input
+         !maybe use different smearing than EF input
+        dist_ptr=>fermi_distrib
+        Call calc_occupation(h_par,eigvec,eigval,E_f,TB_params%io_Ef%kt,'occ.dat',dist_ptr)
+        dist_ptr=>dE_fermi_distrib
+        Call calc_occupation(h_par,eigvec,eigval,E_f,TB_params%io_Ef%kt,'occ_dE.dat',dist_ptr)
     endif
 
 end subroutine 

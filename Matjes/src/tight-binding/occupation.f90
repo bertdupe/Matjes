@@ -2,18 +2,26 @@ module m_occupation
 use m_fermi,only: fermi_distrib
 use m_tb_types
 use m_io_files_utils, only: close_file,open_file_write
+use m_distribution, only: int_distrib
 private
 public calc_occupation,calc_occupation_sc
 
+
+
+
 contains 
     
-    subroutine calc_occupation(h_par,eigvec,eigval,E_f_in,kt)
+    subroutine calc_occupation(h_par,eigvec,eigval,E_f_in,kt,fname,dist_ptr)
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
         real(8),intent(in)      ::  eigval(:),E_f_in,kt
         complex(8),intent(in)   ::  eigvec(:,:)
+        character(len=*),intent(in) ::  fname
+		procedure(int_distrib),pointer,intent(in)	:: dist_ptr
+
         real(8),allocatable     ::  occ(:)
         integer                 ::  n_occ 
         real(8)                 ::  E_F
+
 
         n_occ=h_par%nspin*h_par%ncell*h_par%norb
         allocate(occ(n_occ),source=0.0d0)
@@ -26,16 +34,16 @@ contains
             !    write(*,*) "Warning, setting E_F=0 for SC"
             !endif
             !E_f=0.0d0
-            Call calc_occupation_sc(eigvec,eigval,E_f,kt,occ)
+            Call calc_occupation_sc(eigvec,eigval,E_f,kt,occ,dist_ptr)
         elseif(h_par%nsc==1)then
-            Call calc_occupation_nc(eigvec,eigval,E_f,kt,occ)
+            Call calc_occupation_nc(eigvec,eigval,E_f,kt,occ,dist_ptr)
         else
             write(*,*) 'h_par%nsc=',h_par%nsc
             STOP 'unexpected value for h_par%nsc'
         endif
 
         !write output
-        Call write_output(h_par,'occ.dat',occ)
+        Call write_output(h_par,fname,occ)
 
     end subroutine
 
@@ -67,27 +75,30 @@ contains
         call close_file(fname,io)
     end subroutine 
 
-    subroutine calc_occupation_nc(eigvec,eigval,E_f,kt,occ)
+    subroutine calc_occupation_nc(eigvec,eigval,E_f,kt,occ,dist_ptr)
         real(8),intent(in)      ::  eigval(:),E_f,kt
         complex(8),intent(in)   ::  eigvec(:,:)
         real(8),intent(out)     ::  occ(:)
+		procedure(int_distrib),pointer,intent(in)	:: dist_ptr
+
         integer                 ::  i
         real(8)                 ::  fd
 
         occ=0.0d0
         do i=1,size(eigval)
-            fd=fermi_distrib(E_f,eigval(i),kt)
+            fd=dist_ptr(E_f,eigval(i),kt)
             occ=occ+fd*real(conjg(eigvec(:,i))*eigvec(:,i),kind=8)
         enddo
     end subroutine
 
 
-    subroutine calc_occupation_sc(eigvec,eigval,E_f,kt,occ)
+    subroutine calc_occupation_sc(eigvec,eigval,E_f,kt,occ,dist_ptr)
         real(8),intent(in)      ::   eigval(:),E_f,kt
         complex(8),intent(in)   ::   eigvec(:,:)
         real(8),intent(out)     ::   occ(:)
-        integer                 ::  i
+		procedure(int_distrib),pointer,intent(in)	:: dist_ptr
 
+        integer                 ::  i
         integer                 ::  n_state
         integer                 ::  dimH,half
         real(8)                 ::  fd
@@ -104,12 +115,13 @@ contains
         enddo
         if(n_state<1) STOP "n_state<1 in calc_occupation_sc, eigval not sorted or all possitive?"
         do i=1,n_state
-            fd=fermi_distrib(E_f,eigval(i),kt)
+            fd=dist_ptr(E_f,eigval(i),kt)
             occ=occ+fd*real(conjg(eigvec(1:half,i))*eigvec(1:half,i),kind=8)
-            fd=1.0d0-fd
+            fd=dist_ptr(E_f,-eigval(i),kt)
             occ=occ+fd*real(conjg(eigvec(half+1:dimH,i))*eigvec(half+1:dimH,i),kind=8)
         enddo
 
     end subroutine
+
 
 end module

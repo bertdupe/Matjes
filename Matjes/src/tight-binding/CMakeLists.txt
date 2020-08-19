@@ -2,6 +2,7 @@ set(main_f90 ${main_f90}
 src/tight-binding/bandstructure.f90
 src/tight-binding/dos.f90
 #src/tight-binding/DOS.f90  #not actually used, old implementation of Bertrand
+src/tight-binding/distribution.f90
 src/tight-binding/dos_sc.f90
 src/tight-binding/energy_k.f90
 src/tight-binding/energy_r.f90

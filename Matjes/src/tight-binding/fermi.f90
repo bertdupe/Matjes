@@ -1,4 +1,5 @@
 module m_fermi
+	use m_distribution, only: fermi_distrib
     implicit none
 
     public :: get_fermi_k, calc_fermi,fermi_distrib
@@ -166,24 +167,7 @@ module m_fermi
             end do
         end function
 
-        ! Function implementing the FD distribution for a given energy
-        real(kind=8) function fermi_distrib(E_F, energy, kt)
-            implicit none
-            real(kind=8),intent(in) :: E_F
-            real(kind=8),intent(in) :: kt
-            real(kind=8),intent(in) :: energy
 
-            real(8)                 ::  exp_val
-            real(8)                 ::  cutoff=30.0d0
 
-            exp_val=(energy-E_F)/kt
-            if(exp_val>cutoff)then
-                fermi_distrib=0.0d0
-            elseif(exp_val<-cutoff)then
-                fermi_distrib=1.0d0
-            else
-                fermi_distrib = 1.0d0/( 1.0d0 + exp(exp_val ) )
-            endif
-        end function fermi_distrib
 
 end module m_fermi
