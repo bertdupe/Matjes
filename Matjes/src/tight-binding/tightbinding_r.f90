@@ -8,6 +8,7 @@ use m_fermi, only: calc_fermi
 use m_dos, only: calc_dos 
 use m_dos_sc, only: calc_dos_sc
 use m_distribution, only: int_distrib,fermi_distrib,dE_fermi_distrib
+use  m_save_state_r,only: TB_write_states_r, TB_read_states_r
 implicit none
 private
 public :: tightbinding_r
@@ -23,19 +24,36 @@ subroutine tightbinding_r(h_par,mode_mag)
     real(8)                     ::  E_f
     logical                     :: calc_eigval,calc_eigvec
 
+    logical                     :: read_success
+
 	procedure(int_distrib),pointer	:: dist_ptr => null()
 
-
+    !check what to calculate (eigenvalue/eigenvector)
     calc_eigval=TB_params%flow%dos_r.or.TB_params%flow%occ_r.or.TB_params%flow%spec_r.or.TB_params%flow%fermi_r
     calc_eigvec=(TB_params%flow%dos_r.and.TB_params%is_sc).or.TB_params%flow%occ_r
 
+    !possibly read previous solution
+    if(TB_params%flow%read_solution_r)then
+        Call TB_read_states_r(eigval,eigvec,read_success)
+        calc_eigvec=calc_eigvec.and..not.allocated(eigvec)
+        calc_eigval=calc_eigval.and..not.allocated(eigval)
+    else
+        read_success=.false.
+    endif
+
+    !calculate eigenvalue/eigenvector
     if(calc_eigvec)then
         write(*,*) 'start eigenvec_r'
         Call get_eigenvec_r(h_par,eigval,eigvec,mode_mag)
+        read_success=.false.
     elseif(calc_eigval)then
         write(*,*) 'start eigenval_r'
         Call get_eigenval_r(h_par,eigval,mode_mag)
+        read_success=.false.
     endif
+
+    !write eigenvalue/eigenvector to file for later reuse
+    if(.not.read_success.and.TB_params%flow%write_solution_r) Call TB_write_states_r(eigval,eigvec)
 
     !write spectrum
     if(TB_params%flow%spec_r)then

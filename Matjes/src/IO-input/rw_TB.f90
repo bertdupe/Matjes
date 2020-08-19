@@ -67,6 +67,8 @@ module m_rw_TB
             call get_parameter(io_input,fname,'do_occ_r',flow%occ_r)
             call get_parameter(io_input,fname,'do_spec_r',flow%spec_r)
             call get_parameter(io_input,fname,'do_fermi_r',flow%fermi_r)
+            call get_parameter(io_input,fname,'TB_read_solution_r',flow%read_solution_r)
+            call get_parameter(io_input,fname,'TB_write_solution_r',flow%write_solution_r)
 
             call get_parameter(io_input,fname,'do_TB_k',flow%do_k)
             call get_parameter(io_input,fname,'do_dos_k',flow%dos_k)

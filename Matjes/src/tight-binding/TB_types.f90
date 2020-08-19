@@ -68,6 +68,8 @@ type parameters_TB_IO_FLOW
     logical         ::  spec_r=.False.
     logical         ::  fermi_r=.False.
     logical         ::  occ_r=.False.
+    logical         ::  read_solution_r=.True.
+    logical         ::  write_solution_r=.False.
 
     logical         ::  do_k=.False.
     logical         ::  dos_k=.False.
