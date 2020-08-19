@@ -27,21 +27,23 @@ subroutine tightbinding_r(h_par,mode_mag)
     calc_eigvec=(TB_params%flow%dos_r.and.TB_params%is_sc).or.TB_params%flow%occ_r
 
     if(calc_eigvec)then
-        write(*,*) 'get eigenvec_r'
+        write(*,*) 'start eigenvec_r'
         Call get_eigenvec_r(h_par,eigval,eigvec,mode_mag)
     elseif(calc_eigval)then
-        write(*,*) 'get eigenval_r'
+        write(*,*) 'start eigenval_r'
         Call get_eigenval_r(h_par,eigval,mode_mag)
     endif
 
     !write spectrum
     if(TB_params%flow%spec_r)then
+        write(*,*) 'start write spectrum'
         Call write_realarray('eigval.dat',eigval)
     endif
 
     !Calculate Fermi energy (only useful without SC)
     E_f=TB_params%io_ef%E_F_in
     if(TB_params%flow%fermi_r)then
+        write(*,*) 'start calculate Fermi energy'
         if(TB_params%is_sc)then
             STOP "calculation of Fermi energy doesn't work when using superconductivity"
         else
@@ -49,6 +51,7 @@ subroutine tightbinding_r(h_par,mode_mag)
         endif
     endif
     if(TB_params%flow%dos_r)then
+        write(*,*) 'start calculate DOS'
         if(TB_params%is_sc)then
             Call calc_dos_sc(eigval,eigvec,TB_params%io_dos,'dos_r_sc.dat')
         else
@@ -57,6 +60,7 @@ subroutine tightbinding_r(h_par,mode_mag)
     endif
 
     if(TB_params%flow%occ_r)then
+        write(*,*) 'start calculate occupation'
         Call calc_occupation(h_par,eigvec,eigval,E_f,TB_params%io_Ef%kt) !maybe use different smearing than EF input
     endif
 

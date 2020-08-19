@@ -29,17 +29,6 @@ src/GNEB/initialize_path.f90
 src/GNEB/io-gneb.f90
 src/GNEB/path.f90
 src/GNEB/tangent.f90
-src/initialization/init_constant.f90
-src/initialization/init-DW.f90
-src/initialization/init-heavyside.f90
-src/initialization/initial-configuration.f90
-src/initialization/init_random_config.f90
-src/initialization/init-Sk-lattice.f90
-src/initialization/init-skyrmions.f90
-src/initialization/InitSpin.f90
-src/initialization/init-spiral.f90
-src/initialization/init-variables.f90
-src/initialization/IO-modes.f90
 src/IO-ouputs/CreateSpinFile.f90
 src/IO-ouputs/plot_FFT.f90
 src/IO-ouputs/print_Beff.f90
@@ -114,4 +103,5 @@ include(src/symmetries/CMakeLists.txt)
 include(src/Energy/CMakeLists.txt)
 include(src/setup/CMakeLists.txt)
 include(src/paratemp-MC/CMakeLists.txt) 
+include(src/initialization/CMakeLists.txt) 
 #include(src/parallelization/CMakeLists.txt)  #requires fftw,

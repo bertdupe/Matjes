@@ -5,6 +5,7 @@ use m_init_DW
 use m_init_Sk
 use m_init_Sklattice
 use m_init_constant
+use m_init_punch, only: init_punch
 use m_io_utils
 use m_init_heavyside
 use m_io_files_utils
@@ -36,9 +37,9 @@ N_mode=size(my_order_parameters)
 
 do i=1,N_mode
 
-configuration='constant'
-mode_name=convert(seed_name,my_order_parameters(i)%name)
-call get_parameter(io,fname,mode_name,configuration)
+  configuration='constant'
+  mode_name=convert(seed_name,my_order_parameters(i)%name)
+  call get_parameter(io,fname,mode_name,configuration)
 
   select case (adjustl(configuration))
     case('spiral')
@@ -50,6 +51,7 @@ call get_parameter(io,fname,mode_name,configuration)
     case('skyrmion')
       call init_spiral(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
       call init_Sk(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
+      Call init_punch(io,fname,my_lattice,my_motif,my_order_parameters(i)%start,my_order_parameters(i)%end)
     case('skyrmionla')
       call init_spiral(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
       call init_Sk_lattice(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
@@ -59,8 +61,9 @@ call get_parameter(io,fname,mode_name,configuration)
     case default
       call init_constant_config(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end,ext_param)
   end select
-
 enddo
+
+
 call close_file(fname,io)
 
 end subroutine init_config
