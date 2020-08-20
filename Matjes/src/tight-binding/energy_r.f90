@@ -2,13 +2,13 @@ module m_energy_r
     use m_basic_types, only : vec_point
     use m_tb_types
     use m_energy_solve_dense
-    use m_energy_set_real_sparse, only: set_Hr_sparse_nc
-    use m_energy_set_real_sparse_sc, only: set_Hr_sparse_sc
     use m_energy_set_real_sc, only: set_Hr_dense_sc
     use m_energy_set_real, only: set_Hr_dense_nc
 #ifdef CPP_MKL
     use MKL_SPBLAS
     use m_energy_solve_sparse
+    use m_energy_set_real_sparse_sc, only: set_Hr_sparse_sc
+    use m_energy_set_real_sparse, only: set_Hr_sparse_nc
 #endif
 
     implicit none
