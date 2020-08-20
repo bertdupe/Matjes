@@ -8,18 +8,27 @@ character(len=*),parameter      :: filen='TB_solution_r.dat'
 contains
 
 subroutine TB_write_states_r(eigval,eigvec)
+    !subroutine writing previously calculated eigenvalues and eigenvectors to file
     real(8),intent(in),allocatable  :: eigval(:)
     complex(8),intent(in),allocatable  :: eigvec(:,:)
     integer             ::  dimH,numE
     logical             ::  leigval,leigvec
 
     logical             :: is_open
+    integer             :: data_size !estimate data_size
 
-    dimH=0; numE=0
+    dimH=0; numE=0;data_size=0
     leigval=allocated(eigval)
     leigvec=allocated(eigvec)
-    if(leigval) numE=size(eigval)
-    if(leigvec) dimH=size(eigvec,1)
+    if(leigval)then
+        numE=size(eigval)
+        data_size=data_size+STORAGE_SIZE(eigval)*size(eigval)
+    endif
+    if(leigvec)then
+        data_size=data_size+STORAGE_SIZE(eigvec)*size(eigvec)
+        dimH=size(eigvec,1)
+    endif
+    write(*,*) 'Estimating size for '//filen//'=',data_size/8/1024/1024,'Mb'
     if(.not.(leigval.or.leigvec)) return
 
     inquire(io_unit,OPENED=is_open)
@@ -39,6 +48,7 @@ end subroutine
 
 
 subroutine TB_read_states_r(eigval,eigvec,success)
+    !subroutine reading previously calculated eigenvalues and eigenvectors from file
     real(8),intent(out),allocatable     :: eigval(:)
     complex(8),intent(out),allocatable  :: eigvec(:,:)
     logical,intent(out) :: success

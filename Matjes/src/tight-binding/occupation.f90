@@ -1,10 +1,9 @@
 module m_occupation
-use m_fermi,only: fermi_distrib
 use m_tb_types
 use m_io_files_utils, only: close_file,open_file_write
 use m_distribution, only: int_distrib
 private
-public calc_occupation,calc_occupation_sc
+public calc_occupation
 
 
 
@@ -43,15 +42,15 @@ contains
         endif
 
         !write output
-        Call write_output(h_par,fname,occ)
+        Call write_output(h_par,E_f,fname,occ)
 
     end subroutine
 
-    subroutine write_output(h_par,fname,occ)
+    subroutine write_output(h_par,E_F,fname,occ)
         !sum up orbitals of each cell and print out each spin-channel 
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
         character(len=*),intent(in) ::  fname
-        real(8),intent(in)          ::  occ(:)
+        real(8),intent(in)          ::  occ(:),E_F
         
         integer                     :: i,io
         integer                     :: ist,ien !start/end
@@ -59,6 +58,7 @@ contains
 
         per_site=h_par%nspin*h_par%norb
         io=open_file_write(fname)
+        write(io,'(E16.8)') E_f
         if(h_par%nspin==2)then
             do i=1,h_par%ncell
                 ist=1+(i-1)*per_site

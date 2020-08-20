@@ -25,6 +25,8 @@ module m_rw_TB
             Call read_TB_dos(fname,TB_params%io_dos)
             Call read_TB_flow(fname,TB_params%flow)
             Call read_TB_highs(fname,TB_params%io_highs)
+            Call read_TB_occ_mult(fname,TB_params%io_occ_mult)
+
 
             if(TB_params%io_H%nb_shell==2) TB_params%is_mag=.True.
         end subroutine
@@ -67,6 +69,8 @@ module m_rw_TB
             call get_parameter(io_input,fname,'do_occ_r',flow%occ_r)
             call get_parameter(io_input,fname,'do_spec_r',flow%spec_r)
             call get_parameter(io_input,fname,'do_fermi_r',flow%fermi_r)
+            call get_parameter(io_input,fname,'do_occ_mult_r',flow%occ_mult_r)
+
             call get_parameter(io_input,fname,'TB_read_solution_r',flow%read_solution_r)
             call get_parameter(io_input,fname,'TB_write_solution_r',flow%write_solution_r)
 
@@ -90,6 +94,21 @@ module m_rw_TB
             call close_file(fname,io_input)
 
         end subroutine
+
+
+        subroutine read_TB_occ_mult(fname,io_occ_mult)
+            character(len=*), intent(in)                      :: fname
+            type(parameters_TB_IO_OCC_MULT),intent(out)       :: io_occ_mult
+            integer     ::  io_input
+
+            io_input=open_file_read(fname)
+            call get_parameter(io_input, fname, 'occ_mult_dE', io_occ_mult%dE)
+            call get_parameter(io_input, fname, 'occ_mult_E_ext',2, io_occ_mult%E_ext)
+            call get_parameter(io_input, fname, 'occ_mult_kt',  io_occ_mult%kt)
+            call close_file(fname,io_input)
+
+        end subroutine
+
 
         subroutine read_TB_EF(fname,io_ef)
             character(len=*), intent(in)             :: fname

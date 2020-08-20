@@ -9,7 +9,7 @@ OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o TB_types.o rw_TB
  operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o save_states.o distribution.o\
  tb_params.o mkl_lib_include.o energy_set_real_sc.o energy_set_real_sparse.o energy_set_real_sparse_sc.o dos.o dos_sc.o energy_solve_dense.o energy_solve_sparse.o\
  Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_r.o tightbinding_k.o wavefunction.o DOS.o bandstructure.o \
- highsymmetry.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o J_sd_exchange.o occupation.o mkl_util.o\
+ highsymmetry.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o J_sd_exchange.o occupation.o occupation_mult.o mkl_util.o\
  sampling.o relaxationtype.o external_fields.o init_constant.o dipolar-energy.o dipolar-field.o \
  create_lattice.o forces.o init_rand_seed.o gauge_util.o derivative.o coordinatesv4.o eigen_val_vec.o invert.o determinant.o \
  qorienplot.o rw_MC.o  CalculateAverages.o WriteSpinAndCorrFile.o topocharge_sd.o shape_excitations.o \
@@ -61,7 +61,7 @@ TB_types.o:
 tb_params.o: rw_TB.o
 rw_TB.o: io_files_utils.o io-utils.o convert.o TB_types.o
 save_states.o: 
-tightbinding_r.o:  distribution.o tb_params.o io_files_utils.o io-utils.o energy_r.o basic_types.o dos.o fermi.o save_states.o
+tightbinding_r.o:  distribution.o tb_params.o io_files_utils.o io-utils.o energy_r.o basic_types.o dos.o fermi.o save_states.o occupation.o occupation_mult.o
 tbessk.o:
 tbessj.o:
 tbessy.o:
@@ -81,7 +81,8 @@ energy_solve_dense.o:
 energy_solve_sparse.o: mkl_lib_include.o TB_types.o
 energy_set_real_sparse.o: mkl_lib_include.o mkl_util.o energy_commons.o basic_types.o TB_types.o
 energy_set_real_sparse_sc.o: mkl_lib_include.o energy_commons.o basic_types.o TB_types.o energy_set_real_sparse.o
-occupation.o: fermi.o tb_params.o TB_types.o  
+occupation.o: distribution.o tb_params.o TB_types.o  
+occupation_mult.o: distribution.o tb_params.o TB_types.o occupation.o 
 energy_r.o: basic_types.o fermi.o tb_params.o energy_set_real_sparse.o energy_set_real_sparse_sc.o energy_set_real.o energy_set_real_sc.o dos_sc.o energy_solve_dense.o energy_solve_sparse.o occupation.o
 tightbinding_k.o: basic_types.o get-position.o derived_types.o energy_k.o highsymmetry.o energy_r.o fermi.o dos.o
 tightbinding.o: basic_types.o tb_params.o derived_types.o operator_pointer_utils.o get-position.o bandstructure.o DOS.o wavefunction.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_k.o tightbinding_r.o highsymmetry.o

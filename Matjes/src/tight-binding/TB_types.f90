@@ -37,6 +37,15 @@ type parameters_TB_IO_HIGHS
    real(8)                 ::  aim_dist=1.0d-2 !aimed k-space distance between neighboring points along high symmetry line
 end type
 
+
+type parameters_TB_IO_OCC_MULT
+   !parameters for multiple occupation calculation at different energies
+   real(8)                 ::  dE=-1.0                      !energy step size to plot
+   real(8)                 ::  E_ext(2)=[0.0d0,0.0d0]      !minimal and aimed maximal energy considered
+   real(8)                 ::  kt=-1.0d0                    !smearing factor of fermi and derivative of fermi function
+end type
+
+
 type parameters_TB_Hsolve
     !basic parameters
     integer         ::  nspin=1     !number of spins (1 or 2) for each orbital
@@ -68,6 +77,8 @@ type parameters_TB_IO_FLOW
     logical         ::  spec_r=.False.
     logical         ::  fermi_r=.False.
     logical         ::  occ_r=.False.
+    logical         ::  occ_mult_r=.False.
+
     logical         ::  read_solution_r=.True.
     logical         ::  write_solution_r=.False.
 
@@ -78,12 +89,13 @@ type parameters_TB_IO_FLOW
 end type
 
 type parameters_TB
-    type(parameters_TB_IO_H)      ::  io_H
-    type(parameters_TB_IO_EF)     ::  io_ef
-    type(parameters_TB_IO_DOS)    ::  io_dos
-    type(parameters_TB_IO_HIGHS)  ::  io_highs
-    type(parameters_TB_IO_flow)   ::  flow
-    type(parameters_TB_Hsolve)     ::  H
+    type(parameters_TB_IO_H)            ::  io_H
+    type(parameters_TB_IO_EF)           ::  io_ef
+    type(parameters_TB_IO_DOS)          ::  io_dos
+    type(parameters_TB_IO_HIGHS)        ::  io_highs
+    type(parameters_TB_IO_flow)         ::  flow
+    type(parameters_TB_Hsolve)          ::  H
+    type(parameters_TB_IO_OCC_MULT)     ::  io_occ_mult
     logical         ::  is_mag=.False. !Hamiltonian has spins
     logical         ::  is_sc=.False. !Hamiltonian is superconducting-> everything doubles to include creators and destructors
 end type

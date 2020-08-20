@@ -3,12 +3,13 @@ use m_tb_params, only : TB_params
 use m_tb_types
 use m_basic_types, only : vec_point
 use m_energy_r, only: get_eigenval_r,get_eigenvec_r
-use m_occupation, only: calc_occupation,calc_occupation_sc
+use m_occupation, only: calc_occupation
+use m_occupation_mult, only: occupation_mult
 use m_fermi, only: calc_fermi 
 use m_dos, only: calc_dos 
 use m_dos_sc, only: calc_dos_sc
 use m_distribution, only: int_distrib,fermi_distrib,dE_fermi_distrib
-use  m_save_state_r,only: TB_write_states_r, TB_read_states_r
+use m_save_state_r,only: TB_write_states_r, TB_read_states_r
 implicit none
 private
 public :: tightbinding_r
@@ -89,7 +90,14 @@ subroutine tightbinding_r(h_par,mode_mag)
         Call calc_occupation(h_par,eigvec,eigval,E_f,TB_params%io_Ef%kt,'occ_dE.dat',dist_ptr)
     endif
 
+    if(TB_params%flow%occ_mult_r)then
+        write(*,*) 'start calculate multiple occupations'
+        Call occupation_mult(h_par,TB_params%io_occ_mult,eigval,eigvec)
+    endif
+
 end subroutine 
+
+
 
 
 subroutine write_realarray(fname,realarr)
