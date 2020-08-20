@@ -6,7 +6,7 @@ OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o TB_types.o rw_TB
  total_Hamiltonian_TB.o envelope.o eigen_interface.o eigen_sparse_reduce.o eigen_electron.o matrix_power.o matrix.o Hamiltonian_variables.o modes_variables.o tracker.o solver_order.o \
  null.o zeeman.o anisotropy_heisenberg.o solver_commun.o propagator.o couplage_ME.o exchange_Heisenberg.o total_Heisenberg_Ham.o \
  EMwave.o BTeff_sd.o update_time.o TPulse.o heavyside.o rampe.o topo_commons.o internal_fields.o ext_param_rw.o simu-parameters.o basic_types.o \
- operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o \
+ operator_pointer_utils.o io_files_utils.o solver.o rw_motif.o info-dynamics.o symmetry_operators.o precision.o save_states.o distribution.o\
  tb_params.o mkl_lib_include.o energy_set_real_sc.o energy_set_real_sparse.o energy_set_real_sparse_sc.o dos.o dos_sc.o energy_solve_dense.o energy_solve_sparse.o\
  Beff_sd.o choosespin.o entropic.o topocharge_local.o topocharge_all.o fermi.o energy_set_real.o energy_k.o energy_r.o tightbinding_r.o tightbinding_k.o wavefunction.o DOS.o bandstructure.o \
  highsymmetry.o fit.o derived_types.o constant.o vector.o sym_utils.o Correlation.o main.o rw_lattice.o minimize.o J_sd_exchange.o occupation.o mkl_util.o\
@@ -60,7 +60,8 @@ determinant.o:
 TB_types.o:
 tb_params.o: rw_TB.o
 rw_TB.o: io_files_utils.o io-utils.o convert.o TB_types.o
-tightbinding_r.o: tb_params.o io_files_utils.o io-utils.o energy_r.o basic_types.o dos.o fermi.o
+save_states.o: 
+tightbinding_r.o:  distribution.o tb_params.o io_files_utils.o io-utils.o energy_r.o basic_types.o dos.o fermi.o save_states.o
 tbessk.o:
 tbessj.o:
 tbessy.o:
@@ -72,7 +73,8 @@ total_Heisenberg_Ham.o: Hamiltonian_variables.o zeeman.o anisotropy_heisenberg.o
 exchange_tight_binding.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o rw_TB.o create_lattice.o
 chemical_potential_TB.o: io_files_utils.o io-utils.o convert.o Hamiltonian_variables.o symmetry_operators.o create_lattice.o
 total_Hamiltonian_TB.o: J_sd_exchange.o exchange_tight_binding.o chemical_potential_TB.o
-fermi.o:  energy_commons.o sort.o
+distribution.o: 
+fermi.o:  distribution.o energy_commons.o sort.o
 energy_set_real.o: energy_commons.o basic_types.o eigen_interface.o tb_params.o
 energy_set_real_sc.o: energy_commons.o basic_types.o eigen_interface.o energy_set_real.o tb_params.o
 energy_solve_dense.o:
