@@ -19,7 +19,7 @@ OBJS = tbessk.o tbessj.o tbessy.o summerfeld_exp.o random_lib.o TB_types.o rw_TB
  stdtypes.o Energy_distrib.o error.o rw_efield.o energy_commons.o excitations.o rotation.o projection.o spline.o \
  rw_zdir.o MonteCarlo.o check_restart.o measure_temp.o store_relaxation.o torques.o tangent.o gneb.o io-gneb.o gneb_utils.o gneb_parameters.o initialize_path.o \
  initialize_temperature.o cal_local_energy.o user_information.o parallel_tempering.o paratemp.o  mpi_prop.o \
- initial-configuration.o init-spiral.o init_random_config.o init-DW.o init-skyrmions.o init-punch.o init-Sk-lattice.o init-heavyside.o get-position.o \
+ initial-configuration.o init-spiral.o init_random_config.o init-DW.o init-skyrmions.o init-skyrmions-lin.o init-punch.o init-Sk-lattice.o init-heavyside.o get-position.o \
  IO-modes.o io-utils.o get-random.o simu-parameters.o init-variables.o convert.o kmesh.o dyna-utils.o pointgrp.o fftw.o
 
 Matjes: $(OBJS)
@@ -155,7 +155,8 @@ init-Sk-lattice.o: vector.o init-skyrmions.o
 init-heavyside.o:
 init-spiral.o: vector.o get-position.o io-utils.o
 init-punch.o: io-utils.o vector.o constant.o create_lattice.o
-initial-configuration.o: init_constant.o init_random_config.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o init-punch.o io-utils.o
+init-skyrmions-lin.f90: derived_types.o get-position.o
+initial-configuration.o: init_constant.o init_random_config.o init-spiral.o init-DW.o init-skyrmions.o init-Sk-lattice.o init-heavyside.o init-punch.o io-utils.o init-skyrmions-lin.o
 simu-parameters.o: basic_types.o
 io_files_utils.o: derived_types.o
 io-utils.o: constant.o convert.o derived_types.o simu-parameters.o vector.o
