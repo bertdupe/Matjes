@@ -276,6 +276,7 @@ module m_rw_TB
             call get_parameter(io_input,fname,'SC_delta',TB_params%nb_orbitals,TB_params%delta)
             call get_parameter(io_input,fname,'TB_sparse',TB_params%sparse)
             call get_parameter(io_input,fname,'TB_diag',TB_params%i_diag)
+            call get_parameter(io_input,fname,'TB_diag_acc',TB_params%diag_acc)
             call get_parameter(io_input,fname,'TB_rearrange',TB_params%rearrange)
             call get_parameter(io_input,fname,'TB_diag_Emin',TB_params%extE(1))
             call get_parameter(io_input,fname,'TB_diag_Emax',TB_params%extE(2))

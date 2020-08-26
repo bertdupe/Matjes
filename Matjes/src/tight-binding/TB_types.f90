@@ -16,6 +16,7 @@ type parameters_TB_IO_H
     logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
     real(8)             ::  extE(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines
     integer             ::  estNe=0                       !estimated number of eigenvalues in interval
+    real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 end type 
 
 type parameters_TB_IO_EF
@@ -61,6 +62,7 @@ type parameters_TB_Hsolve
     logical         ::  sparse=.False.
     integer         ::  i_diag=1  !different diagonalization methods
     logical         ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
+    real(8)         ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 
     !calculating only part of spectrum 
     real(8)         ::  extE(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines

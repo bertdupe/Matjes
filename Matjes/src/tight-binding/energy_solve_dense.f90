@@ -188,7 +188,8 @@ contains
         dimH=h_par%dimH
         Call feastinit(fpm) 
         fpm(1)=1
-        fpm(2)=4
+        fpm(2)=8
+        fpm(3)=-nint(log10(h_par%diag_acc))
         emin=h_par%extE(1)
         emax=h_par%extE(2)
         m0=h_par%estNe

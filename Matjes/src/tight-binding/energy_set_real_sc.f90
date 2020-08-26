@@ -42,6 +42,10 @@ contains
         Hr=cmplx(0.0d0,0.0d0, kind=8)
         Hr(1:h_par_nc%dimH,1:h_par_nc%dimH)=Hr_nc
         Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1:h_par%dimH)=-Hr_nc
+
+        !Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1:h_par%dimH)=Hr_nc
+        !Hr(h_par_nc%dimH+1:h_par%dimH:2,h_par_nc%dimH+1:h_par%dimH)=-Hr(h_par_nc%dimH+1:h_par%dimH:2,h_par_nc%dimH+1:h_par%dimH)
+        !Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1+1:h_par%dimH:2)=-Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1+1:h_par%dimH:2)
         Call set_delta(h_par,TB_params%io_H%delta,Hr)
 
         if(h_par%rearrange) Call rearange_H(h_par%dimH,Hr)
@@ -69,6 +73,10 @@ contains
                 hr(i_dn_dg,i_up)=Hr(i_dn_dg,i_up)+conjg(delta(i_orb))
                 Hr(i_up,i_dn_dg)=Hr(i_up,i_dn_dg)+delta(i_orb)
                 Hr(i_dn,i_up_dg)=Hr(i_dn,i_up_dg)-delta(i_orb)
+                !Hr(i_up_dg,i_dn)=Hr(i_up_dg,i_dn)+conjg(delta(i_orb))
+                !hr(i_dn_dg,i_up)=Hr(i_dn_dg,i_up)+conjg(delta(i_orb))
+                !Hr(i_up,i_dn_dg)=Hr(i_up,i_dn_dg)+delta(i_orb)
+                !Hr(i_dn,i_up_dg)=Hr(i_dn,i_up_dg)+delta(i_orb)
             enddo
         enddo
     end subroutine

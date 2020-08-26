@@ -87,7 +87,7 @@ subroutine TB_read_states_r(eigval,eigvec,success)
         endif
         close(io_unit)
     else
-        write(*,*) 'DId not find file '//filen//' to read eigenvalues and eigenvectors'
+        write(*,*) 'Did not find file '//filen//' to read eigenvalues and eigenvectors'
     endif
 end subroutine
 

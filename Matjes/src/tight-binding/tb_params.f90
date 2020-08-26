@@ -37,6 +37,7 @@ subroutine set_TB_params(Ncell,TB_pos_ext)
     TB_params%H%i_diag=TB_params%io_H%i_diag
     TB_params%H%estNe=TB_params%io_H%estNe
     TB_params%H%extE=TB_params%io_H%extE
+    TB_params%H%diag_acc=TB_params%io_H%diag_acc
     if(TB_params%H%extE(1)>=TB_params%H%extE(2))then
         TB_params%H%extE(1)=-9.0d99!Huge(1.0d0)
         TB_params%H%extE(2)=9.0d99!Huge(1.0d0)
