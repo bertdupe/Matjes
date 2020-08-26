@@ -7,6 +7,7 @@ src/initialization/init-punch.f90
 src/initialization/init_random_config.f90
 src/initialization/init-Sk-lattice.f90
 src/initialization/init-skyrmions.f90
+src/initialization/init-skyrmions-lin.f90
 src/initialization/InitSpin.f90
 src/initialization/init-spiral.f90
 src/initialization/init-variables.f90

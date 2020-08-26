@@ -3,6 +3,7 @@ use m_derived_types
 use m_init_spiral
 use m_init_DW
 use m_init_Sk
+use m_init_sky_lin, only: init_sky_lin
 use m_init_Sklattice
 use m_init_constant
 use m_init_punch, only: init_punch
@@ -51,7 +52,8 @@ do i=1,N_mode
     case('skyrmion')
       call init_spiral(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
       call init_Sk(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
-      Call init_punch(io,fname,my_lattice,my_motif,my_order_parameters(i)%start,my_order_parameters(i)%end)
+    case('skyrmion_lin')
+      Call init_Sky_lin(io,fname,my_lattice,my_motif,my_order_parameters(i)%start,my_order_parameters(i)%end)
     case('skyrmionla')
       call init_spiral(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
       call init_Sk_lattice(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
@@ -61,6 +63,7 @@ do i=1,N_mode
     case default
       call init_constant_config(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end,ext_param)
   end select
+  Call init_punch(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
 enddo
 
 
