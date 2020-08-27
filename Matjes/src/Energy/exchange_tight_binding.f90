@@ -43,13 +43,12 @@ module m_exchange_TB
             ! c_tij and put its value in the variable exc_ham_TB%c_ham
             call get_parameter(io_param,fname,'c_tij',exc_ham_TB%c_ham)
 
-            nb_shell=TB_params%io_H%nb_shell
-            if (nb_shell.ne.0) then
-               exc_ham_TB%i_exist=.true.
-            else
-               return
-            endif
 
+            call close_file(fname,io_param)
+
+            nb_shell=TB_params%io_H%nb_shell
+            if (nb_shell.le.0) return
+            exc_ham_TB%i_exist=.true.
 
             do i=1, size(my_order_parameters)
                 if (my_order_parameters(i)%name.eq.'Tight-binding') then
