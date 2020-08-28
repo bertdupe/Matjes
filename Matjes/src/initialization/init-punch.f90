@@ -31,6 +31,7 @@ end select
 pos=0.0d0
 radius=Huge(1.0d0)
 width=Huge(1.0d0)
+height=Huge(1.0d0)
 angle=0.0d0
 configuration="nothing"
 call get_parameter(io,fname,'punch_config',configuration)
@@ -181,7 +182,6 @@ real(kind=8), allocatable,target :: pos(:,:,:,:,:)
 real(8),pointer         ::  pos_mat2(:,:)
 integer :: Nx,Ny,Nz
 
-real(8)                 ::  width_outer
 integer                 ::  Npos
 logical,allocatable,target     ::  outside(:)
 logical,pointer         ::  outside_point(:,:,:,:)
