@@ -57,7 +57,7 @@ do i_nim=1,nim
    call associate_pointer(magnetic_mode_path(:,i_nim),path(:,:,i_nim),'magnetic',found)
 enddo
 call get_B_matrix(my_lattice%dim_mode)
-call get_E_matrix(my_lattice%dim_mode)
+call set_E_matrix(my_lattice%dim_mode)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the pointers for the B-field and the energy
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -345,7 +345,7 @@ do i_nim=1,nim
    call associate_pointer(magnetic_mode_path(:,i_nim),path(:,:,i_nim),'magnetic',found)
 enddo
 call get_B_matrix(my_lattice%dim_mode)
-call get_E_matrix(my_lattice%dim_mode)
+call set_E_matrix(my_lattice%dim_mode)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! allocate the pointers for the B-field and the energy
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

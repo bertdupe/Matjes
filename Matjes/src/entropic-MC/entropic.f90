@@ -43,7 +43,7 @@ real(kind=8) :: kT,DProb,DE
 integer :: i_T,N_cell,n_Tsteps,dim_mode
 logical :: sphere,equi,ising,i_magnetic,underrel,overrel
 
-type(vec_point),allocatable,dimension(:) :: all_mode
+type(vec_point),pointer :: all_mode(:)
 type(vec_point),allocatable,dimension(:) :: mode_magnetic
 
 !call mtprng_init(37, state)
@@ -94,8 +94,7 @@ kTfin=1.0d0
 kTini=1.0d0
 dim_mode=my_lattice%dim_mode
 
-allocate(all_mode(N_cell))
-call associate_pointer(all_mode,my_lattice)
+all_mode(1:N_cell)=>my_lattice%ordpar%all_l_modes
 
 ! magnetization
 do i=1,size(my_order_parameters)
@@ -106,14 +105,10 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-call get_E_matrix(my_lattice%dim_mode)
+call set_E_matrix(my_lattice%dim_mode)
 
 ! initializing the variables above
-E_total=0.0d0
-do iomp=1,N_cell
-    call local_energy(Et,iomp,all_mode)
-    E_total=E_total+Et
-enddo
+Call sum_energy(E_total,my_lattice)
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',E_total/real(N_cell)
 
 
@@ -159,20 +154,20 @@ do i_loop=1,n_loop
 ! different relaxation process
 !---------------------------------
       if (underrel) then
-         S_new=underrelax(iomp,mode_magnetic)
+         S_new=underrelax(iomp,my_lattice)
       elseif (overrel) then
-         S_new=overrelax(iomp,mode_magnetic)
+         S_new=overrelax(iomp,my_lattice)
       endif
 
       if (ising) S_new=-mode_magnetic(iomp)%w
 
 ! calculate the energy before and after
 
-      call local_energy(E_old,iomp,all_mode)
+      call local_energy(E_old,iomp,my_lattice)
 
       mode_magnetic(iomp)%w=S_new
 
-      call local_energy(E_new,iomp,all_mode)
+      call local_energy(E_new,iomp,my_lattice)
 
       mode_magnetic(iomp)%w=S_old
       E_test=E_total+E_new-E_old
@@ -323,6 +318,7 @@ do i_T=1,n_Tsteps
 enddo
 close(7)
 
+nullify(all_mode)
 write(6,'(a)') "done with entropic"
 
 end subroutine entropic

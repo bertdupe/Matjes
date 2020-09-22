@@ -63,7 +63,7 @@ start_lattice%alat=0.0
 
 start_lattice%boundary=.True.
 
-!nullify(start_lattice%l_modes)
+!nullify(start_lattice%ordpar%l_modes)
 
 my_lattice=start_lattice
 

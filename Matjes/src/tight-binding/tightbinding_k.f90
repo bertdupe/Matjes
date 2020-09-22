@@ -30,7 +30,7 @@ subroutine tightbinding_k(h_par,mode_mag,my_lattice,my_motif)
     real(kind=8), allocatable :: eigval(:,:) !eigen values(N_state,N_k)
     real(kind=8), allocatable :: dist_neigh(:,:) !neighbor distances for fourier transform
 
-    N_cell=product(shape(my_lattice%l_modes))
+    N_cell=product(shape(my_lattice%ordpar%l_modes))
 
     !get dist_neigh
     Call get_dist_neigh(N_cell,my_lattice,my_motif,dist_neigh)

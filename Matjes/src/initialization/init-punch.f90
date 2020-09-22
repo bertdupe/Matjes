@@ -97,7 +97,7 @@ do i_m=1,nmag
       Do i_y=1,dim_lat(2)
          Do i_x=1,dim_lat(1)
             if(norm2(pos(:,i_x,i_y,i_z,i_m))>radius)then
-               my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(m_start:m_end) = 0.0d0
+               my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(m_start:m_end) = 0.0d0
             endif
          enddo
       enddo
@@ -155,7 +155,7 @@ do i_m=1,nmag
       Do i_y=1,dim_lat(2)
          Do i_x=1,dim_lat(1)
             if(abs(pos(1,i_x,i_y,i_z,i_m))>width*0.5d0.or.abs(pos(2,i_x,i_y,i_z,i_m))>height*0.5d0)then
-               my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(m_start:m_end) = 0.0d0
+               my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(m_start:m_end) = 0.0d0
             endif
          enddo
       enddo
@@ -226,7 +226,7 @@ do i_m=1,nmag
       Do i_y=1,dim_lat(2)
          Do i_x=1,dim_lat(1)
             if(outside_point(i_x,i_y,i_z,i_m))then
-               my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(m_start:m_end) = 0.0d0
+               my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(m_start:m_end) = 0.0d0
             endif
          enddo
       enddo

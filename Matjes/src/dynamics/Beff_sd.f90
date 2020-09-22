@@ -24,7 +24,7 @@ type(all_order_all_B), allocatable, dimension(:) :: all_B
 !sparse format full matrix
 integer             :: dimB
 public :: set_B_sparse, B_sparse,dimB
-#ifdef __mkl_csr__
+#ifdef CPPMKL_CSR
 real(8),allocatable :: val_csr(:)
 integer,allocatable :: i_csr(:),j_csr(:)
 #else
@@ -35,7 +35,7 @@ integer,allocatable :: rowind(:),colind(:)
 #endif
 
 
-#ifdef __direct_mult_EIGEN__
+#ifdef CPPEIGEN_SPARSE
 integer             :: dimB
 public :: energy_B,set_large_B,dimB
 #endif
@@ -241,7 +241,7 @@ subroutine B_sparse(Bini,dimmode,Ncell,mode)
     real(8)             :: tmp(dimmode*Ncell)
     external mkl_dcoogemv
    
-#ifdef __mkl_csr__
+#ifdef CPPMKL_CSR
     Call mkl_dcsrgemv('N',dimB,val_csr,i_csr,j_csr,mode,tmp)
 #else
     nnz=size(val)
@@ -257,13 +257,13 @@ subroutine set_B_sparse(dim_mode)
     integer                 ::  tmp,info
     integer,parameter       ::  job(8)=[2,1,1,0,0,0,0,0]
     external mkl_dcsrcoo
-#ifdef __mkl_csr__
+#ifdef CPPMKL_CSR
     real(8),allocatable :: val(:)
     integer,allocatable :: rowind(:),colind(:)
 #endif 
 
     Call set_matrix_sparse(dim_mode,val,rowind,colind,dimB)
-#ifdef __mkl_csr__
+#ifdef CPPMKL_CSR
     nnz=size(val)
     allocate(val_csr(nnz),source=0.0d0)
     allocate(j_csr(nnz),source=0)
@@ -319,7 +319,7 @@ subroutine set_matrix_sparse(dim_mode,val,rowind,colind,dimB)
 end subroutine
 
 
-#ifdef __direct_mult_EIGEN__
+#ifdef CPPEIGEN_SPARSE
 subroutine set_large_B(dim_mode)
     use m_eigen_interface, only: eigen_set_B
     integer,intent(in)  :: dim_mode

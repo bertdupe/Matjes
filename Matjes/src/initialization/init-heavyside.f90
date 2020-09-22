@@ -28,8 +28,8 @@ do i_m=1,size_mag
       do i_y=1,Ny
          do i_x=1,Nx
 
-            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
-            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end)=1-2*(2*i_x/Nx)
+            my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
+            my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(end)=1-2*(2*i_x/Nx)
 
           enddo
       enddo

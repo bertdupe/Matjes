@@ -64,7 +64,7 @@ real(kind=8) :: acc,rate,tries,cone,nb
 integer :: i
 logical :: underrel,overrel,sphere,equi,i_restart,ising,print_relax,Cor_log,Gra_log,i_magnetic,i_print_W,spstmL,i_temperature
 
-type(vec_point),allocatable,dimension(:) :: all_mode
+type(vec_point),pointer :: all_mode(:)
 type(vec_point),allocatable,dimension(:) :: mode_magnetic,mode_temp
 
 ! initialize the variables
@@ -94,7 +94,7 @@ allocate(vortex_av(3,size_table),qeulerp_av(size_table),qeulerm_av(size_table))
 allocate(kt_all(size_table),E_sum_av(size_table),E_sq_sum_av(size_table))
 
 ! updating data during the simulation
-!shape_spin=shape(my_lattices%l_modes)
+!shape_spin=shape(my_lattices%ordpar%l_modes)
 qeulerp=0.0d0
 qeulerm=0.0d0
 vortex=0.0d0
@@ -106,11 +106,10 @@ Gra_log=io_simu%io_Xstruct
 i_print_W=io_simu%io_warning
 kTini=ext_param%ktini%value
 kTfin=ext_param%ktfin%value
-N_cell=product(shape(my_lattice%l_modes))
+N_cell=product(shape(my_lattice%ordpar%l_modes))
 spstmL=io_simu%io_spstmL
 
-allocate(all_mode(N_cell))
-call associate_pointer(all_mode,my_lattice)
+all_mode=>my_lattice%ordpar%all_l_modes
 !
 ! Prepare the calculation of the Energy and the field
 ! magnetization
@@ -133,7 +132,7 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-call get_E_matrix(my_lattice%dim_mode)
+call set_E_matrix(my_lattice%dim_mode)
 call get_B_matrix(my_lattice%dim_mode)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -141,13 +140,13 @@ call get_B_matrix(my_lattice%dim_mode)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call get_size_Q_operator(my_lattice)
-call associate_Q_operator(all_mode,my_lattice%boundary,shape(my_lattice%l_modes))
+call associate_Q_operator(all_mode,my_lattice%boundary,shape(my_lattice%ordpar%l_modes))
 
 !ktini=ext_param%ktini%value
 !ktfin=ext_param%ktfin%value
 ! initializing the variables above
 
-E_total=total_energy(N_cell,all_mode)
+E_total=total_energy(N_cell,my_lattice)
 
 call CalculateAverages(mode_magnetic,qeulerp,qeulerm,vortex,Magnetization)
 
@@ -195,7 +194,7 @@ Do n_kT=1,n_Tsteps
 !  do i=1,N_cell
 !     mode_temp(i)%w=kt
 !  enddo
-!  call get_E_matrix(my_lattice%dim_mode,kt/k_b)
+!  call set_E_matrix(my_lattice%dim_mode,kt/k_b)
 
   call Relaxation(all_mode,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
 
@@ -207,11 +206,11 @@ Do n_kT=1,n_Tsteps
 
        Do i_relax=1,T_auto*N_cell
 
-          Call MCstep(all_mode,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+          Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
        End do
 
-       Call MCstep(all_mode,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+       Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 
 ! Calculate the topological charge and the vorticity
        dumy=get_charge()
@@ -360,4 +359,5 @@ enddo
 close(7) !Close EM.dat
 #endif
 
+nullify(all_mode)
 end subroutine montecarlo

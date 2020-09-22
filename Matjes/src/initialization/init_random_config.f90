@@ -32,7 +32,7 @@ do i_m=1,nmag
 
 ! fix the spin direction as random
 
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start:end)=get_rand_classic(3,1.0d0)
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start:end)=get_rand_classic(3,1.0d0)
 
           enddo
       enddo

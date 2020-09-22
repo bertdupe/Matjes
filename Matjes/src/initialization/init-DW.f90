@@ -22,7 +22,7 @@ real(kind=8) :: alpha
 Nx=my_lattice%dim_lat(1)
 Ny=my_lattice%dim_lat(2)
 Nz=my_lattice%dim_lat(3)
-shape_lattice=shape(my_lattice%l_modes)
+shape_lattice=shape(my_lattice%ordpar%l_modes)
 size_mag=shape_lattice(4)
 
 do i_x=1,Nx
@@ -40,9 +40,9 @@ do i_x=1,Nx
             do i_z=1,Nz
                do i_m=1,size_mag
 
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start)=sin(alpha)
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start+1)=0.0d0
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end)=-1.0d0*cos(alpha)
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start)=sin(alpha)
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start+1)=0.0d0
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(end)=-1.0d0*cos(alpha)
 
                enddo
             enddo
@@ -53,8 +53,8 @@ do i_x=1,Nx
             do i_z=1,Nz
                do i_m=1,size_mag
 
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end)=-1.0d0
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(end)=-1.0d0
 
                enddo
             enddo
@@ -65,8 +65,8 @@ do i_x=1,Nx
             do i_z=1,Nz
                do i_m=1,size_mag
 
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end)=1.0d0
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start:start+1)=0.0d0
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(end)=1.0d0
 
                enddo
             enddo

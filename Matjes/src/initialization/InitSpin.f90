@@ -73,7 +73,7 @@ do i_m=1,nmag
    do i_z=1,dim_lat(3)
       do i_y=1,dim_lat(2)
          do i_x=1,dim_lat(1)
-          write(*,*) my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(:)
+          write(*,*) my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(:)
          enddo
       enddo
    enddo

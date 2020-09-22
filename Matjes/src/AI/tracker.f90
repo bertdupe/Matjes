@@ -249,13 +249,14 @@ end subroutine
 !
 ! plot the different patterns
 !
-subroutine plot_tracking(tag,mode)
+subroutine plot_tracking(tag,lat)
 use m_convert
 use m_io_files_utils
 use m_local_energy
+use m_derived_types, only: lattice
 implicit none
 integer, intent(in) :: tag
-type(vec_point), intent(in) :: mode(:)
+type(lattice), intent(in) :: lat
 ! internal
 integer :: i,N_pat,io_inside,io_border,j,iomp,dim_mode
 character(len=50) :: filename_inside,filename_border
@@ -267,14 +268,14 @@ io_inside=open_file_write(filename_inside)
 filename_border=convert('pat_border_',tag,'.dat')
 io_border=open_file_write(filename_border)
 
-dim_mode=size(mode(1)%w)
+dim_mode=lat%dim_mode
 N_pat=size(all_patterns)
 do i=1,N_pat
 
   do j=1,all_patterns(i)%Nsites
 
     iomp=all_patterns(i)%interior(j)
-    call local_energy(Et,iomp,mode,dim_mode)
+    call local_energy(Et,iomp,lat)
 
     write(io_inside,'(4(2x,E20.12E3))') pos(:,iomp),Et
 
@@ -283,14 +284,14 @@ do i=1,N_pat
   write(io_inside,'(a)') ''
 enddo
 
-dim_mode=size(mode(1)%w)
+dim_mode=lat%dim_mode
 do i=1,N_pat
 
   do j=1,size(all_patterns(i)%boundary)
 
     iomp=all_patterns(i)%boundary(j)
 
-    call local_energy(Et,iomp,mode,dim_mode)
+    call local_energy(Et,iomp,lat)
 
     write(io_border,'(4(2x,E20.12E3))') pos(:,iomp),Et
 

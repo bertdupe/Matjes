@@ -96,7 +96,7 @@ type(lattice), intent(in) :: my_lattice
 !internal variable
 integer :: shape_lattice(4),size_point,i
 
-shape_lattice=shape(my_lattice%l_modes)
+shape_lattice=shape(my_lattice%ordpar%l_modes)
 size_point=product(shape_lattice)
 
 allocate(ext_field(size_point))

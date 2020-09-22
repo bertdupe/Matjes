@@ -25,7 +25,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     integer :: i, TB_pos_ext(2)
     logical :: i_magnetic, i_TB
    
-    N_cell=product(shape(my_lattice%l_modes))
+    N_cell=product(shape(my_lattice%ordpar%l_modes))
 
     !get magnetization everywhere and set some pointers and control integers
     allocate( all_mode(N_cell))

@@ -530,7 +530,7 @@ integer, intent(in) :: indexNN(:)
 ! slope of the sums
 integer :: Nspin,all_size(4),shape_tableNN(6)
 
-all_size=shape(my_lattice%l_modes)
+all_size=shape(my_lattice%ordpar%l_modes)
 Nspin=product(all_size)
 shape_tableNN=shape(tableNN)
 

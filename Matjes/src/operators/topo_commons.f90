@@ -149,7 +149,7 @@ type(lattice), intent(in) :: my_lattice
 integer :: n_corner,lattice_size(4),N_site
 integer :: i,j
 
-lattice_size=shape(my_lattice%l_modes)
+lattice_size=shape(my_lattice%ordpar%l_modes)
 N_site=product(lattice_size)
 n_corner=0
 

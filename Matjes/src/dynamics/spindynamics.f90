@@ -48,7 +48,7 @@ real(8),pointer     ::  spinafter_1(:)
 real(kind=8),allocatable,dimension(:,:) :: D_T,Bini,BT
 real(kind=8),allocatable,dimension(:,:,:) :: D_mode
 real(kind=8),allocatable,dimension(:) :: D_mode_int
-type(vec_point),allocatable,dimension(:) :: all_mode,all_mode_1,all_mode_2
+type(lattice)                         :: lat_1,lat_2
 ! pointers specific for the modes
 type(vec_point),allocatable,dimension(:) :: mode_temp,mode_Efield,mode_Hfield,mode_magnetic,mode_disp
 type(vec_point),target,allocatable,dimension(:) :: D_T_mag,B_mag,BT_mag
@@ -62,7 +62,7 @@ real(kind=8) :: dumy(5),security(2)
 real(kind=8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
 real(kind=8) :: kt,ktini,ktfin
 real(kind=8) :: time
-integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq,dimension_mode
+integer :: iomp,shape_lattice(4),shape_spin(4),N_cell,N_loop,duration,Efreq
 !integer :: io_test
 !! switch that controls the presence of magnetism, electric fields and magnetic fields
 logical :: i_magnetic,i_temperature,i_mode,i_Efield,i_Hfield,i_excitation,i_displacement
@@ -84,7 +84,7 @@ open(8,FILE='convergence.dat',action='write',form='formatted')
 ! prepare the matrices for integration
 
 call rw_dyna(timestep_int,damping,Efreq,duration)
-shape_lattice=shape(mag_lattice%l_modes)
+shape_lattice=shape(mag_lattice%ordpar%l_modes)
 N_cell=product(shape_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! Select the propagators and the integrators
@@ -93,18 +93,14 @@ N_cell=product(shape_lattice)
 call select_propagator(ext_param%ktini%value,N_loop)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! Allocate the matrix of after spin and the pointers associated to it
+!!!! Create copies of lattice with order-parameter for intermediary states
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-allocate(all_mode(N_cell),all_mode_1(N_cell),all_mode_2(N_cell))
-allocate(spinafter(mag_lattice%dim_mode,shape_lattice(1),shape_lattice(2),shape_lattice(3),shape_lattice(4),2))
+Call mag_lattice%copy(lat_1) 
+Call mag_lattice%copy(lat_2) 
 
-shape_spin=shape_lattice
-spinafter=0.0d0
-
-call associate_pointer(all_mode,mag_lattice)
-call associate_pointer(all_mode_1,spinafter(:,:,:,:,:,1))
-call associate_pointer(all_mode_2,spinafter(:,:,:,:,:,2))
+!shape_spin=shape_lattice
+!spinafter=0.0d0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! associate pointer for the topological charge, vorticity calculations
@@ -112,7 +108,7 @@ call associate_pointer(all_mode_2,spinafter(:,:,:,:,:,2))
 call user_info(6,time,'topological operators',.false.)
 
 call get_size_Q_operator(mag_lattice)
-call associate_Q_operator(all_mode_1,mag_lattice%boundary,shape(mag_lattice%l_modes))
+call associate_Q_operator(lat_1%ordpar%all_l_modes,mag_lattice%boundary,shape(mag_lattice%ordpar%l_modes))
 
 call user_info(6,time,'done',.true.)
 
@@ -142,7 +138,7 @@ do i=1,size(my_order_parameters)
   if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
    allocate(mode_magnetic(N_cell),D_mode_mag(N_cell,N_loop),D_T_mag(N_cell),B_mag(N_cell),BT_mag(N_cell))
    call dissociate(mode_magnetic,N_cell)
-   call associate_pointer(mode_magnetic,all_mode_1,'magnetic',i_magnetic)
+   call associate_pointer(mode_magnetic,lat_1%ordpar%all_l_modes,'magnetic',i_magnetic)
 
    do j=1,N_loop
       call dissociate(D_mode_mag(:,j),N_cell)
@@ -167,7 +163,7 @@ do i=1,size(my_order_parameters)
   if ('temperature'.eq.trim(my_order_parameters(i)%name)) then
    allocate(mode_temp(N_cell))
    call dissociate(mode_temp,N_cell)
-   call associate_pointer(mode_temp,all_mode_1,'temperature',i_temperature)
+   call associate_pointer(mode_temp,lat_1%ordpar%all_l_modes,'temperature',i_temperature)
 
    exit
   endif
@@ -178,7 +174,7 @@ do i=1,size(my_order_parameters)
   if ('Bfield'.eq.trim(my_order_parameters(i)%name)) then
    allocate(mode_Hfield(N_cell))
    call dissociate(mode_Hfield,N_cell)
-   call associate_pointer(mode_Hfield,all_mode_1,'Bfield',i_Hfield)
+   call associate_pointer(mode_Hfield,lat_1%ordpar%all_l_modes,'Bfield',i_Hfield)
 
    exit
   endif
@@ -189,7 +185,7 @@ do i=1,size(my_order_parameters)
   if ('Efield'.eq.trim(my_order_parameters(i)%name)) then
    allocate(mode_Efield(N_cell))
    call dissociate(mode_Efield,N_cell)
-   call associate_pointer(mode_Efield,all_mode_1,'Efield',i_Efield)
+   call associate_pointer(mode_Efield,lat_1%ordpar%all_l_modes,'Efield',i_Efield)
 
    exit
   endif
@@ -199,7 +195,7 @@ enddo
 do i=1,size(my_order_parameters)
   if ('displacement'.eq.trim(my_order_parameters(i)%name)) then
    allocate(mode_disp(N_cell),D_mode_disp(N_cell,N_loop),D_T_disp(N_cell),B_disp(N_cell),BT_disp(N_cell))
-   call associate_pointer(mode_disp,all_mode_1,'displacement',i_displacement)
+   call associate_pointer(mode_disp,lat_1%ordpar%all_l_modes,'displacement',i_displacement)
 
    do j=1,N_loop
      call dissociate(D_mode_disp(:,j),N_cell)
@@ -223,14 +219,12 @@ enddo
 ! Prepare the calculation of the energy and the effective field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_B_matrix(mag_lattice%dim_mode)
-call get_E_matrix(mag_lattice%dim_mode)
+call set_E_matrix(mag_lattice%dim_mode)
 
-#ifdef __direct_mult_EIGEN__
-Call set_large_H(mag_lattice%dim_mode)
+#ifdef CPPEIGEN_SPARSE
 Call set_large_B(mag_lattice%dim_mode)
 spinafter_1(1:dimB)=>spinafter(:,:,:,:,:,1)
 #elif defined __sparse_mkl__
-Call set_H_sparse(mag_lattice%dim_mode)
 Call set_B_sparse(mag_lattice%dim_mode)
 spinafter_1(1:dimB)=>spinafter(:,:,:,:,:,1)
 #endif
@@ -257,14 +251,9 @@ security=0.0d0
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! initialize the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call copy_lattice(all_mode,all_mode_1)
+Call mag_lattice%copy_val_to(lat_1)
 
-Edy=0.0d0
-dimension_mode=size(all_mode(1)%w)
-do iomp=1,N_cell
-    call local_energy(Et,iomp,all_mode)
-    Edy=Edy+Et
-enddo
+Call sum_energy(Edy,mag_lattice)
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -285,8 +274,8 @@ call get_excitations('input',i_excitation,input_excitations)
 if (i_excitation) then
    allocate(mode_excitation_field(N_cell,input_excitations),lattice_ini_excitation_field(N_cell,input_excitations))
    do iomp=1,input_excitations
-     call associate_excitation(iomp,mode_excitation_field(:,iomp),all_mode_1,my_order_parameters)
-     call associate_excitation(iomp,lattice_ini_excitation_field(:,iomp),all_mode,my_order_parameters)
+     call associate_excitation(iomp,mode_excitation_field(:,iomp),lat_1%ordpar%all_l_modes,my_order_parameters)
+     call associate_excitation(iomp,lattice_ini_excitation_field(:,iomp),mag_lattice%ordpar%all_l_modes,my_order_parameters)
    enddo
 endif
 
@@ -313,7 +302,7 @@ do j=1,duration
 
    call init_temp_measure(check,check1,check2,check3)
 
-   call truncate(all_mode_1,mag_lattice%dim_mode)
+   call truncate(lat_1,mag_lattice%dim_mode)
    qeuler=0.0d0
    q_plus=0.0d0
    q_moins=0.0d0
@@ -362,25 +351,14 @@ do j=1,duration
       endif
     enddo 
 
-#ifdef __direct_mult_EIGEN__
+#ifdef CPPEIGEN_SPARSE
     Call energy_B(Bini,size(Bini,1),size(Bini,2),spinafter_1)
 #elif defined __sparse_mkl__
     Call B_sparse(Bini,size(Bini,1),size(Bini,2),spinafter_1) 
-#elif defined __SLOW__
-    Bini=0.0d0
-    do iomp=1,N_cell
-! call routine normal which is very slow
-      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
-! call routine optimized which
-!      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
-    enddo 
 #else
     Bini=0.0d0
     do iomp=1,N_cell
-! call routine normal which is very slow
-!      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1,mag_lattice%dim_mode)
-! call routine optimized which
-      call calculate_Beff(Bini(:,iomp),iomp,all_mode_1)
+      call calculate_Beff(Bini(:,iomp),iomp,lat_1%ordpar%all_l_modes)
     enddo 
 #endif
 
@@ -404,7 +382,7 @@ do j=1,duration
 
        call get_D_mode(D_mode(:,iomp,:),i_loop,N_loop,D_mode_int)
 
-       all_mode_2(iomp)%w=get_integrator_field(all_mode(iomp)%w,D_mode_int,D_T(:,iomp),dt,mag_lattice%dim_mode)
+       lat_2%ordpar%all_l_modes(iomp)%w=get_integrator_field(mag_lattice%ordpar%all_l_modes(iomp)%w,D_mode_int,D_T(:,iomp),dt,mag_lattice%dim_mode)
 
     enddo
 
@@ -412,7 +390,7 @@ do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-   call copy_lattice(all_mode_2,all_mode_1)
+   Call lat_2%copy_val_to(lat_1)
 
   enddo
 !!$OMP end do
@@ -420,8 +398,9 @@ do j=1,duration
 !!!!!!!!!!!!!!! copy the final configuration in my_lattice
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-call copy_lattice(all_mode_2,all_mode)
-call truncate(all_mode,mag_lattice%dim_mode)
+Call lat_2%copy_val_to(mag_lattice)
+
+call truncate(mag_lattice,mag_lattice%dim_mode)
 
 !
 !!!!!! Measure the temperature if the users wish
@@ -449,26 +428,12 @@ if (j.eq.1) check3=test_torque
 
 !!!$omp do private(iomp,Et,dumy) reduction(+:Edy,Mdy,q_plus,q_moins,vx,vy,vz) schedule(auto)
 
-#ifdef __direct_mult_EIGEN__
+#ifdef CPPEIGEN_SPARSE
 Call energy_H(Edy,mag_lattice%dim_mode)
 #elif defined __sparse_mkl__
 Call energy_sparse(Edy,dimH)
-#elif defined __SLOW__
-do iomp=1,N_cell
-!trop lent
-    call local_energy(Et,iomp,all_mode,mag_lattice%dim_mode)
-! optimisé
-!    call local_energy(Et,iomp,all_mode)
-    Edy=Edy+Et
-enddo
 #else
-do iomp=1,N_cell
-!trop lent
-!    call local_energy(Et,iomp,all_mode,mag_lattice%dim_mode)
-! optimisé
-    call local_energy(Et,iomp,all_mode)
-    Edy=Edy+Et
-enddo
+Call sum_energy(Edy,mag_lattice)
 #endif
 do iomp=1,N_cell
 
@@ -498,7 +463,7 @@ if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
 if (io_simu%io_tracker) then
 !  call update_tracking(j)
-  if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,all_mode_1)
+  if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,lat_1)
 endif
 
 
@@ -511,26 +476,26 @@ if (mod(j-1,Efreq).eq.0) Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Ed
      &   kT/k_B,(security(i),i=1,2),H_int
 
 if ((io_simu%io_Energy_Distrib).and.((mod(j-1,gra_freq).eq.0))) then
-         call get_Energy_distrib(j/gra_freq,all_mode)
-      endif
+    call get_Energy_distrib(j/gra_freq,mag_lattice%ordpar%all_l_modes)
+endif
 
 if ((gra_log).and.(mod(j-1,gra_freq).eq.0)) then
-         call CreateSpinFile(j/gra_freq,all_mode)
-         call WriteSpinAndCorrFile(j/gra_freq,all_mode,'SpinSTM_')
-         write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',j/gra_freq
-         write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
-      endif
+    call CreateSpinFile(j/gra_freq,mag_lattice%ordpar%all_l_modes)
+    call WriteSpinAndCorrFile(j/gra_freq,mag_lattice%ordpar%all_l_modes,'SpinSTM_')
+    write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',j/gra_freq
+    write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
+endif
 
 if ((io_stochafield).and.(mod(j-1,gra_freq).eq.0)) then
-         call WriteSpinAndCorrFile(j/gra_freq,BT,'Stocha-field_')
-         write(6,'(a,I10)')'wrote Spin configuration and povray file number',j/gra_freq
-      endif
+    call WriteSpinAndCorrFile(j/gra_freq,BT,'Stocha-field_')
+    write(6,'(a,I10)')'wrote Spin configuration and povray file number',j/gra_freq
+endif
 
 if ((gra_topo).and.(mod(j-1,gra_freq).eq.0)) Call get_charge_map(j/gra_freq)
 
-if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,all_mode_1,mag_lattice%dim_mode,mag_lattice%areal)
+if ((io_simu%io_Force).and.(mod(j-1,gra_freq).eq.0)) call forces(j/gra_freq,lat_1%ordpar%all_l_modes,mag_lattice%dim_mode,mag_lattice%areal)
 
-if ((io_simu%io_fft_Xstruct).and.(mod(j-1,gra_freq).eq.0)) call plot_fft(all_mode,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
+if ((io_simu%io_fft_Xstruct).and.(mod(j-1,gra_freq).eq.0)) call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
 
 ! security in case of energy increase in SD and check for convergence
 if (((damping*(Edy-Eold).gt.1.0d-10).or.(damping*(Edy-Einitial).gt.1.0d-10)).and.(kt.lt.1.0d-10).and.(.not.said_it_once)) then
@@ -594,5 +559,11 @@ endif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  copy the last spin lattice into the mag_lattice
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+call kill_B_matrix()
+call kill_E_matrix()
+
 
 end subroutine spindynamics

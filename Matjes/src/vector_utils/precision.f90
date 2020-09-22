@@ -8,7 +8,7 @@ real(kind=8), parameter :: EPS=1.0d-50
 !
 
 interface truncate
-  module procedure troncate_real,troncate_vecp_1D
+  module procedure truncate_real,truncate_vecp_1D,truncate_lattice
 end interface
 
 private
@@ -16,7 +16,20 @@ public :: truncate
 
 contains
 
-subroutine troncate_real(X,N)
+subroutine truncate_lattice(lat,N)
+use m_derived_types, only : lattice
+implicit none
+type(lattice),intent(inout) ::  lat
+integer, intent(in) :: N !why is there this N, sounds terrible
+! internal
+integer :: i
+
+    where(abs(lat%ordpar%modes) < EPS) lat%ordpar%modes=0.0d0
+
+end subroutine
+
+
+subroutine truncate_real(X,N)
 implicit none
 real(kind=8),intent(inout) :: X(:)
 integer, intent(in) :: N
@@ -30,7 +43,7 @@ enddo
 end subroutine
 
 
-subroutine troncate_vecp_1D(X,N)
+subroutine truncate_vecp_1D(X,N)
 use m_basic_types, only : vec_point
 implicit none
 type(vec_point), intent(inout) :: X(:)

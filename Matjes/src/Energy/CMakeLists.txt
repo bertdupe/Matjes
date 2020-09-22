@@ -1,6 +1,8 @@
 set(main_f90 ${main_f90}
 src/Energy/anisotropy_heisenberg.f90
 src/Energy/cal_local_energy.f90
+src/Energy/cal_local_energy_manual.f90
+src/Energy/cal_local_energy_mkl.f90
 src/Energy/chemical_potential_TB.f90
 src/Energy/couplage_ME.f90
 #src/Energy/demag-matrix.f90   #requires m_fft (not used?)

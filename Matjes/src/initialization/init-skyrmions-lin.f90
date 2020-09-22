@@ -92,9 +92,9 @@ do i_m=1,nmag
          Do i_x=1,dim_lat(1)
            f_r=norm2(pos(:,i_x,i_y,i_z,i_m))*slope
            qphi=atan2(pos(2,i_x,i_y,i_z,i_m),pos(1,i_x,i_y,i_z,i_m))*real(q,8)
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(m_start)   = sin(f_r)*cos(qphi)
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(m_start+1) = sin(f_r)*sin(qphi)
-           my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(m_start+2) = cos(f_r)
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(m_start)   = sin(f_r)*cos(qphi)
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(m_start+1) = sin(f_r)*sin(qphi)
+           my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(m_start+2) = cos(f_r)
          enddo
       enddo
    enddo

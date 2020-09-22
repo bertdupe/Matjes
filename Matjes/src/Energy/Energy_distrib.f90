@@ -39,7 +39,7 @@ integer :: size_ham,Nspin,all_size(4)
 integer :: i,j
 integer,allocatable :: int_ind(:)
 
-all_size=shape(my_lattice%l_modes)
+all_size=shape(my_lattice%ordpar%l_modes)
 Nspin=product(all_size)
 
 size_ham=size(total_hamiltonian%num)
@@ -78,7 +78,7 @@ integer, intent(in) :: indexNN(:),n_shell
 ! internal variable
 integer :: avant,n_atom_shell,Nspin,all_size(4)
 
-all_size=shape(my_lattice%l_modes)
+all_size=shape(my_lattice%ordpar%l_modes)
 Nspin=product(all_size)
 n_atom_shell=indexNN(n_shell)
 

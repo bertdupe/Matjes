@@ -163,14 +163,14 @@ real(kind=8),target,intent(in) :: matrix2(:,:,:,:,:)
 integer :: i,j,k,l,N_mat2(5),N_mat1(4)
 
 ! check that the dimensions are equal
-N_mat1=shape(my_lattice%l_modes)
+N_mat1=shape(my_lattice%ordpar%l_modes)
 N_mat2=shape(matrix2)
 
 do l=1,N_mat1(4)
   do k=1,N_mat1(3)
     do j=1,N_mat1(2)
       do i=1,N_mat1(1)
-      my_lattice%l_modes(i,j,k,l)%w=>matrix2(:,i,j,k,l)
+      my_lattice%ordpar%l_modes(i,j,k,l)%w=>matrix2(:,i,j,k,l)
       enddo
     enddo
   enddo
@@ -252,7 +252,7 @@ integer :: i,j,k,l,N_mat2(4),Ilat(4),pos
 !logical :: test
 
 ! check that the dimensions are equal
-N_mat2=shape(my_lattice%l_modes)
+N_mat2=shape(my_lattice%ordpar%l_modes)
 
 do l=1,N_mat2(4)
   Ilat(4)=l
@@ -265,7 +265,7 @@ do l=1,N_mat2(4)
 
         pos=get_position_ND_to_1D(Ilat,N_mat2)
 
-        point(pos)%w=>my_lattice%l_modes(i,j,k,l)%w
+        point(pos)%w=>my_lattice%ordpar%l_modes(i,j,k,l)%w
 
       enddo
     enddo
@@ -341,7 +341,7 @@ integer :: i_x,i_y,i_z,i_m,ipos_1,ipos_2,v_x,v_y,v_z,v_m,i_voisin,i_shell
 integer :: Nspin,all_size(4),shape_tableNN(6),avant,Ilat(4),line_index
 integer :: N_shell
 
-all_size=shape(my_lattice%l_modes)
+all_size=shape(my_lattice%ordpar%l_modes)
 Nspin=product(all_size)
 shape_tableNN=shape(tableNN)
 N_shell=size(static_target)
@@ -420,7 +420,7 @@ integer :: i_x,i_y,i_z,i_m,ipos_1,ipos_2,v_x,v_y,v_z,v_m,i_voisin,i_shell,i_orde
 integer :: Nspin,all_size(4),shape_tableNN(6),avant,Ilat(4),line_index
 integer :: N_shell,N_order
 
-all_size=shape(my_lattice%l_modes)
+all_size=shape(my_lattice%ordpar%l_modes)
 Nspin=product(all_size)
 shape_tableNN=shape(tableNN)
 N_shell=size(static_target%num)
@@ -510,7 +510,7 @@ integer, intent(in) :: avant
 integer :: i_x,i_y,i_z,i_m,ipos_1,ipos_2,v_x,v_y,v_z,v_m,i_voisin,N_order,i_order
 integer :: Nspin,all_size(4),shape_tableNN(6),Ilat(4)
 
-all_size=shape(my_lattice%l_modes)
+all_size=shape(my_lattice%ordpar%l_modes)
 Nspin=product(all_size)
 shape_tableNN=shape(tableNN)
 N_order=size(static_target%order)

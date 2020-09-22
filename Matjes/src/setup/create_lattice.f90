@@ -5,19 +5,9 @@ use m_derived_types, only : order_parameter
 ! array that stores what are the order parameter used
 type(order_parameter), protected, allocatable, save, target :: my_order_parameters(:)
 ! Array of spins on the lattice (matrix)
-real(kind=8), allocatable, save, target :: modes(:,:,:,:,:)
-
-
-!!!!!!
-! to be deleted
-! Array of the table of Neighbours
-!Integer, allocatable :: tableNN(:,:,:,:,:,:), indexNN(:,:)
-! array that contains 1 or 0 depending of the presence or absence of spins
-! very important in the case of non periodic boundary conditions
-!Integer, allocatable :: masque(:,:,:,:)
 
 private
-public :: modes,create_lattice,my_order_parameters
+public :: create_lattice,my_order_parameters
 contains
 
 subroutine create_lattice(mag_lattice,motif,ext_param,nb_orbitals)
@@ -28,13 +18,14 @@ type(cell), intent(in) :: motif
 type(lattice), intent(inout) :: mag_lattice
 type(simulation_parameters), intent(in) :: ext_param
 ! internal
-integer :: dim_lat(3), nmag, N_dim_order_param,N_mode
+integer :: dim_lat(3), nmag, N_mode,dim_mode
 ! slopes
 integer :: i,j,k,l
 
 dim_lat=mag_lattice%dim_lat
 !nmag=count(motif%atomic(:)%moment.gt.0.0d0)
 nmag=1
+mag_lattice%nmag=nmag
 
 N_mode=get_num_mode(motif,ext_param,nb_orbitals)
 
@@ -46,7 +37,7 @@ do i=1,N_mode
     my_order_parameters(i)%end=-1
 enddo
 
-N_dim_order_param=get_dim_mode(motif,ext_param,nb_orbitals)
+dim_mode=get_dim_mode(motif,ext_param,nb_orbitals)
 
 !!!!!!!!!!!!!!!!!!!!!!
 !
@@ -56,25 +47,8 @@ N_dim_order_param=get_dim_mode(motif,ext_param,nb_orbitals)
 ! ......
 !
 !!!!!!!!!!!!!!!!!!!!!!
-allocate(modes(N_dim_order_param,dim_lat(1),dim_lat(2),dim_lat(3),1))
-
-!allocate(modes(3,dim_lat(1),dim_lat(2),dim_lat(3),nmag))
-modes=0.0d0
-mag_lattice%dim_mode=N_dim_order_param
-
-allocate(mag_lattice%l_modes(dim_lat(1),dim_lat(2),dim_lat(3),nmag))
-
-do l=1,nmag
-   do k=1,dim_lat(3)
-      do j=1,dim_lat(2)
-         do i=1,dim_lat(1)
-
-       mag_lattice%l_modes(i,j,k,l)%w=>modes(:,i,j,k,l)
-
-         enddo
-      enddo
-   enddo
-enddo
+mag_lattice%dim_mode=dim_mode
+Call mag_lattice%ordpar%init(mag_lattice)
 
 
 end subroutine create_lattice
@@ -194,7 +168,7 @@ get_num_mode=N_mode
 
 end function get_num_mode
 
-! routine that order the modes as fonction of what is already in the matrix
+! routine that order the modes as function of what is already in the matrix
 subroutine order_mode(i,name,dim_mode)
 implicit none
 integer, intent(in) :: i, dim_mode

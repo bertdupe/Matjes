@@ -25,13 +25,13 @@ real(kind=8), allocatable :: value(:)
 allocate(value(end-start+1))
 call get_value_field(value,mode_name,ext_param)
 
-shape_lattice=shape(my_lattice%l_modes)
+shape_lattice=shape(my_lattice%ordpar%l_modes)
 
 do l=1,shape_lattice(4)
    do k=1,shape_lattice(3)
       do j=1,shape_lattice(2)
          do i=1,shape_lattice(1)
-           my_lattice%l_modes(i,j,k,l)%w(start:end)=value
+           my_lattice%ordpar%l_modes(i,j,k,l)%w(start:end)=value
          enddo
       enddo
    enddo

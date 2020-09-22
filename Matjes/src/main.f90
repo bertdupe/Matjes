@@ -65,7 +65,7 @@ call close_file('input',io_param)
 call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param)
 
 ! number of cell in the simulation
-N_cell=size(all_lattices%l_modes)
+N_cell=size(all_lattices%ordpar%l_modes)
 n_system=all_lattices%n_system
 
 write(6,'(I6,a)') N_cell, ' unit cells'
@@ -118,6 +118,7 @@ if (my_simu%name == 'entropic') call entropic(all_lattices,motif,io_simu,ext_par
 if (my_simu%name == 'GNEB') then
             write(6,'(a)') 'entering into the GNEB routine'
 !!            call init_gneb()
+             STOP "PB: GNEB HAS TO BE UPDATED"
              call GNEB(all_lattices,motif,io_simu,ext_param)
             !call set_gneb_defaults()
 endif

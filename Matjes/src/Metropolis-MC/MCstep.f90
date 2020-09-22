@@ -13,7 +13,7 @@ contains
 !
 ! ===============================================================
 !
-SUBROUTINE MCstep(mode,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+SUBROUTINE MCstep(lat,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
 #ifdef CPP_MPI
       use m_parameters, only : d_mu,n_ghost,i_separate,i_average,i_ghost
       use m_make_box, only : ghost_border,rank_nei
@@ -23,7 +23,8 @@ use m_constants, only : k_b,pi
 use mtprng
 Implicit none
 ! input
-type(vec_point), intent(inout) :: mode(:)
+type(lattice),intent(inout)    :: lat
+!type(vec_point), intent(inout) :: mode(:)
 logical, intent(in) :: equi,overrel,sphere,underrel,ising
 real(kind=8), intent(in) :: kt
 integer, intent(in) :: N_spin
@@ -40,6 +41,8 @@ real(kind=8) :: S_new(3),S_old(3)
 ! decomposition of the energy
 real(kind=8) :: E_dec_new(8),E_dec_old(8)
 integer :: iomp
+!temporary assignment
+type(vec_point), pointer :: mode(:)
 
 #ifdef CPP_MPI
 real(kind=8) :: mpi_DE(isize),mpi_S_store(3,isize),mpi_mu(isize)
@@ -63,6 +66,8 @@ irank_send=0
 tmp=0.0d0
 
 #endif
+
+mode=>lat%ordpar%all_l_modes
 
 E_dec_new=0.0d0
 E_dec_old=0.0d0
@@ -89,20 +94,20 @@ endif
 !---------------------------------------
 
 if (sphere) then
-   S_new=sphereft(mode(iomp)%w(1:3),cone)
+   S_new=sphereft(lat%ordpar%all_l_modes(iomp)%w(1:3),cone)
 !---------------------------------------
 ! Algorithm square sampling
 !---------------------------------------
 elseif (equi) then
-   S_new=equirep(mode(iomp)%w(1:3),cone)
+   S_new=equirep(lat%ordpar%all_l_modes(iomp)%w(1:3),cone)
 endif
 !---------------------------------
 ! different relaxation process
 !---------------------------------
 if (underrel) then
-   S_new=underrelax(iomp,mode)
+   S_new=underrelax(iomp,lat)
 elseif (overrel) then
-   S_new=overrelax(iomp,mode)
+   S_new=overrelax(iomp,lat)
 endif
 
 if (ising) S_new=-mode(iomp)%w(1:3)
@@ -111,13 +116,13 @@ if (ising) S_new=-mode(iomp)%w(1:3)
 !       and decider, if the Spin flip will be performed
 !----------------------------------
 !Energy of old configuration
-call local_energy(E_old,iomp,mode)
+call local_energy(E_old,iomp,lat)
 
 !Energy of the new configuration
 S_old=mode(iomp)%w(1:3)
 
 mode(iomp)%w(1:3)=S_new
-call local_energy(E_new,iomp,mode)
+call local_energy(E_new,iomp,lat)
 
 mode(iomp)%w(1:3)=S_old
 
@@ -189,6 +194,8 @@ endif
 #endif
 
 rate=acc/nb
+nullify(mode)
+
 !      write(*,*) acc,nb,kt/k_B,irank_working
 ! part that does the parallel tempering
 

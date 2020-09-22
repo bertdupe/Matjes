@@ -208,9 +208,9 @@ If (R0.gt. 0.0d0) then
 ! to write a skyrmion, x->-x i.e. a symmetry around the y axis
              Psi = Phi(position(1:2,i_x,i_y,i_z,i_m),x0,y0,dim_lat,net)+pi(1.0d0)
 
-             my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi(1.0d0))
-             my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start+1) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi(1.0d0))
-             my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(end) = Cos(Theta)
+             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi(1.0d0))
+             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start+1) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi(1.0d0))
+             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(end) = Cos(Theta)
 
            else
            cycle

@@ -8,20 +8,14 @@ private
 public :: total_energy
 contains
 
-real(kind=8) function total_energy(N,spin)
-use m_basic_types, only : vec_point
-use m_local_energy, only : local_energy
+real(kind=8) function total_energy(N,lat)
+use m_derived_types, only : lattice
+use m_local_energy, only : sum_energy
 implicit none
 integer, intent(in) :: N
-type(vec_point), intent(in) :: spin(:)
-! internal
-integer :: i
+type(lattice), intent(in) :: lat
 
-total_energy=0.0d0
-
-do i=1,N
-   call local_energy(total_energy,i,spin)
-enddo
+Call sum_energy(total_energy,lat)
 
 end function total_energy
 

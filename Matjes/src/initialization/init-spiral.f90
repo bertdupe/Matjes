@@ -64,7 +64,7 @@ do i_m=1,size_mag
       do i_y=1,Ny
          do i_x=1,Nx
 !normal spin spiral
-            my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(start:end)=( cos( dot_product(qvec,position(:,i_x,i_y,i_z,i_m)) )*Rq+ &
+            my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start:end)=( cos( dot_product(qvec,position(:,i_x,i_y,i_z,i_m)) )*Rq+ &
          sin( dot_product(qvec,position(:,i_x,i_y,i_z,i_m)) )*Iq)
 ! inomegenous spin spiral in mulitlayer
 !        if (l.eq.1) Spin(4:6,i,j,k,l)=(/0.0d0,0.0d0,1.0d0/)

@@ -162,7 +162,7 @@ real(kind=8), intent(in) :: position(:,:,:,:,:)
 Integer :: i_x,i_y,i_z,i_m,N(4)
 real(kind=8) :: Rc,Gc,Bc,theta,phi
 
-N=shape(my_lattice%l_modes)
+N=shape(my_lattice%ordpar%l_modes)
 
 do i_m=1,N(4)
    Do i_z=1,N(3)
@@ -170,7 +170,7 @@ do i_m=1,N(4)
          Do i_x=1,N(1)
 
 
-        call get_colors(Rc,Gc,Bc,theta,phi,my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(:))
+        call get_colors(Rc,Gc,Bc,theta,phi,my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(:))
 
          write(io,'(8(a,f16.8),a)') 'Spin(', &
      & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
@@ -247,7 +247,7 @@ type(lattice), intent(in) :: my_lattice
 Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
 character(len=100) :: rw_format
 
-N=shape(my_lattice%l_modes)
+N=shape(my_lattice%ordpar%l_modes)
 
 write(rw_format,'( "(", I4, "f14.8,2x)" )') my_lattice%dim_mode
 
@@ -255,7 +255,7 @@ do i_z=1,N(3)
   do i_y=1,N(2)
     do i_x=1,N(1)
 
-    Write(io,rw_format) ((my_lattice%l_modes(i_x,i_y,i_z,i_m)%w(j_lat), j_lat=1,my_lattice%dim_mode),i_m=1,N(4))
+    Write(io,rw_format) ((my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(j_lat), j_lat=1,my_lattice%dim_mode),i_m=1,N(4))
 
     enddo
   enddo

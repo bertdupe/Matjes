@@ -113,7 +113,7 @@ type(lattice),intent(in) :: my_lattice
 ! internal variables
 integer :: i,j,k,l,N_point(4),N_mat(5)
 
-N_point=shape(my_lattice%l_modes)
+N_point=shape(my_lattice%ordpar%l_modes)
 N_mat=shape(matrix)
 
 !!!!$omp do ordered private(i,j,k,l) schedule(auto) collapse(4)
@@ -121,7 +121,7 @@ do l=1,N_point(4)
   do k=1,N_point(3)
     do j=1,N_point(2)
       do i=1,N_point(1)
-      matrix(:,i,j,k,l)=my_lattice%l_modes(i,j,k,l)%w
+      matrix(:,i,j,k,l)=my_lattice%ordpar%l_modes(i,j,k,l)%w
       enddo
     enddo
   enddo

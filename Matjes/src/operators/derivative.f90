@@ -35,7 +35,7 @@ integer :: io_input
 logical :: periodic(3)
 real(kind=8) :: DF(3,2)
 
-dim_lat=shape(mag_lattice%l_modes)
+dim_lat=shape(mag_lattice%ordpar%l_modes)
 periodic=mag_lattice%boundary
 N_world=size(mag_lattice%world)
 
@@ -85,7 +85,7 @@ integer, allocatable :: pos(:,:,:)
 integer :: N_cell,i,dim_lat(4),N_world,j,k,location,shape_D(3),N_vois
 logical :: periodic(3)
 
-dim_lat=shape(mag_lattice%l_modes)
+dim_lat=shape(mag_lattice%ordpar%l_modes)
 periodic=mag_lattice%boundary
 N_world=size(mag_lattice%world)
 shape_D=shape(derivat_point)

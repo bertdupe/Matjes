@@ -91,7 +91,7 @@ integer :: N(4),Natom_motif,io
 real(kind=8) :: r(3,3)
 
 
-N=shape(my_lattice%l_modes)
+N=shape(my_lattice%ordpar%l_modes)
 Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
 r=my_lattice%areal
 
@@ -123,7 +123,7 @@ integer :: N(4),Natom_motif,io
 ! calculating the angles
 real(kind=8) :: r(3,3)
 
-N=shape(my_lattice%l_modes)
+N=shape(my_lattice%ordpar%l_modes)
 Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
 r=my_lattice%areal
 

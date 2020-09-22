@@ -22,13 +22,6 @@ src/excitations/shape_excitations.f90
 src/excitations/TPulse.f90
 src/fixed-parameters/constant.f90
 src/fixed-parameters/null.f90
-src/GNEB/gneb.f90
-src/GNEB/gneb_parameters.f90
-src/GNEB/gneb_utils.f90
-src/GNEB/initialize_path.f90
-src/GNEB/io-gneb.f90
-src/GNEB/path.f90
-src/GNEB/tangent.f90
 src/IO-ouputs/CreateSpinFile.f90
 src/IO-ouputs/plot_FFT.f90
 src/IO-ouputs/print_Beff.f90
@@ -104,4 +97,5 @@ include(src/Energy/CMakeLists.txt)
 include(src/setup/CMakeLists.txt)
 include(src/paratemp-MC/CMakeLists.txt) 
 include(src/initialization/CMakeLists.txt) 
+include(src/GNEB/CMakeLists.txt) 
 #include(src/parallelization/CMakeLists.txt)  #requires fftw,

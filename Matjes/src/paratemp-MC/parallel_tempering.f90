@@ -86,8 +86,7 @@ integer :: i,istart,istop,io_EM,io_Trange,N_cell,n_sizerelax,N_temp,n_thousand,n
 logical :: Cor_log,gra_log,equi,i_magnetic,i_optTset,i_print_W,i_restart,ising,overrel,sphere,print_relax,underrel
 real(kind=8) :: dumy(5),nb
 
-type(vec_point),allocatable,dimension(:,:) :: all_mode
-type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
+type(lattice),allocatable,dimension(:)     :: lat_replica
 
 #ifdef CPP_MPI
       include 'mpif.h'
@@ -97,7 +96,7 @@ type(vec_point),allocatable,dimension(:,:) :: mode_magnetic
 call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,total_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
 size_table=n_Tsteps
 world=size(my_lattice%world)
-N_cell=product(shape(my_lattice%l_modes))
+N_cell=product(my_lattice%dim_lat)
 gra_log=io_simu%io_Xstruct
 i_print_W=io_simu%io_warning
 kTini=ext_param%ktini%value
@@ -115,33 +114,38 @@ kTfin=ext_param%ktfin%value
       write(6,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
 #endif
 
-allocate(all_mode(N_cell,size_table))
-call associate_pointer(all_mode(:,1),my_lattice)
-
-allocate(replicas(my_lattice%dim_mode,N_cell,size_M_replica))
-replicas=0.0d0
+!create replica lattices
+allocate(lat_replica(size_table))
+do i_image=1,size_table
+    Call my_lattice%copy(lat_replica(i_image))
+enddo
+!allocate(all_mode(N_cell,size_table))
+!call associate_pointer(all_mode(:,1),my_lattice)
+!allocate(replicas(my_lattice%dim_mode,N_cell,size_M_replica))
+!replicas=0.0d0
 ! initialize the matrices
-do i_image=1,size_M_replica
-   do iomp=1,N_cell
-      replicas(:,iomp,i_image)=all_mode(iomp,1)%w
-   enddo
-enddo
+!do i_image=1,size_M_replica
+!   do iomp=1,N_cell
+!      replicas(:,iomp,i_image)=all_mode(iomp,1)%w
+!   enddo
+!enddo
+!do i_image=1,size_M_replica
+!   call associate_pointer(all_mode(:,i_image),replicas(:,:,i_image))
+!enddo
 
-do i_image=1,size_M_replica
-   call associate_pointer(all_mode(:,i_image),replicas(:,:,i_image))
-enddo
+
 !
 ! Prepare the calculation of the Energy and the field
 ! magnetization
-do i=1,size(my_order_parameters)
-  if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
-   allocate(mode_magnetic(N_cell,size_M_replica))
-   do i_image=1,size_M_replica
-      call dissociate(mode_magnetic(:,i_image),N_cell)
-      call associate_pointer(mode_magnetic(:,i_image),all_mode(:,i_image),'magnetic',i_magnetic)
-   enddo
-  endif
-enddo
+!do i=1,size(my_order_parameters)
+!  if ('magnetic'.eq.trim(my_order_parameters(i)%name)) then
+!   allocate(mode_magnetic(N_cell,size_M_replica))
+!   do i_image=1,size_M_replica
+!      call dissociate(mode_magnetic(:,i_image),N_cell)
+!      call associate_pointer(mode_magnetic(:,i_image),all_mode(:,i_image),'magnetic',i_magnetic)
+!   enddo
+!  endif
+!enddo
 
 
 ! allocate the temperatures
@@ -357,16 +361,25 @@ do j_optset=1,N_temp
 ! load the actual temperature into kT
          kt=kt_updated(i_temp)
 ! initializing the variables above
-         E_total=total_energy(N_cell,mode_magnetic(:,i_image))
+         E_total=total_energy(N_cell,lat_replica(i_image))
 
-         Call CalculateAverages(mode_magnetic(:,i_image),qeulerp,qeulerm,vortex,magnetization)
-
-            Do i_MC=1,autocor_steps*N_cell
-                Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
-            enddo
-
+!PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!TODO REQUIRES MAGNETIC TEXTURE ONLY
+!         Call CalculateAverages(mode_magnetic(:,i_image),qeulerp,qeulerm,vortex,magnetization)
+!
+!            Do i_MC=1,autocor_steps*N_cell
+!                Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+!            enddo
+!
+!
 ! In case T_relax set to zero at least one MCstep is done
-            Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+!            Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+            STOP "THIS HAS TO BE IMPLEMENTED"
 
 ! calculate the topocharge
             dumy=get_charge()
