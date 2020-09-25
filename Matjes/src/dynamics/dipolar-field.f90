@@ -262,7 +262,8 @@ end subroutine get_dipole_B
 subroutine get_ham_dipole(fname,my_lattice,motif)
 use m_io_files_utils
 use m_io_utils
-use m_derived_types, only : cell,lattice
+use m_derived_types, only : cell
+use m_type_lattice, only : lattice
 use m_get_position
 use m_operator_pointer_utils
 use m_constants, only : mu_B

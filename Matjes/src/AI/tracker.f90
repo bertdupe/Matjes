@@ -1,7 +1,7 @@
 module m_tracker
 use m_topoplot
 use m_topo_commons
-use m_derived_types, only : lattice
+use m_type_lattice, only : lattice
 use m_basic_types, only : vec_point
 use m_io_files_utils
 use m_get_position

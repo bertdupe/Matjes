@@ -1,6 +1,7 @@
 module m_local_energy_manual
 use m_basic_types, only : vec_point
 use m_derived_types, only : point_shell_Operator
+use m_type_lattice, only : lattice
 use m_modes_variables, only : point_shell_mode
 implicit none
 
@@ -17,7 +18,6 @@ contains
 
 
 subroutine sum_energy_manual(E_int,lat)
-use m_derived_types, only: lattice
 implicit none
 type(lattice), intent(in) :: lat
 real(8), intent(out) :: E_int
@@ -38,7 +38,6 @@ subroutine local_energy_manual(E_int,iomp,lat)
 use m_energy_commons, only : energy
 use m_dipole_energy
 use m_dipolar_field, only : i_dip
-use m_derived_types, only: lattice
 implicit none
 ! input
 type(lattice), intent(in) :: lat

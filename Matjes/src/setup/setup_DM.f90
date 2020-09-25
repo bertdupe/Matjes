@@ -1,6 +1,7 @@
 module m_setup_DM
 use m_grp_sym
-use m_derived_types, only : cell,lattice
+use m_derived_types, only : cell
+use m_type_lattice, only : lattice
 use m_basic_types, only : symop
 use m_vector, only : cross,norm
 

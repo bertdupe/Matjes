@@ -11,7 +11,9 @@ public :: create_lattice,my_order_parameters
 contains
 
 subroutine create_lattice(mag_lattice,motif,ext_param,nb_orbitals)
+!subroutine that initializes the the lattice and its orderparameters
 use m_derived_types
+use m_type_lattice
 implicit none
 integer, intent(in) :: nb_orbitals
 type(cell), intent(in) :: motif
@@ -22,53 +24,54 @@ integer :: dim_lat(3), nmag, N_mode,dim_mode
 ! slopes
 integer :: i,j,k,l
 
+integer :: dim_mode_arr(number_different_order_parameters)
+
 dim_lat=mag_lattice%dim_lat
-!nmag=count(motif%atomic(:)%moment.gt.0.0d0)
 nmag=1
 mag_lattice%nmag=nmag
-
+!find out how many order parameters are used
 N_mode=get_num_mode(motif,ext_param,nb_orbitals)
 
+!(old) initialize variable saving information what order parameter is what
 allocate(my_order_parameters(N_mode))
-! initialize the data
 do i=1,N_mode
     my_order_parameters(i)%name=''
     my_order_parameters(i)%start=-1
     my_order_parameters(i)%end=-1
 enddo
+!get sizes of the order parameters
+Call get_dim_mode(motif,ext_param,nb_orbitals,dim_mode_arr)
+dim_mode=sum(dim_mode_arr)
 
-dim_mode=get_dim_mode(motif,ext_param,nb_orbitals)
-
-!!!!!!!!!!!!!!!!!!!!!!
-!
-! Create a structure that stores the order parameter of arbitraty dimanesions
-! 3 if there is only the magnetization
-! 6 of there is a magnetic field
-! ......
-!
-!!!!!!!!!!!!!!!!!!!!!!
+!old orderparameter format
 mag_lattice%dim_mode=dim_mode
 Call mag_lattice%ordpar%init(mag_lattice)
 
+!new orderparameter format
+if(dim_mode_arr(1)>0) Call mag_lattice%M%init(mag_lattice,dim_mode_arr(1))
+if(dim_mode_arr(2)>0) Call mag_lattice%E%init(mag_lattice,dim_mode_arr(2))
+if(dim_mode_arr(3)>0) Call mag_lattice%B%init(mag_lattice,dim_mode_arr(3))
+if(dim_mode_arr(4)>0) Call mag_lattice%T%init(mag_lattice,dim_mode_arr(4))
 
 end subroutine create_lattice
 
 !!!!!!!!!!!!!!!!!!!!!!!!
 ! function that gets the number of order parameter
 !!!!!!!!!!!!!!!!!!!!!!!!
-integer function get_dim_mode(motif,ext_param,nb_orbitals)
+subroutine get_dim_mode(motif,ext_param,nb_orbitals,dim_mode_arr)
 use m_derived_types
 implicit none
 integer, intent(in) :: nb_orbitals
 type(cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
+integer :: dim_mode_arr(number_different_order_parameters)
 ! internal parameters
-integer :: N_dim_order_param,nmag,N_mode
+integer :: nmag,N_mode
 real(kind=8) :: Field(3)
 
-N_dim_order_param=0
+dim_mode_arr=0
 nmag=count(motif%atomic(:)%moment.gt.0.0d0)
-N_dim_order_param=N_dim_order_param+nmag*3
+dim_mode_arr(1)=nmag*3
 
 ! for each order parameter, organize the matrix of the mode
 N_mode=0
@@ -80,44 +83,33 @@ endif
 ! electric field
 Field=ext_param%E_ext%value
 if (sqrt(Field(1)**2+Field(2)**2+Field(3)**2).gt.1.0d-8) then
-   N_dim_order_param=N_dim_order_param+3
+   dim_mode_arr(2)=3
    N_mode=N_mode+1
    call order_mode(N_mode,'Efield',3)
    write(6,'(a)') 'electric field found'
-   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
+   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',sum(dim_mode_arr)**2
 endif
 
 ! Magnetic field
 Field=ext_param%H_ext%value
 if (sqrt(Field(1)**2+Field(2)**2+Field(3)**2).gt.1.0d-8) then
-   N_dim_order_param=N_dim_order_param+3
+   dim_mode_arr(3)=3
    N_mode=N_mode+1
    call order_mode(N_mode,'Bfield',3)
    write(6,'(a)') 'magnetic field found'
-   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
+   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',sum(dim_mode_arr)**2
 endif
 
 ! Temperature
 if ((ext_param%ktini%value.gt.1.0d-8).or.(ext_param%ktfin%value.gt.1.0d-8)) then
-   N_dim_order_param=N_dim_order_param+1
+   dim_mode_arr(4)=1
    N_mode=N_mode+1
    call order_mode(N_mode,'temperature',1)
    write(6,'(a)') 'Temperature found'
-   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
+   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',sum(dim_mode_arr)**2
 endif
 
-! TB
-if (nb_orbitals.gt.0) then
-   N_dim_order_param=N_dim_order_param+nb_orbitals
-   N_mode=N_mode+1
-   call order_mode(N_mode,'Tight-binding',nb_orbitals)
-   write(6,'(a)') 'Tight-binding found'
-   write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',N_dim_order_param**2
-endif
-
-get_dim_mode=N_dim_order_param
-
-end function get_dim_mode
+end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!
 ! function that gets the number of different order parameter
@@ -150,11 +142,6 @@ endif
 
 ! Temperature
 if ((ext_param%ktini%value.gt.1.0d-8).or.(ext_param%ktfin%value.gt.1.0d-8)) then
-   N_mode=N_mode+1
-endif
-
-! TB
-if (nb_orbitals.gt.0) then
    N_mode=N_mode+1
 endif
 

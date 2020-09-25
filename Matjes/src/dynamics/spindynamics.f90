@@ -2,7 +2,8 @@ module m_spindynamics
 contains
 subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param,Ham)
 use m_basic_types, only : vec_point
-use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator
+use m_derived_types, only : cell,io_parameter,simulation_parameters,point_shell_Operator
+use m_type_lattice, only : lattice
 use m_modes_variables, only : point_shell_mode
 use m_torques, only : get_torques
 use m_lattice, only : my_order_parameters

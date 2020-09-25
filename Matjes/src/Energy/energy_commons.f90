@@ -1,7 +1,8 @@
 module m_energy_commons
 use m_basic_types, only : vec_point
 use m_modes_variables, only : point_shell_mode
-use m_derived_types, only : operator_real_order_N,point_shell_Operator,lattice,point_shell_Operator
+use m_derived_types, only : operator_real_order_N,point_shell_Operator,point_shell_Operator
+use m_type_lattice, only : lattice
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec,coeff_ham_inter_spec_pointer,shell_Ham,H_vois
 use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters

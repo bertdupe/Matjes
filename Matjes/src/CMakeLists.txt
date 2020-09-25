@@ -33,11 +33,6 @@ src/IO-utils/convert.f90
 src/IO-utils/io_files_utils.f90
 src/IO-utils/io-utils.f90
 src/IO-utils/user_information.f90
-src/libraries_and_variables/basic_types.f90
-src/libraries_and_variables/derived_types.f90
-src/libraries_and_variables/Hamiltonian_variables.f90
-src/libraries_and_variables/modes_variables.f90
-src/libraries_and_variables/simu-parameters.f90
 src/matrix_utils/determinant.f90
 src/matrix_utils/eigen_val_vec.f90
 src/matrix_utils/invert.f90
@@ -98,4 +93,5 @@ include(src/setup/CMakeLists.txt)
 include(src/paratemp-MC/CMakeLists.txt) 
 include(src/initialization/CMakeLists.txt) 
 include(src/GNEB/CMakeLists.txt) 
+include(src/libraries_and_variables/CMakeLists.txt) 
 #include(src/parallelization/CMakeLists.txt)  #requires fftw,

@@ -2,6 +2,7 @@ module m_summer_exp
 use m_lattice, only : my_order_parameters
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 use m_derived_types
+use m_type_lattice, only : lattice
 use m_convert
 
 ! do we turn on the interaction

@@ -16,7 +16,8 @@ public :: mapping
 contains
 
 subroutine mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice)
-use m_derived_types, only : lattice,cell
+use m_type_lattice, only : lattice
+use m_derived_types, only : cell
 implicit none
 integer, intent(inout) :: tableNN(:,:,:,:,:,:)
 type(lattice), intent(in) :: my_lattice
@@ -79,7 +80,7 @@ end subroutine mapping
 ! third column gives: 1-x;2-y;3-z position
 subroutine mapping_1D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
-use m_derived_types, only : lattice
+use m_type_lattice, only : lattice
 #ifdef CPP_MPI
 use m_make_box, only : Xstart
 #endif
@@ -135,7 +136,7 @@ end subroutine mapping_1D
 !
 subroutine mapping_2D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
-use m_derived_types, only : lattice
+use m_type_lattice, only : lattice
 #ifdef CPP_MPI
 use m_make_box, only : Xstart,Ystart
 #endif
@@ -218,7 +219,7 @@ end subroutine mapping_2D
 !
 subroutine mapping_2D_SL(d,nei,Nei_il,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
-use m_derived_types, only : lattice
+use m_type_lattice, only : lattice
 #ifdef CPP_MPI
 use m_make_box, only : Xstart,Ystart
 #endif
@@ -327,7 +328,7 @@ end subroutine mapping_2D_SL
 !
 subroutine mapping_2D_motif(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
-use m_derived_types, only : lattice
+use m_type_lattice, only : lattice
 #ifdef CPP_MPI
 use m_make_box, only : Xstart,Ystart
 #endif
@@ -398,7 +399,7 @@ end subroutine mapping_2D_motif
 
 subroutine mapping_3D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
-use m_derived_types, only : lattice
+use m_type_lattice, only : lattice
 #ifdef CPP_MPI
 use m_make_box, only : Xstart,Ystart,Zstart
 #endif
