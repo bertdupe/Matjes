@@ -15,7 +15,6 @@ add_executable(Matjes ${main_f90})
 target_link_libraries(Matjes eigen_cpp)
 set_target_properties(Matjes  PROPERTIES OUTPUT_NAME "Matjes")
 #set_target_properties(Matjes PROPERTIES LINKER_LANGUAGE Fortran)
-target_compile_definitions(Matjes PRIVATE ${CPP_flags})
 
 target_compile_options(Matjes BEFORE PRIVATE "${COMPADD_only_own}")
 if(DEFINED add_lib)

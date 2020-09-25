@@ -1,4 +1,7 @@
-subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif,ext_param)
+module m_setup_simu
+
+contains
+subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif,ext_param,Ham)
 use m_derived_types
 use m_energyfield, only : init_Energy_distrib
 use m_energy_commons
@@ -24,6 +27,8 @@ use m_null
 use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
 use m_summer_exp, only : get_coeff_TStra
 
+use m_Htype_gen
+
 #ifdef CPP_MPI
       use m_make_box
       use m_split_work
@@ -40,6 +45,7 @@ type(bool_var), intent(in) :: my_simu
 type(lattice), intent(inout) :: my_lattice
 type(cell), intent(out) :: my_motif
 type(simulation_parameters),intent (inout) :: ext_param
+class(t_H),intent(inout),allocatable      ::  Ham
 ! variable of the system
 real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
 integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:)
@@ -54,6 +60,7 @@ logical :: i_usestruct
 integer :: alloc_check
 ! Nb orbitals in TB
 integer :: nb_orbitals = 0
+
 
 ! innitialisation of dummy
 i_usestruct=.False.
@@ -264,11 +271,18 @@ call user_info(6,time,'done',.true.)
 
 
 
+
 !
 ! Check the presence of the dipole dipole
 !
 !
 call get_ham_dipole('input',my_lattice,my_motif)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!! CREATE NEW HAMILTONIAN TYPE
+Call get_Htype(Ham)
+Call Ham%set_H(energy,my_lattice)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 #ifdef CPP_MPI
 if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'
@@ -278,8 +292,10 @@ write(6,'(/,a,/)') 'the setup of the simulation is over'
 
 if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
 
+
 !!!!!!!!!!!!!! end of the setup
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end subroutine setup_simu
+end module

@@ -1,4 +1,6 @@
-subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param)
+module m_spindynamics
+contains
+subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param,Ham)
 use m_basic_types, only : vec_point
 use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator
 use m_modes_variables, only : point_shell_mode
@@ -15,7 +17,7 @@ use m_eval_Beff
 use m_write_spin
 use m_energyfield, only : get_Energy_distrib
 use m_createspinfile
-use m_local_energy
+!use m_local_energy
 use m_dyna_utils
 use m_user_info
 use m_excitations
@@ -33,12 +35,14 @@ use m_tracker
 use m_print_Beff
 use omp_lib
 use m_precision
+use m_Htype_gen
 implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
 type(cell), intent(in) :: mag_motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
+class(t_H), intent(in) :: Ham
 ! internal
 logical :: gra_log,io_stochafield
 integer :: i,j,gra_freq,i_loop,input_excitations
@@ -219,7 +223,7 @@ enddo
 ! Prepare the calculation of the energy and the effective field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_B_matrix(mag_lattice%dim_mode)
-call set_E_matrix(mag_lattice%dim_mode)
+!call set_E_matrix(mag_lattice%dim_mode)
 
 #ifdef CPPEIGEN_SPARSE
 Call set_large_B(mag_lattice%dim_mode)
@@ -253,7 +257,8 @@ security=0.0d0
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 Call mag_lattice%copy_val_to(lat_1)
 
-Call sum_energy(Edy,mag_lattice)
+Call Ham%eval_all(Edy,mag_lattice)
+
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -426,15 +431,11 @@ if (j.eq.1) check3=test_torque
 
 ! calculate energy
 
-!!!$omp do private(iomp,Et,dumy) reduction(+:Edy,Mdy,q_plus,q_moins,vx,vy,vz) schedule(auto)
-
-#ifdef CPPEIGEN_SPARSE
-Call energy_H(Edy,mag_lattice%dim_mode)
-#elif defined __sparse_mkl__
-Call energy_sparse(Edy,dimH)
-#else
-Call sum_energy(Edy,mag_lattice)
-#endif
+!#ifdef CPPEIGEN_SPARSE
+!Call energy_H(Edy,mag_lattice%dim_mode)
+!#else
+Call Ham%eval_all(Edy,mag_lattice)
+!#endif
 do iomp=1,N_cell
 
     Mdy=Mdy+mode_magnetic(iomp)%w
@@ -563,7 +564,8 @@ endif
 
 
 call kill_B_matrix()
-call kill_E_matrix()
+!call kill_E_matrix()
 
 
 end subroutine spindynamics
+end module

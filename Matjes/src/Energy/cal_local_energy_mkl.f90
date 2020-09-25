@@ -32,8 +32,8 @@ subroutine set_E_matrix_mkl(dim_mode)
 #ifdef CPPMKL_CSR
     real(8),allocatable :: val(:)
     integer,allocatable :: rowind(:),colind(:)
-#endif
     external mkl_dcsrcoo
+#endif
 
     Call get_matrix_sparse_manual(dim_mode,val,rowind,colind,dimH)
 #ifdef CPPMKL_CSR

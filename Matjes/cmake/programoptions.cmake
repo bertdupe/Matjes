@@ -1,5 +1,4 @@
 message("gitversion :${GITVERSION}")
-set(CPP_flags ${CPP_flags}  ${GITVERSION})
 
 if(${COMPOP} STREQUAL "release")
 	message("using release compile options")

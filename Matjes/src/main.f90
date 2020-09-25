@@ -7,11 +7,14 @@ use m_io_files_utils
 use m_init_variables
 use m_derived_types
 use m_lattice
+use m_setup_simu
 use m_write_spin
 use m_createspinfile
 use m_minimize
 use m_get_random
 use m_user_info
+use m_Htype_gen
+use m_spindynamics
 Implicit None
 
 ! variable for the simulation
@@ -28,6 +31,8 @@ integer :: io_param
 type(cell) :: motif
 ! external parameter
 type(simulation_parameters) :: ext_param
+! Hamiltonian used (extend to array with different basis + higher ranks)
+class(t_H),allocatable      :: Ham
 ! tag that defines the system
       integer :: n_system
       Integer :: N_cell
@@ -62,7 +67,8 @@ call get_parameter(io_param,'input',my_simu)
 call close_file('input',io_param)
 
 ! read the input and prepare the lattices, the Hamitlonian and all this mess
-call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param)
+call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param,Ham)
+!call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param)
 
 ! number of cell in the simulation
 N_cell=size(all_lattices%ordpar%l_modes)
@@ -97,19 +103,26 @@ call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
 !  Part which does a normal MC with the metropolis algorithm
 !---------------------------------
 
-if (my_simu%name == 'metropolis') call MonteCarlo(all_lattices,motif,io_simu,ext_param)
+if (my_simu%name == 'metropolis')then
+    STOP "put metropolis back in"
+    !call MonteCarlo(all_lattices,motif,io_simu,ext_param)
+endif
 
 !---------------------------------
 !  Part which does the Spin dynamics
 !    Loop for Spin dynamics
 !---------------------------------
 
-if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_simu,ext_param)
+if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,motif,io_simu,ext_param,Ham)
 
 !---------------------------------
 !  Part which does Entropic Sampling
 !---------------------------------
-if (my_simu%name == 'entropic') call entropic(all_lattices,motif,io_simu,ext_param)
+if (my_simu%name == 'entropic')then
+    STOP "put entropic back in"
+    !call entropic(all_lattices,motif,io_simu,ext_param)
+endif
+
 
 
 !---------------------------------
@@ -119,7 +132,7 @@ if (my_simu%name == 'GNEB') then
             write(6,'(a)') 'entering into the GNEB routine'
 !!            call init_gneb()
              STOP "PB: GNEB HAS TO BE UPDATED"
-             call GNEB(all_lattices,motif,io_simu,ext_param)
+            !call GNEB(all_lattices,motif,io_simu,ext_param)
             !call set_gneb_defaults()
 endif
 
@@ -132,9 +145,15 @@ if (my_simu%name == 'tight-binding') then
              call tightbinding(all_lattices,motif,io_simu,ext_param)
 endif
 
-if (my_simu%name == 'minimization') call minimize(all_lattices,io_simu)
+if (my_simu%name == 'minimization')then
+    STOP "put minimize back in"
+    !call minimize(all_lattices,io_simu)
+endif
 
-if (my_simu%name == 'minimize_infdamp') call minimize_infdamp(all_lattices,io_simu)
+if (my_simu%name == 'minimize_infdamp')then
+    STOP "put minimize back in"
+    !call minimize_infdamp(all_lattices,io_simu)
+endif
 !---------------------------------
 !  Part which does the GNEB
 !---------------------------------

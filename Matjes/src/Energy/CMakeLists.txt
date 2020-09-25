@@ -13,6 +13,14 @@ src/Energy/Energy_distrib.f90
 src/Energy/exchange_Heisenberg.f90
 src/Energy/exchange_tight_binding.f90
 src/Energy/four-spin.f90
+src/Energy/ham_type.f90
+src/Energy/ham_type_coo.f90
+src/Energy/ham_type_gen.f90
+src/Energy/ham_type_manual.f90
+src/Energy/ham_type_mkl_coo.f90
+src/Energy/ham_type_mkl_inspector_coo.f90
+src/Energy/ham_type_mkl_csr.f90
+src/Energy/ham_type_mkl_inspector_csr.f90
 src/Energy/J_sd_exchange.f90
 src/Energy/summerfeld_exp.f90
 src/Energy/total_Energy.f90
