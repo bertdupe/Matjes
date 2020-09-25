@@ -3,7 +3,7 @@
       use m_vector, only : norm
       implicit none
       type(lattice), intent(in) :: my_lattice
-      type(cell), intent(in) :: motif
+      type(t_cell), intent(in) :: motif
       real(kind=8), intent(inout) :: spins(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0))
 ! local variables
       real(kind=8) :: save_spin(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0))

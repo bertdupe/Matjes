@@ -29,7 +29,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine associate_internal_Beff(my_lattice,tableNN,indexNN)
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_Hamiltonian_variables, only : Coeff_Ham
 use m_energy_commons, only : energy,total_hamiltonian
 use m_constants, only : identity

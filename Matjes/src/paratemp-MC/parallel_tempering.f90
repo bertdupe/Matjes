@@ -8,8 +8,8 @@ use m_paratemp
 use m_store_relaxation
 use m_check_restart
 use m_createspinfile
-use m_derived_types, only : cell,io_parameter,simulation_parameters
-use m_type_lattice, only : lattice
+use m_derived_types, only : t_cell,io_parameter,simulation_parameters
+use m_derived_types, only : lattice
 use m_basic_types, only : vec_point
 use m_lattice, only : my_order_parameters
 use m_local_energy
@@ -27,7 +27,7 @@ use m_MCstep
 #endif
 implicit none
 type(lattice), intent(inout) :: my_lattice
-type(cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 ! internal variable

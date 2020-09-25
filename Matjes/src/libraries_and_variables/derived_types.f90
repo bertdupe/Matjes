@@ -2,13 +2,6 @@ module m_derived_types
 use m_basic_types
 use m_type_lattice
 
-! unit cells
-! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
-type cell
-     type(atom), allocatable :: atomic(:)
-end type cell
-
-
 ! parameters for printing in and out
 type io_parameter
 ! Go in the spmstm program of Tobias

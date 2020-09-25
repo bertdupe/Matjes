@@ -1,6 +1,6 @@
 module m_derivative
 use m_basic_types, only : vec_point
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 
 
 type(vec_point), allocatable :: derivative(:,:,:)

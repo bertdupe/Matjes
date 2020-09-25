@@ -1,6 +1,6 @@
 module m_grp_sym
 use m_basic_types, only : symop
-use m_derived_types, only : cell
+use m_derived_types, only : t_cell
 use m_vector, only : norm
 use m_constants, only : pi
 use m_user_info
@@ -24,7 +24,7 @@ contains
 subroutine get_group(areal,my_motif,periodic,dim_lat)
 implicit none
 real(kind=8), intent(in) :: areal(3,3)
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 logical, intent(in) :: periodic(:)
 integer, intent(in) :: dim_lat(:)
 ! internal variables
@@ -136,7 +136,7 @@ real(kind=8), intent(in) :: areal(3,3)
 integer, intent(in) :: dim_lat(:)
 logical, intent(in) :: periodic(:)
 integer, intent(inout) :: number_sym,sym_index(:)
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 !internal
 integer :: natom,i,j,i_sim,new_index(64),k
 type(symop) :: all_sym_op(64)

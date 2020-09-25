@@ -2,7 +2,7 @@ module m_highsym
     use m_basic_types, only : vec_point
     use m_io_utils, only: get_parameter
     use m_io_files_utils, only: close_file,open_file_write
-    use m_type_lattice, only : lattice
+    use m_derived_types, only : lattice
     use m_energy_k,only : get_energy_kpts
     use m_tb_types
     implicit none

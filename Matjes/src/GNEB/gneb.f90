@@ -9,7 +9,7 @@ use m_spline
 
 implicit none
 type(lattice), intent(in) :: my_lattice
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 !internal variable

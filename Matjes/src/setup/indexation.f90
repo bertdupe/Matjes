@@ -8,9 +8,9 @@ public :: get_num_neighbors
 contains
 
 subroutine get_num_neighbors(N_Nneigh,d,r,world,my_motif,indexNN)
-use m_derived_types, only : cell
+use m_derived_types, only : t_cell
 implicit none
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: N_Nneigh,world(:)
 real(kind=8), intent(in) :: d(:,:),r(:,:)
 integer, intent(inout) :: indexNN(:,:)
@@ -33,7 +33,7 @@ implicit none
 ! input variable
 integer, intent(in) :: k,world(:)
 real (kind=8), intent(in) :: rad(:),r(3,3)
-type (cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 ! variable that goes out
 integer, intent(inout) :: indexNN(:)
 !dummy variable

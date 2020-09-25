@@ -5,7 +5,7 @@ use m_io_utils
 implicit none
 ! intent(inout)
 type(lattice), intent(inout) :: my_lattice
-type(cell), intent(out) :: my_motif
+type(t_cell), intent(out) :: my_motif
 ! internal
 integer :: io_input,i,n_mag
 ! check the allocation of memory

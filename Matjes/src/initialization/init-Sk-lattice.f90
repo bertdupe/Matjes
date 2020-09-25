@@ -15,7 +15,7 @@ use m_io_utils
 use m_init_Sk
 use m_convert
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: io,start,end
 character(len=*), intent(in) :: fname,mode_name
 ! internal variables

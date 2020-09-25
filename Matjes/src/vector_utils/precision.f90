@@ -17,7 +17,7 @@ public :: truncate
 contains
 
 subroutine truncate_lattice(lat,N)
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 implicit none
 type(lattice),intent(inout) ::  lat
 integer, intent(in) :: N !why is there this N, sounds terrible

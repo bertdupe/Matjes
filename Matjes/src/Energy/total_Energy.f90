@@ -9,7 +9,7 @@ public :: total_energy
 contains
 
 real(kind=8) function total_energy(N,lat)
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_local_energy, only : sum_energy
 implicit none
 integer, intent(in) :: N

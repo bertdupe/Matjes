@@ -153,7 +153,7 @@ end subroutine dump_config_spinse_vec_point
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine dump_config_spinse(io,my_lattice,position)
 use m_derived_types
-use m_type_lattice, only: lattice
+use m_derived_types, only: lattice
 use m_constants, only : pi
 implicit none
 integer, intent(in) :: io
@@ -240,7 +240,7 @@ end subroutine dump_config_matrix_5D_real
 ! routine that reads and write the local modes configurations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine dump_config_modes(io,my_lattice)
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 implicit none
 integer, intent(in) :: io
 type(lattice), intent(in) :: my_lattice

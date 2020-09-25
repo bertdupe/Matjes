@@ -2,7 +2,7 @@ module m_summer_exp
 use m_lattice, only : my_order_parameters
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 use m_derived_types
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_convert
 
 ! do we turn on the interaction
@@ -39,7 +39,7 @@ use m_tbessj
 use m_tbessk
 implicit none
 type(lattice), intent(in) :: my_lattice
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! internal
 integer :: io_input,n_mag,i
 real(kind=8), allocatable, dimension(:,:) :: tabledist

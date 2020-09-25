@@ -134,12 +134,12 @@ end subroutine get_position_file_1d
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine get_position_lattice(pos,dim_lat,r,motif)
-use m_derived_types, only : cell
+use m_derived_types, only : t_cell
 implicit none
 real(kind=8), intent(inout) :: pos(:,:,:,:,:)
 integer, intent(in) :: dim_lat(:)
 real(kind=8), intent(in) :: r(:,:)
-type (cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 ! internal variables
 integer :: i_z,i_y,i_x,i_m,Natom_motif
 
@@ -197,9 +197,9 @@ end function get_position_ND_to_1D
 ! subfunction that gives cartesian corrdinates as a function of the internal coordinates
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 function get_internal_to_cart(r,motif,i_x,i_y,i_z,i_m)
-use m_derived_types, only : cell
+use m_derived_types, only : t_cell
 implicit none
-type(cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 real(kind=8), intent(in) :: r(:,:)
 integer, intent(in) :: i_x,i_y,i_z,i_m
 ! output

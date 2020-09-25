@@ -3,6 +3,14 @@ use m_basic_types
 
 integer,parameter :: number_different_order_parameters=4    !m,E,B,T
 
+! unit cells
+! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
+type t_cell
+     type(atom), allocatable :: atomic(:)
+     contains
+     procedure :: ind_mag => cell_get_ind_mag
+end type 
+
 type order_par
 !variable that contains all order parameters as vec_point and the
 !corresponding target
@@ -31,6 +39,7 @@ end type
 ! variable that defines the lattice
 type lattice
      real(8) :: areal(3,3),astar(3,3),alat(3)
+     type(t_cell) :: cell
      integer :: dim_lat(3),n_system,dim_mode
      integer :: nmag !this nmag is nonsense and should be removed (number of m encoded elsewhere)
      integer, allocatable :: world(:)
@@ -43,13 +52,88 @@ type lattice
      type(order_par)   :: T !Temperature
 contains
     procedure :: copy => copy_lattice
+    procedure :: get_pos_mag => lattice_get_position_mag
     procedure :: copy_val_to => copy_val_lattice
 
 end type lattice
 private
-public lattice, number_different_order_parameters
+public lattice, number_different_order_parameters, t_cell
 
 contains 
+
+subroutine cell_get_ind_mag(this,ind_Nat)
+    class(t_cell),intent(in)    ::  this
+    integer                     ::  Nat
+    integer                     ::  i,j
+    integer,allocatable         ::  ind_Nat(:)
+
+    Nat=0
+    do i=1,size(this%atomic)
+        if(this%atomic(i)%moment/=0.0d0) Nat=Nat+1
+    enddo
+    allocate(ind_Nat(Nat),source=0)
+    j=0
+    do i=1,size(this%atomic)
+        if(this%atomic(i)%moment/=0.0d0)then
+            j=j+1
+            ind_Nat(j)=i
+        endif
+    enddo
+
+end subroutine
+
+subroutine lattice_get_position_mag(this,pos)
+    class(lattice),intent(in)       :: this
+    real(8),allocatable,intent(out) :: pos(:,:,:,:,:)
+
+    real(8), allocatable            :: pos_lat(:,:,:,:)
+    integer, allocatable            :: ind_at_mag(:)
+    integer     :: Nat_mag
+    real(8)     :: pos_at(3)
+    integer     :: i,i1,i2,i3
+
+    Call this%cell%ind_mag(ind_at_mag)
+    Nat_mag=size(ind_at_mag)
+    call get_position_cell(pos_lat,this%dim_lat,this%areal)
+    allocate(pos(3,Nat_mag,this%dim_lat(1),this%dim_lat(2),this%dim_lat(3)),source=0.0d0)
+    do i=1,Nat_mag
+        pos_at=this%cell%atomic(ind_at_mag(i))%position
+        pos(:,i,:,:,:)=pos_lat(:,:,:,:)
+        do i3=1,this%dim_lat(3)
+            do i2=1,this%dim_lat(2)
+                do i1=1,this%dim_lat(1)
+                    pos(:,i,i1,i2,i3)=pos(:,i,i1,i2,i3)+pos_at
+                enddo
+            enddo
+        enddo
+    enddo
+    deallocate(pos_lat)
+
+end subroutine
+
+
+subroutine get_position_cell(pos,dim_lat,lat)
+    !get the positions of the 0 point of each cell
+    real(8), intent(out),allocatable    :: pos(:,:,:,:)
+    integer, intent(in)                 :: dim_lat(:)
+    real(8), intent(in)                 :: lat(:,:)
+    ! internal variables
+    real(8)     :: tmp(3,3)
+    integer     :: i_z,i_y,i_x
+    
+    allocate(pos(3,dim_lat(1),dim_lat(2),dim_lat(3)),source=0.0d0)
+    do i_z=1,dim_lat(3)
+        tmp(:,3)=lat(3,:)*real(i_z-1,8)
+        do i_y=1,dim_lat(2)
+            tmp(:,2)=lat(2,:)*real(i_y-1,8)
+            do i_x=1,dim_lat(1)
+                tmp(:,1)=lat(1,:)*real(i_x-1,8)
+                pos(1:3,i_x,i_y,i_z)=sum(tmp,dim=2)
+            enddo
+        enddo
+    enddo
+end subroutine 
+
 
 subroutine init_order_par(self,lat,dim_mode)
     !if the data pointers are not allocated, initialize them with 0

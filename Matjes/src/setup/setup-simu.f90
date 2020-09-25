@@ -43,7 +43,7 @@ implicit none
 type(io_parameter), intent(out) :: io_simu
 type(bool_var), intent(in) :: my_simu
 type(lattice), intent(inout) :: my_lattice
-type(cell), intent(out) :: my_motif
+type(t_cell), intent(out) :: my_motif
 type(simulation_parameters),intent (inout) :: ext_param
 class(t_H),intent(inout),allocatable      ::  Ham
 ! variable of the system

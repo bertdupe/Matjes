@@ -24,7 +24,7 @@ subroutine init_config(fname,my_lattice,my_motif,ext_param)
 implicit none
 character(len=*), intent(in) :: fname
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 type (simulation_parameters), intent(in) :: ext_param
 ! internal variables
 integer :: io,N_mode,index_mode,i
@@ -64,14 +64,68 @@ do i=1,N_mode
       call init_constant_config(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end,ext_param)
   end select
   Call init_punch(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
-enddo
 
+  Call copy_init(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
+
+enddo
 
 call close_file(fname,io)
 
 end subroutine init_config
 
+subroutine copy_init(my_lattice,mode_name,start,end)
+ !copy initialization to specific orderparameter in lattice (has to be moved further upwards, i.e. directly initialize the new array)
+    type(lattice),intent(inout)     ::  my_lattice
+    character(len=30),intent(in)    ::  mode_name
+    integer,intent(in)              :: start,end
 
+    integer                         :: ix,iy,iz,im
+    if(adjustl(mode_name)=='magnetic')then
+        do im=1,size(my_lattice%ordpar%l_modes,4)
+            do iz=1,size(my_lattice%ordpar%l_modes,3)
+                do iy=1,size(my_lattice%ordpar%l_modes,2)
+                    do ix=1,size(my_lattice%ordpar%l_modes,1)
+                        my_lattice%M%l_modes(ix,iy,iz,im)%w=my_lattice%ordpar%l_modes(ix,iy,iz,im)%w(start:end)
+                    enddo
+                enddo
+            enddo
+        enddo
+    elseif(adjustl(mode_name)=='Efield')then
+        do im=1,size(my_lattice%ordpar%l_modes,4)
+            do iz=1,size(my_lattice%ordpar%l_modes,3)
+                do iy=1,size(my_lattice%ordpar%l_modes,2)
+                    do ix=1,size(my_lattice%ordpar%l_modes,1)
+                        my_lattice%E%l_modes(ix,iy,iz,im)%w=my_lattice%ordpar%l_modes(ix,iy,iz,im)%w(start:end)
+                    enddo
+                enddo
+            enddo
+        enddo
+    elseif(adjustl(mode_name)=='Bfield')then
+        do im=1,size(my_lattice%ordpar%l_modes,4)
+            do iz=1,size(my_lattice%ordpar%l_modes,3)
+                do iy=1,size(my_lattice%ordpar%l_modes,2)
+                    do ix=1,size(my_lattice%ordpar%l_modes,1)
+                        my_lattice%B%l_modes(ix,iy,iz,im)%w=my_lattice%ordpar%l_modes(ix,iy,iz,im)%w(start:end)
+                    enddo
+                enddo
+            enddo
+        enddo
+    elseif(adjustl(mode_name)=='temperature')then
+        do im=1,size(my_lattice%ordpar%l_modes,4)
+            do iz=1,size(my_lattice%ordpar%l_modes,3)
+                do iy=1,size(my_lattice%ordpar%l_modes,2)
+                    do ix=1,size(my_lattice%ordpar%l_modes,1)
+                        my_lattice%T%l_modes(ix,iy,iz,im)%w=my_lattice%ordpar%l_modes(ix,iy,iz,im)%w(start:end)
+                    enddo
+                enddo
+            enddo
+        enddo
+    else
+        write(*,*) 'mode_name: ',mode_name
+        STOP 'unexpected mode_name in initial-configuration'
+    endif
+
+end subroutine
 
 
 

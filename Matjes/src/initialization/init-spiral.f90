@@ -17,7 +17,7 @@ use m_vector
 use m_io_utils
 use m_convert
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: io,start,end
 character(len=*), intent(in) :: fname,mode_name
 ! internal variables
@@ -25,6 +25,11 @@ real(kind=8) :: qvec(3),Rq(3),Iq(3),dumy_vec(3),kvec(3,3),r(3,3),ss
 integer :: i_z,i_y,i_x,i_m,Nx,Ny,Nz,Nmag,size_mag
 real(kind=8), allocatable :: position(:,:,:,:,:)
 character(len=30) :: variable_name
+
+!new internal variables
+real(8), allocatable,target :: pos_new(:,:,:,:,:)
+real(8),pointer :: pos_new_flat(:,:),mag_point(:,:)
+integer         :: i
 
 kvec=my_lattice%astar
 r=my_lattice%areal
@@ -66,22 +71,21 @@ do i_m=1,size_mag
 !normal spin spiral
             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start:end)=( cos( dot_product(qvec,position(:,i_x,i_y,i_z,i_m)) )*Rq+ &
          sin( dot_product(qvec,position(:,i_x,i_y,i_z,i_m)) )*Iq)
-! inomegenous spin spiral in mulitlayer
-!        if (l.eq.1) Spin(4:6,i,j,k,l)=(/0.0d0,0.0d0,1.0d0/)
-! 3x3 cubic
-! define by theta and phi
-!        coefftheta=dot_product(qvec,Spin(1:3,i,j,k,l))
-!        coeffphi=sqrt(Spin(1,i,j,k,l)**2+Spin(2,i,j,k,l)**2)
-!        if (abs(coeffphi).gt.1.0d-5) coeffphi=Spin(1,i,j,k,l)/sqrt(Spin(1,i,j,k,l)**2+Spin(2,i,j,k,l)**2)
-!        Spin(4:6,i,j,k,l)=(/coeffphi*sin(coefftheta), &
-!         sqrt(1-coeffphi**2)*sin(coefftheta), &
-!         cos(coefftheta) /)
          enddo
       enddo
    enddo
 enddo
-
 deallocate(position)
+
+Call my_lattice%get_pos_mag(pos_new)
+pos_new_flat(1:3,1:size(pos_new)/3)=>pos_new
+mag_point(1:3,1:size(pos_new)/3)=>my_lattice%M%modes
+do i=1,size_mag
+    mag_point(:,i)=(cos(dot_product(qvec,pos_new_flat(:,i)))*Rq+ &
+                    sin(dot_product(qvec,pos_new_flat(:,i)))*Iq)
+enddo
+nullify(pos_new_flat,mag_point)
+deallocate(pos_new)
 
 end subroutine init_spiral
 

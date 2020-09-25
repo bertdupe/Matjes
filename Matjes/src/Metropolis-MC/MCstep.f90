@@ -1,5 +1,5 @@
 module m_MCstep
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_basic_types, only : vec_point
 use m_sampling
 use m_choose_spin

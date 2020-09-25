@@ -2,7 +2,7 @@
 module m_tightbinding_k
 use m_basic_types, only : vec_point
 use m_tb_types
-use m_derived_types, only : cell,lattice
+use m_derived_types, only : t_cell,lattice
 use m_get_position, only: calculate_distances,get_position
 use m_tb_params, only : TB_params
 use m_energy_k ,only: set_dist_neigh, get_energy_kpts
@@ -21,7 +21,7 @@ subroutine tightbinding_k(h_par,mode_mag,my_lattice,my_motif)
     type(parameters_TB_Hsolve),intent(in)     ::  h_par
     type(vec_point),intent(in)  :: mode_mag(:)
     type(lattice), intent(in)   :: my_lattice
-    type(cell), intent(in)      :: my_motif
+    type(t_cell), intent(in)      :: my_motif
 
     ! N_cell is the variable that will contain the number of unit
     ! cells in the simulation
@@ -58,7 +58,7 @@ subroutine get_dist_neigh(N_cell,my_lattice,my_motif,dist_neigh)
     !functions which gives the difference vectors dist_neigh for the different shell neighbors
     integer,intent(in)                    :: N_cell
     type(lattice), intent(in)             :: my_lattice
-    type(cell), intent(in)                :: my_motif
+    type(t_cell), intent(in)                :: my_motif
     real(kind=8), allocatable,intent(out) :: dist_neigh(:,:)
 
     real(kind=8)              :: pos(3,N_cell)

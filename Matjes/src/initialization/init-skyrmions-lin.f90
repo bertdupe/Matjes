@@ -23,7 +23,7 @@ subroutine init_sky_lin(io,fname,my_lattice,my_motif,m_start,m_end)
 !punches out an area 
 use m_io_utils
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: io,m_start,m_end
 character(len=*), intent(in) :: fname
 ! internal variables
@@ -54,7 +54,7 @@ subroutine set_sky_lin(center,slope,q,my_lattice,my_motif,m_start,m_end)
 use m_get_position, only: get_position
 Implicit None
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! center of circle region
 real(kind=8), intent(in) :: center(3)
 ! slope for the radial part

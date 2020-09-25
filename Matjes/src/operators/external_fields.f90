@@ -1,5 +1,5 @@
 module m_external_fields
-use m_derived_types, only : cell,vec_dim_n,lattice,vec_point
+use m_derived_types, only : t_cell,vec_dim_n,lattice,vec_point
 use m_operator_pointer_utils
 
 type(vec_dim_N),private,protected,target,save :: EM_external
@@ -17,7 +17,7 @@ contains
 subroutine get_EM_external_fields(h_ext,E_ext,my_motif)
 implicit none
 real(kind=8), intent(in) :: h_ext(:),E_ext(:)
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! interenal variable
 integer :: dim_H, dim_E,dim_EM,avant
 integer :: n_atom,n_mag,i,j

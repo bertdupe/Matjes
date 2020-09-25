@@ -8,7 +8,7 @@ use m_constants
 use m_derived_types
 Implicit none
 ! variables that come in
-type (cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 type(lattice), intent(inout) :: my_lattice
 type (simulation_parameters), intent(in) :: ext_param
 !     Slope Indexes for three dim spins
@@ -16,7 +16,7 @@ LOGICAL :: i_exi,i_init_config
 !     Absolute value of a spin
 integer, parameter  :: io=9
 integer :: dim_lat(3)
-real(kind=8) :: r(3,3),mu_S
+real(kind=8) :: mu_S
 
 #ifdef CPP_MPI
    include 'mpif.h'
@@ -24,7 +24,6 @@ real(kind=8) :: r(3,3),mu_S
 #endif
 mu_S=motif%atomic(1)%moment
 dim_lat=my_lattice%dim_lat
-r=my_lattice%areal
 
 !     Check if spin lattice input is present
 inquire(file='SpinSTMi.dat',exist=i_exi)
@@ -43,16 +42,6 @@ endif
 
 ! initialize the lattice
 
-!truc bizare
-!        do i=1,dim_lat(1)
-!        do j=1,dim_lat(2)
-!         Spin(4:6,i,j,1,1)=Spin(4:6,i,72,1,1)
-!         Spin(4:6,i,j,1,2)=Spin(4:6,i,72,1,2)
-!
-!        enddo
-!        enddo
-! Check for reordering the lattice
-
 i_init_config=.False.
 inquire(file='init.config',exist=i_init_config)
 if (i_init_config) then
@@ -63,22 +52,7 @@ endif
 
 #ifdef CPP_MPI
 endif
-
 spin=bcast(Spin,7,dim_lat(1),dim_lat(2),dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0),MPI_REAL8,0,MPI_COMM)
-
-#endif
-
-#ifdef CPP_DEBUG
-do i_m=1,nmag
-   do i_z=1,dim_lat(3)
-      do i_y=1,dim_lat(2)
-         do i_x=1,dim_lat(1)
-          write(*,*) my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(:)
-         enddo
-      enddo
-   enddo
-enddo
-stop
 #endif
 
 END SUBROUTINE InitSpin

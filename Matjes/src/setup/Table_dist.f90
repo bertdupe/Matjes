@@ -15,11 +15,11 @@ contains
 
 subroutine get_table_of_distance(r,N_Nneigh,world,my_motif,n_mag,d)
 use m_user_info
-use m_derived_types, only : cell
+use m_derived_types, only : t_cell
 use m_convert
 implicit none
 real(kind=8), intent(in) :: r(:,:)
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: N_Nneigh,world(:),n_mag
 real(kind=8), intent(inout) :: d(:,:)
 ! internal variable
@@ -55,14 +55,14 @@ end subroutine
 !no supercell
 !
 subroutine Tdist_basic(r,k,N,motif,tabledist)
-use m_derived_types, only : cell
+use m_derived_types, only : t_cell
 use m_vector , only : norm
 implicit none
 integer, intent(in) :: k,N(:)
 !       real (kind=8) :: Tdist(k,phase)
 ! input variable
 real (kind=8), intent(in) :: r(3,3)
-type (cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 !dummy variable
 integer :: j,m,pos_min,nmag
 real (kind=8) :: u,v,w,minimum,test_vec(3)

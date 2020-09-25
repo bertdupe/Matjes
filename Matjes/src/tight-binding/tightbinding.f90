@@ -2,7 +2,7 @@
 subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     use m_tb_params, only: TB_params, set_TB_params
     use m_basic_types, only : vec_point
-    use m_derived_types, only : cell,lattice,io_parameter,simulation_parameters
+    use m_derived_types, only : t_cell,lattice,io_parameter,simulation_parameters
     use m_operator_pointer_utils
     use m_lattice, only : my_order_parameters
     use m_tightbinding_r, only: tightbinding_r
@@ -12,7 +12,7 @@ subroutine tightbinding(my_lattice,my_motif,io_simu,ext_param)
     ! internal parameter
     type(io_parameter), intent(in) :: io_simu
     type(lattice), intent(in) :: my_lattice
-    type(cell), intent(in) :: my_motif
+    type(t_cell), intent(in) :: my_motif
     type(simulation_parameters), intent(in) :: ext_param
 
     ! N_cell is the variable that will contain the number of unit

@@ -17,7 +17,7 @@ implicit none
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! variable part
 type(lattice), intent(inout) :: my_lattice
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 !------------------------------------------

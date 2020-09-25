@@ -352,7 +352,7 @@ module m_fftw
         ! Get the mesh for the Fourrier transform
         subroutine set_k_mesh(fname,my_lattice)
             use m_kmesh
-            use m_type_lattice, only : lattice
+            use m_derived_types, only : lattice
             use m_io_utils
             use m_io_files_utils
             implicit none

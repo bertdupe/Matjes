@@ -1,7 +1,7 @@
 module m_local_energy_manual
 use m_basic_types, only : vec_point
 use m_derived_types, only : point_shell_Operator
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_modes_variables, only : point_shell_mode
 implicit none
 

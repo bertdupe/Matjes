@@ -13,7 +13,7 @@ subroutine init_punch(io,fname,my_lattice,my_motif,mode_name,m_start,m_end)
 !punches out an area with magnetization (i.e. removes magnetization outsize of the region)
 use m_io_utils
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: io,m_start,m_end
 character(len=*), intent(in) :: fname,mode_name
 ! internal variables
@@ -61,7 +61,7 @@ subroutine punch_texture_circle(center,radius,my_lattice,my_motif,m_start,m_end)
 use m_get_position, only: get_position
 Implicit None
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! center of circle region
 real(kind=8), intent(in) :: center(3)
 ! radius of circular region
@@ -110,7 +110,7 @@ subroutine punch_texture_rectangle(center,width,height,angle_in,my_lattice,my_mo
 use m_get_position, only: get_position
 Implicit None
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 !rectangle parameters
 real(kind=8), intent(in) :: center(3)
 real(kind=8),intent(in) :: width,height,angle_in
@@ -168,7 +168,7 @@ subroutine punch_texture_hexagon(center,width,angle_in,my_lattice,my_motif,m_sta
 use m_get_position, only: get_position
 Implicit None
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! center of circle region
 real(kind=8), intent(in) :: center(3)
 ! radius of circular region

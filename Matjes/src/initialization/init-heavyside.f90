@@ -11,7 +11,7 @@ contains
 
 subroutine init_heavyside(my_lattice,my_motif,start,end)
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: start,end
 ! internal variable
 integer :: i_z,i_y,i_x,i_m,Nx,Ny,Nz,size_mag

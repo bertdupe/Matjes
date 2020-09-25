@@ -82,7 +82,7 @@ subroutine CreateSpinFile_lattice_usernamed(fname,my_lattice,my_motif)
 Implicit none
 character(len=*), intent(in) :: fname
 type(lattice), intent(in) :: my_lattice
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! lattice of the positions
 real(kind=8), allocatable, dimension(:,:,:,:,:) :: position
 ! coordinate of the spins
@@ -115,7 +115,7 @@ END subroutine CreateSpinFile_lattice_usernamed
 subroutine CreateSpinFile_end(my_lattice,my_motif)
 Implicit none
 type(lattice), intent(in) :: my_lattice
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! lattice of the positions
 real(kind=8), allocatable, dimension(:,:,:,:,:) :: position
 ! coordinate of the spins

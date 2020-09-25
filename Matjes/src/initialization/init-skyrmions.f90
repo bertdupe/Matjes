@@ -14,7 +14,7 @@ use m_vector
 use m_io_utils
 use m_convert
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 integer, intent(in) :: io,start,end
 character(len=*), intent(in) :: fname,mode_name
 ! internal variables
@@ -105,7 +105,7 @@ use m_vector, only : norm,distance,phi
 use m_get_position
 Implicit None
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 ! (x0, y0) are the coordinates of the center of the skyrmion that we
 ! want to create0
 real(kind=8), intent(in) :: x0, y0
@@ -239,7 +239,7 @@ use m_derived_types
 use m_get_position
 implicit none
 type (lattice), intent(in) :: my_lattice
-type (cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 real(kind=8), intent(in) ::X0,Y0
 ! internal variables
 Integer::i_x,i_y,i_z,i_m

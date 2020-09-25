@@ -1,6 +1,6 @@
 module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_derived_types, only: operator_real_order_N
 implicit none
 

@@ -13,10 +13,9 @@ contains
 subroutine create_lattice(mag_lattice,motif,ext_param,nb_orbitals)
 !subroutine that initializes the the lattice and its orderparameters
 use m_derived_types
-use m_type_lattice
 implicit none
 integer, intent(in) :: nb_orbitals
-type(cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 type(lattice), intent(inout) :: mag_lattice
 type(simulation_parameters), intent(in) :: ext_param
 ! internal
@@ -26,6 +25,7 @@ integer :: i,j,k,l
 
 integer :: dim_mode_arr(number_different_order_parameters)
 
+mag_lattice%cell=motif
 dim_lat=mag_lattice%dim_lat
 nmag=1
 mag_lattice%nmag=nmag
@@ -45,7 +45,7 @@ dim_mode=sum(dim_mode_arr)
 
 !old orderparameter format
 mag_lattice%dim_mode=dim_mode
-Call mag_lattice%ordpar%init(mag_lattice)
+Call mag_lattice%ordpar%init(mag_lattice,dim_mode)
 
 !new orderparameter format
 if(dim_mode_arr(1)>0) Call mag_lattice%M%init(mag_lattice,dim_mode_arr(1))
@@ -62,7 +62,7 @@ subroutine get_dim_mode(motif,ext_param,nb_orbitals,dim_mode_arr)
 use m_derived_types
 implicit none
 integer, intent(in) :: nb_orbitals
-type(cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
 integer :: dim_mode_arr(number_different_order_parameters)
 ! internal parameters
@@ -118,7 +118,7 @@ integer function get_num_mode(motif,ext_param,nb_orbitals)
 use m_derived_types
 implicit none
 integer, intent(in) :: nb_orbitals
-type(cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
 ! internal parameters
 integer :: N_mode,nmag

@@ -262,13 +262,13 @@ end subroutine get_dipole_B
 subroutine get_ham_dipole(fname,my_lattice,motif)
 use m_io_files_utils
 use m_io_utils
-use m_derived_types, only : cell
-use m_type_lattice, only : lattice
+use m_derived_types, only : t_cell
+use m_derived_types, only : lattice
 use m_get_position
 use m_operator_pointer_utils
 use m_constants, only : mu_B
 implicit none
-type(cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 type(lattice), intent(in) :: my_lattice
 character(len=*), intent(in) :: fname
 ! internal

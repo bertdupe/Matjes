@@ -188,7 +188,7 @@ use m_io_utils
 use m_get_position
 implicit none
 type (lattice), intent(inout) :: my_lattice
-type (cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 character(len=*), intent(in) :: fname
 ! internal variables
 integer :: dim_lat(3),n_column,io,nmag,n_column_pos,io_pos

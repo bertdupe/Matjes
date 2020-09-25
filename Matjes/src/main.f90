@@ -28,7 +28,7 @@ type(lattice) :: all_lattices
 ! unit parameters for the file
 integer :: io_param
 ! description of the unit cell
-type(cell) :: motif
+type(t_cell) :: motif
 ! external parameter
 type(simulation_parameters) :: ext_param
 ! Hamiltonian used (extend to array with different basis + higher ranks)

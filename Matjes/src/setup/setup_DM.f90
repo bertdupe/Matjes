@@ -1,7 +1,7 @@
 module m_setup_DM
 use m_grp_sym
-use m_derived_types, only : cell
-use m_type_lattice, only : lattice
+use m_derived_types, only : t_cell
+use m_derived_types, only : lattice
 use m_basic_types, only : symop
 use m_vector, only : cross,norm
 
@@ -45,7 +45,7 @@ end function
 subroutine setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector,tabledist)
 implicit none
 integer, intent(in) :: indexNN(:,:),n_DMI
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 type(lattice), intent(in) :: my_lattice
 real(kind=8), intent(in) :: tabledist(:,:)
 real(kind=8), intent(inout) :: DM_vector(:,:,:)
@@ -93,7 +93,7 @@ function get_DM_vectors(shell_number,atom_all_shells,areal,my_motif,n_sym,symmet
 implicit none
 integer, intent(in) :: atom_all_shells,n_sym,shell_number
 real(kind=8), intent(in) :: areal(:,:),distance
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 type(symop), intent(in) :: symmetries(:)
 real(kind=8) :: get_DM_vectors(atom_all_shells,3,1)
 logical, intent(in) :: periodic(:)
@@ -197,7 +197,7 @@ subroutine find_mag_and_nonmag_atoms(shell_number,my_motif,areal,distance,period
 implicit none
 integer, intent(in) :: shell_number
 real(kind=8), intent(in) :: areal(:,:),distance
-type(cell), intent(in) :: my_motif
+type(t_cell), intent(in) :: my_motif
 logical, intent(in) :: periodic(:)
 real(kind=8), intent(inout) :: R_mag(:,:),R_non_mag(:,:)
 ! internal

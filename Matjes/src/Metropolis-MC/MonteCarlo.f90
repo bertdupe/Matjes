@@ -5,7 +5,7 @@
 subroutine montecarlo(my_lattice,motif,io_simu,ext_param)
 use m_constants, only : k_b,pi
 use m_vector, only : norm
-use m_derived_types, only : lattice,cell,io_parameter,simulation_parameters,point_shell_Operator
+use m_derived_types, only : lattice,t_cell,io_parameter,simulation_parameters,point_shell_Operator
 use m_modes_variables, only : point_shell_mode
 use m_basic_types, only : vec_point
 use m_rw_MC
@@ -35,7 +35,7 @@ use m_MCstep
 #endif
 implicit none
 type(lattice), intent(inout) :: my_lattice
-type(cell), intent(in) :: motif
+type(t_cell), intent(in) :: motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
 

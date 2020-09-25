@@ -155,7 +155,7 @@ end subroutine associate_mode_name
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine asso_lattice_to_matrix(my_lattice,matrix2)
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 implicit none
 type(lattice),intent(inout) :: my_lattice
 real(kind=8),target,intent(in) :: matrix2(:,:,:,:,:)
@@ -244,7 +244,7 @@ end subroutine asso_pointer_to_2Dmatrix
 subroutine asso_pointer_to_lattice(point,my_lattice)
 use m_get_position, only : get_position_ND_to_1D
 use m_derived_types, only : vec_point
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 implicit none
 type(vec_point),intent(inout) :: point(:)
 type(lattice),target,intent(in) :: my_lattice
@@ -328,7 +328,7 @@ end subroutine A_vecpoint1D_vecdimn
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_shellHam1D(point,static_target,my_lattice,tableNN,indexNN)
 use m_derived_types, only : operator_real
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_Hamiltonian_variables, only : shell_Ham
 use m_get_position
 use m_null
@@ -408,7 +408,7 @@ end subroutine A_Opreal_shellHam1D
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_OrderN_shellHam1D(point,static_target,my_lattice,tableNN,indexNN)
 use m_derived_types, only : operator_real_order_N
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_Hamiltonian_variables, only : H_vois
 use m_get_position
 use m_null
@@ -499,7 +499,7 @@ end subroutine A_Opreal_OrderN_shellHam1D
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine A_Opreal_real2D(point,static_target,my_lattice,tableNN,Nvoisin,avant)
 use m_derived_types, only : operator_real_order_N
-use m_type_lattice, only : lattice
+use m_derived_types, only : lattice
 use m_Hamiltonian_variables, only : shell_Ham_order_N
 use m_get_position
 use m_null
