@@ -5,7 +5,7 @@ use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: zeeman
 
 private
-public :: get_ham_zeeman
+public :: get_ham_zeeman, get_zeeman_H
 
 contains
 
@@ -69,5 +69,47 @@ write(6,'(a)') ''
 
 end subroutine get_ham_zeeman
 
+
+subroutine get_zeeman_H(Ham,lat)
+    !get zeeman in t_H Hamiltonian format
+    !so far zeeman has to be set before
+    !unsymmetric in that it only includes the B M basis and not the revers ( similar to previous implementation)
+    use m_Htype_gen
+    use m_derived_types
+    use m_setH_util,only: get_coo
+
+    class(t_H),intent(inout)    :: Ham
+    type(lattice),intent(in)    :: lat
+
+    !describe local Hamiltonian
+    real(8),allocatable         :: Htmp(:,:)
+    !input for setting t_H
+    real(8),allocatable         :: val_tmp(:)
+    integer,allocatable         :: ind_tmp(:,:)
+    integer,allocatable         :: line(:,:)
+
+    integer :: i
+    integer :: x_start,x_end
+    integer :: y_start,y_end
+    integer :: Ncell
+
+
+    if(zeeman%i_exist)then
+        Ncell=product(lat%dim_lat)
+        allocate(line(1,Ncell),source=0) !1, since always onsite
+        call get_borders('Bfield',x_start,x_end,'magnetic',y_start,y_end,my_order_parameters)
+        allocate(Htmp,source=zeeman%ham(1)%H(x_start:x_end,y_start:y_end))
+    
+        !get local Hamiltonian in coo format
+        Call get_coo(Htmp,val_tmp,ind_tmp)
+       
+        !simple on-site term
+        do i=1,Ncell
+            line(1,i)=i
+        enddo
+    
+        Call Ham%set_H_1(line,val_tmp,ind_tmp,[3,1],lat)
+    endif
+end subroutine
 
 end module m_zeeman

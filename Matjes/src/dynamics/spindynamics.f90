@@ -1,12 +1,13 @@
 module m_spindynamics
 contains
-subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param,Ham)
+subroutine spindynamics(mag_lattice,mag_motif,io_simu,ext_param,Hams)
 use m_basic_types, only : vec_point
 use m_derived_types, only : t_cell,io_parameter,simulation_parameters,point_shell_Operator
 use m_derived_types, only : lattice
 use m_modes_variables, only : point_shell_mode
 use m_torques, only : get_torques
 use m_lattice, only : my_order_parameters
+use m_H_type
 use m_eval_BTeff
 use m_measure_temp
 use m_topo_commons
@@ -43,7 +44,7 @@ type(lattice), intent(inout) :: mag_lattice
 type(t_cell), intent(in) :: mag_motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
-class(t_H), intent(in) :: Ham
+class(t_H), intent(in) :: Hams(:)
 ! internal
 logical :: gra_log,io_stochafield
 integer :: i,j,gra_freq,i_loop,input_excitations
@@ -258,7 +259,8 @@ security=0.0d0
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 Call mag_lattice%copy_val_to(lat_1)
 
-Call Ham%eval_all(Edy,mag_lattice)
+!Call Hams%eval_all(Edy,mag_lattice)
+Call energy_all(Hams,mag_lattice,Edy)
 
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
 
@@ -435,7 +437,8 @@ if (j.eq.1) check3=test_torque
 !#ifdef CPPEIGEN_SPARSE
 !Call energy_H(Edy,mag_lattice%dim_mode)
 !#else
-Call Ham%eval_all(Edy,mag_lattice)
+!Call Hams%eval_all(Edy,mag_lattice)
+Call energy_all(Hams,mag_lattice,Edy)
 !#endif
 do iomp=1,N_cell
 

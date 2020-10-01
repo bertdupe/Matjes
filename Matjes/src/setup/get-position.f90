@@ -172,26 +172,22 @@ end subroutine get_position_lattice
 ! get_position_4D_to_1D: position in the 1D lattice
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-recursive function get_position_ND_to_1D(Ilat,N) result(k)
-use m_derived_types
-implicit none
-integer, intent(in) :: N(:),Ilat(:)
-integer :: k
-! internal variables
-integer :: Num,Ncoord
 
-Num=size(N)
-Ncoord=size(ilat)
+function get_position_ND_to_1D(ind_in,lat) result(ind_out)
+    integer,intent(in)  ::  ind_in(:)
+    integer,intent(in)  ::  lat(:)
+    integer             ::  ind_out
 
-if (Num.eq.Ncoord) k=0
+    integer             ::  N
+    integer             ::  i
 
-if (Num.eq.1) then
-   k=ilat(Num)
-else
-   k=(ilat(Num)-1)*product(N(1:Num-1))+get_position_ND_to_1D(Ilat,N(1:Num-1))
-endif
+    ind_out=ind_in(1)
+    do i=2,size(ind_in)
+        ind_out=ind_out+(ind_in(i)-1)*product(lat(1:i-1))
+    enddo
 
-end function get_position_ND_to_1D
+end function
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! subfunction that gives cartesian corrdinates as a function of the internal coordinates

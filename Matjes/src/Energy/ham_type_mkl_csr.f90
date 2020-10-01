@@ -1,5 +1,5 @@
 module m_H_type_mkl_csr
-#ifdef CPP_MATMUL_MKL_CSR
+#if defined(CPP_MATMUL_MKL_CSR) && !defined(CPP_MKL_SPBLAS)
 !Hamiltonian type specifications using mkl in coordinate sparse format 
 use m_H_type
 use m_H_type_coo, only: t_h_coo

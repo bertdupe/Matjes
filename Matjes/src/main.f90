@@ -32,7 +32,7 @@ type(t_cell) :: motif
 ! external parameter
 type(simulation_parameters) :: ext_param
 ! Hamiltonian used (extend to array with different basis + higher ranks)
-class(t_H),allocatable      :: Ham
+class(t_H),allocatable      :: Ham(:)
 ! tag that defines the system
       integer :: n_system
       Integer :: N_cell

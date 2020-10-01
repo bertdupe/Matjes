@@ -66,8 +66,8 @@ do i=1,N_mode
   Call init_punch(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
 
   Call copy_init(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
-
 enddo
+
 
 call close_file(fname,io)
 

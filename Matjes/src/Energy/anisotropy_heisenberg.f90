@@ -5,7 +5,7 @@ use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: anisotropy
 
 private
-public :: get_ham_anisotropy
+public :: get_ham_anisotropy,get_anisotropy_H
 
 contains
 
@@ -88,5 +88,47 @@ enddo
 write(6,'(a)') ''
 
 end subroutine get_ham_anisotropy
+
+subroutine get_anisotropy_H(Ham,lat)
+    !get anisotropy in t_H Hamiltonian format
+    !so far anisotropy has to be set before
+    use m_Htype_gen
+    use m_derived_types
+    use m_setH_util,only: get_coo
+
+    class(t_H),intent(inout)    :: Ham
+!    integer, intent(in)         :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
+!    integer, intent(in)         :: indexNN(:)
+    type(lattice),intent(in)    :: lat
+   
+    integer :: i
+    integer :: x_start,x_end
+    integer :: y_start,y_end
+    
+    real(8),allocatable :: Htmp(:,:)
+    real(8),allocatable :: val_tmp(:)
+    integer,allocatable :: ind_tmp(:,:)
+    
+    integer,allocatable :: line(:,:)
+    
+    integer :: Ncell
+
+    if(anisotropy%i_exist)then
+        Ncell=product(lat%dim_lat)
+        allocate(line(1,Ncell),source=0) !1, since always onsite
+        call get_borders('magnetic',x_start,x_end,'magnetic',y_start,y_end,my_order_parameters)
+        allocate(Htmp,source=anisotropy%ham(1)%H(x_start:x_end,y_start:y_end))
+    
+        !get local Hamiltonian in coo format
+        Call get_coo(Htmp,val_tmp,ind_tmp)
+
+        !Anisotropy only has simple onsite terms
+        do i=1,Ncell
+            line(1,i)=i
+        enddo
+    
+        Call Ham%set_H_1(line,val_tmp,ind_tmp,[1,1],lat)
+    endif
+end subroutine
 
 end module m_anisotropy_heisenberg

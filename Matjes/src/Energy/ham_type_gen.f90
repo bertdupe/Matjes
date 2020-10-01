@@ -32,5 +32,19 @@ subroutine get_Htype(H_out)
 #endif
 end subroutine
 
+subroutine get_Htype_N(H_out,N)
+    class(t_h),intent(out),allocatable      :: H_out (:)
+    integer,intent(in)                      :: N
+#if defined CPP_MATMUL_MKL_CSR
+   allocate(H_out(N),source=t_H_mkl_csr())
+#elif defined CPP_MATMUL_MKL_COO
+   allocate(H_out(N),source=t_H_mkl_coo())
+!#elif defined CPP_MATMUL_EIGEN_SPARSE
+!    TOTO 
+#else
+   allocate(H_out(N),source=t_H_manual())
+#endif
+end subroutine
+
 
 end module

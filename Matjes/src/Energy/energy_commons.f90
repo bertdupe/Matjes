@@ -208,9 +208,10 @@ write(6,'(a)') ''
 ! find the shells with order N
 !
 
-! shell_order_max(:,1) maximum Hamiltonian order for each shell
-! shell_order_max(:,2) number of Hamiltonian per shell
-! Hamiltonians(i)%onsite=.True. means that the shell 0 is included in the Hamiltonian
+!get shell_order_max
+!  shell_order_max(:,1) maximum Hamiltonian order for each shell
+!  shell_order_max(:,2) number of Hamiltonian per shell
+!  Hamiltonians(i)%onsite=.True. means that the shell 0 is included in the Hamiltonian
 allocate(shell_order_max(N_shell+1,2))
 shell_order_max=0
 do i=1,n_ham
@@ -226,11 +227,11 @@ do i=1,n_ham
     endif
   enddo
 enddo
-
 form=convert('(a,',N_shell+1,'I4)')
 write(6,form) 'Maximum Hamiltonianss order per shell', shell_order_max(:,1)
 write(6,form) 'number of Hamiltonians per shell', shell_order_max(:,2)
 
+!allocate correct sizes for total_hamiltonian
 do i=2,N_shell+1
   n_order=shell_order_max(i,1)
   ! if you have a Hamiltonian of order 3 on one shell, you must an Hamiltonian of order 2
@@ -292,6 +293,7 @@ do i=1,n_ham
          enddo
       else
          do k=1,size(ham_DMI_Nshell_local(j-1)%atom)
+            write(*,*) j,k
             ham_DMI_Nshell_local(j-1)%atom(k)%H=Hamiltonians(i)%ham(j)%op_loc
          enddo
       endif
@@ -300,7 +302,6 @@ do i=1,n_ham
     ! The number of atom in the shell is then in ham_DMI_Nshell_local
 
   endif
-
 !
 ! Magnetoelectric part
 !

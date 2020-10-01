@@ -1,4 +1,5 @@
 module m_setup_simu
+implicit none
 
 contains
 subroutine setup_simu(my_simu,io_simu,my_lattice,my_motif,ext_param,Ham)
@@ -35,7 +36,6 @@ use m_Htype_gen
       use m_mpi_prop, only : isize,irank,irank_working,N,start
 #endif
 
-implicit none
 ! this subroutine is used only to setup the simulation box
 ! it reads first the parameters of the simulation i.e. inp file
 ! then it reads the lattice
@@ -45,7 +45,7 @@ type(bool_var), intent(in) :: my_simu
 type(lattice), intent(inout) :: my_lattice
 type(t_cell), intent(out) :: my_motif
 type(simulation_parameters),intent (inout) :: ext_param
-class(t_H),intent(inout),allocatable      ::  Ham
+class(t_H),intent(inout),allocatable      ::  Ham(:)
 ! variable of the system
 real(kind=8), allocatable :: tabledist(:,:),DM_vector(:,:,:)
 integer, allocatable :: indexNN(:,:),tableNN(:,:,:,:,:,:)
@@ -279,8 +279,11 @@ call user_info(6,time,'done',.true.)
 call get_ham_dipole('input',my_lattice,my_motif)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!! CREATE NEW HAMILTONIAN TYPE
-Call get_Htype(Ham)
-Call Ham%set_H(energy,my_lattice)
+!old
+!Call get_Htype(Ham)
+!Call Ham%set_H(energy,my_lattice)
+!
+Call set_Hamiltonians(Ham,tableNN,indexNN(:,1),DM_vector,my_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -298,4 +301,53 @@ if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end subroutine setup_simu
+
+subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
+    use m_derived_types
+    use m_Htype_gen
+    
+    use m_get_position,only :get_position_ND_to_1D 
+    
+    use m_symmetry_operators
+    use m_lattice, only : my_order_parameters
+    use m_anisotropy_heisenberg,only: get_anisotropy_H,anisotropy
+    use m_exchange_heisenberg,only: get_exchange_H,exchange
+    use m_zeeman,only: get_zeeman_H,zeeman
+    class(t_H),allocatable,intent(out)  :: Ham(:)
+    real(8), intent(in) :: DM_vector(:,:,:)
+    integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
+    integer, intent(in) :: indexNN(:)
+    type(lattice), intent(inout) :: lat
+
+    integer :: i_H,N_ham
+
+    N_ham=0
+    if(exchange%i_exist) N_ham=N_ham+1
+    if(anisotropy%i_exist) N_ham=N_ham+1
+    if(zeeman%i_exist) N_ham=N_ham+1
+        
+    !get number of Hamilonians used
+    Call get_Htype_N(Ham,N_ham)
+
+    i_H=1 
+    !set exchange (with DMI)
+    Call get_exchange_H(Ham(i_H),tableNN,indexNN,lat,DM_vector)
+    if(Ham(i_H)%is_set()) i_H=i_H+1
+    !set anisotropy
+    Call get_anisotropy_H(Ham(i_H),lat)
+    if(Ham(i_H)%is_set()) i_H=i_H+1
+    !set zeeman
+    Call get_zeeman_H(Ham(i_H),lat)
+    if(Ham(i_H)%is_set()) i_H=i_H+1
+    !add ME-coupling (implement rank 3)
+
+    do i_H=1,N_ham
+        if(.not. Ham(i_h)%is_set()) STOP "not all Hamiltonians are set"
+        Call Ham(i_h)%optimize()
+    enddo
+
+
+end subroutine
+
+
 end module

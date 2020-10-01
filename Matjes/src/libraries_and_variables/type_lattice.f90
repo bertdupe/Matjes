@@ -35,31 +35,111 @@ contains
     final :: final_order_par
 end type
 
-
 ! variable that defines the lattice
 type lattice
-     real(8) :: areal(3,3),astar(3,3),alat(3)
-     type(t_cell) :: cell
-     integer :: dim_lat(3),n_system,dim_mode
-     integer :: nmag !this nmag is nonsense and should be removed (number of m encoded elsewhere)
+     real(8)        :: areal(3,3),astar(3,3),alat(3)
+     type(t_cell)   :: cell
+     integer        :: dim_lat(3),n_system,dim_mode
+     integer        :: nmag !this nmag is nonsense and should be removed (number of m encoded elsewhere)
      integer, allocatable :: world(:)
      logical :: boundary(3)
-! Table of pointer
-     type(order_par)   :: ordpar !make this an array if using separated order parameters
+
+!order parameters
      type(order_par)   :: M !magnetization 
      type(order_par)   :: E !Electric field
      type(order_par)   :: B !Magnetic field
      type(order_par)   :: T !Temperature
+     !ultimately delete ordpar
+     type(order_par)   :: ordpar !make this an array if using separated order parameters
+
 contains
     procedure :: copy => copy_lattice
     procedure :: get_pos_mag => lattice_get_position_mag
     procedure :: copy_val_to => copy_val_lattice
-
+    procedure :: get_order_dim  => get_order_dim
+    procedure :: set_order_point => set_order_point
+    procedure :: index_m_1 => index_m_1
+    procedure :: index_1_3 => index_1_3
 end type lattice
+
+
 private
 public lattice, number_different_order_parameters, t_cell
 
 contains 
+
+function index_m_1(this,indm)result(ind1)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: indm(:) 
+    integer                     :: ind1
+    integer     :: i
+
+    ind1=indm(1)
+    do i=2,size(indm)
+        ind1=ind1+(indm(i)-1)*product(this%dim_lat(1:i-1))
+    enddo
+end function
+
+function index_1_3(this,ind1)result(indm)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: ind1
+    integer                     :: indm(3) 
+    integer                     :: tmp,prod
+
+    prod=product(this%dim_lat(:2))
+    indm(3)=ind1/prod
+    tmp=ind1-prod*indm(3)
+    prod=this%dim_lat(1)
+    indm(2)=tmp/prod
+    indm(1)=tmp-indm(2)*prod
+end function
+
+subroutine set_order_point(this,order,point)
+    class(lattice),intent(in)   ::  this
+    integer,intent(in)          ::  order
+    real(8),pointer,intent(out) ::  point(:)
+
+    select case(order)
+    case(1)
+        point=>this%M%all_modes
+    case(2)
+        point=>this%E%all_modes
+    case(3)
+        point=>this%B%all_modes
+    case(4)
+        point=>this%T%all_modes
+    case default
+        write(*,*) 'order:',order
+        STOP 'failed to associate pointer in set_order_point'
+    end select
+
+end subroutine
+
+
+function get_order_dim(this,order) result(dim_mode)
+    class(lattice),intent(in)   ::  this
+    integer,intent(in)          ::  order
+    integer                     ::  dim_mode
+
+    select case(order)
+    case(1)
+        dim_mode=this%M%dim_mode
+    case(2)
+        dim_mode=this%E%dim_mode
+    case(3)
+        dim_mode=this%B%dim_mode
+    case(4)
+        dim_mode=this%T%dim_mode
+    case default
+        write(*,*) "order=",order
+        STOP "trying to get dim_mode for unset orderparameter"
+    end select
+    if(dim_mode<1)then
+        write(*,*) 'trying to get dim_mode for order=',order 
+        STOP "dim_mode not positive, requested order parameter not set?"
+    endif
+
+end function
 
 subroutine cell_get_ind_mag(this,ind_Nat)
     class(t_cell),intent(in)    ::  this
@@ -89,14 +169,14 @@ subroutine lattice_get_position_mag(this,pos)
     real(8), allocatable            :: pos_lat(:,:,:,:)
     integer, allocatable            :: ind_at_mag(:)
     integer     :: Nat_mag
-    real(8)     :: pos_at(3)
+    real(8)     :: pos_at(3) 
     integer     :: i,i1,i2,i3
 
     Call this%cell%ind_mag(ind_at_mag)
     Nat_mag=size(ind_at_mag)
     call get_position_cell(pos_lat,this%dim_lat,this%areal)
     allocate(pos(3,Nat_mag,this%dim_lat(1),this%dim_lat(2),this%dim_lat(3)),source=0.0d0)
-    do i=1,Nat_mag
+    do i=1,Nat_mag  !could be done smarter with position array (:,Nat)
         pos_at=this%cell%atomic(ind_at_mag(i))%position
         pos(:,i,:,:,:)=pos_lat(:,:,:,:)
         do i3=1,this%dim_lat(3)

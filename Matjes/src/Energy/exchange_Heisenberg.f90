@@ -5,7 +5,7 @@ use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 type(coeff_ham_inter_spec), target, public, protected :: exchange
 
 private
-public :: get_ham_exchange
+public :: get_ham_exchange, get_exchange_H
 
 contains
 
@@ -128,5 +128,106 @@ enddo
 write(6,'(a)') ''
 
 end subroutine get_ham_exchange
+
+
+subroutine get_exchange_H(Ham,tableNN,indexNN,lat,DM_vector)
+    !get exchange in t_H Hamiltonian format
+    !so far exchange has to be set before
+    !unsymmetric in that it only includes the B M basis and not the revers ( similar to previous implementation)
+    use m_Htype_gen
+    use m_derived_types
+    use m_setH_util,only: get_coo
+
+    class(t_H),intent(inout)    :: Ham
+    integer, intent(in)         :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
+    integer, intent(in)         :: indexNN(:)
+    type(lattice),intent(in)    :: lat
+    real(8), intent(in)         :: DM_vector(:,:,:)
+
+    !describe local Hamiltonian
+    integer                     :: sizeH(2) 
+    real(8),allocatable         :: Htmp(:,:)
+
+    !input for setting t_H
+    real(8),allocatable         :: val_tmp(:)
+    integer,allocatable         :: ind_tmp(:,:)
+    integer,allocatable         :: line(:,:)
+
+
+    class(t_H),allocatable    :: Ham_tmp
+    integer :: shape_tableNN(6)
+    integer :: i1,i2,ii
+    integer :: N_nonzero
+    integer :: x_start,x_end
+    integer :: y_start,y_end
+    integer :: Ncell
+    integer :: Nshell,i_sh
+    integer :: Nvois,i_vois
+
+    integer :: ilat_1(3),ilat_2(3),ii1,ii2
+    integer :: offset
+    integer :: i_x,i_y,i_z
+
+    if(exchange%i_exist)then
+        Call get_Htype(Ham_tmp)
+        Nshell=size(exchange%ham)
+        Ncell=product(lat%dim_lat)
+        shape_tableNN=shape(tableNN)
+        call get_borders('magnetic',x_start,x_end,'magnetic',y_start,y_end,my_order_parameters)
+        sizeH(1)=x_end-x_start+1
+        sizeH(2)=y_end-y_start+1
+        allocate(Htmp(sizeH(1),sizeH(2)),source=0.0d0)
+        do i_sh=1,Nshell
+            Nvois=indexNN(i_sh)
+            offset=sum(indexNN(1:i_sh-1))
+            do i_vois=1,Nvois
+                if(size(DM_vector,1)>=i_vois+offset)then
+                    Call convoluate_Op_2D_SOC_vector_1D(DM_vector(i_vois+offset,:,1),exchange%ham(i_sh)%H(x_start:x_end,y_start:y_end),Htmp)
+                else
+                    Htmp=exchange%ham(i_sh)%H(x_start:x_end,y_start:y_end)
+                endif
+                Call get_coo(Htmp,val_tmp,ind_tmp)
+
+                !get all lines ( connections including all neigbors for a given shell
+                allocate(line(Nvois,Ncell),source=0) !1, since always onsite
+                do i_z=1,shape_tableNN(5)
+                  do i_y=1,shape_tableNN(4)
+                    do i_x=1,shape_tableNN(3)
+                        ilat_1=[i_x,i_y,i_z]
+                        ii1=lat%index_m_1(ilat_1)
+                        ilat_2=tableNN(1:3,i_vois+offset,i_x,i_y,i_z,1)
+                        ii2=lat%index_m_1(ilat_2)
+                        line(i_vois,ii1)=ii2
+                    enddo
+                  enddo
+                enddo
+                Call Ham_tmp%set_H_1(line(i_vois:i_vois,:),val_tmp,ind_tmp,[1,1],lat)
+                deallocate(val_tmp,ind_tmp,line)
+                Call Ham%add_H(Ham_tmp)
+                Call Ham_tmp%destroy()
+            enddo
+        enddo
+    endif
+end subroutine
+
+
+subroutine convoluate_Op_2D_SOC_vector_1D(D,Op_DMI,H)
+    real(8), intent(in) :: D(:),Op_DMI(:,:)
+    real(8), intent(inout) :: H(:,:)
+    ! internal variable
+    
+    H(1,2)=Op_DMI(1,2)*D(3)
+    H(1,3)=Op_DMI(1,3)*D(2)
+    H(2,3)=Op_DMI(2,3)*D(1)
+    
+    H(2,1)=Op_DMI(2,1)*D(3)
+    H(3,1)=Op_DMI(3,1)*D(2)
+    H(3,2)=Op_DMI(3,2)*D(1)
+    
+    H(1,1)=Op_DMI(1,1)
+    H(2,2)=Op_DMI(2,2)
+    H(3,3)=Op_DMI(3,3)
+
+end subroutine convoluate_Op_2D_SOC_vector_1D
 
 end module m_exchange_heisenberg
