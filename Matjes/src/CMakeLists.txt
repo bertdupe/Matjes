@@ -5,14 +5,6 @@ src/analytical_function/tbessj.f90
 src/analytical_function/tbessk.f90
 src/analytical_function/tbessy.f90
 src/correlation/Correlation.f90
-src/dynamics/Beff_sd.f90
-src/dynamics/BTeff_sd.f90
-src/dynamics/dipolar-field.f90
-src/dynamics/dyna-utils.f90
-src/dynamics/forces.f90
-src/dynamics/measure_temp.f90
-src/dynamics/spindynamics.f90
-src/dynamics/topocharge_sd.f90
 src/entropic-MC/entropic.f90
 src/excitations/EMwave.f90
 src/excitations/excitations.f90
@@ -88,6 +80,7 @@ include(src/Sparselib/CMakeLists.txt)
 include(src/solvers/CMakeLists.txt)
 include(src/IO-input/CMakeLists.txt)
 include(src/symmetries/CMakeLists.txt)
+include(src/dynamics/CMakeLists.txt)
 include(src/Energy/CMakeLists.txt)
 include(src/setup/CMakeLists.txt)
 include(src/paratemp-MC/CMakeLists.txt) 

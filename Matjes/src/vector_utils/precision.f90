@@ -8,7 +8,7 @@ real(kind=8), parameter :: EPS=1.0d-50
 !
 
 interface truncate
-  module procedure truncate_real,truncate_vecp_1D,truncate_lattice
+  module procedure truncate_real,truncate_vecp_1D,truncate_lattice,truncate_lattice_used
 end interface
 
 private
@@ -25,6 +25,22 @@ integer, intent(in) :: N !why is there this N, sounds terrible
 integer :: i
 
     where(abs(lat%ordpar%modes) < EPS) lat%ordpar%modes=0.0d0
+
+end subroutine
+
+
+subroutine truncate_lattice_used(lat,used)
+use m_derived_types, only : lattice,number_different_order_parameters
+implicit none
+type(lattice),intent(inout) ::  lat
+logical,intent(in)  :: used(number_different_order_parameters)
+! internal
+integer :: i
+
+    if(used(1)) where(abs(lat%M%modes) < EPS) lat%M%modes=0.0d0
+    if(used(2)) where(abs(lat%E%modes) < EPS) lat%E%modes=0.0d0
+    if(used(3)) where(abs(lat%B%modes) < EPS) lat%B%modes=0.0d0
+    if(used(4)) where(abs(lat%T%modes) < EPS) lat%T%modes=0.0d0
 
 end subroutine
 

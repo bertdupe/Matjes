@@ -25,6 +25,7 @@ type order_par
     type(vec_point),pointer,contiguous      :: l_modes(:,:,:,:) => null() !main vec_type get allocated
     real(8),pointer,contiguous              :: modes(:,:,:,:,:) => null() !main pointer that get allocated
     real(8),pointer,contiguous              :: all_modes(:) => null()
+    real(8),pointer,contiguous              :: modes_v(:,:) => null()
 
     integer                                 :: dim_mode=0
 contains 
@@ -60,6 +61,7 @@ contains
     procedure :: set_order_point => set_order_point
     procedure :: index_m_1 => index_m_1
     procedure :: index_1_3 => index_1_3
+    procedure :: used_order => lattice_used_order
 end type lattice
 
 
@@ -67,6 +69,17 @@ private
 public lattice, number_different_order_parameters, t_cell
 
 contains 
+
+subroutine lattice_used_order(this,used)
+    class(lattice),intent(in)   :: this
+    logical,intent(out)         :: used(number_different_order_parameters)
+
+    used=.False.
+    if(this%M%dim_mode>0) used(1)=.True.
+    if(this%E%dim_mode>0) used(2)=.True.
+    if(this%B%dim_mode>0) used(3)=.True.
+    if(this%T%dim_mode>0) used(4)=.True.
+end subroutine
 
 function index_m_1(this,indm)result(ind1)
     class(lattice),intent(in)   :: this
@@ -238,6 +251,7 @@ subroutine init_order_par(self,lat,dim_mode)
     endif
     self%all_modes(1:N)=>self%data_real
     self%modes(1:dim_mode,1:lat%dim_lat(1),1:lat%dim_lat(2),1:lat%dim_lat(3),1:lat%nmag)=>self%data_real
+    self%modes_v(1:dim_mode,1:product(lat%dim_lat)*lat%nmag)=>self%data_real
 
     !initialize vec_pointer data if necessary and associate pointers
     N=product(lat%dim_lat)*lat%nmag
@@ -326,7 +340,12 @@ subroutine copy_lattice(self,copy)
     copy%nmag=self%nmag
     copy%boundary=self%boundary
     if(allocated(self%world)) allocate(copy%world,source=self%world)
-    Call self%ordpar%copy(copy%ordpar,self)
+    if(self%ordpar%dim_mode>0) Call self%ordpar%copy(copy%ordpar,self)
+
+    if(self%m%dim_mode>0) Call self%M%copy(copy%M,self)
+    if(self%e%dim_mode>0) Call self%E%copy(copy%E,self)
+    if(self%b%dim_mode>0) Call self%B%copy(copy%B,self)
+    if(self%t%dim_mode>0) Call self%T%copy(copy%T,self)
 end subroutine
 
 
@@ -335,6 +354,11 @@ subroutine copy_val_lattice(self,copy)
    
     !might make sense to check other values to make sure, but this should be faster
     Call self%ordpar%copy_val(copy%ordpar)
+
+    if(self%m%dim_mode>0) Call self%M%copy_val(copy%M)
+    if(self%e%dim_mode>0) Call self%E%copy_val(copy%E)
+    if(self%b%dim_mode>0) Call self%B%copy_val(copy%B)
+    if(self%t%dim_mode>0) Call self%T%copy_val(copy%T)
 end subroutine
 
 end module

@@ -1,4 +1,5 @@
 module m_H_type_manual
+#if 0
 !Hamiltonian type specifications to use Bertrands manual matrix multiplication
 use m_H_type
 
@@ -121,4 +122,5 @@ subroutine eval_all(this,E,lat)
     
 end subroutine 
 
+#endif
 end module

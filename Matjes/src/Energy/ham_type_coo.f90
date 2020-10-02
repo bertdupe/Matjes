@@ -19,6 +19,7 @@ contains
     procedure :: destroy
     procedure :: optimize
     procedure :: copy
+    procedure :: mult_l,mult_r
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -27,6 +28,24 @@ end type
 private
 public t_H,t_H_coo
 contains 
+
+subroutine mult_r(this,lat,vec)
+    use m_derived_types, only: lattice
+    class(t_H_coo),intent(in)    :: this
+    type(lattice),intent(in)     :: lat
+    real(8),intent(inout)        :: vec(:)
+
+    STOP "IMPLEMENT apply_r FOR t_H_coo in m_H_type_coo if really necessary"
+end subroutine 
+
+subroutine mult_l(this,lat,vec)
+    use m_derived_types, only: lattice
+    class(t_H_coo),intent(in)    :: this
+    type(lattice),intent(in)     :: lat
+    real(8),intent(inout)        :: vec(:)
+
+    STOP "IMPLEMENT apply_l FOR t_H_coo in m_H_type_coo if really necessary"
+end subroutine 
 
 
 subroutine optimize(this)
@@ -130,7 +149,7 @@ subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
 
     !fill type
     allocate(this%op_l(1),source=order(1))
-    allocate(this%op_r(2),source=order(2))
+    allocate(this%op_r(1),source=order(2))
     this%nnz=ii
     this%dimH=N_site*dim_mode
     allocate(this%colind,source=colind(1:this%nnz))

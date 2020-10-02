@@ -23,6 +23,7 @@ contains
     procedure :: add_H      
     procedure :: copy       
     procedure :: optimize
+    procedure :: mult_r,mult_l
 end type
 
 interface t_H_mkl_csr
@@ -37,6 +38,51 @@ type(t_H_mkl_csr) function dummy_constructor()
     !might want some initialization for H and descr, but should work without
     !continue 
 end function 
+
+subroutine mult_r(this,lat,vec)
+    use m_derived_types, only: lattice
+    class(t_H_mkl_csr),intent(in)   :: this
+    type(lattice), intent(in)       :: lat
+    real(8), intent(inout)          :: vec(:)
+    ! internal
+    real(C_DOUBLE)      :: alpha,beta
+    integer(C_int)      :: stat
+    real(8),pointer     :: modes_r(:)
+
+    Call lat%set_order_point(this%op_r(1),modes_r)
+
+    if(size(vec)/=this%dimH(1)) STOP "size of vec is wrong"
+    vec=0.0d0
+    alpha=1.0d0;beta=0.0d0
+    stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes_r,beta,vec)
+    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in apply_r of m_H_type_mkl_inspector_csr"
+    
+end subroutine 
+
+
+subroutine mult_l(this,lat,vec)
+    use m_derived_types, only: lattice
+    class(t_H_mkl_csr),intent(in)   :: this
+    type(lattice), intent(in)       :: lat
+    real(8), intent(inout)          :: vec(:)
+    ! internal
+    real(C_DOUBLE)      :: alpha,beta
+    integer(C_int)      :: stat
+    real(8),pointer     :: modes_l(:)
+
+    Call lat%set_order_point(this%op_l(1),modes_l)
+
+    if(size(vec)/=this%dimH(2)) STOP "size of vec is wrong"
+    vec=0.0d0
+    alpha=1.0d0;beta=0.0d0
+    stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes_l,beta,vec)
+    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in apply_r of m_H_type_mkl_inspector_csr"
+    
+end subroutine 
+
+
+
+
 
 subroutine optimize(this)
     class(t_H_mkl_csr),intent(inout)   :: this

@@ -18,6 +18,7 @@ contains
     procedure(int_destroy),deferred     :: destroy
     procedure(int_copy),deferred        :: copy
     procedure(int_destroy),deferred     :: optimize
+    procedure(int_mult),deferred        :: mult_r,mult_l
 
 
     procedure,NON_OVERRIDABLE           :: destroy_base
@@ -28,6 +29,13 @@ private
 public t_H,energy_all
 
 interface
+    subroutine int_mult(this,lat,vec)
+        import t_H,lattice
+    	class(t_H),intent(in)     :: this
+    	type(lattice),intent(in)  :: lat
+        real(8),intent(inout)     :: vec(:)
+    end subroutine
+
     subroutine int_destroy(this)
         import t_H
     	class(t_H),intent(inout)  :: this
