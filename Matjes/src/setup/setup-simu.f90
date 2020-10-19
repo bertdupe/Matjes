@@ -267,7 +267,6 @@ if (io_simu%io_Energy_Distrib) call init_Energy_distrib(my_lattice,tableNN,index
 
 call user_info(6,time,'done',.true.)
 
-!deallocate(tabledist,tableNN,indexNN)
 
 
 
@@ -285,6 +284,7 @@ call get_ham_dipole('input',my_lattice,my_motif)
 !
 Call set_Hamiltonians(Ham,tableNN,indexNN(:,1),DM_vector,my_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+deallocate(tabledist,tableNN,indexNN)
 
 
 #ifdef CPP_MPI

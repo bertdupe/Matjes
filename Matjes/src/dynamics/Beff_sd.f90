@@ -152,7 +152,8 @@ do k=size_B,1,-1
 
     B_transfer=matmul(all_B(k)%B_all_shell,all_vectors(1:counter*dim_mode))
     write(*,*) B_transfer
-   pause
+   STOP  "HERE IS A PAUSE AND I DON'T KNOW IF THIS FUNCTION IS FINISHED"
+!   pause
 !  B=matmul(all_B(k)%B_all_shell,all_vectors(1:counter*dim_mode))
 enddo
 

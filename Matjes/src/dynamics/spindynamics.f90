@@ -1,18 +1,16 @@
 module m_spindynamics
+implicit none
 contains
 subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams)
 use m_basic_types, only : vec_point
 use m_derived_types, only : t_cell,io_parameter,simulation_parameters,point_shell_Operator
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_modes_variables, only : point_shell_mode
-use m_torques, only : get_torques
+!use m_torques, only : get_torques
 use m_lattice, only : my_order_parameters
-use m_H_type
-use m_eval_BTeff
 use m_measure_temp
 use m_topo_commons
 use m_update_time
-use m_vector, only : cross,norm,norm_cross
 use m_randist
 use m_constants, only : pi,k_b,hbar
 use m_eval_Beff
@@ -22,14 +20,10 @@ use m_createspinfile
 use m_dyna_utils
 use m_user_info
 use m_excitations
-use m_operator_pointer_utils
 use m_solver_commun
 use m_topo_sd
-use m_derivative
 use m_forces
-use m_fftw, only : calculate_fft
 use m_plot_FFT
-use m_dipolar_field, only : prepare_FFT_dipole,calculate_FFT_modes
 use m_solver_order
 use m_io_files_utils
 use m_tracker
@@ -38,7 +32,6 @@ use omp_lib
 use m_precision
 use m_Htype_gen
 use m_Beff_H
-implicit none
 ! input
 type(lattice), intent(inout) :: mag_lattice
 type(io_parameter), intent(in) :: io_simu
@@ -121,8 +114,8 @@ call user_info(6,time,'done',.true.)
 allocate(Beff(mag_lattice%M%dim_mode*N_cell),source=0.0d0)
 Beff_v(1:mag_lattice%M%dim_mode,1:N_cell)=>Beff
 
-allocate(Dmag(mag_lattice%M%dim_mode,N_cell,N_loop),source=0.0d0)    !change 3 to size M
-allocate(Dmag_int(mag_lattice%M%dim_mode,N_cell),source=0.0d0)    !change 3 to size M
+allocate(Dmag(mag_lattice%M%dim_mode,N_cell,N_loop),source=0.0d0) 
+allocate(Dmag_int(mag_lattice%M%dim_mode,N_cell),source=0.0d0) 
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -154,16 +147,6 @@ Call energy_all(Hams,mag_lattice,Edy)
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! prepare the derivation of the lattice
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!if (io_simu%io_Force) call get_derivative(mode_magnetic,mag_lattice) !lat_1
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! prepare the dipole dipole FFT
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!call prepare_FFT_dipole(N_cell)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! part of the excitations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 call get_excitations('input',i_excitation,input_excitations)
@@ -184,7 +167,7 @@ call init_update_time('input')
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! initialize the different torques
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_torques('input')
+!call get_torques('input')
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! check if a magnetic texture should be tracked
@@ -216,7 +199,6 @@ do j=1,duration
     Mdy=0.0d0
     dt=timestep_int
     call update_ext_EM_fields(real_time,check)
-    call calculate_FFT_modes(j)
     test_torque=0.0d0
     
     !
@@ -239,9 +221,9 @@ do j=1,duration
       
       !do integration
       ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
-      Call get_propagator(Beff_v,damping,lat_1%M%modes_v,Dmag(:,:,i_loop))
+      Call get_propagator_field(Beff_v,damping,lat_1%M%modes_v,Dmag(:,:,i_loop))
       Call get_Dmag_int(Dmag,i_loop,N_loop,Dmag_int)
-      lat_2%M%modes_v=euler1(mag_lattice%M%modes_v,Dmag_int,dt)
+      lat_2%M%modes_v=get_integrator_field(mag_lattice%M%modes_v,Dmag_int,dt)
     
       Call lat_2%copy_val_to(lat_1)
     enddo
@@ -256,7 +238,7 @@ do j=1,duration
     !
     Call energy_all(Hams,mag_lattice,Edy)
     Mdy=sum(mag_lattice%M%modes_v,2) !works only for one M in unit cell
-    
+    !check this?
     do iomp=1,N_cell
         dumy=get_charge(iomp)
         q_plus=q_plus+dumy(1)/pi(4.0d0)
@@ -277,7 +259,7 @@ do j=1,duration
     
     if (mod(j-1,Efreq).eq.0) then
         Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
-         &   norm(Mdy),Mdy,norm(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
+         &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
          &   kT/k_B,(security(i),i=1,2),H_int
         write(8,'(I10,3x,3(E20.12E3,3x))') j,Edy,test_torque,ave_torque
     endif
@@ -289,6 +271,7 @@ do j=1,duration
         write(6,'(a)') 'please reduce the time step'
         said_it_once=.True.
     endif
+    Eold=Edy
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!!! plotting with graphical frequency
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -310,8 +293,6 @@ do j=1,duration
     
         if(io_simu%io_fft_Xstruct) call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
     endif
-    
-    Eold=Edy
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! update timestep
@@ -344,100 +325,4 @@ endif
 
 end subroutine spindynamics
 
-subroutine get_propagator(B,damping,M,Mout)
-    real(8),intent(in)                          ::  damping
-    real(8),intent(in),target,contiguous        ::  M(:,:),B(:,:)
-    real(8),intent(inout),target,contiguous     ::  Mout(:,:)
-
-    real(8),target  ::  M_norm(size(M,1),size(M,2))
-    real(8),target  ::  LLG_int(size(M,1),size(M,2))
-
-    real(8),pointer :: m3(:,:),m3_norm(:,:),B3(:,:),LLG_int3(:,:),m3_out(:,:)
-
-    integer             :: Nvec
-
-    Nvec=size(M)/3
-
-    !MOVE RESHAPING routine up?
-    m3(1:3,1:Nvec)=>M
-    m3_norm(1:3,1:Nvec)=>M_norm
-    B3(1:3,1:Nvec)=>B
-    LLG_int3(1:3,1:Nvec)=>LLG_int
-    M3_out(1:3,1:Nvec)=>Mout(:,:)
-
-    Call normalize_M(M3,M3_norm)
-    Call cross(M3_norm,B3,LLG_int3)
-    LLG_int=-B-damping*LLG_int
-    Call cross(m3_norm,LLG_int3,m3_out)
-    Mout(:,:)=Mout(:,:)/(1.0+damping*damping)
-    nullify(m3,m3_norm,B3,LLG_int3,M3_out)
-
-    !ADD EXTERNAL TORQUES IF NECESSARY
-end subroutine
-
-subroutine cross(vec1,vec2,vec_out)
-    real(8),intent(in)      ::  vec1(:,:)
-    real(8),intent(in)      ::  vec2(:,:)
-    real(8),intent(out)     ::  vec_out(size(vec1,1),size(vec1,2))
-
-    integer                 ::  i,Nvec
-    Nvec=size(vec1,2)
-    do i=1,Nvec
-        vec_out(1,i)=vec1(2,i)*vec2(3,i)-vec1(3,i)*vec2(2,i)
-        vec_out(2,i)=vec1(3,i)*vec2(1,i)-vec1(1,i)*vec2(3,i)
-        vec_out(3,i)=vec1(1,i)*vec2(2,i)-vec1(2,i)*vec2(1,i)
-    enddo
-end subroutine
-
-subroutine normalize_M(M,M_norm)
-    !normalize vectors
-    !first dimension of input has to be vector dimension to be normalized
-    
-    real(8),intent(in)         ::  M(:,:)
-    real(8),intent(inout)      ::  M_norm(:,:)
-
-    real(8)             :: norm(size(M,2))
-    integer             :: i
-
-    norm=norm2(m,dim=1)
-    do i=1,size(M,2)
-        m_norm(:,i)=m(:,i)/norm(i)
-    enddo
-end subroutine
-
-
-function euler1(m,Dmag_int,dt)result(Mout)
-    use m_constants, only : hbar
-    real(8),intent(in),target,contiguous    ::  M(:,:),Dmag_int(:,:)
-    real(8),intent(in)                      ::  dt
-    real(8),target                          ::  Mout(size(M,1),size(M,2))
-
-    real(8),pointer :: m3(:,:),m3_tmp(:,:),m3_out(:,:)
-    real(8)         :: m_norm(size(M)/3),int_norm(size(M)/3)
-
-    real(8),target  :: euler_tmp(size(M,1),size(M,2))
-    logical         :: mask(3,size(M)/3)
-
-    integer         :: Nvec,i
-
-    !ADD DT_mode
-
-    !get 3_vectors for norm stuff
-    Nvec=size(M)/3
-    m3(1:3,1:Nvec)=>M
-    m3_tmp(1:3,1:Nvec)=>euler_tmp
-    m3_out(1:3,1:Nvec)=>Mout
-
-    Mout=M
-    m_norm=norm2(m3,dim=1)
-    euler_tmp=M+Dmag_int*dt/hbar
-    int_norm=norm2(m3_out,dim=1)
-    mask=spread(int_norm>1.0d-8,dim=1,ncopies=3)
-    do i=1,Nvec
-        m3_tmp(:,i)=m3_tmp(:,i)*m_norm(i)/int_norm(i)
-    enddo
-    m3_out=merge(m3_tmp,m3,mask)
-    nullify(m3,m3_tmp,m3_out)
-
-end function
 end module

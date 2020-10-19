@@ -7,7 +7,7 @@ use m_derived_types
    end interface minimization
 
 private
-public :: Euler,implicite,minimization
+public :: Euler,euler_old,implicite,minimization
 contains
 
 !
@@ -67,7 +67,7 @@ end function implicite
 ! ----------------------------------------------
 ! ----------------------------------------------
 ! Euler integration scheme
-function euler(mode_t,D_mode,DT_mode,dt,size_mode)
+function euler_old(mode_t,D_mode,DT_mode,dt,size_mode)result(euler)
 use m_vector, only : cross,norm
 use m_constants, only : hbar
 implicit none
@@ -91,7 +91,45 @@ do i=1,size_mode/3
    if (norm(euler_int(start:end)).gt.1.0d-8) euler(start:end)=euler_int(start:end)*norm_mode/norm_int
 enddo
 
-end function euler
+end function 
+
+
+function euler(m,Dmag_int,dt)result(Mout)
+    use m_constants, only : hbar
+    real(8),intent(in),target,contiguous    ::  M(:,:),Dmag_int(:,:)
+    real(8),intent(in)                      ::  dt
+    real(8),target                          ::  Mout(size(M,1),size(M,2))
+
+    real(8),pointer :: m3(:,:),m3_tmp(:,:),m3_out(:,:)
+    real(8)         :: m_norm(size(M)/3),int_norm(size(M)/3)
+
+    real(8),target  :: euler_tmp(size(M,1),size(M,2))
+    logical         :: mask(3,size(M)/3)
+
+    integer         :: Nvec,i
+
+    !ADD DT_mode
+
+    !get 3_vectors for norm stuff
+    Nvec=size(M)/3
+    m3(1:3,1:Nvec)=>M
+    m3_tmp(1:3,1:Nvec)=>euler_tmp
+    m3_out(1:3,1:Nvec)=>Mout
+
+    Mout=M
+    m_norm=norm2(m3,dim=1)
+    euler_tmp=M+Dmag_int*dt/hbar
+    int_norm=norm2(m3_out,dim=1)
+    mask=spread(int_norm>1.0d-8,dim=1,ncopies=3)
+    do i=1,Nvec
+        m3_tmp(:,i)=m3_tmp(:,i)*m_norm(i)/int_norm(i)
+    enddo
+    m3_out=merge(m3_tmp,m3,mask)
+    nullify(m3,m3_tmp,m3_out)
+
+end function
+
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
