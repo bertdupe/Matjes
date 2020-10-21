@@ -127,7 +127,7 @@ subroutine get_anisotropy_H(Ham,lat)
             line(1,i)=i
         enddo
     
-        Call Ham%set_H_1(line,val_tmp,ind_tmp,[1,1],lat)
+        Call Ham%init_1(line,val_tmp,ind_tmp,[1,1],lat)
     endif
 end subroutine
 

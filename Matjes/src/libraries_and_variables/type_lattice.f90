@@ -67,6 +67,7 @@ contains
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point => set_order_point
     procedure :: set_order_comb
+    procedure :: point_order => point_order_onsite
     !!reduce that order paramter again
     procedure :: reduce
     !real space position functions
@@ -356,6 +357,27 @@ subroutine set_order_comb(this,order,vec)
         enddo
     enddo
 end subroutine
+
+subroutine point_order_onsite(lat,op,dimH,modes,vec)
+    !Subroutine that points modes to the order parameter vector according to op and dimH input
+    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
+    !, and points modes
+    !This only works if the unfolded order paramters are only considered on the same site
+    class(lattice), intent(in)               :: lat
+    integer,intent(in)                      :: op(:)
+    integer,intent(in)                      :: dimH
+    real(8),pointer,intent(out)             :: modes(:)
+    real(8),allocatable,target,intent(out)  :: vec(:)
+
+    if(size(op)==1)then
+        Call lat%set_order_point(op(1),modes)
+    else
+        allocate(vec(dimH),source=0.0d0)
+        Call lat%set_order_comb(op,vec)
+        modes=>vec
+    endif
+end subroutine
+
 
 
 function get_order_dim(this,order) result(dim_mode)

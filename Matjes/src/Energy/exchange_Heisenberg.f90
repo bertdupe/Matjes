@@ -202,9 +202,9 @@ subroutine get_exchange_H(Ham,tableNN,indexNN,lat,DM_vector)
                     enddo
                   enddo
                 enddo
-                Call Ham_tmp%set_H_1(line(i_vois:i_vois,:),val_tmp,ind_tmp,[1,1],lat)
+                Call Ham_tmp%init_1(line(i_vois:i_vois,:),val_tmp,ind_tmp,[1,1],lat)
                 deallocate(val_tmp,ind_tmp,line)
-                Call Ham%add_H(Ham_tmp)
+                Call Ham%add(Ham_tmp)
                 Call Ham_tmp%destroy()
             enddo
         enddo

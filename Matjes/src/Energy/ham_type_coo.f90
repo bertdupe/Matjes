@@ -5,23 +5,22 @@ use m_H_type
 
 type,extends(t_H) :: t_H_coo
     private
-    integer             :: dimH(2)=0 !dimension of Hamiltonian
     integer             :: nnz=0  !number of entries in sparse matrix
     real(8),allocatable :: val(:)
     integer,allocatable :: rowind(:),colind(:)
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: eval_all
-    procedure :: set_H
-    procedure :: set_H_1
-    procedure :: set_H_mult_2
-    procedure :: add_H
-    procedure :: destroy
+    procedure :: init
+    procedure :: init_1
+    procedure :: init_mult_2
+
+    procedure :: destroy_child
+    procedure :: copy_child
+    procedure :: add_child
+
     procedure :: optimize
-    procedure :: copy
     procedure :: mult_l,mult_r
-    procedure :: mult_l_red,mult_r_red
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -49,46 +48,21 @@ subroutine mult_l(this,lat,res)
     STOP "IMPLEMENT mult_l FOR t_H_coo in m_H_type_coo if really necessary"
 end subroutine 
 
-subroutine mult_l_red(this,lat,res,op_keep)
-    use m_derived_types, only: lattice
-    class(t_H_coo),intent(in)    :: this
-    type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: res(:)
-    integer,intent(in)           :: op_keep
-
-    STOP "IMPLEMENT mult_l_red FOR t_H_coo in m_H_type_coo if really necessary"
-end subroutine 
-
-subroutine mult_r_red(this,lat,res,op_keep)
-    use m_derived_types, only: lattice
-    class(t_H_coo),intent(in)    :: this
-    type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: res(:)
-    integer,intent(in)           :: op_keep
-
-    STOP "IMPLEMENT mult_r_red FOR t_H_coo in m_H_type_coo if really necessary"
-end subroutine 
-
-
 subroutine optimize(this)
     class(t_H_coo),intent(inout)    :: this
 
     STOP "IMPLEMENT optimize FOR t_H_coo in m_H_type_coo if really necessary"
 end subroutine 
 
-subroutine destroy(this)
+subroutine destroy_child(this)
     class(t_H_coo),intent(inout)    :: this
-
-    !inherited data
-    Call this%set_prepared(.false.)
-    deallocate(this%op_l,this%op_r)
 
     this%dimH=0
     this%nnz=0
     deallocate(this%val,this%rowind,this%colind)
 end subroutine 
 
-subroutine copy(this,Hout)
+subroutine copy_child(this,Hout)
     class(t_H_coo),intent(in)    :: this
     class(t_H),intent(inout)     :: Hout
 
@@ -96,12 +70,11 @@ subroutine copy(this,Hout)
 
 end subroutine 
 
-subroutine add_H(this,H_add)
+subroutine add_child(this,H_in)
     class(t_H_coo),intent(inout)    :: this
-    class(t_H),intent(in)           :: H_add
+    class(t_H),intent(in)           :: H_in
 
     STOP "IMPLEMENT ADDIND FOR t_H_coo in m_H_type_coo if really necessary"
-
 end subroutine 
 
 subroutine pop_par(this,dimH,nnz,val,rowind,colind)
@@ -122,7 +95,7 @@ subroutine pop_par(this,dimH,nnz,val,rowind,colind)
 end subroutine
 
 
-subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
+subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
     use m_derived_types, only: operator_real_order_N,lattice
     class(t_H_coo),intent(inout)    :: this
@@ -136,9 +109,8 @@ subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
     integer             :: dim_mode(2)
     integer             :: nnz
     integer             :: i,j,l,ii
-    integer             :: i1,i2,ival
-    integer             :: N_neigh
-    integer             :: N_persite,N_site
+    integer             :: ival
+    integer             :: N_neigh,N_site
 
     real(8),allocatable :: val(:)
     integer,allocatable :: rowind(:),colind(:)
@@ -187,7 +159,7 @@ subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
 end subroutine 
 
 
-subroutine set_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
     !(example: ME-coupling M_i*E_i*M_j
     use m_derived_types, only: operator_real_order_N,lattice
@@ -202,7 +174,7 @@ subroutine set_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
 
     integer             :: dim_mode(2)
     integer             :: nnz
-    integer             :: i,j,ii
+    integer             :: i,j
     integer             :: ival
     integer             :: N_connect
 
@@ -255,7 +227,7 @@ end subroutine
 
 
 
-subroutine set_H(this,energy_in,lat)
+subroutine init(this,energy_in,lat)
     use m_derived_types, only: operator_real_order_N,lattice
     class(t_H_coo),intent(inout)  :: this
     type(operator_real_order_N)     :: energy_in
@@ -329,18 +301,6 @@ subroutine eval_single(this,E,i_m,lat)
     STOP "CANNOT EVALUATE t_H_coo"
     !alternatively add some evaluation without an library
 
-end subroutine 
-
-
-subroutine eval_all(this,E,lat)
-    use m_derived_types, only: lattice
-    class(t_H_coo),intent(in)    :: this
-    type(lattice), intent(in)       :: lat
-    real(8), intent(out)            :: E
-
-    STOP "CANNOT EVALUATE t_H_coo"
-    !alternatively add some evaluation without an library
-    
 end subroutine 
 
 end module

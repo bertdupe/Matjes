@@ -11,22 +11,21 @@ USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE,C_INT
 
 type,extends(t_H) :: t_H_mkl_csr
     private
-    integer               :: dimH(2)=0
     type(SPARSE_MATRIX_T) :: H
     TYPE(matrix_descr)    :: descr
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: eval_all   
-    procedure :: set_H      
-    procedure :: set_H_1    
-    procedure :: set_H_mult_2   
-    procedure :: destroy    
-    procedure :: add_H      
-    procedure :: copy       
+    procedure :: init      
+    procedure :: init_1    
+    procedure :: init_mult_2   
+
+    procedure :: add_child 
+    procedure :: destroy_child    
+    procedure :: copy_child 
+
     procedure :: optimize
     procedure :: mult_r,mult_l
-    procedure :: mult_r_red,mult_l_red
 end type
 
 interface t_H_mkl_csr
@@ -43,41 +42,6 @@ type(t_H_mkl_csr) function dummy_constructor()
 end function 
 
 
-subroutine mult_r_red(this,lat,res,op_keep)
-    !multiply out right side and reduce to only keep operator corresponding to op_keep
-    use m_derived_types, only: lattice
-    class(t_H_mkl_csr),intent(in)   :: this
-    type(lattice), intent(in)       :: lat
-    real(8), intent(inout)          :: res(:)   !result matrix-vector product
-    integer,intent(in)              :: op_keep
-    ! internal
-    real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-
-    allocate(tmp(this%dimH(1)))
-    Call this%mult_r(lat,tmp)
-    Call lat%reduce(tmp,this%op_l,op_keep,res)
-    deallocate(tmp)
-end subroutine 
-
-subroutine mult_l_red(this,lat,res,op_keep)
-    !multiply out right side and reduce to only keep operator corresponding to op_keep
-    use m_derived_types, only: lattice
-    class(t_H_mkl_csr),intent(in)   :: this
-    type(lattice), intent(in)       :: lat
-    real(8), intent(inout)          :: res(:)   !result matrix-vector product
-    integer,intent(in)              :: op_keep
-    ! internal
-    real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-
-    allocate(tmp(this%dimH(2)))
-    Call this%mult_l(lat,tmp)
-    Call lat%reduce(tmp,this%op_r,op_keep,res)
-    deallocate(tmp)
-end subroutine 
-
-
-
-
 subroutine mult_r(this,lat,res)
     !mult
     use m_derived_types, only: lattice
@@ -90,7 +54,7 @@ subroutine mult_r(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
 
-    Call init_mode_onsite(this%op_r,this%dimH(2),lat,modes,vec)
+    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
 
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     res=0.0d0
@@ -111,7 +75,7 @@ subroutine mult_l(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
 
-    Call init_mode_onsite(this%op_l,this%dimH(1),lat,modes,vec)
+    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
 
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
     res=0.0d0
@@ -131,7 +95,7 @@ subroutine optimize(this)
     
 end subroutine
 
-subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
+subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(inout)    :: this
 
@@ -145,12 +109,12 @@ subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
     type(t_H_coo)           :: H_coo
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%set_H_1(line,Hval,Hval_ind,order,lat)
+    Call H_coo%init_1(line,Hval,Hval_ind,order,lat)
     Call set_from_Hcoo(this,H_coo)
 end subroutine 
 
 
-subroutine set_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(inout)    :: this
 
@@ -164,21 +128,18 @@ subroutine set_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     type(t_H_coo)           :: H_coo
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%set_H_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
+    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
     Call set_from_Hcoo(this,H_coo)
 end subroutine 
 
 
-subroutine copy(this,Hout)
+subroutine copy_child(this,Hout)
     class(t_H_mkl_csr),intent(in)   :: this
     class(t_H),intent(inout)        :: Hout
     integer         ::  stat
     
     select type(Hout)
     class is(t_H_mkl_csr)
-        Call Hout%destroy()
-        Call this%copy_base(Hout)
-        Hout%dimH=this%dimH
         stat=mkl_sparse_copy(this%H,this%descr,Hout%H )
         Hout%descr=this%descr
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to copy Sparse_Matrix_T in m_H_type_mkl_inspector_csr'
@@ -187,47 +148,39 @@ subroutine copy(this,Hout)
     end select
 end subroutine
 
-subroutine add_H(this,H_add)
+subroutine add_child(this,H_in)
     class(t_H_mkl_csr),intent(inout)    :: this
-    class(t_H),intent(in)               :: H_add
+    class(t_H),intent(in)               :: H_in
     
     type(SPARSE_MATRIX_T)       :: tmp_H
     integer                     :: stat
     real(C_DOUBLE),parameter    :: alpha=1.0d0
 
 
-    select type(H_add)
+    select type(H_in)
     class is(t_H_mkl_csr)
-        if(this%is_set())then
-            if(.not.all(this%op_l==H_add%op_l)) STOP "CANNOT ADD hamiltonians with different op_l"
-            if(.not.all(this%op_r==H_add%op_r)) STOP "CANNOT ADD hamiltonians with different op_r"
-            tmp_H=this%H
-            stat=mkl_sparse_d_add(sparse_operation_non_transpose,tmp_H,alpha,h_add%h,this%H)
-            if(stat/=SPARSE_STATUS_SUCCESS) STOP "add_H failed in mkl_inspector_csr"
-            stat=mkl_sparse_destroy(tmp_H)
-            if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_coo type in m_H_type_mkl_inspector_csr'
-        else
-            Call H_add%copy(this)
-        endif
+        tmp_H=this%H
+        stat=mkl_sparse_d_add(sparse_operation_non_transpose,tmp_H,alpha,h_in%h,this%H)
+        if(stat/=SPARSE_STATUS_SUCCESS) STOP "add failed in mkl_inspector_csr"
+        stat=mkl_sparse_destroy(tmp_H)
+        if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_coo type in m_H_type_mkl_inspector_csr'
     class default
         STOP "Cannot add t_h_mkl_csr type with Hamiltonian that is not a class of t_h_mkl_csr"
     end select
 
 end subroutine 
 
-subroutine destroy(this)
+subroutine destroy_child(this)
     class(t_H_mkl_csr),intent(inout)    :: this
     integer     ::  stat
 
     if(this%is_set())then
-        Call this%destroy_base()
         stat=mkl_sparse_destroy(this%H)
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_csr type in m_H_type_mkl_inspector_csr'
-        this%dimH=0
     endif
 end subroutine
 
-subroutine set_H(this,energy_in,lat)
+subroutine init(this,energy_in,lat)
     use m_derived_types, only: operator_real_order_N,lattice
     class(t_H_mkl_csr),intent(inout)    :: this
     type(operator_real_order_N)         :: energy_in
@@ -237,7 +190,7 @@ subroutine set_H(this,energy_in,lat)
     type(t_H_coo)           :: H_coo
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%set_H(energy_in,lat)
+    Call H_coo%init(energy_in,lat)
     Call set_from_Hcoo(this,H_coo)
 
 end subroutine 
@@ -286,51 +239,13 @@ subroutine eval_single(this,E,i_m,lat)
     real(8),allocatable,target  :: vec_l(:)
     integer             :: dim_modes(2)
 
-    Call init_mode_onsite(this%op_l,this%dimH(1),lat,modes_l,vec_l)
+    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call this%mult_r(lat,tmp)
 
     STOP "UPDATE EVAL_SINGLE FOR HIGHER RANKS, AND ALSO DIM_MODES SEEMS BROKEN..." !there is some function to get those already
     ! try sparse matrix product to substitute sparse matrix times sparse vector product
     E=dot_product(modes_l((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)),tmp((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)))
 end subroutine 
-
-
-subroutine eval_all(this,E,lat)
-    class(t_H_mkl_csr),intent(in)   :: this
-    type(lattice), intent(in)       :: lat
-    real(8), intent(out)            :: E
-    ! internal
-    real(C_DOUBLE)             :: tmp(this%dimH(1))
-    real(8),pointer            :: modes_l(:)
-    real(8),allocatable,target :: vec_l(:)
-
-    Call init_mode_onsite(this%op_l,this%dimH(1),lat,modes_l,vec_l)
-
-    Call this%mult_r(lat,tmp)
-    E=dot_product(modes_l,tmp)
-
-    if(allocated(vec_l)) deallocate(vec_l) 
-end subroutine 
-
-subroutine init_mode_onsite(op,dimH,lat,modes,vec)
-    !Subroutine that points modes to the order parameter vector according to op and dimH input
-    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
-    !, and points modes
-    !This only works if the unfolded order paramters are only considered on the same site
-    integer,intent(in)                      :: op(:)
-    integer,intent(in)                      :: dimH
-    type(lattice), intent(in)               :: lat
-    real(8),pointer,intent(out)             :: modes(:)
-    real(8),allocatable,target,intent(out)  :: vec(:)
-
-    if(size(op)==1)then
-        Call lat%set_order_point(op(1),modes)
-    else
-        allocate(vec(dimH),source=0.0d0)
-        Call lat%set_order_comb(op,vec)
-        modes=>vec
-    endif
-end subroutine
 
 #endif
 end module
