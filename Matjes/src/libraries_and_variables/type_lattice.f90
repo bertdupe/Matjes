@@ -60,25 +60,37 @@ type lattice
      type(order_par)   :: ordpar !make this an array if using separated order parameters
 
 contains
+    !basic function
     procedure :: init_geo => lattice_init_geo
     procedure :: copy => copy_lattice
-    procedure :: get_pos_mag => lattice_get_position_mag
     procedure :: copy_val_to => copy_val_lattice
-    procedure :: get_order_dim  => get_order_dim
+    !get correct order parameter (or combination thereof)
     procedure :: set_order_point => set_order_point
     procedure :: set_order_comb
-    procedure :: index_m_1 => index_m_1
-    procedure :: index_1_3 => index_1_3
-    procedure :: used_order => lattice_used_order
+    !!reduce that order paramter again
+    procedure :: reduce
+    !real space position functions
+    procedure :: get_pos_mag => lattice_get_position_mag
     procedure :: pos_diff_ind => lattice_position_difference
     procedure :: pos_ind => lattice_position
+    !index routines
+    procedure :: index_m_1 
+    procedure :: index_1_3 
+    !misc
+    procedure :: used_order => lattice_used_order
+    procedure :: get_order_dim 
 end type lattice
 
+type point_arr
+    !private type used only here
+    real(8),pointer     ::  v(:)
+end type
 
 private
 public lattice, number_different_order_parameters, t_cell
 
 contains 
+
 
 subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
     use m_vector, only : norm,cross
@@ -266,6 +278,45 @@ subroutine set_order_point(this,order,point)
 end subroutine
 
 
+subroutine reduce(this,vec_in,order,order_keep,vec_out)
+    class(lattice),intent(in)       ::  this
+    real(8),intent(in)              ::  vec_in(:)
+    integer,intent(in)              ::  order(:)
+    integer,intent(in)              ::  order_keep
+    real(8),intent(inout)           ::  vec_out(:)
+
+    integer                 :: dim_modes(size(order))
+    integer                 :: dim_mode_sum,dim_mode_keep
+    integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+
+    integer                 :: ind_div
+
+    integer                 :: i
+    integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
+    integer                 :: dir
+
+    ind_keep=findloc(order,order_keep,dim=1)
+    do i=1,size(order)
+        dim_modes(i)=this%get_order_dim(order(i))
+    enddo
+    dim_mode_sum=product(dim_modes)
+    dim_mode_keep=dim_modes(ind_keep)
+    ind_div=product(dim_modes(:ind_keep-1))
+
+    if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"
+    if(size(vec_in)/=this%Ncell*dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
+    if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
+
+    vec_out=0.0d0
+    do i=1,size(vec_in)
+        site=(i-1)/dim_mode_sum
+        dir=i-site*dim_mode_sum
+        dir=modulo((dir-1)/ind_div,dim_mode_keep)+1
+        vec_out(dir+site*dim_mode_keep)=vec_out(dir+site*dim_mode_keep)+vec_in(i)
+    enddo
+
+end subroutine
+
 subroutine set_order_comb(this,order,vec)
     !fills the combination of several order parameters according to order
     !probably quite slow implementation, but should at least work for any reasonable size of order
@@ -275,12 +326,9 @@ subroutine set_order_comb(this,order,vec)
     integer,intent(in)                ::  order(:)
     real(8),intent(inout)             ::  vec(:)
 
-    type point_arr
-        real(8),pointer     ::  v(:)
-    end type
     type(point_arr)         :: points(size(order))
     integer                 :: dim_modes(size(order))
-    integer                 :: dim_mode_res
+    integer                 :: dim_mode_sum
     integer                 :: i_site,i,i_entry,i_ord
     integer                 :: ind_site(size(order))
     integer                 :: ind(size(order))
@@ -291,7 +339,7 @@ subroutine set_order_comb(this,order,vec)
         Call this%set_order_point(order(i),points(i)%v)
         dim_modes(i)=this%get_order_dim(order(i))
     enddo
-    dim_mode_res=product(dim_modes)
+    dim_mode_sum=product(dim_modes)
     do i=1,size(order)
         ind_div(i)=product(dim_modes(:i-1))
     enddo
@@ -301,7 +349,7 @@ subroutine set_order_comb(this,order,vec)
         do i=1,product(dim_modes)
             ind=(i-1)/ind_div
             ind=modulo(ind,dim_modes)+1+ind_site
-            i_entry=i+(i_site-1)*dim_mode_res
+            i_entry=i+(i_site-1)*dim_mode_sum
             do i_ord=1,size(order)
                 vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
             enddo

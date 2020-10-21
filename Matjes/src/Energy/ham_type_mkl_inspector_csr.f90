@@ -26,6 +26,7 @@ contains
     procedure :: copy       
     procedure :: optimize
     procedure :: mult_r,mult_l
+    procedure :: mult_r_red,mult_l_red
 end type
 
 interface t_H_mkl_csr
@@ -41,44 +42,81 @@ type(t_H_mkl_csr) function dummy_constructor()
     !continue 
 end function 
 
-subroutine mult_r(this,lat,vec)
+
+subroutine mult_r_red(this,lat,res,op_keep)
+    !multiply out right side and reduce to only keep operator corresponding to op_keep
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
-    real(8), intent(inout)          :: vec(:)
+    real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    integer,intent(in)              :: op_keep
     ! internal
-    real(C_DOUBLE)      :: alpha,beta
-    integer(C_int)      :: stat
-    real(8),pointer     :: modes_r(:)
+    real(8),allocatable             :: tmp(:)   !multipied, but not reduced
 
-    Call lat%set_order_point(this%op_r(1),modes_r)
+    allocate(tmp(this%dimH(1)))
+    Call this%mult_r(lat,tmp)
+    Call lat%reduce(tmp,this%op_l,op_keep,res)
+    deallocate(tmp)
+end subroutine 
 
-    if(size(vec)/=this%dimH(1)) STOP "size of vec is wrong"
-    vec=0.0d0
-    alpha=1.0d0;beta=0.0d0
-    stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes_r,beta,vec)
-    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in apply_r of m_H_type_mkl_inspector_csr"
-    
+subroutine mult_l_red(this,lat,res,op_keep)
+    !multiply out right side and reduce to only keep operator corresponding to op_keep
+    use m_derived_types, only: lattice
+    class(t_H_mkl_csr),intent(in)   :: this
+    type(lattice), intent(in)       :: lat
+    real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    integer,intent(in)              :: op_keep
+    ! internal
+    real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+
+    allocate(tmp(this%dimH(2)))
+    Call this%mult_l(lat,tmp)
+    Call lat%reduce(tmp,this%op_r,op_keep,res)
+    deallocate(tmp)
 end subroutine 
 
 
-subroutine mult_l(this,lat,vec)
+
+
+subroutine mult_r(this,lat,res)
+    !mult
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
-    real(8), intent(inout)          :: vec(:)
+    real(8), intent(inout)          :: res(:)   !result matrix-vector product
     ! internal
-    real(C_DOUBLE)      :: alpha,beta
-    integer(C_int)      :: stat
-    real(8),pointer     :: modes_l(:)
+    integer(C_int)             :: stat
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+    real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
 
-    Call lat%set_order_point(this%op_l(1),modes_l)
+    Call init_mode_onsite(this%op_r,this%dimH(2),lat,modes,vec)
 
-    if(size(vec)/=this%dimH(2)) STOP "size of vec is wrong"
-    vec=0.0d0
-    alpha=1.0d0;beta=0.0d0
-    stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes_l,beta,vec)
-    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in apply_r of m_H_type_mkl_inspector_csr"
+    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
+    res=0.0d0
+    stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
+    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_r of m_H_type_mkl_inspector_csr"
+    if(allocated(vec)) deallocate(vec)
+end subroutine 
+
+
+subroutine mult_l(this,lat,res)
+    use m_derived_types, only: lattice
+    class(t_H_mkl_csr),intent(in)   :: this
+    type(lattice), intent(in)       :: lat
+    real(8), intent(inout)          :: res(:)
+    ! internal
+    integer(C_int)             :: stat
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+    real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
+
+    Call init_mode_onsite(this%op_l,this%dimH(1),lat,modes,vec)
+
+    if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
+    res=0.0d0
+    stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
+    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_type_mkl_inspector_csr"
     
 end subroutine 
 
@@ -244,87 +282,55 @@ subroutine eval_single(this,E,i_m,lat)
     real(kind=8), intent(out)       :: E
     ! internal
     real(C_DOUBLE)      :: tmp(this%dimH(1))
-    real(C_DOUBLE)      :: alpha,beta
-    integer(C_int)      :: stat
-    real(8),pointer     :: modes_l(:),modes_r(:)
-    integer           :: dim_modes(2)
+    real(8),pointer             :: modes_l(:)
+    real(8),allocatable,target  :: vec_l(:)
+    integer             :: dim_modes(2)
 
-    Call lat%set_order_point(this%op_l(1),modes_l)
-    Call lat%set_order_point(this%op_r(1),modes_r)
+    Call init_mode_onsite(this%op_l,this%dimH(1),lat,modes_l,vec_l)
+    Call this%mult_r(lat,tmp)
 
-    tmp=0.0d0
-    alpha=1.0d0;beta=0.0d0
-
+    STOP "UPDATE EVAL_SINGLE FOR HIGHER RANKS, AND ALSO DIM_MODES SEEMS BROKEN..." !there is some function to get those already
     ! try sparse matrix product to substitute sparse matrix times sparse vector product
-
-    stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes_r,beta,tmp)
-    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in eval_single  of m_H_type_mkl_inspector_csr"
     E=dot_product(modes_l((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)),tmp((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)))
 end subroutine 
 
 
 subroutine eval_all(this,E,lat)
-    class(t_H_mkl_csr),intent(in)    :: this
+    class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(out)            :: E
     ! internal
-    real(C_DOUBLE)      :: tmp(this%dimH(1))
-    real(C_DOUBLE)      :: alpha,beta
-    integer(C_int)      :: stat
-    real(8),pointer     :: modes_l(:),modes_r(:)
-    real(8),allocatable,target :: vec_l(:),vec_r(:)
+    real(C_DOUBLE)             :: tmp(this%dimH(1))
+    real(8),pointer            :: modes_l(:)
+    real(8),allocatable,target :: vec_l(:)
 
-!    Call lat%set_order_point(this%op_l(1),modes_l)
-!    Call lat%set_order_point(this%op_r(1),modes_r)
-    Call init_modes(this,lat,modes_l,modes_r,vec_l,vec_r)
+    Call init_mode_onsite(this%op_l,this%dimH(1),lat,modes_l,vec_l)
 
-    tmp=0.0d0
-    alpha=1.0d0;beta=0.0d0
-    stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes_r,beta,tmp)
+    Call this%mult_r(lat,tmp)
     E=dot_product(modes_l,tmp)
-    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in eval_all  of m_H_type_mkl_inspector_csr"
 
-    Call finalize_modes(this,modes_l,modes_r,vec_l,vec_r)
-    
+    if(allocated(vec_l)) deallocate(vec_l) 
 end subroutine 
 
-subroutine init_modes(this,lat,modes_l,modes_r,vec_l,vec_r)
-    class(t_H_mkl_csr),intent(in)   :: this
-    type(lattice), intent(in)       :: lat
-    real(8),pointer,intent(out)     :: modes_l(:),modes_r(:)
-    real(8),allocatable,target,intent(out) :: vec_l(:),vec_r(:)
+subroutine init_mode_onsite(op,dimH,lat,modes,vec)
+    !Subroutine that points modes to the order parameter vector according to op and dimH input
+    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
+    !, and points modes
+    !This only works if the unfolded order paramters are only considered on the same site
+    integer,intent(in)                      :: op(:)
+    integer,intent(in)                      :: dimH
+    type(lattice), intent(in)               :: lat
+    real(8),pointer,intent(out)             :: modes(:)
+    real(8),allocatable,target,intent(out)  :: vec(:)
 
-    if(size(this%op_l)==1)then
-        Call lat%set_order_point(this%op_l(1),modes_l)
+    if(size(op)==1)then
+        Call lat%set_order_point(op(1),modes)
     else
-        allocate(vec_r(this%dimH(1)),source=0.0d0)
-        Call lat%set_order_comb(this%op_l,vec_l)
-        modes_l=>vec_l
+        allocate(vec(dimH),source=0.0d0)
+        Call lat%set_order_comb(op,vec)
+        modes=>vec
     endif
-    if(size(this%op_r)==1)then
-        Call lat%set_order_point(this%op_r(1),modes_r)
-    else
-        allocate(vec_r(this%dimH(2)),source=0.0d0)
-        Call lat%set_order_comb(this%op_r,vec_r)
-        modes_r=>vec_r
-    endif
-
 end subroutine
-
-subroutine finalize_modes(this,modes_l,modes_r,vec_l,vec_r)
-    class(t_H_mkl_csr),intent(in)   :: this
-    real(8),pointer,intent(inout)      :: modes_l(:),modes_r(:)
-    real(8),allocatable,intent(inout)  :: vec_l(:),vec_r(:)
-
-    if(size(this%op_l)/=1)then
-        deallocate(vec_l)
-    endif
-    if(size(this%op_r)/=1)then
-        deallocate(vec_r)
-    endif
-
-end subroutine 
-
 
 #endif
 end module

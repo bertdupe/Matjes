@@ -21,6 +21,7 @@ contains
     procedure :: optimize
     procedure :: copy
     procedure :: mult_l,mult_r
+    procedure :: mult_l_red,mult_r_red
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -30,22 +31,42 @@ private
 public t_H,t_H_coo
 contains 
 
-subroutine mult_r(this,lat,vec)
+subroutine mult_r(this,lat,res)
     use m_derived_types, only: lattice
     class(t_H_coo),intent(in)    :: this
     type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: vec(:)
+    real(8),intent(inout)        :: res(:)
 
-    STOP "IMPLEMENT apply_r FOR t_H_coo in m_H_type_coo if really necessary"
+    STOP "IMPLEMENT mult_r FOR t_H_coo in m_H_type_coo if really necessary"
 end subroutine 
 
-subroutine mult_l(this,lat,vec)
+subroutine mult_l(this,lat,res)
     use m_derived_types, only: lattice
     class(t_H_coo),intent(in)    :: this
     type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: vec(:)
+    real(8),intent(inout)        :: res(:)
 
-    STOP "IMPLEMENT apply_l FOR t_H_coo in m_H_type_coo if really necessary"
+    STOP "IMPLEMENT mult_l FOR t_H_coo in m_H_type_coo if really necessary"
+end subroutine 
+
+subroutine mult_l_red(this,lat,res,op_keep)
+    use m_derived_types, only: lattice
+    class(t_H_coo),intent(in)    :: this
+    type(lattice),intent(in)     :: lat
+    real(8),intent(inout)        :: res(:)
+    integer,intent(in)           :: op_keep
+
+    STOP "IMPLEMENT mult_l_red FOR t_H_coo in m_H_type_coo if really necessary"
+end subroutine 
+
+subroutine mult_r_red(this,lat,res,op_keep)
+    use m_derived_types, only: lattice
+    class(t_H_coo),intent(in)    :: this
+    type(lattice),intent(in)     :: lat
+    real(8),intent(inout)        :: res(:)
+    integer,intent(in)           :: op_keep
+
+    STOP "IMPLEMENT mult_r_red FOR t_H_coo in m_H_type_coo if really necessary"
 end subroutine 
 
 

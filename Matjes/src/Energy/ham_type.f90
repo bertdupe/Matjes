@@ -10,6 +10,9 @@ type,abstract :: t_H
 contains
     procedure  :: is_set
     procedure  :: set_prepared
+
+!    procedure  :: test
+
     procedure(int_eval_single),deferred     :: eval_single
     procedure(int_eval_all),deferred        :: eval_all
     procedure(int_set_H),deferred           :: set_H
@@ -20,6 +23,7 @@ contains
     procedure(int_copy),deferred            :: copy
     procedure(int_destroy),deferred         :: optimize
     procedure(int_mult),deferred            :: mult_r,mult_l
+    procedure(int_mult_red),deferred        :: mult_r_red,mult_l_red
 
     procedure,NON_OVERRIDABLE               :: destroy_base
     procedure,NON_OVERRIDABLE               :: add_base
@@ -29,11 +33,19 @@ private
 public t_H,energy_all
 
 interface
-    subroutine int_mult(this,lat,vec)
+    subroutine int_mult(this,lat,res)
         import t_H,lattice
     	class(t_H),intent(in)     :: this
     	type(lattice),intent(in)  :: lat
-        real(8),intent(inout)     :: vec(:)
+        real(8),intent(inout)     :: res(:)
+    end subroutine
+
+    subroutine int_mult_red(this,lat,res,op_keep)
+        import t_H,lattice
+    	class(t_H),intent(in)     :: this
+    	type(lattice),intent(in)  :: lat
+        real(8),intent(inout)     :: res(:)
+        integer,intent(in)        :: op_keep
     end subroutine
 
     subroutine int_destroy(this)
@@ -102,6 +114,22 @@ interface
 end interface
 
 contains
+
+!subroutine test(this,lat,res,op_keep)
+!    !multiply out right side and reduce to only keep operator corresponding to op_keep
+!    use m_derived_types, only: lattice
+!    class(t_H),intent(in)           :: this
+!    type(lattice), intent(in)       :: lat
+!    real(8), intent(inout)          :: res(:)   !result matrix-vector product
+!    integer,intent(in)              :: op_keep
+!    ! internal
+!    real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+!
+!    allocate(tmp(this%dimH(1)))
+!    Call this%mult_r(lat,tmp)
+!    Call lat%reduce(tmp,this%op_l,op_keep,res)
+!    deallocate(tmp)
+!end subroutine 
 
 
     subroutine copy_base(this,Hout)
