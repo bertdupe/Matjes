@@ -22,7 +22,9 @@ call get_parameter(io,'input','duration',duration)
 call get_parameter(io,'input','STMtemp',stmtemp)
 call get_parameter(io,'input','damping',damping)
 
+Ffield=.false.
 call get_parameter(io,'input','Ffield',Ffield)
+i_Efield=.false.
 call get_parameter(io,'input','Efield',i_Efield)
 
 call close_file('input',io)

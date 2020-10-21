@@ -181,7 +181,7 @@ subroutine get_exchange_H(Ham,tableNN,indexNN,lat,DM_vector)
             Nvois=indexNN(i_sh)
             offset=sum(indexNN(1:i_sh-1))
             do i_vois=1,Nvois
-                if(size(DM_vector,1)>=i_vois+offset)then
+                if(size(DM_vector)>1.and.size(DM_vector,1)>=i_vois+offset)then
                     Call convoluate_Op_2D_SOC_vector_1D(DM_vector(i_vois+offset,:,1),exchange%ham(i_sh)%H(x_start:x_end,y_start:y_end),Htmp)
                 else
                     Htmp=exchange%ham(i_sh)%H(x_start:x_end,y_start:y_end)
@@ -198,6 +198,7 @@ subroutine get_exchange_H(Ham,tableNN,indexNN,lat,DM_vector)
                         ilat_2=tableNN(1:3,i_vois+offset,i_x,i_y,i_z,1)
                         ii2=lat%index_m_1(ilat_2)
                         line(i_vois,ii1)=ii2
+                        !might be wrong, not considering edges!!!
                     enddo
                   enddo
                 enddo

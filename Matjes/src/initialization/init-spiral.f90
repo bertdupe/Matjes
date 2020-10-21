@@ -63,8 +63,8 @@ size_mag=size(my_motif%atomic(:))
 allocate(position(3,Nx,Ny,Nz,Nmag))
 call get_position(position,my_lattice%dim_lat,my_lattice%areal,my_motif)
 
-do i_m=1,size_mag
-   if (my_motif%atomic(i_m)%moment.lt.1.0d-8) cycle
+do i_m=1,nmag
+!   if (my_motif%atomic(i_m)%moment.lt.1.0d-8) cycle
    do i_z=1,Nz
       do i_y=1,Ny
          do i_x=1,Nx

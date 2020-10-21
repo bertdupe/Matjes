@@ -15,6 +15,7 @@ contains
     procedure :: eval_all
     procedure :: set_H
     procedure :: set_H_1
+    procedure :: set_H_mult_2
     procedure :: add_H
     procedure :: destroy
     procedure :: optimize
@@ -140,6 +141,7 @@ subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
             j=line(l,i)
             do ival=1,size(Hval) 
                 ii=ii+1
+                !CHECK COLIND<->ROWIND
                 colind(ii)=(j-1)*dim_mode(1)+Hval_ind(1,ival)
                 rowind(ii)=(i-1)*dim_mode(2)+Hval_ind(2,ival)
                 val(ii)=Hval(ival)
@@ -159,8 +161,77 @@ subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
     allocate(this%val,source=val(1:this%nnz))
     deallocate(val)
     Call this%set_prepared(.true.)
+    Call check_H(this)
 
 end subroutine 
+
+
+subroutine set_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
+    !(example: ME-coupling M_i*E_i*M_j
+    use m_derived_types, only: operator_real_order_N,lattice
+    class(t_H_coo),intent(inout)    :: this
+
+    type(lattice),intent(in)        :: lat
+    !input Hamiltonian
+    real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
+    integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
+    integer,intent(in)              :: op_l(:),op_r(:) !which order parameters are used at left/right side of local Hamiltonian-matrix
+    integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
+
+    integer             :: dim_mode(2)
+    integer             :: nnz
+    integer             :: i,j,ii
+    integer             :: ival
+    integer             :: N_connect
+
+    N_connect=size(connect,2)
+    nnz=size(Hval)*N_connect
+
+    !fill temporary coordinate format spare matrix
+    dim_mode=1
+    do i=1,size(op_l)
+        dim_mode(1)=dim_mode(1)*lat%get_order_dim(op_l(i))
+    enddo
+    do i=1,size(op_r)
+        dim_mode(2)=dim_mode(2)*lat%get_order_dim(op_r(i))
+    enddo
+
+    !set local H
+    allocate(this%val(nnz),source=0.0d0)
+    allocate(this%colind(nnz),source=0)
+    allocate(this%rowind(nnz),source=0)
+    nnz=0
+    do j=1,N_connect
+        do ival=1,size(Hval)
+            nnz=nnz+1
+            this%rowind(nnz)=(connect(1,j)-1)*dim_mode(1)+Hval_ind(1,ival)
+            this%colind(nnz)=(connect(2,j)-1)*dim_mode(2)+Hval_ind(2,ival)
+            this%val(nnz)=Hval(ival)
+        enddo
+    enddo
+
+    !fill additional type parameters
+    allocate(this%op_l,source=op_l)
+    allocate(this%op_r,source=op_r)
+    this%nnz=nnz
+    this%dimH=lat%Ncell*dim_mode
+    Call this%set_prepared(.true.)
+    Call check_H(this)
+end subroutine 
+
+subroutine check_H(this)
+    !some sanity test for this Hamiltonian
+    class(t_H_coo),intent(inout)    :: this
+
+    if(maxval(this%rowind)>this%dimH(1)) STOP "H_coo rowind entry larger than dimH"
+    if(maxval(this%colind)>this%dimH(2)) STOP "H_coo colind entry larger than dimH"
+    if(any(this%rowind<1)) STOP "H_coo rowind entry smaller than 1"
+    if(any(this%colind<1)) STOP "H_coo colind entry smaller than 1"
+
+end subroutine
+    
+
 
 
 subroutine set_H(this,energy_in,lat)
@@ -201,6 +272,7 @@ subroutine set_H(this,energy_in,lat)
                 do i1=1,lat%dim_mode
                     if(energy_in%value(l,i)%order_op(1)%Op_loc(i1,i2)/= 0.0d0)then
                         ii=ii+1
+                        !CHECK COLIND ROWIND
                         colind(ii)=(j-1)*lat%dim_mode+i1
                         rowind(ii)=(i-1)*lat%dim_mode+i2
                         val(ii)=energy_in%value(l,i)%order_op(1)%Op_loc(i1,i2)
@@ -220,6 +292,7 @@ subroutine set_H(this,energy_in,lat)
     allocate(this%val,source=val(1:this%nnz))
     deallocate(val)
     Call this%set_prepared(.true.)
+    Call check_H(this)
 
 end subroutine 
 

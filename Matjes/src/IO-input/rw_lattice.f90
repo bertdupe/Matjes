@@ -39,35 +39,8 @@ N_site=dimension(1)*dimension(2)*dimension(3)
 
 call close_file('input',io)
 
-do j=1,3
-   net(j,:)=net(j,:)*a(j)
-enddo
 
 !! put the magnetic lattice in order
-my_lattice%dim_lat=dimension
-my_lattice%areal=net
-my_lattice%alat=a
-my_lattice%boundary=Periodic_log
-
-! build up the reciprocal lattice vectors
-
-volume=dot_product(net(1,:),cross(net(2,:),net(3,:)))
-kv0(1,:) = pi(2.0d0)*cross(net(2,:),net(3,:))/volume
-kv0(2,:) = pi(2.0d0)*cross(net(3,:),net(1,:))/volume
-kv0(3,:) = pi(2.0d0)*cross(net(1,:),net(2,:))/volume
-
-my_lattice%astar=kv0
-
-write(6,'(a)') 'real space lattice vectors (in nm)'
-do i=1,3
-  write(6,'(3(3f12.6,2x))') (net(i,j),j=1,3)
-enddo
-write(6,'(a)') ''
-
-write(6,'(a)') 'reciprocal space lattice vectors (in nm-1)'
-do i=1,3
-  write(6,'(3(3f12.6,2x))') (kv0(i,j),j=1,3)
-enddo
-write(6,'(a)') ''
+Call my_lattice%init_geo(net,a,dimension,Periodic_log)
 
 end subroutine rw_lattice

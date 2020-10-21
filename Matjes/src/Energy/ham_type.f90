@@ -10,20 +10,20 @@ type,abstract :: t_H
 contains
     procedure  :: is_set
     procedure  :: set_prepared
-    procedure(int_eval_single),deferred :: eval_single
-    procedure(int_eval_all),deferred    :: eval_all
-    procedure(int_set_H),deferred       :: set_H
-    procedure(int_set_H_1),deferred     :: set_H_1
-    procedure(int_add_H),deferred       :: add_H
-    procedure(int_destroy),deferred     :: destroy
-    procedure(int_copy),deferred        :: copy
-    procedure(int_destroy),deferred     :: optimize
-    procedure(int_mult),deferred        :: mult_r,mult_l
+    procedure(int_eval_single),deferred     :: eval_single
+    procedure(int_eval_all),deferred        :: eval_all
+    procedure(int_set_H),deferred           :: set_H
+    procedure(int_set_H_1),deferred         :: set_H_1
+    procedure(int_set_H_mult_2),deferred    :: set_H_mult_2
+    procedure(int_add_H),deferred           :: add_H
+    procedure(int_destroy),deferred         :: destroy
+    procedure(int_copy),deferred            :: copy
+    procedure(int_destroy),deferred         :: optimize
+    procedure(int_mult),deferred            :: mult_r,mult_l
 
-
-    procedure,NON_OVERRIDABLE           :: destroy_base
-    procedure,NON_OVERRIDABLE           :: add_base
-    procedure,NON_OVERRIDABLE           :: copy_base
+    procedure,NON_OVERRIDABLE               :: destroy_base
+    procedure,NON_OVERRIDABLE               :: add_base
+    procedure,NON_OVERRIDABLE               :: copy_base
 end type
 private
 public t_H,energy_all
@@ -72,6 +72,20 @@ interface
         integer,intent(in)          :: Hval_ind(:,:)
         integer,intent(in)          :: line(:,:)
     end subroutine
+
+    subroutine int_set_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+        !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
+        !(example: ME-coupling M_i*E_i*M_j
+        import t_H,lattice
+        class(t_H),intent(inout)    :: this
+        type(lattice),intent(in)        :: lat
+        !input Hamiltonian
+        real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
+        integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
+        integer,intent(in)              :: op_l(:),op_r(:) !which order parameters are used at left/right side of local Hamiltonian-matrix
+        integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
+    end subroutine
+
 
     subroutine int_add_H(this,H_add)
         import t_h

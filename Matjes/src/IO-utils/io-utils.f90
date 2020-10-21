@@ -55,7 +55,7 @@ end interface number_nonzero_coeff
 
 
 private
-public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse,number_nonzero_coeff,check_last_char,check_read
+public :: get_parameter,get_cols,get_lines,count_variables,get_coeff,dump_config,dump_spinse,number_nonzero_coeff,check_last_char,check_read,max_ind_variable
 
 contains
 
@@ -288,6 +288,45 @@ do i=1,N
 enddo
 
 end subroutine dump_config_vec_point
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! return the maximal index of parameters of the same type
+! in: io tag
+! in: variable name (for example J_ D_ or whatever)
+! in: name of the file
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+function max_ind_variable(io,var_name,fname) result(max_ind)
+    implicit none
+    character(len=*), intent(in) :: var_name,fname
+    integer, intent(in) :: io
+    integer         ::  max_ind
+    ! internal variable
+    integer :: length_string,i_var,i_end_str,fin
+    character(len=100) :: str
+    
+    max_ind=0
+    length_string=len_trim(var_name)
+    
+    rewind(io)
+    do
+        read (io,'(a)',iostat=fin) str
+        if (fin /= 0) exit
+        str= adjustl(str)
+
+        if (len_trim(str)<length_string) cycle
+        if (str(1:1) == '#' ) cycle
+        if ( str(1:length_string) == var_name ) then
+           i_end_str=scan(str(length_string+1:),' ')
+           read(str(length_string+1:length_string+1+i_end_str),*) i_var
+           max_ind=max(i_var,max_ind)
+        endif
+    enddo
+    write(6,'(3a,I5)') 'Maximal index of ',var_name,' is:', max_ind
+    
+end function 
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! count the number of parameters of the same type

@@ -38,12 +38,18 @@ end type
 
 ! variable that defines the lattice
 type lattice
-     real(8)        :: areal(3,3),astar(3,3),alat(3)
+     real(8)        :: areal(3,3) !real space lattice vector
+     real(8)        :: astar(3,3) !reciprocal space lattice vector
      type(t_cell)   :: cell
-     integer        :: dim_lat(3),n_system,dim_mode
+     integer        :: dim_lat(3) !number of unit-cells in each direction in supercell
+     integer        :: Ncell !number of unit-cells (product of dim_lat)
+     real(8)        :: a_sc(3,3) !real space lattice vectors of supercell
+     integer        :: n_system,dim_mode
      integer        :: nmag !this nmag is nonsense and should be removed (number of m encoded elsewhere)
      integer, allocatable :: world(:)
      logical :: boundary(3)
+
+     real(8),allocatable :: sc_vec_period(:,:)   !real space vectors used to minimize distance using supercell periodicity
 
 !order parameters
      type(order_par)   :: M !magnetization 
@@ -54,14 +60,18 @@ type lattice
      type(order_par)   :: ordpar !make this an array if using separated order parameters
 
 contains
+    procedure :: init_geo => lattice_init_geo
     procedure :: copy => copy_lattice
     procedure :: get_pos_mag => lattice_get_position_mag
     procedure :: copy_val_to => copy_val_lattice
     procedure :: get_order_dim  => get_order_dim
     procedure :: set_order_point => set_order_point
+    procedure :: set_order_comb
     procedure :: index_m_1 => index_m_1
     procedure :: index_1_3 => index_1_3
     procedure :: used_order => lattice_used_order
+    procedure :: pos_diff_ind => lattice_position_difference
+    procedure :: pos_ind => lattice_position
 end type lattice
 
 
@@ -69,6 +79,133 @@ private
 public lattice, number_different_order_parameters, t_cell
 
 contains 
+
+subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
+    use m_vector, only : norm,cross
+    use m_constants, only : pi
+    class(lattice),intent(inout)    ::  this
+    real(8),intent(in)              ::  areal(3,3),alat(3)
+    integer,intent(in)              ::  dim_lat(3)
+    logical,intent(in)              ::  boundary(3)
+    
+    real(8)                         :: volume
+    integer                         :: i
+
+    !use supercell parameter
+    integer,allocatable,dimension(:)     :: i1,i2,i3 
+    real(8)         :: tmp_vec(3,3)
+    integer         :: j,l,i_vec
+
+
+    do i=1,3
+       this%areal(i,:)=areal(i,:)*alat(i)
+    enddo
+    this%dim_lat=dim_lat
+    this%ncell=product(dim_lat)
+    do i=1,3
+       this%a_sc(i,:)=this%areal(i,:)*dim_lat(i)
+    enddo
+
+    this%boundary=boundary
+
+    ! build up the reciprocal lattice vectors
+    volume=dot_product(this%areal(1,:),cross(this%areal(2,:),this%areal(3,:)))
+    this%astar(1,:) = pi(2.0d0)*cross(this%areal(2,:),this%areal(3,:))/volume
+    this%astar(2,:) = pi(2.0d0)*cross(this%areal(3,:),this%areal(1,:))/volume
+    this%astar(3,:) = pi(2.0d0)*cross(this%areal(1,:),this%areal(2,:))/volume
+   
+    !write lattice information
+    write(6,'(/a)') 'real space lattice vectors (in nm)'
+    write(6,'(3(3f12.6/))') transpose(this%areal)
+
+    write(6,'(a)') 'reciprocal space lattice vectors (in nm-1)'
+    write(6,'(3(3f12.6/))') transpose(this%astar)
+
+    write(6,'(a)') 'Supercell real space lattice vectors (in nm)'
+    write(6,'(3(3f12.6/))') transpose(this%a_sc)
+
+    write(6,'(a/,2X,3L3/)') 'Supercell periodicity along each direction:',this%boundary
+
+
+    !get sc_vec_period for quicker check of minimal distance between positions using supercell periodicity
+    if(this%boundary(1))then
+        allocate(i1,source=[-1,0,1])
+    else
+        allocate(i1,source=[0])
+    endif
+    if(this%boundary(2))then
+        allocate(i2,source=[-1,0,1])
+    else
+        allocate(i2,source=[0])
+    endif
+    if(this%boundary(3))then
+        allocate(i3,source=[-1,0,1])
+    else
+        allocate(i3,source=[0])
+    endif
+    allocate(this%sc_vec_period(3,size(i1)*size(i2)*size(i3)),source=0.0d0)   !real space vectors used to minimize distance using supercell periodicity
+    i_vec=1
+    do l=1,size(i3)
+        tmp_vec(:,3)=this%a_sc(3,:)*i3(l)
+        do j=1,size(i2)
+            tmp_vec(:,2)=this%a_sc(2,:)*i2(j)
+            do i=1,size(i1)
+                tmp_vec(:,1)=this%a_sc(1,:)*i1(i)
+                this%sc_vec_period(:,i_vec)=sum(tmp_vec,2)
+                i_vec=i_vec+1
+            enddo
+        enddo
+    enddo
+
+end subroutine
+
+subroutine lattice_position(this,ind,pos)
+    !slow routine to get position of individual index
+    class(lattice)          :: this
+    integer,intent(in)      :: ind(4)  !(i_x,i_y,i_y,i_at)
+    real(8),intent(out)     :: pos(3)
+
+    pos=matmul(real(ind(1:3)-1,8),this%areal)
+    pos=pos+this%cell%atomic(ind(4))%position
+
+end subroutine
+
+subroutine min_diffvec_period(this,diff)
+    !get minimal vector checking supercell perdiocity
+    class(lattice),intent(in)   :: this
+    real(8),intent(inout)       :: diff(3)
+
+    real(8)     :: vec(3,size(this%sc_vec_period,2))
+    real(8)     :: norm(size(this%sc_vec_period,2))
+    integer     :: i
+
+    do i=1,size(this%sc_vec_period,2)
+        vec(:,i)=diff-this%sc_vec_period(:,i)
+    enddo
+    norm=norm2(vec,1)
+    diff=vec(:,minloc(norm,1))
+end subroutine
+
+function lattice_position_difference(this,ind1,ind2)result(diff)
+    !routine to get the difference vector between two individual atoms in index format
+    !r_diff=pos_1-pos_2 (minimize with lattice vectors)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: ind1(4),ind2(4)  !(i_x,i_y,i_y,i_at)
+    real(8)                     :: diff(3)
+
+    real(8)                     :: pos1(3),pos2(3),norm
+
+
+    Call this%pos_ind(ind1,pos1)
+    Call this%pos_ind(ind2,pos2)
+    diff=pos1-pos2
+    norm=norm2(diff)
+    if(norm>minval(norm2(this%a_sc,2)*0.5d0))then
+    !check reduce length using symmetries 
+        Call min_diffvec_period(this,diff)
+    endif
+end function
+
 
 subroutine lattice_used_order(this,used)
     class(lattice),intent(in)   :: this
@@ -126,6 +263,50 @@ subroutine set_order_point(this,order,point)
         STOP 'failed to associate pointer in set_order_point'
     end select
 
+end subroutine
+
+
+subroutine set_order_comb(this,order,vec)
+    !fills the combination of several order parameters according to order
+    !probably quite slow implementation, but should at least work for any reasonable size of order
+    !I SHOULD CHECK HOW SLOW THIS IS
+    !vec should already be allocated to the size of the final vector ->dimH
+    class(lattice),intent(in)         ::  this
+    integer,intent(in)                ::  order(:)
+    real(8),intent(inout)             ::  vec(:)
+
+    type point_arr
+        real(8),pointer     ::  v(:)
+    end type
+    type(point_arr)         :: points(size(order))
+    integer                 :: dim_modes(size(order))
+    integer                 :: dim_mode_res
+    integer                 :: i_site,i,i_entry,i_ord
+    integer                 :: ind_site(size(order))
+    integer                 :: ind(size(order))
+    integer                 :: ind_div(size(order))
+
+
+    do i=1,size(order)
+        Call this%set_order_point(order(i),points(i)%v)
+        dim_modes(i)=this%get_order_dim(order(i))
+    enddo
+    dim_mode_res=product(dim_modes)
+    do i=1,size(order)
+        ind_div(i)=product(dim_modes(:i-1))
+    enddo
+    vec=1.0d0
+    do i_site=1,this%ncell
+        ind_site=(i_site-1)*dim_modes
+        do i=1,product(dim_modes)
+            ind=(i-1)/ind_div
+            ind=modulo(ind,dim_modes)+1+ind_site
+            i_entry=i+(i_site-1)*dim_mode_res
+            do i_ord=1,size(order)
+                vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
+            enddo
+        enddo
+    enddo
 end subroutine
 
 
@@ -237,7 +418,6 @@ subroutine init_order_par(self,lat,dim_mode)
     integer,intent(in)           :: dim_mode
     integer                      :: N
     integer                      :: l,k,j,i          
-    integer                      :: shape_modes(5),shape_lmodes(4)
     
     !initialize real array data if necessary and associate pointers
     self%dim_mode=dim_mode
@@ -333,13 +513,15 @@ subroutine copy_lattice(self,copy)
     
     copy%areal=self%areal
     copy%astar=self%astar
-    copy%alat=self%alat
+    copy%a_sc=self%a_sc
     copy%dim_lat=self%dim_lat
+    copy%ncell=self%ncell
     copy%n_system=self%n_system
     copy%dim_mode=self%dim_mode
     copy%nmag=self%nmag
     copy%boundary=self%boundary
     if(allocated(self%world)) allocate(copy%world,source=self%world)
+    if(allocated(self%sc_vec_period)) allocate(copy%sc_vec_period,source=self%sc_vec_period)
     if(self%ordpar%dim_mode>0) Call self%ordpar%copy(copy%ordpar,self)
 
     if(self%m%dim_mode>0) Call self%M%copy(copy%M,self)

@@ -313,6 +313,7 @@ subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
     use m_anisotropy_heisenberg,only: get_anisotropy_H,anisotropy
     use m_exchange_heisenberg,only: get_exchange_H,exchange
     use m_zeeman,only: get_zeeman_H,zeeman
+    use m_couplage_ME,only: ME,get_coupling_ME
     class(t_H),allocatable,intent(out)  :: Ham(:)
     real(8), intent(in) :: DM_vector(:,:,:)
     integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
@@ -325,6 +326,7 @@ subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
     if(exchange%i_exist) N_ham=N_ham+1
     if(anisotropy%i_exist) N_ham=N_ham+1
     if(zeeman%i_exist) N_ham=N_ham+1
+    if(ME%i_exist) N_ham=N_ham+1
         
     !get number of Hamilonians used
     Call get_Htype_N(Ham,N_ham)
@@ -340,6 +342,8 @@ subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
     Call get_zeeman_H(Ham(i_H),lat)
     if(Ham(i_H)%is_set()) i_H=i_H+1
     !add ME-coupling (implement rank 3)
+    Call get_coupling_ME(Ham(i_H),tableNN,indexNN,lat)
+    if(Ham(i_H)%is_set()) i_H=i_H+1
 
     do i_H=1,N_ham
         if(.not. Ham(i_h)%is_set()) STOP "not all Hamiltonians are set"

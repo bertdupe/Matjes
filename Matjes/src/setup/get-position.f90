@@ -141,23 +141,21 @@ integer, intent(in) :: dim_lat(:)
 real(kind=8), intent(in) :: r(:,:)
 type(t_cell), intent(in) :: motif
 ! internal variables
-integer :: i_z,i_y,i_x,i_m,Natom_motif
+integer :: i_z,i_y,i_x,i_m,i_mag,Natom_motif
 
 Natom_motif=size(motif%atomic)
-
+i_mag=1
 do i_m=1,Natom_motif
+   if (motif%atomic(i_m)%moment.lt.1.0d-8) cycle
    do i_z=1,dim_lat(3)
       do i_y=1,dim_lat(2)
          do i_x=1,dim_lat(1)
-
-         if (motif%atomic(i_m)%moment.lt.1.0d-8) cycle
-
 !fix the coordinates. This part takes care of the motif of the structure
-         pos(1:3,i_x,i_y,i_z,i_m)=get_internal_to_cart(r,motif,i_x,i_y,i_z,i_m)
-
+             pos(1:3,i_x,i_y,i_z,i_mag)=get_internal_to_cart(r,motif,i_x,i_y,i_z,i_m)
          enddo
       enddo
    enddo
+   i_mag=i_mag+1
 enddo
 
 end subroutine get_position_lattice

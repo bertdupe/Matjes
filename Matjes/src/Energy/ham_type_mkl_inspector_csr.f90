@@ -5,6 +5,7 @@ module m_H_type_mkl_inspector_csr
 use m_H_type
 use MKL_SPBLAS
 use m_H_type_coo
+use m_derived_types, only: lattice
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE,C_INT
 
 
@@ -19,6 +20,7 @@ contains
     procedure :: eval_all   
     procedure :: set_H      
     procedure :: set_H_1    
+    procedure :: set_H_mult_2   
     procedure :: destroy    
     procedure :: add_H      
     procedure :: copy       
@@ -81,9 +83,6 @@ subroutine mult_l(this,lat,vec)
 end subroutine 
 
 
-
-
-
 subroutine optimize(this)
     class(t_H_mkl_csr),intent(inout)   :: this
 
@@ -112,6 +111,26 @@ subroutine set_H_1(this,line,Hval,Hval_ind,order,lat)
     Call set_from_Hcoo(this,H_coo)
 end subroutine 
 
+
+subroutine set_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+    use m_derived_types, only: lattice
+    class(t_H_mkl_csr),intent(inout)    :: this
+
+    type(lattice),intent(in)        :: lat
+    integer,intent(in)              :: op_l(:),op_r(:)
+    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+    integer,intent(in)              :: Hval_ind(:,:)
+    integer,intent(in)              :: connect(:,:)
+
+    !local
+    type(t_H_coo)           :: H_coo
+
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
+    Call H_coo%set_H_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
+    Call set_from_Hcoo(this,H_coo)
+end subroutine 
+
+
 subroutine copy(this,Hout)
     class(t_H_mkl_csr),intent(in)   :: this
     class(t_H),intent(inout)        :: Hout
@@ -138,9 +157,12 @@ subroutine add_H(this,H_add)
     integer                     :: stat
     real(C_DOUBLE),parameter    :: alpha=1.0d0
 
+
     select type(H_add)
     class is(t_H_mkl_csr)
         if(this%is_set())then
+            if(.not.all(this%op_l==H_add%op_l)) STOP "CANNOT ADD hamiltonians with different op_l"
+            if(.not.all(this%op_r==H_add%op_r)) STOP "CANNOT ADD hamiltonians with different op_r"
             tmp_H=this%H
             stat=mkl_sparse_d_add(sparse_operation_non_transpose,tmp_H,alpha,h_add%h,this%H)
             if(stat/=SPARSE_STATUS_SUCCESS) STOP "add_H failed in mkl_inspector_csr"
@@ -233,6 +255,8 @@ subroutine eval_single(this,E,i_m,lat)
     tmp=0.0d0
     alpha=1.0d0;beta=0.0d0
 
+    ! try sparse matrix product to substitute sparse matrix times sparse vector product
+
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes_r,beta,tmp)
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in eval_single  of m_H_type_mkl_inspector_csr"
     E=dot_product(modes_l((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)),tmp((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)))
@@ -240,7 +264,6 @@ end subroutine
 
 
 subroutine eval_all(this,E,lat)
-    use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(in)    :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(out)            :: E
@@ -249,17 +272,59 @@ subroutine eval_all(this,E,lat)
     real(C_DOUBLE)      :: alpha,beta
     integer(C_int)      :: stat
     real(8),pointer     :: modes_l(:),modes_r(:)
+    real(8),allocatable,target :: vec_l(:),vec_r(:)
 
-    Call lat%set_order_point(this%op_l(1),modes_l)
-    Call lat%set_order_point(this%op_r(1),modes_r)
+!    Call lat%set_order_point(this%op_l(1),modes_l)
+!    Call lat%set_order_point(this%op_r(1),modes_r)
+    Call init_modes(this,lat,modes_l,modes_r,vec_l,vec_r)
 
     tmp=0.0d0
     alpha=1.0d0;beta=0.0d0
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes_r,beta,tmp)
     E=dot_product(modes_l,tmp)
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in eval_all  of m_H_type_mkl_inspector_csr"
+
+    Call finalize_modes(this,modes_l,modes_r,vec_l,vec_r)
     
 end subroutine 
+
+subroutine init_modes(this,lat,modes_l,modes_r,vec_l,vec_r)
+    class(t_H_mkl_csr),intent(in)   :: this
+    type(lattice), intent(in)       :: lat
+    real(8),pointer,intent(out)     :: modes_l(:),modes_r(:)
+    real(8),allocatable,target,intent(out) :: vec_l(:),vec_r(:)
+
+    if(size(this%op_l)==1)then
+        Call lat%set_order_point(this%op_l(1),modes_l)
+    else
+        allocate(vec_r(this%dimH(1)),source=0.0d0)
+        Call lat%set_order_comb(this%op_l,vec_l)
+        modes_l=>vec_l
+    endif
+    if(size(this%op_r)==1)then
+        Call lat%set_order_point(this%op_r(1),modes_r)
+    else
+        allocate(vec_r(this%dimH(2)),source=0.0d0)
+        Call lat%set_order_comb(this%op_r,vec_r)
+        modes_r=>vec_r
+    endif
+
+end subroutine
+
+subroutine finalize_modes(this,modes_l,modes_r,vec_l,vec_r)
+    class(t_H_mkl_csr),intent(in)   :: this
+    real(8),pointer,intent(inout)      :: modes_l(:),modes_r(:)
+    real(8),allocatable,intent(inout)  :: vec_l(:),vec_r(:)
+
+    if(size(this%op_l)/=1)then
+        deallocate(vec_l)
+    endif
+    if(size(this%op_r)/=1)then
+        deallocate(vec_r)
+    endif
+
+end subroutine 
+
 
 #endif
 end module
