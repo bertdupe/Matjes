@@ -12,8 +12,6 @@ use m_derived_types, only : t_cell,io_parameter,simulation_parameters
 use m_derived_types, only : lattice
 use m_basic_types, only : vec_point
 use m_lattice, only : my_order_parameters
-use m_local_energy
-use m_total_energy
 use m_topo_commons
 use m_convert
 use m_io_files_utils
@@ -362,7 +360,6 @@ do j_optset=1,N_temp
 ! load the actual temperature into kT
          kt=kt_updated(i_temp)
 ! initializing the variables above
-         E_total=total_energy(N_cell,lat_replica(i_image))
 
 !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -371,6 +368,7 @@ do j_optset=1,N_temp
 !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !TODO REQUIRES MAGNETIC TEXTURE ONLY
+         !E_total=total_energy(N_cell,lat_replica(i_image))
 !         Call CalculateAverages(mode_magnetic(:,i_image),qeulerp,qeulerm,vortex,magnetization)
 !
 !            Do i_MC=1,autocor_steps*N_cell

@@ -1,8 +1,11 @@
+module m_montecarlo
+implicit none
+contains
 !
 ! Routine that does the Monte Carlo (and not the parallel tempering)
 !
 !subroutine MonteCarlo(my_lattices,mag_motif,io_simu,gra_topo,ext_param)
-subroutine montecarlo(my_lattice,motif,io_simu,ext_param)
+subroutine montecarlo(my_lattice,motif,io_simu,ext_param,Hams)
 use m_constants, only : k_b,pi
 use m_vector, only : norm
 use m_derived_types, only : lattice,t_cell,io_parameter,simulation_parameters,point_shell_Operator
@@ -10,14 +13,15 @@ use m_modes_variables, only : point_shell_mode
 use m_basic_types, only : vec_point
 use m_rw_MC
 use m_lattice, only : my_order_parameters
-use m_local_energy
-use m_total_energy
 use m_topo_commons
 use m_convert
 use m_io_files_utils
 use m_operator_pointer_utils
 use m_eval_Beff
 use m_MCstep
+use m_Htype_gen
+use m_relaxation
+!use m_H_type
 
       use m_Corre
       use m_check_restart
@@ -33,11 +37,11 @@ use m_MCstep
       use m_mpi_prop, only : MPI_COMM
       use m_gather_reduce
 #endif
-implicit none
 type(lattice), intent(inout) :: my_lattice
 type(t_cell), intent(in) :: motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
+class(t_H), intent(in) :: Hams(:)
 
 !!!!!!!!!!!!!!!!!!!!!!!
 ! internal variables
@@ -132,9 +136,6 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-call set_E_matrix(my_lattice%dim_mode)
-call get_B_matrix(my_lattice%dim_mode)
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!! associate pointer for the topological charge, vorticity calculations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -146,7 +147,7 @@ call associate_Q_operator(all_mode,my_lattice%boundary,shape(my_lattice%ordpar%l
 !ktfin=ext_param%ktfin%value
 ! initializing the variables above
 
-E_total=total_energy(N_cell,my_lattice)
+E_total=energy_all(Hams,my_lattice)
 
 call CalculateAverages(mode_magnetic,qeulerp,qeulerm,vortex,Magnetization)
 
@@ -196,7 +197,7 @@ Do n_kT=1,n_Tsteps
 !  enddo
 !  call set_E_matrix(my_lattice%dim_mode,kt/k_b)
 
-  call Relaxation(all_mode,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
+  call Relaxation(my_lattice,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax,hams)
 
 !       Monte Carlo steps, calculate the values
 
@@ -206,11 +207,11 @@ Do n_kT=1,n_Tsteps
 
        Do i_relax=1,T_auto*N_cell
 
-          Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+          Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
 
        End do
 
-       Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+       Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
 
 ! Calculate the topological charge and the vorticity
        dumy=get_charge()
@@ -361,3 +362,4 @@ close(7) !Close EM.dat
 
 nullify(all_mode)
 end subroutine montecarlo
+end module

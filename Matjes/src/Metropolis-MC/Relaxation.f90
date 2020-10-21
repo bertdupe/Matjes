@@ -1,6 +1,9 @@
+module m_relaxation
+implicit none
+contains
 !
 ! ===============================================================
-SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax)
+SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax,Hams)
 use mtprng
 use m_Corre
 use m_constants, only : k_b
@@ -9,6 +12,7 @@ use m_store_relaxation
 use m_derived_types, only : point_shell_Operator,lattice
 use m_basic_types, only : vec_point
 use m_modes_variables, only : point_shell_mode
+use m_Htype_gen
 use m_topo_commons
 use m_io_utils
 use m_io_files_utils
@@ -26,6 +30,7 @@ real(kind=8), intent(inout) :: nb
 real(kind=8), intent(in) :: kT
 integer, intent(in) :: n_relaxation,T_relax,N_cell,n_sizerelax
 logical, intent(in) :: ising,equi,overrel,sphere,underrel,print_relax
+class(t_H), intent(in) :: Hams(:)
 ! a big table
 real(kind=8) :: Relax(18,n_sizerelax),dumy(5)
 !     Slope Index
@@ -56,11 +61,11 @@ do i_relaxation=1,n_relaxation
 !         the step to an unordered structure
             !Relaxation of the System
    Do i_MC=1,T_relax*N_cell
-      Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+      Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
    enddo
 
             !In case T_relax set to zero at least one MCstep is done
-   Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+   Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
 
 ! calculate the topocharge
    dumy=get_charge()
@@ -128,3 +133,4 @@ endif
 
 
 END SUBROUTINE Relaxation
+end module

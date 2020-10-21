@@ -15,6 +15,9 @@ use m_get_random
 use m_user_info
 use m_Htype_gen
 use m_spindynamics
+use m_montecarlo
+use m_entropic
+
 Implicit None
 
 ! variable for the simulation

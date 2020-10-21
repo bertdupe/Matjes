@@ -32,6 +32,7 @@ use omp_lib
 use m_precision
 use m_Htype_gen
 use m_Beff_H
+
 ! input
 type(lattice), intent(inout) :: mag_lattice
 type(io_parameter), intent(in) :: io_simu
@@ -142,7 +143,7 @@ security=0.0d0
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 Call mag_lattice%copy_val_to(lat_1)
 
-Call energy_all(Hams,mag_lattice,Edy)
+Edy=energy_all(Hams,mag_lattice)
 
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
 
@@ -178,7 +179,6 @@ if (io_simu%io_tracker) call init_tracking(mag_lattice)
 ! beginning of the
 do j=1,duration
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    
    !   call init_temp_measure(check,check1,check2,check3)
     
     call truncate(lat_1,used)
@@ -236,7 +236,7 @@ do j=1,duration
     !
     !!!!!! Measure the temperature if the users wish
     !
-    Call energy_all(Hams,mag_lattice,Edy)
+    Edy=energy_all(Hams,mag_lattice)
     Mdy=sum(mag_lattice%M%modes_v,2) !works only for one M in unit cell
     !check this?
     do iomp=1,N_cell
@@ -254,7 +254,7 @@ do j=1,duration
     !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
     
     if (io_simu%io_tracker) then
-      if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,lat_1)
+      if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,lat_1,Hams)
     endif
     
     if (mod(j-1,Efreq).eq.0) then

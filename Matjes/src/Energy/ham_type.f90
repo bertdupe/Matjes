@@ -42,7 +42,7 @@ contains
     !finalize routine? (might be risky with Hamiltonian references that have been passed around)
 end type
 private
-public t_H,energy_all
+public t_H
 
 interface
     subroutine int_mult(this,lat,res)
@@ -126,26 +126,6 @@ interface
 end interface
 
 contains
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!                    EXTERNAL ROUTINES                            !!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    subroutine energy_all(ham,lat,E)
-        !get all energies from an energy array
-        class(t_H),intent(in)       ::  ham(:)
-        class(lattice),intent(in)   ::  lat
-        real(8),intent(out)         ::  E
-
-        real(8)     ::  tmp_E(size(ham))
-        integer     ::  i
-
-        E=0.0d0
-        do i=1,size(ham)
-          Call ham(i)%eval_all(tmp_E(i),lat)
-        enddo
-        E=sum(tmp_E)
-    end subroutine
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!                    MOST USEFULL ROUTINES                        !!!!!!!!!!!

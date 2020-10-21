@@ -249,14 +249,15 @@ end subroutine
 !
 ! plot the different patterns
 !
-subroutine plot_tracking(tag,lat)
+subroutine plot_tracking(tag,lat,Hams)
 use m_convert
 use m_io_files_utils
-use m_local_energy
 use m_derived_types, only: lattice
+use m_Htype_gen
 implicit none
-integer, intent(in) :: tag
-type(lattice), intent(in) :: lat
+integer, intent(in)         :: tag
+type(lattice), intent(in)   :: lat
+class(t_h),intent(in)       :: Hams(:)
 ! internal
 integer :: i,N_pat,io_inside,io_border,j,iomp,dim_mode
 character(len=50) :: filename_inside,filename_border
@@ -275,7 +276,8 @@ do i=1,N_pat
   do j=1,all_patterns(i)%Nsites
 
     iomp=all_patterns(i)%interior(j)
-    call local_energy(Et,iomp,lat)
+
+    Et=energy_single(Hams,iomp,lat)
 
     write(io_inside,'(4(2x,E20.12E3))') pos(:,iomp),Et
 
@@ -291,7 +293,7 @@ do i=1,N_pat
 
     iomp=all_patterns(i)%boundary(j)
 
-    call local_energy(Et,iomp,lat)
+    Et=energy_single(Hams,iomp,lat)
 
     write(io_border,'(4(2x,E20.12E3))') pos(:,iomp),Et
 

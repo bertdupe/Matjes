@@ -17,7 +17,6 @@ use m_mapping
 use m_indexation
 use m_arrange_neigh
 use m_topoplot
-use m_total_energy
 use m_get_position
 use m_external_fields
 use m_excitations

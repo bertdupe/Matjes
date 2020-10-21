@@ -1,8 +1,11 @@
+module m_entropic
+implicit none
+contains
 !
 ! Entropic sampling Monte Carlo
 !
 !
-subroutine entropic(my_lattice,my_motif,io_simu,ext_param)
+subroutine entropic(my_lattice,my_motif,io_simu,ext_param,Hams)
 use mtprng
 use m_choose_spin
 use m_constants, only : pi,k_B
@@ -10,16 +13,15 @@ use m_relaxtyp
 use m_sampling
 use m_derived_types
 use m_lattice, only : my_order_parameters
-use m_local_energy
-use m_total_energy
 use m_operator_pointer_utils
-implicit none
+use m_Htype_gen, only: t_H,energy_single,energy_all
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! variable part
 type(lattice), intent(inout) :: my_lattice
 type(t_cell), intent(in) :: my_motif
 type(io_parameter), intent(in) :: io_simu
 type(simulation_parameters), intent(in) :: ext_param
+class(t_H),intent(in)       ::  Hams(:)
 !------------------------------------------
 ! internal variable
 type(mtprng_state) :: state
@@ -105,10 +107,8 @@ do i=1,size(my_order_parameters)
   endif
 enddo
 
-call set_E_matrix(my_lattice%dim_mode)
-
 ! initializing the variables above
-Call sum_energy(E_total,my_lattice)
+E_total=energy_all(Hams,my_lattice)
 write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',E_total/real(N_cell)
 
 
@@ -163,11 +163,11 @@ do i_loop=1,n_loop
 
 ! calculate the energy before and after
 
-      call local_energy(E_old,iomp,my_lattice)
+      E_old=energy_single(Hams,iomp,my_lattice)
 
       mode_magnetic(iomp)%w=S_new
 
-      call local_energy(E_new,iomp,my_lattice)
+      E_new=energy_single(Hams,iomp,my_lattice)
 
       mode_magnetic(iomp)%w=S_old
       E_test=E_total+E_new-E_old
@@ -322,3 +322,4 @@ nullify(all_mode)
 write(6,'(a)') "done with entropic"
 
 end subroutine entropic
+end module

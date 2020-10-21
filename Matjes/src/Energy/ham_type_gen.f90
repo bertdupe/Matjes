@@ -11,10 +11,13 @@ use m_H_type_mkl_csr
 #elif defined CPP_MATMUL_MKL_COO
 use m_H_type_mkl_coo
 #elif defined CPP_MATMUL_EIGEN_SPARSE
-TOTO 
+TODO 
 #else
 use m_H_type_manual
 #endif
+
+
+use m_derived_types, only : lattice
 implicit none
 public
 
@@ -46,5 +49,37 @@ subroutine get_Htype_N(H_out,N)
 #endif
 end subroutine
 
+    function energy_all(ham,lat)result(E)
+        !get all energies from an energy array
+        class(t_H),intent(in)       ::  ham(:)
+        class(lattice),intent(in)   ::  lat
+        real(8)                     ::  E
+
+        real(8)     ::  tmp_E(size(ham))
+        integer     ::  i
+
+        E=0.0d0
+        do i=1,size(ham)
+          Call ham(i)%eval_all(tmp_E(i),lat)
+        enddo
+        E=sum(tmp_E)
+    end function
+     
+    function energy_single(ham,i_m,lat)result(E)
+        !get all energies from an energy array
+        class(t_H),intent(in)       ::  ham(:)
+        integer,intent(in)          ::  i_m
+        class(lattice),intent(in)   ::  lat
+        real(8)                     ::  E
+
+        real(8)     ::  tmp_E(size(ham))
+        integer     ::  i
+
+        E=0.0d0
+        do i=1,size(ham)
+          Call ham(i)%eval_single(tmp_E(i),i,lat)
+        enddo
+        E=sum(tmp_E)
+    end function
 
 end module

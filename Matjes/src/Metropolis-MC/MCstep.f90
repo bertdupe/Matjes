@@ -5,7 +5,7 @@ use m_sampling
 use m_choose_spin
 use m_relaxtyp
 use m_createspinfile
-use m_local_energy
+use m_Htype_gen
 
 private
 public :: MCstep
@@ -13,7 +13,7 @@ contains
 !
 ! ===============================================================
 !
-SUBROUTINE MCstep(lat,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
+SUBROUTINE MCstep(lat,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
 #ifdef CPP_MPI
       use m_parameters, only : d_mu,n_ghost,i_separate,i_average,i_ghost
       use m_make_box, only : ghost_border,rank_nei
@@ -29,6 +29,8 @@ logical, intent(in) :: equi,overrel,sphere,underrel,ising
 real(kind=8), intent(in) :: kt
 integer, intent(in) :: N_spin
 real(kind=8), intent(inout) :: E_total,Magnetization(3),E(8),acc,rate,cone,nb
+class(t_H), intent(in) :: Hams(:)
+
 ! internal variable
 type(mtprng_state) :: state
 !     Energy difference Delta E and -DE/kT, Dmag and Dq
@@ -116,13 +118,14 @@ if (ising) S_new=-mode(iomp)%w(1:3)
 !       and decider, if the Spin flip will be performed
 !----------------------------------
 !Energy of old configuration
-call local_energy(E_old,iomp,lat)
+E_old=energy_single(Hams,iomp,lat)
 
 !Energy of the new configuration
 S_old=mode(iomp)%w(1:3)
 
 mode(iomp)%w(1:3)=S_new
-call local_energy(E_new,iomp,lat)
+
+E_new=energy_single(Hams,iomp,lat)
 
 mode(iomp)%w(1:3)=S_old
 

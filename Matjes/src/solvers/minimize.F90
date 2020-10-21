@@ -25,7 +25,7 @@ contains
 ! The interface is used to put the data into the good format
 !
 !
-subroutine minimize_lattice(lat,io_simu)
+subroutine minimize_lattice(lat,io_simu,Hams)
 use m_derived_types, only : io_parameter,lattice
 use m_basic_types, only : vec_point
 use m_constants, only : pi
@@ -35,13 +35,15 @@ use m_solver, only : minimization
 use m_vector, only : norm_cross,norm, calculate_damping
 use m_dyna_utils, only : copy_lattice
 use m_eval_Beff
-use m_local_energy
 use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
+use m_Htype_gen
 use omp_lib
+
 implicit none
 type(io_parameter), intent(in) :: io_simu
 type(lattice), intent(inout) :: lat
+class(t_H), intent(in) :: Hams(:)
 ! dummy variable
 real(kind=8),allocatable, dimension(:,:) :: velocity,predicator,force
 real(kind=8),allocatable, dimension(:) :: F_eff,V_eff,F_temp
@@ -98,8 +100,9 @@ enddo
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Prepare the calculation of the energy and the effective field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_B_matrix(dim_mode)
-call set_E_matrix(dim_mode)
+STOP 'ANYTHING TO DO WITH lines directly below?'
+!call get_B_matrix(dim_mode)
+!call set_E_matrix(dim_mode)
 
 
 do iomp=1,N_cell
@@ -164,7 +167,7 @@ do i_min=1,N_minimization
 
   call copy_lattice(predicator,all_mode)
 
-  Call sum_energy(Energy,lat)
+  Energy=energy_all(Hams,lat)
 
   write(6,'(/,a,2x,I10)') 'iteration',i_min
   write(6,'(a,2x,f14.11)') 'Energy of the system (eV/unit cell)',Energy/dble(N_cell)
@@ -183,9 +186,9 @@ do i_min=1,N_minimization
 
 enddo ! number of minimization steps
 
-
-call kill_B_matrix()
-call kill_E_matrix()
+STOP 'ANYTHING TO DO WITH lines directly below?'
+!call kill_B_matrix()
+!call kill_E_matrix()
 
 nullify(my_lattice,all_mode)
 
@@ -200,7 +203,6 @@ use m_write_spin
 use m_createspinfile
 use m_vector, only : cross,norm
 use m_eval_Beff
-use m_local_energy
 use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
 implicit none
@@ -242,8 +244,9 @@ gra_freq=io_simu%io_frequency
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Prepare the calculation of the energy and the effective field
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_B_matrix(N_dim)
-call set_E_matrix(N_dim)
+STOP 'ANYTHING TO DO WITH lines directly below?'
+!call get_B_matrix(N_dim)
+!call set_E_matrix(N_dim)
 
 Call sum_energy(Edy,lat)
 write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell)
