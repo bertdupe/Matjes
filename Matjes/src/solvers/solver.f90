@@ -119,7 +119,7 @@ function euler(m,Dmag_int,dt)result(Mout)
     Mout=M
     m_norm=norm2(m3,dim=1)
     euler_tmp=M+Dmag_int*dt/hbar
-    int_norm=norm2(m3_out,dim=1)
+    int_norm=norm2(m3_tmp,dim=1)
     mask=spread(int_norm>1.0d-8,dim=1,ncopies=3)
     do i=1,Nvec
         m3_tmp(:,i)=m3_tmp(:,i)*m_norm(i)/int_norm(i)
