@@ -39,6 +39,7 @@ subroutine get_ME_input(fname,c_ham,sym,asym,N_me)
     neighbor_sym=0
     neighbor_asym=0
     io_param=open_file_read(fname)
+    c_ham=1.0d0
     call get_parameter(io_param,fname,'c_ME',c_ham)
     !
     ! count the ME coefficients if present
