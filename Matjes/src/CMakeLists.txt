@@ -6,12 +6,6 @@ src/analytical_function/tbessk.f90
 src/analytical_function/tbessy.f90
 src/correlation/Correlation.f90
 src/entropic-MC/entropic.f90
-src/excitations/EMwave.f90
-src/excitations/excitations.f90
-src/excitations/heavyside.f90
-src/excitations/rampe.f90
-src/excitations/shape_excitations.f90
-src/excitations/TPulse.f90
 src/fixed-parameters/constant.f90
 src/fixed-parameters/null.f90
 src/IO-ouputs/CreateSpinFile.f90
@@ -80,6 +74,7 @@ include(src/Sparselib/CMakeLists.txt)
 include(src/solvers/CMakeLists.txt)
 include(src/IO-input/CMakeLists.txt)
 include(src/symmetries/CMakeLists.txt)
+include(src/excitations/CMakeLists.txt)
 include(src/dynamics/CMakeLists.txt)
 include(src/Energy/CMakeLists.txt)
 include(src/setup/CMakeLists.txt)

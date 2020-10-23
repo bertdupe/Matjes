@@ -150,15 +150,7 @@ write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! part of the excitations
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-call get_excitations('input',i_excitation,input_excitations)
-! allocate the field on which the excitation occurs
-if (i_excitation) then
-   allocate(mode_excitation_field(N_cell,input_excitations),lattice_ini_excitation_field(N_cell,input_excitations))
-   do iomp=1,input_excitations
-     call associate_excitation(iomp,mode_excitation_field(:,iomp),lat_1%ordpar%all_l_modes,my_order_parameters)
-     call associate_excitation(iomp,lattice_ini_excitation_field(:,iomp),mag_lattice%ordpar%all_l_modes,my_order_parameters)
-   enddo
-endif
+call set_excitations('input',i_excitation,input_excitations)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! do we use the update timestep
@@ -197,40 +189,42 @@ do j=1,duration
     test_torque=0.0d0
     ave_torque=0.0d0
     Mdy=0.0d0
-    dt=timestep_int
-    call update_ext_EM_fields(real_time,check)
     test_torque=0.0d0
+    dt=timestep_int
+    !why is this outside of the integration order loop? time changes there
+    call update_ext_EM_fields(real_time,check)
     
     !
     ! loop over the integration order
     !
     do i_loop=1,N_loop
       !get actual dt from butchers table
-      dt=get_dt_mode(timestep_int,i_loop)
+      !dt=get_dt_mode(timestep_int,i_loop)
     
       ! loop that get all the fields
       if (i_excitation) then
           do iomp=1,N_cell
-              call update_EMT_of_r(iomp,mode_excitation_field)
-              call update_EMT_of_r(iomp,lattice_ini_excitation_field)
+            !smarter to just copy relevant order parameters around, or even point all to the same array
+              call update_EMT_of_r(iomp,mag_lattice)
+              call update_EMT_of_r(iomp,lat_1)
           enddo
-      endif 
-    
+      endif
+   
+    !update mag
       !get effective field on magnetic lattice
       Call get_B(Hams,lat_1,Beff)
-      
       !do integration
       ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
       Call get_propagator_field(Beff_v,damping,lat_1%M%modes_v,Dmag(:,:,i_loop))
       Call get_Dmag_int(Dmag,i_loop,N_loop,Dmag_int)
       lat_2%M%modes_v=get_integrator_field(mag_lattice%M%modes_v,Dmag_int,dt)
-    
-      Call lat_2%copy_val_to(lat_1)
+    !copy mag 
+      Call lat_2%M%copy_val(lat_1%M)
     enddo
     !!!!!!!!!!!!!!! copy the final configuration in my_lattice
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    Call lat_2%copy_val_to(mag_lattice)
+    Call lat_2%M%copy_val(mag_lattice%M)
     call truncate(mag_lattice,used)
     
     !

@@ -3,6 +3,12 @@ use m_basic_types
 
 integer,parameter :: number_different_order_parameters=4    !m,E,B,T
 
+character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
+								&	'magnetic   ',&
+								&	'Efield     ',&
+								&	'Bfield     ',&
+								&	'temperature']
+
 ! unit cells
 ! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
 type t_cell
@@ -52,10 +58,10 @@ type lattice
      real(8),allocatable :: sc_vec_period(:,:)   !real space vectors used to minimize distance using supercell periodicity
 
 !order parameters
-     type(order_par)   :: M !magnetization 
-     type(order_par)   :: E !Electric field
-     type(order_par)   :: B !Magnetic field
-     type(order_par)   :: T !Temperature
+     type(order_par)  :: M !magnetization 
+     type(order_par)  :: E !Electric field
+     type(order_par)  :: B !Magnetic field
+     type(order_par)  :: T !Temperature
      !ultimately delete ordpar
      type(order_par)   :: ordpar !make this an array if using separated order parameters
 
@@ -88,7 +94,7 @@ type point_arr
 end type
 
 private
-public lattice, number_different_order_parameters, t_cell
+public lattice, number_different_order_parameters,op_name_to_int, t_cell
 
 contains 
 
@@ -612,5 +618,21 @@ subroutine copy_val_lattice(self,copy)
     if(self%b%dim_mode>0) Call self%B%copy_val(copy%B)
     if(self%t%dim_mode>0) Call self%T%copy_val(copy%T)
 end subroutine
+
+function op_name_to_int(name_in)result(int_out)
+	character(len=*),intent(in)	::	name_in
+	integer            			::	int_out
+
+	integer			::	i
+	
+	do i=1,number_different_order_parameters
+        if(trim(adjustl(name_in))==order_parameter_name(i))then
+            int_out=i
+            return
+        endif
+    enddo
+    write(*,*) 'inserted name:',name_in
+    STOP "Failed to identify name with operator"
+end function
 
 end module

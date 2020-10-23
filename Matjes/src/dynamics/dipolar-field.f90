@@ -283,6 +283,7 @@ N=product(my_lattice%dim_lat)
 io=open_file_read(fname)
 call get_parameter(io,fname,'dipdip',i_dip)
 call close_file(fname,io)
+if(i_dip) STOP "dipolar interactions not supported in this version"
 
 if (.not.i_dip) return
 

@@ -7,20 +7,22 @@ use m_EMwave
 use m_shape_excitations
 use m_get_position
 use m_convert
+use m_type_lattice
 
 ! variable that contains the the excitations form (sweep of EM field...)
 type excitations
-    real(kind=8) :: start_value(3),end_value(3)
-    real(kind=8) :: t_start,t_end
+    real(kind=8)      :: start_value(3),end_value(3)
+    real(kind=8)      :: t_start,t_end
 ! name of the order parameter to change
     character(len=30) :: name
+    integer           :: op !order parameter as ordered by m_type_lattice
 end type excitations
 
 type excitation_order_parameter
 ! field concerned by the order parameter
   real(kind=8), allocatable :: field(:)
 ! name of the shape in field
-  character(len=30) :: name
+  character(len=30)         :: name
 ! pointer towards the norm of the field
   procedure(shape_norm), pointer, nopass :: norm => null()
 end type excitation_order_parameter
@@ -34,10 +36,6 @@ type cycle_excitations
     character(len=30), allocatable :: name(:)
 end type cycle_excitations
 
-
-
-
-
 !
 ! position of the modes on the lattice
 !
@@ -50,14 +48,14 @@ type(cycle_excitations) :: EM_of_t
 logical :: i_excitations
 
 private
-public :: get_excitations,update_ext_EM_fields,associate_excitation,update_EMT_of_r
+public :: set_excitations,update_ext_EM_fields,update_EMT_of_r
 
 contains
 
 !
 ! routine that chooses if you are doing a EM_cycle, changing temperature or something else
 !
-subroutine get_excitations(fname,excitation,input_excitations)
+subroutine set_excitations(fname,excitation,input_excitations)
 use m_io_utils
 use m_io_files_utils
 use m_convert
@@ -124,12 +122,12 @@ do j=1,EM_of_t%counter
 
     write(6,'(a)') 'initialization of the electron temperature pulse'
     call read_excitations(io_input,fname,excitations,EM_of_t%temporal_param(j))
-     call get_parameter_TPulse(io_input,fname)
+    call get_parameter_TPulse(io_input,fname)
 
   case('EMwave')
 
     call read_excitations(io_input,fname,excitations,EM_of_t%temporal_param(j))
-   call get_parameter_EMwave(io_input,fname)
+    call get_parameter_EMwave(io_input,fname)
 
   case default
      write(6,'(a)') 'no excitations selected'
@@ -153,60 +151,28 @@ allocate(position(3,N))
 position=0.0d0
 call get_position(position,'positions.dat')
 
-!
-end subroutine get_excitations
-
-!
-! routine that associates the field to the table of pointer that should be used
-!
-subroutine associate_excitation(i_excite,point,all_mode,my_order_parameters)
-use m_derived_types, only : order_parameter
-use m_basic_types, only : vec_point
-implicit none
-type(order_parameter), intent(in) :: my_order_parameters(:)
-type(vec_point), intent(in):: all_mode(:)
-type(vec_point), intent(inout):: point(:)
-integer, intent(in) :: i_excite
-! internal variables
-integer :: i,j
+end subroutine 
 
 
-do i=1,size(my_order_parameters)
-   if( my_order_parameters(i)%name.eq.EM_of_t%temporal_param(i_excite)%name) then
-      write(6,'(2a)') 'excitations was found on  ', my_order_parameters(i)%name
-      do j=1,size(all_mode)
-         point(j)%w => all_mode(j)%w(my_order_parameters(i)%start:my_order_parameters(i)%end)
-  	if (associated(point(j)%w) .eqv. .false.)  then
-		write(*,*) '!!!!! In associate excitations, pointer not associated, aborting...'
-		call abort
-	endif
-      enddo
-   endif
-enddo
-
-
-write(6,'(/,a,/)') 'the pointers for the excitations has been allocated in associate_excitation'
-
-end subroutine
-
-!
-! routine that updates the the field depending on the position
-!
-subroutine update_EMT_of_r(i,mode)
-use m_basic_types, only : vec_point
-implicit none
-integer, intent(in) :: i
-type(vec_point), intent(inout) :: mode(:,:)
-! internal
-real(kind=8) :: r(3)
-integer :: j
-
-r=position(:,i)
-
-do j=1,EM_of_t%counter
- mode(i,j)%w=EM_of_t%spatial_param(j)%field*EM_of_t%spatial_param(j)%norm(r,shape_excitation%center,shape_excitation%cutoff)
-enddo
-
+subroutine update_EMT_of_r(i,lat)
+    use m_basic_types, only : vec_point
+    implicit none
+    integer, intent(in) :: i
+    type(lattice), intent(inout) :: lat
+    ! internal
+    real(8),pointer,contiguous :: opvec(:)
+    real(kind=8) :: r(3)
+    integer :: j
+    integer :: dim_mode
+    
+    r=position(:,i)
+    do j=1,EM_of_t%counter
+       Call lat%set_order_point(EM_of_t%temporal_param(j)%op,opvec)
+       dim_mode=lat%get_order_dim(EM_of_t%temporal_param(j)%op)
+       opvec(1+(i-1)*dim_mode:i*dim_mode)=EM_of_t%spatial_param(j)%field*EM_of_t%spatial_param(j)%norm(r,shape_excitation%center,shape_excitation%cutoff)
+    enddo
+    nullify(opvec)
+    
 end subroutine
 
 
@@ -332,55 +298,55 @@ end function get_num_variable
 !
 !
 subroutine read_excitations(io,fname,vname,excite)
-use m_io_utils, only : check_read
-implicit none
-type(excitations), intent(inout) :: excite
-integer, intent(in) :: io
-character(len=*), intent(in) :: vname,fname
-! internal variable
-integer :: fin,len_string,nread,check
-character(len=100) :: str
-character(len=100) :: dummy
-logical :: dum_logic
-
-nread=0
-len_string=len(trim(adjustl(vname)))
-
-
-excite%start_value(:)=0.0d0
-excite%end_value(:)=0.0d0
-excite%t_start=0
-excite%t_end=0
-excite%name=fname
-
-
-rewind(io)
-do
-   read (io,'(a)',iostat=fin) str
-   if (fin /= 0) exit
-   str= trim(adjustl(str))
-
-   if (len_trim(str)==0) cycle
-   if (str(1:1) == '#' ) cycle
-
-!cccc We start to read the input
-   if ( str(1:len_string) == trim(adjustl(vname)) ) then
-      nread=nread+1
-      backspace(io)
-      read(io,*) dummy,dum_logic,excite%name
-      if ((excite%name.eq.'Bfield').or.(excite%name.eq.'Efield')) then
-         backspace(io)
-         read(io,*) dummy,dum_logic,dummy,excite%start_value(1:3),excite%end_value(1:3),excite%t_start,excite%t_end
-      else
-        backspace(io)
-	read(io,*) dummy,dum_logic,dummy,excite%start_value(1),excite%end_value(1),excite%t_start,excite%t_end
-      endif
-
-   endif
-
-enddo
-
-check=check_read(nread,vname,fname)
+    use m_io_utils, only : check_read
+    use m_type_lattice, only: op_name_to_int 
+    implicit none
+    type(excitations), intent(inout) :: excite
+    integer, intent(in) :: io
+    character(len=*), intent(in) :: vname,fname
+    ! internal variable
+    integer :: fin,len_string,nread,check
+    character(len=100) :: str
+    character(len=100) :: dummy
+    logical :: dum_logic
+    
+    nread=0
+    len_string=len(trim(adjustl(vname)))
+    
+    excite%start_value(:)=0.0d0
+    excite%end_value(:)=0.0d0
+    excite%t_start=0
+    excite%t_end=0
+    excite%name=fname
+    
+    rewind(io)
+    do
+       read (io,'(a)',iostat=fin) str
+       if (fin /= 0) exit
+       str= trim(adjustl(str))
+    
+       if (len_trim(str)==0) cycle
+       if (str(1:1) == '#' ) cycle
+    
+    !cccc We start to read the input
+       if ( str(1:len_string) == trim(adjustl(vname)) ) then
+            nread=nread+1
+            backspace(io)
+            read(io,*) dummy,dum_logic,excite%name
+            excite%op=op_name_to_int(excite%name)
+            if ((excite%name.eq.'Bfield').or.(excite%name.eq.'Efield')) then
+                backspace(io)
+                read(io,*) dummy,dum_logic,dummy,excite%start_value(1:3),excite%end_value(1:3),excite%t_start,excite%t_end
+            else
+                backspace(io)
+                read(io,*) dummy,dum_logic,dummy,excite%start_value(1),excite%end_value(1),excite%t_start,excite%t_end
+            endif
+    
+       endif
+    
+    enddo
+    
+    check=check_read(nread,vname,fname)
 
 end subroutine read_excitations
 
