@@ -73,6 +73,7 @@ contains
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point => set_order_point
     procedure :: set_order_comb
+    procedure :: set_order_comb_exc
     procedure :: point_order => point_order_onsite
     !!reduce that order paramter again
     procedure :: reduce
@@ -363,6 +364,50 @@ subroutine set_order_comb(this,order,vec)
         enddo
     enddo
 end subroutine
+
+
+subroutine set_order_comb_exc(this,order,vec,order_exc)
+    !fills the combination of several order parameters according to order
+    !probably quite slow implementation, but should at least work for any reasonable size of order
+    !TODO: I SHOULD CHECK HOW SLOW THIS IS
+    !vec should already be allocated to the size of the final vector ->dimH
+    class(lattice),intent(in)         ::  this
+    integer,intent(in)                ::  order(:)
+    logical,intent(in)                ::  order_exc(:)
+    real(8),intent(inout)             ::  vec(:)
+
+    type(point_arr)         :: points(size(order))
+    integer                 :: dim_modes(size(order))
+    integer                 :: dim_mode_sum
+    integer                 :: i_site,i,i_entry,i_ord
+    integer                 :: ind_site(size(order))
+    integer                 :: ind(size(order))
+    integer                 :: ind_div(size(order))
+
+
+    if(size(order_exc)/=size(order)) STOP 'set_order_comb_exc input array shape wrong'
+    do i=1,size(order)
+        Call this%set_order_point(order(i),points(i)%v)
+        dim_modes(i)=this%get_order_dim(order(i))
+    enddo
+    dim_mode_sum=product(dim_modes)
+    do i=1,size(order)
+        ind_div(i)=product(dim_modes(:i-1))
+    enddo
+    vec=1.0d0
+    do i_site=1,this%ncell
+        ind_site=(i_site-1)*dim_modes
+        do i=1,product(dim_modes)
+            ind=(i-1)/ind_div
+            ind=modulo(ind,dim_modes)+1+ind_site
+            i_entry=i+(i_site-1)*dim_mode_sum
+            do i_ord=1,size(order)
+                if(.not.order_exc(i_ord)) vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord)) 
+            enddo
+        enddo
+    enddo
+end subroutine
+
 
 subroutine point_order_onsite(lat,op,dimH,modes,vec)
     !Subroutine that points modes to the order parameter vector according to op and dimH input

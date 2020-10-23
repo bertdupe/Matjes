@@ -199,7 +199,7 @@ do j=1,duration
     !
     do i_loop=1,N_loop
       !get actual dt from butchers table
-      !dt=get_dt_mode(timestep_int,i_loop)
+      dt=get_dt_mode(timestep_int,i_loop)
     
       ! loop that get all the fields
       if (i_excitation) then

@@ -153,7 +153,8 @@ contains
 
 
     subroutine mult_r_red(this,lat,res,op_keep)
-        !multiply out right side and reduce to only keep operator corresponding to op_keep
+        !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
+        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
         use m_derived_types, only: lattice
         class(t_H),intent(in)           :: this
         type(lattice), intent(in)       :: lat
@@ -161,15 +162,21 @@ contains
         integer,intent(in)              :: op_keep
         ! internal
         real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+        real(8),pointer                 :: modes(:)
+        real(8),allocatable,target      :: vec(:)
     
         allocate(tmp(this%dimH(1)))
         Call this%mult_r(lat,tmp)
+        allocate(vec(this%dimH(1)),source=0.0d0)
+        Call lat%set_order_comb_exc(this%op_l,vec,this%op_l==op_keep)
+        tmp=tmp*vec
         Call lat%reduce(tmp,this%op_l,op_keep,res)
-        deallocate(tmp)
+        deallocate(tmp,vec)
     end subroutine 
     
     subroutine mult_l_red(this,lat,res,op_keep)
-        !multiply out right side and reduce to only keep operator corresponding to op_keep
+        !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
+        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
         use m_derived_types, only: lattice
         class(t_H),intent(in)           :: this
         type(lattice), intent(in)       :: lat
@@ -177,11 +184,15 @@ contains
         integer,intent(in)              :: op_keep
         ! internal
         real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+        real(8),allocatable,target      :: vec(:)
     
         allocate(tmp(this%dimH(2)))
         Call this%mult_l(lat,tmp)
+        allocate(vec(this%dimH(2)),source=0.0d0)
+        Call lat%set_order_comb_exc(this%op_r,vec,this%op_r==op_keep)
+        tmp=tmp*vec
         Call lat%reduce(tmp,this%op_r,op_keep,res)
-        deallocate(tmp)
+        deallocate(tmp,vec)
     end subroutine 
 
 

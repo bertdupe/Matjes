@@ -39,7 +39,7 @@ subroutine get_ME_input(fname,c_ham,sym,asym,N_me)
     neighbor_sym=0
     neighbor_asym=0
     io_param=open_file_read(fname)
-    c_ham=1.0d0
+    c_ham=-1.0d0
     call get_parameter(io_param,fname,'c_ME',c_ham)
     !
     ! count the ME coefficients if present
@@ -208,7 +208,7 @@ subroutine get_coupling_ME(Ham,tableNN,indexNN,lat)
             !get local Hamiltonian for given neighbor
                 ind1=[1,1,1,1]
                 ind2=tableNN(1:4,i_vois+offset,1,1,1,1)
-                diff_pos=-lat%pos_diff_ind(ind1,ind2) !minus sign to be conistent with old version
+                diff_pos=lat%pos_diff_ind(ind1,ind2) 
                 where(abs(diff_pos)<norm2(diff_pos)*1.0d-8) diff_pos=0.0d0
                 diff_pos=diff_pos/norm2(diff_pos)
                 !explicitly assuming M only has dim_mode 3
