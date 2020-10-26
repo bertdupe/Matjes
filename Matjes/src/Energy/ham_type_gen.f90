@@ -4,12 +4,8 @@ module m_Htype_gen
 
 #if defined   CPP_MATMUL_MKL_CSR && defined(CPP_MKL_SPBLAS)
 use m_H_type_mkl_inspector_csr
-#elif defined CPP_MATMUL_MKL_COO && defined(CPP_MKL_SPBLAS)
-use m_H_type_mkl_inspector_coo
-#elif defined CPP_MATMUL_MKL_CSR 
-use m_H_type_mkl_csr
-#elif defined CPP_MATMUL_MKL_COO
-use m_H_type_mkl_coo
+#elif defined CPP_DENSE_BARE
+use m_H_type_dense
 #elif defined CPP_MATMUL_EIGEN_SPARSE
 TODO 
 #else
@@ -28,6 +24,8 @@ subroutine get_Htype(H_out)
    allocate(H_out,source=t_H_mkl_csr())
 #elif defined CPP_MATMUL_MKL_COO
    allocate(H_out,source=t_H_mkl_coo())
+#elif defined CPP_DENSE_BARE
+   allocate(H_out,source=t_H_dense())
 !#elif defined CPP_MATMUL_EIGEN_SPARSE
 !    TOTO 
 #else
@@ -42,6 +40,8 @@ subroutine get_Htype_N(H_out,N)
    allocate(H_out(N),source=t_H_mkl_csr())
 #elif defined CPP_MATMUL_MKL_COO
    allocate(H_out(N),source=t_H_mkl_coo())
+#elif defined CPP_DENSE_BARE
+   allocate(H_out(N),source=t_H_dense())
 !#elif defined CPP_MATMUL_EIGEN_SPARSE
 !    TOTO 
 #else

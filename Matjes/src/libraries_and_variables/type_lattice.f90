@@ -303,7 +303,13 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
     integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
     integer                 :: dir
 
-    ind_keep=findloc(order,order_keep,dim=1)
+!   ind_keep=findloc(order,order_keep,dim=1)
+    do i=1,size(order)
+        if(order(i)==order_keep)then
+            ind_keep=i
+            exit
+        endif
+    enddo
     do i=1,size(order)
         dim_modes(i)=this%get_order_dim(order(i))
     enddo
