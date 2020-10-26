@@ -19,14 +19,15 @@ contains
 
         !export csr parameters
         integer(C_INT)                     :: nrows,ncols,indexing
-        type(C_PTR)                        :: rows_start,rows_end,col_indx
-        type(C_PTR)                        :: values
         integer(c_int),pointer             :: tmp(:)
         !integer                           :: nnz
         integer                            :: stat
+        type(C_PTR)                        :: values
+        type(C_PTR)                        :: rows_start,rows_end,col_indx
 
         !get csr matrix out of SPARSE_MATRIX_T
-        stat=mkl_sparse_z_export_csr ( H , indexing , nrows , ncols , rows_start , rows_end , col_indx , values ) 
+        STOP "UPDATE unpack_csr to also work with potentially different mkl interface, so far comment out at TB not immediately necessary"
+        !stat=mkl_sparse_z_export_csr ( H , indexing , nrows , ncols , rows_start , rows_end , col_indx , values ) 
         if(stat/=0) STOP 'sparse_z_export_csr in uppack_csr failed'
         CAll C_F_POINTER(rows_end, tmp,[nrows] )
         nnz=tmp(nrows)-indexing

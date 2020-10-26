@@ -42,7 +42,8 @@ contains
         desc%Type=SPARSE_MATRIX_TYPE_HERMITIAN
         desc%mode=SPARSE_FILL_MODE_UPPER
         desc%diag=SPARSE_DIAG_NON_UNIT
-        stat = mkl_sparse_set_lu_smoother_hint ( H_r , SPARSE_OPERATION_NON_TRANSPOSE , desc , 100000 )
+        !commented out because I'm not sure if it helps and the interface changes between mkl versions
+        !stat = mkl_sparse_set_lu_smoother_hint ( H_r , SPARSE_OPERATION_NON_TRANSPOSE , desc , 100000 )
         stat = mkl_sparse_optimize ( H_r )
 
    end subroutine 
