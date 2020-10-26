@@ -1,106 +1,90 @@
-!module m_DOS
-!    ! Used to read an input file
-!    use m_io_utils
-!    use m_io_files_utils
-!
-!    real(kind=8) :: E_F = 0.0d0
-!    real(kind=8) :: from = -1.0d0
-!    real(kind=8) :: to = 1.0d0
-!    real(kind=8) :: smearing = 1.0d-2
-!    integer :: n_pt = 1000
-!    character(len=20) :: smearing_type = 'gaussian'
-!
-!    real(kind=8), allocatable :: DOS(:),E_DOS(:)
-!
-!    private
-!    public :: read_params_DOS, init_Evector_DOS, compute_DOS, print_DOS
-!    contains
-!        subroutine read_params_DOS(fname)
-!            implicit none
-!            character(len=*), intent(in) :: fname
-!
-!            ! Internal variables
-!            integer :: io_input
-!
-!            io_input=open_file_read(fname)
-!
-!            call get_parameter(io_input, fname, 'E_F', E_F)
-!            call get_parameter(io_input, fname, 'n_pt', n_pt)
-!            call get_parameter(io_input, fname, 'from', from)
-!            call get_parameter(io_input, fname, 'to', to)
-!            call get_parameter(io_input, fname, 'smearing_type', smearing_type)
-!            call get_parameter(io_input, fname, 'smearing', smearing)
-!
-!            call close_file(fname, io_input)
-!        end subroutine read_params_DOS
-!
-!
-!
-!        ! Subroutine initialising the energy vector required by the DOS
-!        subroutine init_Evector_DOS()
-!            implicit none
-!
-!            ! Internal variable
-!            integer :: i
-!            real(kind=8) :: range_values,N
-!
-!            allocate( E_DOS(n_pt) )
-!            E_DOS = 0.0d0
-!
-!            range_values = to - from
-!            N=real(n_pt - 1)
-!            do i=1, n_pt
-!                E_DOS(i) =from +  real(i-1)*range_values/N
-!            enddo
-!        end subroutine init_Evector_DOS
-!
-!
-!
-!        ! Function computing the DOS
-!        subroutine compute_DOS(disp_en, N_cell)
-!            implicit none
-!            integer, intent(in) :: N_cell
-!            complex(kind=8), intent(in) :: disp_en(:)
-!
-!            ! Internal variable
-!            integer :: i, j
-!            real(kind=8) :: lower_bound,upper_bound,energy,tmp
-!
-!            allocate( DOS(n_pt) )
-!            DOS = 0.0d0
-!
-!            do i = 1, size(disp_en)
-!                energy=real(disp_en(i),kind=8)
-!                do j = 1, size( E_DOS )
-!                    tmp=(E_DOS(j)-energy)**2/(2.0d0*smearing**2)
-!                    if (tmp.gt.50.0) then
-!                       lower_bound=energy-1.0d-8
-!                       upper_bound=energy+1.0d-8
-!                    else
-!                       lower_bound=0.7d0*energy*exp( tmp )
-!                       upper_bound=1.3d0*energy*exp( tmp )
-!                    endif
-!                    if((E_DOS(j) .le. upper_bound).and.(E_DOS(j) .ge. lower_bound))  DOS(j)=DOS(j)+1.0d0
-!                enddo
-!            enddo
-!            DOS = DOS/real(N_cell)
-!        end subroutine compute_DOS
-!
-!        ! Function printing the DOS
-!        subroutine print_DOS(fname)
-!        use m_io_utils
-!        use m_io_files_utils
-!        implicit none
-!        character(len=*), intent(in) :: fname
-!        ! internal
-!        integer :: io_DOS,i,N_k
-!
-!        io_DOS=open_file_write(fname)
-!        do i=1,n_pt
-!           write(io_DOS,'(2(E20.12E3,3x))') E_DOS(i),DOS(i)
-!        enddo
-!        call close_file(fname,io_DOS)
-!
-!        end subroutine
-!
-!end module m_DOS
+module m_dos
+!this module contains a badly designed dos calculation using a gauss smearing, but so far it was sufficiently fast
+use m_TB_types, only: parameters_TB_IO_DOS
+implicit none
+private
+public calc_dos
+contains
+
+subroutine calc_dos(eigval,io_dos,fname)
+    !subroutine to calculate the density of states
+    !eigval input has to be sorted
+    use m_io_files_utils, only: close_file,open_file_write
+    real(8),intent(in)  ::  eigval(:)
+    type(parameters_TB_IO_DOS) :: io_dos
+    character(len=*)    ::  fname
+
+
+    integer             ::  NE,iE
+    real(8),allocatable ::  dos(:),Eval(:)
+
+    integer                     :: i,io
+
+    Ne=int((io_dos%E_ext(2)-io_dos%E_ext(1))/io_dos%dE)+1
+    allocate(dos(Ne),Eval(Ne),source=0.0d0)
+    do iE=1,Ne
+        Eval(iE)=(iE-1)*io_dos%dE+io_dos%E_ext(1)
+    enddo
+
+    do iE=1,Ne
+        Call get_dos(eigval,Eval(iE),dos(iE),io_dos%sigma)
+    enddo
+    dos=dos/real(size(eigval,1))
+
+    io=open_file_write(fname)
+    do i=1,size(dos)
+       write(io,'(2E16.8)') Eval(i),dos(i)
+    enddo
+    call close_file(fname,io)
+end subroutine
+
+
+subroutine get_dos(val,E,res,sigma)
+    real(8),intent(in)  ::  val(:),E,sigma
+    real(8),intent(out) ::  res
+
+    real(8)             ::  tmp(size(val,1))
+
+    Call gauss_dist(val,E,sigma,tmp)
+    res=sum(tmp)
+
+end subroutine
+
+subroutine gauss_dist(val,mu,sigma,res)
+    !gauss distribution using 1/\sqrt{2*\pi*sigma^2}*e^{-(val-mu)^2/(2*sigma^2)} for all values in val respective to one given mu and sigma
+    real(8),intent(in)  ::  val(:),mu,sigma
+    real(8),intent(out) ::  res(size(val,1))
+    integer             ::  i
+
+    !only consider vals which are within [mu-dist_inc*sigma,mu+dist_inc*sigma], because all 
+    !other results in small res  anyways and a too small exponent becomes numerically problematic
+    real(8),parameter   ::  dist_inc=5.0d0
+
+    integer             ::  i_min,i_max,Ne
+
+    
+    Ne=size(val,1)
+    res=0.0d0
+    if(val(Ne) <=mu-dist_inc*sigma.or.val(1) >=mu+dist_inc*sigma) return
+    i_min=1
+    do i=1,Ne
+        if(val(i) >=mu-dist_inc*sigma)then
+            i_min=i
+            exit
+        endif
+    enddo
+    i_max=i_min
+    do i=Ne,i_min,-1
+        if(val(i) <=mu+dist_inc*sigma)then
+            i_max=i
+            exit
+        endif
+    enddo
+    if(i_min.eq.i_max) return
+    res(i_min:i_max)=(val(i_min:i_max)-mu)*(val(i_min:i_max)-mu)
+    res(i_min:i_max)=-res(i_min:i_max)*0.5d0/sigma/sigma
+    res(i_min:i_max)=exp(res(i_min:i_max))
+    res=res/sqrt(2.0d0*3.14159265359d0)/sigma
+
+end subroutine
+end module

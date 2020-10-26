@@ -19,7 +19,8 @@ cd $build_dir
 echo -e "\n\n\n start cmake"
 cmake .. -DGITVERSION:STRING=$gitversion -DCOMPOP:STRING=$compop
 echo -e "\n\n\n start make"
-make VERBOSE=1 -j $(( `nproc` < 8 ? `nproc` : 8 ))
+#make VERBOSE=1 -j $(( `nproc` < 8 ? `nproc` : 8 ))
+make
 echo "compop $compop" >> compop
 echo -e "\n\n\n done"
 bindir=`pwd`

@@ -22,14 +22,14 @@ using namespace Eigen;
 
 extern "C"{
 
-SparseMatrix<complex<double>> H_e;
+SparseMatrix<complex<double> > H_e;
 void eigen_set_H_e(
     int Nentry,
     int Hdim,
     int ind1[],
     int ind2[],
     complex<double> arr_in[]){
-	typedef Eigen::Triplet<std::complex<double>> T;
+	typedef Eigen::Triplet<std::complex<double> > T;
 
 	std::vector<T> tripletList;
 	tripletList.reserve(Nentry);
@@ -37,21 +37,21 @@ void eigen_set_H_e(
 		tripletList.push_back(T(ind1[i],ind2[i],arr_in[i]));
 	}
 	
-	SparseMatrix<complex<double>> tmp(Hdim,Hdim);
+	SparseMatrix<complex<double> > tmp(Hdim,Hdim);
 	tmp.setFromTriplets(tripletList.begin(), tripletList.end());
 	H_e=tmp;
  	cout <<"H_e set in Eigen" << endl;
 }
 
 
-SparseMatrix<complex<double>> H_e_jsd;
+SparseMatrix<complex<double> > H_e_jsd;
 void eigen_set_H_e_jsd(
     int Nentry,
     int Hdim,
     int ind1[],
     int ind2[],
     complex<double> arr_in[]){
-	typedef Eigen::Triplet<std::complex<double>> T;
+	typedef Eigen::Triplet<std::complex<double> > T;
 
 	std::vector<T> tripletList;
 	tripletList.reserve(Nentry);
@@ -59,7 +59,7 @@ void eigen_set_H_e_jsd(
 		tripletList.push_back(T(ind1[i],ind2[i],arr_in[i]));
 	}
 	
-	SparseMatrix<complex<double>> tmp(Hdim,Hdim);
+	SparseMatrix<complex<double> > tmp(Hdim,Hdim);
 	tmp.setFromTriplets(tripletList.begin(), tripletList.end());
 	H_e_jsd=tmp;
  	cout <<"H_e_jsd set in Eigen" << endl;
