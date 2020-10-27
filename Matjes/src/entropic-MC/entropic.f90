@@ -14,7 +14,7 @@ use m_sampling
 use m_derived_types
 use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
-use m_Htype_gen, only: t_H,energy_single,energy_all
+use m_H_public, only: t_H,energy_single,energy_all
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! variable part
 type(lattice), intent(inout) :: my_lattice

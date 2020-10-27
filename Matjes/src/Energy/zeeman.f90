@@ -74,7 +74,7 @@ subroutine get_zeeman_H(Ham,lat)
     !get zeeman in t_H Hamiltonian format
     !so far zeeman has to be set before
     !unsymmetric in that it only includes the B M basis and not the revers ( similar to previous implementation)
-    use m_Htype_gen
+    use m_H_public
     use m_derived_types
     use m_setH_util,only: get_coo
 

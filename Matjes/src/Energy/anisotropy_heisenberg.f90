@@ -92,7 +92,7 @@ end subroutine get_ham_anisotropy
 subroutine get_anisotropy_H(Ham,lat)
     !get anisotropy in t_H Hamiltonian format
     !so far anisotropy has to be set before
-    use m_Htype_gen
+    use m_H_public
     use m_derived_types
     use m_setH_util,only: get_coo
 

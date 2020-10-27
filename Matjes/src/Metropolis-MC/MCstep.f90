@@ -5,7 +5,7 @@ use m_sampling
 use m_choose_spin
 use m_relaxtyp
 use m_createspinfile
-use m_Htype_gen
+use m_H_public
 
 private
 public :: MCstep

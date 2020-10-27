@@ -253,7 +253,7 @@ subroutine plot_tracking(tag,lat,Hams)
 use m_convert
 use m_io_files_utils
 use m_derived_types, only: lattice
-use m_Htype_gen
+use m_H_public
 implicit none
 integer, intent(in)         :: tag
 type(lattice), intent(in)   :: lat

@@ -19,9 +19,8 @@ use m_io_files_utils
 use m_operator_pointer_utils
 use m_eval_Beff
 use m_MCstep
-use m_Htype_gen
+use m_H_public
 use m_relaxation
-!use m_H_type
 
       use m_Corre
       use m_check_restart

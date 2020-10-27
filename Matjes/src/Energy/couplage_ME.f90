@@ -145,7 +145,7 @@ end subroutine get_ham_ME
 subroutine get_coupling_ME(Ham,tableNN,indexNN,lat)
     !get coupling  in t_H Hamiltonian format
     !so far ME has to be set before
-    use m_Htype_gen
+    use m_H_public
     use m_derived_types
     use m_setH_util,only: get_coo
 

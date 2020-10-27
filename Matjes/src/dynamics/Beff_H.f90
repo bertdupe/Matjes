@@ -1,6 +1,6 @@
 module m_Beff_H
 use m_derived_types
-use m_H_type
+use m_H_public, only : t_H
 implicit none
 
 

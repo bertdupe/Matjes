@@ -37,7 +37,7 @@ use m_dyna_utils, only : copy_lattice
 use m_eval_Beff
 use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
-use m_Htype_gen
+use m_H_public
 use omp_lib
 
 implicit none

@@ -13,7 +13,7 @@ use m_createspinfile
 use m_minimize
 use m_get_random
 use m_user_info
-use m_Htype_gen
+use m_H_public
 use m_spindynamics
 use m_montecarlo
 use m_entropic

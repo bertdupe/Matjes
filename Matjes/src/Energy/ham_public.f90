@@ -1,15 +1,17 @@
-module m_Htype_gen
+module m_H_public
 !module used to choose the correct version of treating the Hamiltonian 
 !and provide all necessary types for other routines
 
 #if defined   CPP_MATMUL_MKL_CSR && defined(CPP_MKL_SPBLAS)
-use m_H_type_mkl_inspector_csr
+use m_H_sparse_mkl
 #elif defined CPP_DENSE_BARE
-use m_H_type_dense
+use m_H_dense
+#elif defined CPP_DENSE_LAPACK
+use m_H_dense
 #elif defined CPP_MATMUL_EIGEN_SPARSE
 TODO 
 #else
-use m_H_type_manual
+use m_H_manual
 #endif
 
 

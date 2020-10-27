@@ -1,6 +1,7 @@
-module m_H_type_manual
+module m_H_manual
 #if 0
 !Hamiltonian type specifications to use Bertrands manual matrix multiplication
+!THIS IN NOT IMPLEMENTED SO FAR
 use m_H_type
 
 type,extends(t_H) :: t_H_manual
@@ -48,7 +49,7 @@ subroutine add_H(this,H_add)
     class(t_H_manual),intent(inout)    :: this
     class(t_H),intent(in)              :: H_add
 
-    STOP "IMPLEMENT ADDIND FOR t_H_manual in m_H_type_manual if really necessary"
+    STOP "IMPLEMENT ADDIND FOR t_H_manual in m_H_manual if really necessary"
 
 end subroutine 
 

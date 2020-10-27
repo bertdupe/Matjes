@@ -1,4 +1,4 @@
-module m_H_type_coo
+module m_H_coo
 !Hamiltonian type only for calculating coo parameters without external library
 !hence evaluation does not work <- don't use in ham_type_gen 
 use m_H_type
@@ -36,7 +36,7 @@ subroutine mult_r(this,lat,res)
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
 
-    STOP "IMPLEMENT mult_r FOR t_H_coo in m_H_type_coo if really necessary"
+    STOP "IMPLEMENT mult_r FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
 subroutine mult_l(this,lat,res)
@@ -45,13 +45,13 @@ subroutine mult_l(this,lat,res)
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
 
-    STOP "IMPLEMENT mult_l FOR t_H_coo in m_H_type_coo if really necessary"
+    STOP "IMPLEMENT mult_l FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
 subroutine optimize(this)
     class(t_H_coo),intent(inout)    :: this
 
-    STOP "IMPLEMENT optimize FOR t_H_coo in m_H_type_coo if really necessary"
+    STOP "IMPLEMENT optimize FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
 subroutine destroy_child(this)
@@ -66,7 +66,7 @@ subroutine copy_child(this,Hout)
     class(t_H_coo),intent(in)    :: this
     class(t_H),intent(inout)     :: Hout
 
-    STOP "IMPLEMENT copy FOR t_H_coo in m_H_type_coo if really necessary"
+    STOP "IMPLEMENT copy FOR t_H_coo in m_H_coo if really necessary"
 
 end subroutine 
 
@@ -74,7 +74,7 @@ subroutine add_child(this,H_in)
     class(t_H_coo),intent(inout)    :: this
     class(t_H),intent(in)           :: H_in
 
-    STOP "IMPLEMENT ADDIND FOR t_H_coo in m_H_type_coo if really necessary"
+    STOP "IMPLEMENT ADDIND FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
 subroutine pop_par(this,dimH,nnz,val,rowind,colind)

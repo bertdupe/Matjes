@@ -134,7 +134,7 @@ subroutine get_exchange_H(Ham,tableNN,indexNN,lat,DM_vector)
     !get exchange in t_H Hamiltonian format
     !so far exchange has to be set before
     !unsymmetric in that it only includes the B M basis and not the revers ( similar to previous implementation)
-    use m_Htype_gen
+    use m_H_public
     use m_derived_types
     use m_setH_util,only: get_coo
 

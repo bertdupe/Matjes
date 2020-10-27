@@ -30,7 +30,7 @@ use m_tracker
 use m_print_Beff
 use omp_lib
 use m_precision
-use m_Htype_gen
+use m_H_public
 use m_Beff_H
 
 ! input

@@ -27,7 +27,7 @@ use m_null
 use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
 use m_summer_exp, only : get_coeff_TStra
 
-use m_Htype_gen
+use m_H_public
 
 #ifdef CPP_MPI
       use m_make_box
@@ -303,7 +303,7 @@ end subroutine setup_simu
 
 subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
     use m_derived_types
-    use m_Htype_gen
+    use m_H_public
     
     use m_get_position,only :get_position_ND_to_1D 
     
