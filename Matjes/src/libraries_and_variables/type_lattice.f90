@@ -95,7 +95,7 @@ type point_arr
 end type
 
 private
-public lattice, number_different_order_parameters,op_name_to_int, t_cell
+public lattice, number_different_order_parameters,op_name_to_int, t_cell, order_par
 
 contains 
 

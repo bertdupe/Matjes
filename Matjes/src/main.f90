@@ -17,6 +17,7 @@ use m_H_public
 use m_spindynamics
 use m_montecarlo
 use m_entropic
+use m_write_config, only: write_config
 
 Implicit None
 
@@ -82,8 +83,9 @@ write(6,'(a)') '-----------------------------------------------'
 write(6,'(a)') ''
 write(6,'(a)') '-----------------------------------------------'
 
-call CreateSpinFile('Spinse_start.dat',all_lattices,motif)
-call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
+!call CreateSpinFile('Spinse_start.dat',all_lattices,motif)
+!call WriteSpinAndCorrFile('SpinSTM_start.dat',all_lattices)
+Call write_config('start',all_lattices)
 
 
 
@@ -172,8 +174,9 @@ endif
 !  Part which does the PIMC
 !---------------------------------
 
-call CreateSpinFile('Spinse_end.dat',all_lattices,motif)
-call WriteSpinAndCorrFile('SpinSTM_end.dat',all_lattices)
+Call write_config('end',all_lattices)
+!call CreateSpinFile('Spinse_end.dat',all_lattices,motif)
+!call WriteSpinAndCorrFile('SpinSTM_end.dat',all_lattices)
 
 call cpu_time(computation_time)
 write(*,*) 'computation time:',computation_time,'seconds'

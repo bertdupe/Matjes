@@ -22,6 +22,7 @@ interface dump_config
  module procedure dump_config_matrix_5D_real
  module procedure dump_config_FFT
  module procedure dump_config_vec_point
+ module procedure dump_config_order
 end interface dump_config
 
 !interface get_names
@@ -263,6 +264,24 @@ do i_z=1,N(3)
 enddo
 
 end subroutine dump_config_modes
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! routine that writes the configuration for order_par
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine dump_config_order(io,order)
+use m_type_lattice, only : order_par
+implicit none
+integer, intent(in) :: io
+type(order_par), intent(in) :: order
+! internale variables
+!#Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
+character(len=100) :: rw_format
+
+write(rw_format,'( "(", I4, "f14.8,2x)" )') order%dim_mode
+write(io,rw_format) order%all_modes
+
+end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write an array of pointer configurations

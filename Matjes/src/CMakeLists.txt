@@ -8,13 +8,6 @@ src/correlation/Correlation.f90
 src/entropic-MC/entropic.f90
 src/fixed-parameters/constant.f90
 src/fixed-parameters/null.f90
-src/IO-ouputs/CreateSpinFile.f90
-src/IO-ouputs/plot_FFT.f90
-src/IO-ouputs/print_Beff.f90
-src/IO-ouputs/qorienplot.f90
-src/IO-ouputs/spstm.F90
-src/IO-ouputs/topoplot.f90
-src/IO-ouputs/WriteSpinAndCorrFile.f90
 src/IO-utils/convert.f90
 src/IO-utils/io_files_utils.f90
 src/IO-utils/io-utils.f90
@@ -73,6 +66,7 @@ include(src/tight-binding/CMakeLists.txt)
 include(src/Sparselib/CMakeLists.txt)
 include(src/solvers/CMakeLists.txt)
 include(src/IO-input/CMakeLists.txt)
+include(src/IO-outputs/CMakeLists.txt)
 include(src/symmetries/CMakeLists.txt)
 include(src/excitations/CMakeLists.txt)
 include(src/dynamics/CMakeLists.txt)

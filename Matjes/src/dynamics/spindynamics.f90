@@ -32,6 +32,7 @@ use omp_lib
 use m_precision
 use m_H_public
 use m_Beff_H
+use m_write_config
 
 ! input
 type(lattice), intent(inout) :: mag_lattice
@@ -277,7 +278,7 @@ do j=1,duration
     
         if(gra_log) then
             call CreateSpinFile(j/gra_freq,mag_lattice%M%all_l_modes)
-            call WriteSpinAndCorrFile(j/gra_freq,mag_lattice%M%all_l_modes,'SpinSTM_')
+            Call write_config(j/gra_freq,mag_lattice) 
             write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',j/gra_freq
             write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
         endif
