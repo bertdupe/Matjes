@@ -6,7 +6,6 @@ use m_derived_types, only: lattice
 
 
 type,extends(t_H) :: t_H_dense
-    private
     real(8),allocatable   :: H(:,:)
 contains
     !necessary t_H routines
@@ -38,9 +37,9 @@ subroutine mult_r(this,lat,res)
     real(8),allocatable,target :: vec(:)
 
     Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
-
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     res=matmul(this%H,modes)
+
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 

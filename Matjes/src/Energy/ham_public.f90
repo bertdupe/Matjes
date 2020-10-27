@@ -6,8 +6,8 @@ module m_H_public
 use m_H_sparse_mkl
 #elif defined CPP_DENSE_BARE
 use m_H_dense
-#elif defined CPP_DENSE_LAPACK
-use m_H_dense
+#elif defined CPP_DENSE_BLAS
+use m_H_dense_blas
 #elif defined CPP_MATMUL_EIGEN_SPARSE
 TODO 
 #else
@@ -28,6 +28,8 @@ subroutine get_Htype(H_out)
    allocate(H_out,source=t_H_mkl_coo())
 #elif defined CPP_DENSE_BARE
    allocate(H_out,source=t_H_dense())
+#elif defined CPP_DENSE_BLAS
+   allocate(H_out,source=t_H_dense_blas())
 !#elif defined CPP_MATMUL_EIGEN_SPARSE
 !    TOTO 
 #else
@@ -44,8 +46,8 @@ subroutine get_Htype_N(H_out,N)
    allocate(H_out(N),source=t_H_mkl_coo())
 #elif defined CPP_DENSE_BARE
    allocate(H_out(N),source=t_H_dense())
-!#elif defined CPP_MATMUL_EIGEN_SPARSE
-!    TOTO 
+#elif defined CPP_DENSE_BLAS
+   allocate(H_out(N),source=t_H_dense_blas())
 #else
    allocate(H_out(N),source=t_H_manual())
 #endif

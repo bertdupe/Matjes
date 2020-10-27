@@ -20,6 +20,7 @@ src/Energy/ham_public.f90
 src/Energy/ham_base.f90
 src/Energy/ham_coo.f90
 src/Energy/ham_dense.f90
+src/Energy/ham_dense_blas.f90
 src/Energy/ham_manual.f90
 src/Energy/ham_sparse_mkl.f90
 src/Energy/ham_set_util.f90
