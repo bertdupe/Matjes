@@ -1,4 +1,4 @@
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
 
 module m_energy_set_real_sparse
 use m_energy_commons, only : energy

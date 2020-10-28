@@ -1,6 +1,6 @@
 
 module m_H_sparse_mkl
-#if defined(CPP_MATMUL_MKL_CSR) && defined(CPP_MKL_SPBLAS)
+#if defined(CPP_MKL_SPBLAS)
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
 use m_H_type
 use MKL_SPBLAS

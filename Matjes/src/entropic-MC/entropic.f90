@@ -263,14 +263,6 @@ enddo
 
 close(7)
 
-#ifdef CPP_DEBUG
-      OPEN(666,FILE='test.dat',action='write',status='unknown',form='formatted')
-      do i=1,N_cell+1
-        write(666,'(I10)') vector(i)
-      enddo
-      close(666)
-#endif
-
 write(6,'(/a)') "-------------------------"
 write(6,'(a/)') "writing the final results"
 

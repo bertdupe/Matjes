@@ -1,4 +1,4 @@
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
 module m_energy_solve_sparse
 use MKL_SPBLAS
 use mkl_spblas_util, only: unpack_csr 

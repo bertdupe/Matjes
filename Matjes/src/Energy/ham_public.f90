@@ -2,7 +2,7 @@ module m_H_public
 !module used to choose the correct version of treating the Hamiltonian 
 !and provide all necessary types for other routines
 
-#if defined   CPP_MATMUL_MKL_CSR && defined(CPP_MKL_SPBLAS)
+#if defined CPP_MKL_SPBLAS
 use m_H_sparse_mkl
 #elif defined CPP_DENSE_BARE
 use m_H_dense
@@ -22,10 +22,8 @@ public
 contains
 subroutine get_Htype(H_out)
     class(t_h),intent(out),allocatable      :: H_out 
-#if defined CPP_MATMUL_MKL_CSR
+#if defined CPP_MKL_SPBLAS
    allocate(H_out,source=t_H_mkl_csr())
-#elif defined CPP_MATMUL_MKL_COO
-   allocate(H_out,source=t_H_mkl_coo())
 #elif defined CPP_DENSE_BARE
    allocate(H_out,source=t_H_dense())
 #elif defined CPP_DENSE_BLAS
@@ -40,10 +38,8 @@ end subroutine
 subroutine get_Htype_N(H_out,N)
     class(t_h),intent(out),allocatable      :: H_out (:)
     integer,intent(in)                      :: N
-#if defined CPP_MATMUL_MKL_CSR
+#if defined CPP_MKL_SPBLAS
    allocate(H_out(N),source=t_H_mkl_csr())
-#elif defined CPP_MATMUL_MKL_COO
-   allocate(H_out(N),source=t_H_mkl_coo())
 #elif defined CPP_DENSE_BARE
    allocate(H_out(N),source=t_H_dense())
 #elif defined CPP_DENSE_BLAS

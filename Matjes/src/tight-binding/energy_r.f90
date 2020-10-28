@@ -4,7 +4,7 @@ module m_energy_r
     use m_energy_solve_dense
     use m_energy_set_real_sc, only: set_Hr_dense_sc
     use m_energy_set_real, only: set_Hr_dense_nc
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
     use MKL_SPBLAS
     use m_energy_solve_sparse
     use m_energy_set_real_sparse_sc, only: set_Hr_sparse_sc
@@ -17,7 +17,7 @@ module m_energy_r
     public :: get_eigenval_r,get_eigenvec_r,set_Hr,set_Hr_dense
     !large electronic Hamiltonian
     complex(8),allocatable  ::  Hr(:,:)
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
     type(SPARSE_MATRIX_T)   ::  Hr_sparse
     public :: set_hr_sparse
 #endif
@@ -29,10 +29,10 @@ module m_energy_r
         type(vec_point),intent(in)               ::  mode_mag(:)
 
         if(h_par%sparse)then
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
             Call set_Hr_sparse(h_par,mode_mag,Hr_sparse)
 #else
-            STOP "requires CPP_MKL for sparse TB"
+            STOP "requires CPP_MKL_SPBLAS for sparse TB"
 #endif
         else
             Call set_Hr_dense(h_par,mode_mag,Hr)
@@ -40,7 +40,7 @@ module m_energy_r
     end subroutine 
 
 
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
     subroutine set_Hr_sparse(h_par,mode_mag,Hr_set)
         type(parameters_TB_Hsolve),intent(in)    ::  h_par
         type(SPARSE_MATRIX_T),intent(out)        ::  Hr_set
@@ -82,11 +82,11 @@ module m_energy_r
         type(vec_point),intent(in)                ::  mode_mag(:)
     
         if(h_par%sparse)then
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
             Call set_Hr_sparse(h_par,mode_mag,Hr_sparse)
             Call HR_eigval_sparse_feast(h_par,Hr_sparse,eigval)
 #else
-            STOP 'Cannot use spase get_eigenvalue without CPP_MKL'
+            STOP 'Cannot use spase get_eigenvalue without CPP_MKL_SPBLAS'
 #endif
         else
             Call set_Hr_dense(h_par,mode_mag,Hr)
@@ -113,11 +113,11 @@ module m_energy_r
         type(vec_point),intent(in)                :: mode_mag(:)
 
         if(h_par%sparse)then
-#ifdef CPP_MKL
+#ifdef CPP_MKL_SPBLAS
             Call set_Hr_sparse(h_par,mode_mag,Hr_sparse)
             Call HR_eigvec_sparse_feast(h_par,Hr_sparse,eigvec,eigval)
 #else
-            STOP 'Cannot use spase get_eigenvalue without CPP_MKL'
+            STOP 'Cannot use spase get_eigenvalue without CPP_MKL_SPBLAS'
 #endif
         else
             Call set_Hr_dense(h_par,mode_mag,Hr)
