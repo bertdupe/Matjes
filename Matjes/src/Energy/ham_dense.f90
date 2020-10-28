@@ -84,7 +84,7 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_1(line,Hval,Hval_ind,order,lat)
-    Call set_from_Hcoo(this,H_coo)
+    Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
 
@@ -103,7 +103,7 @@ subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
-    Call set_from_Hcoo(this,H_coo)
+    Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
 
@@ -151,13 +151,14 @@ subroutine init(this,energy_in,lat)
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init(energy_in,lat)
-    Call set_from_Hcoo(this,H_coo)
+    Call set_from_Hcoo(this,H_coo,lat)
 
 end subroutine 
 
-subroutine set_from_Hcoo(this,H_coo)
+subroutine set_from_Hcoo(this,H_coo,lat)
     type(t_H_coo),intent(inout)         :: H_coo
     type(t_h_dense),intent(inout)     :: this
+    type(lattice),intent(in)            :: lat
 
     !local
     integer                 :: nnz,i
@@ -172,7 +173,7 @@ subroutine set_from_Hcoo(this,H_coo)
 
     allocate(this%op_l,source=H_coo%op_l)
     allocate(this%op_r,source=H_coo%op_r)
-    Call this%set_prepared(.true.)
+    Call this%init_base(lat)
 end subroutine 
 
 

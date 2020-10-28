@@ -128,43 +128,30 @@ Qm_sq_sum=Qm_sq_sum+qeulerm**2
 M_sum=M_sum+Magnetization
 M_sq_sum=M_sq_sum+Magnetization**2
 sum_vortex=sum_vortex+dumy(3:5)
+STOP 'update_ave'
 
 END subroutine update_ave
 
 ! ===============================================================
-subroutine initialize_ave(spin,qeulerp,qeulerm,vortex,Magnetization)
-use m_topo_commons
-use m_derived_types
-Implicit none
-type(vec_point), intent(in) :: spin(:)
-real(kind=8), intent(out) :: vortex(3),qeulerp,qeulerm,Magnetization(3)
-! dumy
-integer :: i,N_size
-real(kind=8) :: dumy(5)
-
-dumy=0.0d0
-qeulerp=0.0d0
-qeulerm=0.0d0
-vortex=0.0d0
-Magnetization=0.0d0
-N_size=size(spin)
-
-#ifdef CPP_OPENMP
-!$OMP parallel DO REDUCTION(+:Magnetization,dumy,qeulerp,qeulerm,vortex) private(i) default(shared)
-#endif
-
-do i=1,N_size
-   Magnetization=Magnetization+Spin(i)%w
-   dumy=get_charge(i)
-   qeulerp=dumy(1)
-   qeulerm=dumy(2)
-   vortex=dumy(3:5)
-enddo
-
-#ifdef CPP_OPENMP
-!$OMP end parallel do
-#endif
-
+subroutine initialize_ave(lat,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
+!THIS RETURNS NO AVERAGES... IS THIS REALLY WHAT IS INTENDED TO BE CALCULATED?
+    use m_topo_commons
+    use m_derived_types
+    Implicit none
+    type(lattice),intent(in)  :: lat
+    integer,intent(in)        :: Q_neigh(:,:)
+    real(kind=8), intent(out) :: vortex(3),qeulerp,qeulerm,Magnetization(3)
+    ! dumy
+    real(kind=8) :: dumy(5)
+    real(8),pointer :: M3(:,:)
+    
+    M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
+    Magnetization=sum(M3,2) !sum over magnetization of all magnetic atoms without magnetic moment, probably not what is really wanted
+    dumy=get_charge(lat,Q_neigh)
+    qeulerp=dumy(1)
+    qeulerm=dumy(2)
+    vortex=dumy(3:5)
+    nullify(M3)
 END subroutine initialize_ave
 
 end module m_average_MC

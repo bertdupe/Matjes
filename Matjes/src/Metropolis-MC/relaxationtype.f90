@@ -23,6 +23,7 @@ real(kind=8), dimension(3) ::S_int
 real(kind=8) :: norm_local,dumy(3)
 type(vec_point), pointer :: spin(:)
 
+ERROR STOP "NEEDS TO BE UPDATED TO NEW ORDER PARAMETER"
 spin=>lat%ordpar%all_l_modes
 call calculate_Beff(S_int,iomp,spin,size(spin(iomp)%w))
 norm_local=norm(S_int)
@@ -55,6 +56,7 @@ real(kind=8), dimension(3) ::S_int
 real(kind=8) :: norm_local,dumy(3)
 type(vec_point), pointer :: spin(:)
 
+ERROR STOP "NEEDS TO BE UPDATED TO NEW ORDER PARAMETER"
 spin=>lat%ordpar%all_l_modes
 
 call calculate_Beff(S_int,iomp,spin,size(spin(iomp)%w))

@@ -111,7 +111,7 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_1(line,Hval,Hval_ind,order,lat)
-    Call set_from_Hcoo(this,H_coo)
+    Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
 
@@ -130,7 +130,7 @@ subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
-    Call set_from_Hcoo(this,H_coo)
+    Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
 
@@ -192,13 +192,14 @@ subroutine init(this,energy_in,lat)
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init(energy_in,lat)
-    Call set_from_Hcoo(this,H_coo)
+    Call set_from_Hcoo(this,H_coo,lat)
 
 end subroutine 
 
-subroutine set_from_Hcoo(this,H_coo)
+subroutine set_from_Hcoo(this,H_coo,lat)
     type(t_H_coo),intent(inout)         :: H_coo
     type(t_H_mkl_csr),intent(inout)     :: this
+    type(lattice),intent(in)            :: lat
 
     !local
     integer                 :: nnz
@@ -222,7 +223,7 @@ subroutine set_from_Hcoo(this,H_coo)
 
     allocate(this%op_l,source=H_coo%op_l)
     allocate(this%op_r,source=H_coo%op_r)
-    Call this%set_prepared(.true.)
+    Call this%init_base(lat)
 end subroutine 
 
 
@@ -238,14 +239,18 @@ subroutine eval_single(this,E,i_m,lat)
     real(C_DOUBLE)      :: tmp(this%dimH(1))
     real(8),pointer             :: modes_l(:)
     real(8),allocatable,target  :: vec_l(:)
-    integer             :: dim_modes(2)
+    integer             :: i
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call this%mult_r(lat,tmp)
 
-    STOP "UPDATE EVAL_SINGLE FOR HIGHER RANKS, AND ALSO DIM_MODES SEEMS BROKEN..." !there is some function to get those already
+    write(*,*) this%dim_mode
+
+
+
+    ERROR STOP "UPDATE EVAL_SINGLE FOR HIGHER RANKS, AND ALSO DIM_MODES SEEMS BROKEN..." !there is some function to get those already
     ! try sparse matrix product to substitute sparse matrix times sparse vector product
-    E=dot_product(modes_l((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)),tmp((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)))
+    E=dot_product(modes_l((i_m-1)*this%dim_mode(1)+1:i_m*this%dim_mode(1)),tmp((i_m-1)*this%dim_mode(1)+1:i_m*this%dim_mode(1)))
 end subroutine 
 
 #endif

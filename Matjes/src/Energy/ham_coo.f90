@@ -153,7 +153,7 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     deallocate(rowind)
     allocate(this%val,source=val(1:this%nnz))
     deallocate(val)
-    Call this%set_prepared(.true.)
+    Call this%init_base(lat)
     Call check_H(this)
 
 end subroutine 
@@ -209,7 +209,7 @@ subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     allocate(this%op_r,source=op_r)
     this%nnz=nnz
     this%dimH=lat%Ncell*dim_mode
-    Call this%set_prepared(.true.)
+    Call this%init_base(lat)
     Call check_H(this)
 end subroutine 
 
@@ -284,7 +284,7 @@ subroutine init(this,energy_in,lat)
     deallocate(rowind)
     allocate(this%val,source=val(1:this%nnz))
     deallocate(val)
-    Call this%set_prepared(.true.)
+    Call this%init_base(lat)
     Call check_H(this)
 
 end subroutine 

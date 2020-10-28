@@ -5,7 +5,7 @@ use m_type_lattice
 ! parameters for printing in and out
 type io_parameter
 ! Go in the spmstm program of Tobias
-     logical :: io_spstmL
+     logical :: io_spstmL=.false.
 ! plot the spin structure (or the order parameter structure)
      logical :: io_Xstruct=.false.
 ! plot the effective neighbouring field

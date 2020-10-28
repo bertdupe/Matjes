@@ -6,8 +6,9 @@ implicit none
 
 type,abstract :: t_H
     integer                 :: dimH(2)=0 !dimension of Hamiltonian
-    integer,allocatable     :: op_l(:),op_r(:)
-    logical,private         :: set=.false.
+    integer,allocatable     :: op_l(:),op_r(:)  !operator indices which have to be combined to get the space of the left/right side of the Hamiltonian
+    integer                 :: dim_mode(2)     !size of left/right mode after multiplying out order parameters (size per lattice point)
+    logical,private         :: set=.false. !has this object been set?
 contains
 
     !Hamiltonian initialization routines
@@ -27,6 +28,7 @@ contains
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
     procedure,NON_OVERRIDABLE               :: add
+    procedure,NON_OVERRIDABLE               :: init_base
 
     procedure(int_add_H),deferred           :: add_child
     procedure(int_destroy),deferred         :: destroy_child
@@ -211,6 +213,7 @@ contains
             allocate(Hout%op_l,source=this%op_l)
             allocate(Hout%op_r,source=this%op_r)
             Hout%dimH=this%dimH
+            Hout%dim_mode=this%dim_mode
             Call this%copy_child(Hout)
             Call Hout%set_prepared(.true.)
         else
@@ -243,9 +246,24 @@ contains
         this%dimH=0
         if(allocated(this%op_l)) deallocate(this%op_l)
         if(allocated(this%op_r)) deallocate(this%op_r)
+        this%dim_mode=0
         Call this%set_prepared(.false.)
     end subroutine
 
+    subroutine init_base(this,lat)
+        class(t_H),intent(inout)    :: this
+        class(lattice),intent(in)   :: lat
+        integer     ::  i
+
+        this%dim_mode=1
+        do i=1,size(this%op_l)
+            this%dim_mode(1)=this%dim_mode(1)*lat%get_order_dim(this%op_l(i))
+        enddo
+        do i=1,size(this%op_r)
+            this%dim_mode(2)=this%dim_mode(2)*lat%get_order_dim(this%op_r(i))
+        enddo
+        this%set=.true.
+    end subroutine
 
     function is_set(this) result(l)
         class(t_H),intent(in)       ::  this

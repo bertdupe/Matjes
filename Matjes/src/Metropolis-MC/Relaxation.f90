@@ -18,13 +18,12 @@ use m_io_utils
 use m_io_files_utils
 use m_convert
 use m_MCstep
-#ifdef CPP_MPI
-      use m_mpi_prop, only : isize,irank_working,MPI_COMM,MPI_COMM_BOX,irank_box
-#endif
+!#ifdef CPP_MPI
+!      use m_mpi_prop, only : isize,irank_working,MPI_COMM,MPI_COMM_BOX,irank_box
+!#endif
 Implicit none
 ! input
 type(lattice),intent(inout)    :: lat
-!type(vec_point), intent(inout) :: mode(N_cell)
 real(kind=8), intent(inout) :: qeulerp,qeulerm,cone,acc,rate,E_total,magnetization(3),E(8)
 real(kind=8), intent(inout) :: nb
 real(kind=8), intent(in) :: kT
@@ -39,14 +38,14 @@ integer :: i_relaxation,i_MC,io_relax
 integer :: i,j,n_w_step
 character(len=50) :: fname
 
-#ifdef CPP_MPI
-
-      include 'mpif.h'
-
-      if (irank_working.eq.0) write(6,'(/,a,/)') "starting relaxation"
-#else
+!#ifdef CPP_MPI
+!
+!      include 'mpif.h'
+!
+!      if (irank_working.eq.0) write(6,'(/,a,/)') "starting relaxation"
+!#else
       write(6,'(/,a,/)') "starting relaxation"
-#endif
+!#endif
 
 Relax=0.0d0
 n_w_step=n_relaxation/n_sizerelax
@@ -76,25 +75,25 @@ do i_relaxation=1,n_relaxation
 ! Write the Equilibrium files
 
    if (print_relax) then
-#ifdef CPP_MPI
-      if (i_ghost) then
-
-         E_int=E
-         M_int=Magnetization
-         qp_int=qeulerp
-         qm_int=qeulerm
-         qeulerm=0.0d0
-         qeulerp=0.0d0
-         Magnetization=0.0d0
-         E=0.0d0
-
-         call mpi_reduce(E,E_int,8,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
-         call mpi_reduce(Magnetization,M_int,3,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
-         call mpi_reduce(qeulerp,qp_int,1,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
-         call mpi_reduce(qeulerm,qm_int,1,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
-
-      endif
-#endif
+!#ifdef CPP_MPI
+!      if (i_ghost) then
+!
+!         E_int=E
+!         M_int=Magnetization
+!         qp_int=qeulerp
+!         qm_int=qeulerm
+!         qeulerm=0.0d0
+!         qeulerp=0.0d0
+!         Magnetization=0.0d0
+!         E=0.0d0
+!
+!         call mpi_reduce(E,E_int,8,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
+!         call mpi_reduce(Magnetization,M_int,3,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
+!         call mpi_reduce(qeulerp,qp_int,1,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
+!         call mpi_reduce(qeulerm,qm_int,1,MPI_REAL8,MPI_SUM,0,MPI_COMM_BOX,ierr)
+!
+!      endif
+!#endif
 
       if (mod(i_relaxation,n_w_step).eq.0) call store_relaxation(Relax,i_relaxation,dble(i_relaxation), &
              &  sum(E)/dble(N_cell),E,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)
@@ -130,7 +129,7 @@ if (print_relax) then
     write(6,'(/,a,f8.4,2x,a,/)') 'Equilibrium files are written for T= ',kT/k_B,'Kelvin'
 
 endif
-
+STOP "end RELAXATION"
 
 END SUBROUTINE Relaxation
 end module
