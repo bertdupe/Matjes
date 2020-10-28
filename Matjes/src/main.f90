@@ -109,8 +109,7 @@ Call write_config('start',all_lattices)
 !---------------------------------
 
 if (my_simu%name == 'metropolis')then
-    STOP "put metropolis back in"
-    !call MonteCarlo(all_lattices,motif,io_simu,ext_param)
+    call MonteCarlo(all_lattices,motif,io_simu,ext_param,Ham)
 endif
 
 !---------------------------------

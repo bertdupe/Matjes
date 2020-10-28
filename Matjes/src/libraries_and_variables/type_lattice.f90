@@ -50,10 +50,11 @@ type lattice
      integer        :: dim_lat(3) !number of unit-cells in each direction in supercell
      integer        :: Ncell !number of unit-cells (product of dim_lat)
      real(8)        :: a_sc(3,3) !real space lattice vectors of supercell
-     integer        :: n_system,dim_mode
-     integer        :: nmag !this nmag is nonsense and should be removed (number of m encoded elsewhere)
+     integer        :: dim_mode !probably obsolete
+     integer        :: n_system !no clue what this does
+     integer        :: nmag  !this has to be set somewhere consistently
      integer, allocatable :: world(:)
-     logical :: boundary(3)
+     logical :: periodic(3) !lattice periodic in direction
 
      real(8),allocatable :: sc_vec_period(:,:)   !real space vectors used to minimize distance using supercell periodicity
 
@@ -67,7 +68,7 @@ type lattice
 
 contains
     !basic function
-    procedure :: init_geo => lattice_init_geo
+    procedure :: init_geo  => lattice_init_geo
     procedure :: copy => copy_lattice
     procedure :: copy_val_to => copy_val_lattice
     !get correct order parameter (or combination thereof)
@@ -83,6 +84,7 @@ contains
     procedure :: pos_ind => lattice_position
     !index routines
     procedure :: index_m_1 
+    procedure :: index_4_1 
     procedure :: index_1_3 
     !misc
     procedure :: used_order => lattice_used_order
@@ -126,7 +128,7 @@ subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
        this%a_sc(i,:)=this%areal(i,:)*dim_lat(i)
     enddo
 
-    this%boundary=boundary
+    this%periodic=boundary
 
     ! build up the reciprocal lattice vectors
     volume=dot_product(this%areal(1,:),cross(this%areal(2,:),this%areal(3,:)))
@@ -144,21 +146,21 @@ subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
     write(6,'(a)') 'Supercell real space lattice vectors (in nm)'
     write(6,'(3(3f12.6/))') transpose(this%a_sc)
 
-    write(6,'(a/,2X,3L3/)') 'Supercell periodicity along each direction:',this%boundary
+    write(6,'(a/,2X,3L3/)') 'Supercell periodicity along each direction:',this%periodic
 
 
     !get sc_vec_period for quicker check of minimal distance between positions using supercell periodicity
-    if(this%boundary(1))then
+    if(this%periodic(1))then
         allocate(i1,source=[-1,0,1])
     else
         allocate(i1,source=[0])
     endif
-    if(this%boundary(2))then
+    if(this%periodic(2))then
         allocate(i2,source=[-1,0,1])
     else
         allocate(i2,source=[0])
     endif
-    if(this%boundary(3))then
+    if(this%periodic(3))then
         allocate(i3,source=[-1,0,1])
     else
         allocate(i3,source=[0])
@@ -262,6 +264,25 @@ function index_1_3(this,ind1)result(indm)
     prod=this%dim_lat(1)
     indm(2)=tmp/prod
     indm(1)=tmp-indm(2)*prod
+end function
+
+
+function index_4_1(this,ind4)result(ind1)
+    !get the correct in index from an (im,ix,iy,iz) array to the (3,Nmag*prod(Nlat)) magnetic array
+    !order
+    !MAKE SURE THAT THE 4-index array is in the correct order
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: ind4(4) !(im,ix,iy,iz) 
+    integer                     :: ind1
+    integer     :: i
+    integer     :: dim_full(4)
+
+    dim_full(2:4)=this%dim_lat
+    dim_full(1)=this%nmag
+    ind1=ind4(1)
+    do i=2,4
+        ind1=ind1+(ind4(i)-1)*product(dim_full(1:i-1))
+    enddo
 end function
 
 subroutine set_order_point(this,order,point)
@@ -646,7 +667,7 @@ subroutine copy_lattice(self,copy)
     copy%n_system=self%n_system
     copy%dim_mode=self%dim_mode
     copy%nmag=self%nmag
-    copy%boundary=self%boundary
+    copy%periodic=self%periodic
     if(allocated(self%world)) allocate(copy%world,source=self%world)
     if(allocated(self%sc_vec_period)) allocate(copy%sc_vec_period,source=self%sc_vec_period)
     if(self%ordpar%dim_mode>0) Call self%ordpar%copy(copy%ordpar,self)

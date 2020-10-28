@@ -71,7 +71,7 @@ subroutine get_dist_neigh(N_cell,my_lattice,my_motif,dist_neigh)
     call get_position( start_positions, my_lattice%dim_lat, my_lattice%areal, my_motif )
     pos=reshape( start_positions, [3, N_cell] )
     deallocate(start_positions)
-    call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%boundary)
+    call calculate_distances(distances,pos,my_lattice%areal,my_lattice%dim_lat,my_lattice%periodic)
     Call set_dist_neigh(dist_neigh,distances)
 
 end subroutine

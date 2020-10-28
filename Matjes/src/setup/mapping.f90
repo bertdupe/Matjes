@@ -118,7 +118,7 @@ do i_nei=1,nei
           found=.false.
           ! suppose that the neighbour should be taken into account
           ok=1
-          call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
+          call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
           dist=norm(vec)
           call associate_neighbour(tableNN(:,avant+l,i_x),v_x,1,1,1,ok,l,d(i_nei),dist,found)
 
@@ -194,8 +194,8 @@ do i_nei=1,nei
                found=.false.
                ! suppose that the neighbour should be taken into account
                ok=1
-               call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-               call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+               call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+               call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
                dist=norm(vec)
 
                call associate_neighbour(tableNN(:,avant+l,i_x,i_y),v_x,v_y,1,1,ok,l,d(i_nei),dist,found)
@@ -269,8 +269,8 @@ do i_nei=1,nei
                      ! suppose that the neighbour should be taken into account
                      ok=1
 
-                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
                      dist=norm(vec)
 
                      call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist,found)
@@ -304,8 +304,8 @@ do i_nei=1,Nei_il
                      ! suppose that the neighbour should be taken into account
                      ok=1
 
-                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
                      dist=norm(vec)
 
                      call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei,i_phase),dist,found)
@@ -376,8 +376,8 @@ do i_nei=1,nei
                      ! suppose that the neighbour should be taken into account
                      ok=1
 
-                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+                     call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+                     call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
                      dist=norm(vec)
 
                      call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_m),v_x,v_y,1,i_p,ok,l,d(i_nei),dist,found)
@@ -454,9 +454,9 @@ do i_nei=1,nei
                            ! suppose that the neighbour should be taken into account
                            ok=1
 
-                           call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-                           call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-                           call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%boundary(3))
+                           call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+                           call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
+                           call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%periodic(3))
                            dist=norm(vec)
 
                            call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei),dist,found)
@@ -537,8 +537,8 @@ do i_nei=1,nei
                         ! suppose that the neighbour should be taken into account
                         ok=1
 
-                        call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-                        call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+                        call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+                        call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
                         dist=norm(vec)
 
                         call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist,found)
@@ -574,8 +574,8 @@ do i_nei=1,Nei_il
                         ! suppose that the neighbour should be taken into account
                         ok=1
 
-                        call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-                        call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
+                        call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+                        call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
                         dist=norm(vec)
 
                         call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,i_z,i_p,ok,l,d(i_nei,i_phase),dist,found)
@@ -612,9 +612,9 @@ do i_nei=1,Nei_z
                            ! suppose that the neighbour should be taken into account
                            ok=1
 
-                           call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%boundary(1))
-                           call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%boundary(2))
-                           call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%boundary(3))
+                           call test_neighbour(vec,v_x,ok,i_x,i,Xstop,r(:,1),my_lattice%periodic(1))
+                           call test_neighbour(vec,v_y,ok,i_y,j,Ystop,r(:,2),my_lattice%periodic(2))
+                           call test_neighbour(vec,v_z,ok,i_z,k,Zstop,r(:,3),my_lattice%periodic(3))
                            dist=norm(vec)
 
                            call associate_neighbour(tableNN(:,avant+l,i_x,i_y,i_z,i_m),v_x,v_y,v_z,i_p,ok,l,d(i_nei,i_phase),dist,found)

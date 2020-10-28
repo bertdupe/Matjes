@@ -54,8 +54,8 @@ real(8),pointer,contiguous              :: Beff_v(:,:)
 
 
 ! dummys
-real(kind=8) :: qeuler,q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
-real(kind=8) :: Mx,My,Mz,vx,vy,vz,check(2),test_torque,Einitial,ave_torque
+real(kind=8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
+real(kind=8) :: check(2),test_torque,Einitial,ave_torque
 real(kind=8) :: dumy(5),security(2)
 real(kind=8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
 real(kind=8) :: kt,ktini,ktfin
@@ -67,6 +67,7 @@ logical :: i_excitation
 logical :: used(number_different_order_parameters)
 ! dumy
 logical :: said_it_once,gra_topo
+integer,allocatable ::  Q_neigh(:,:)
 
 time=0.0d0
 input_excitations=0
@@ -99,14 +100,11 @@ Call mag_lattice%copy(lat_1)
 Call mag_lattice%copy(lat_2) 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! associate pointer for the topological charge, vorticity calculations
+!!!! Prepare Q_neigh for topological neighbor calculation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 call user_info(6,time,'topological operators',.false.)
-
-!UPDATE
-call get_size_Q_operator(mag_lattice)
-call associate_Q_operator(lat_1%ordpar%all_l_modes,mag_lattice%boundary,shape(mag_lattice%ordpar%l_modes))
-
+Call neighbor_Q(mag_lattice,Q_neigh)
 call user_info(6,time,'done',.true.)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -175,21 +173,8 @@ do j=1,duration
    !   call init_temp_measure(check,check1,check2,check3)
     
     call truncate(lat_1,used)
-    qeuler=0.0d0
-    q_plus=0.0d0
-    q_moins=0.0d0
-    vx=0.0d0
-    vy=0.0d0
-    vz=0.0d0
-    Mx=0.0d0
-    My=0.0d0
-    Mz=0.0d0
     Edy=0.0d0
-    Mdy=0.0d0
-    vortex=0.0d0
-    test_torque=0.0d0
     ave_torque=0.0d0
-    Mdy=0.0d0
     test_torque=0.0d0
     dt=timestep_int
     !why is this outside of the integration order loop? time changes there
@@ -228,23 +213,7 @@ do j=1,duration
     Call lat_2%M%copy_val(mag_lattice%M)
     call truncate(mag_lattice,used)
     
-    !
-    !!!!!! Measure the temperature if the users wish
-    !
-    Edy=energy_all(Hams,mag_lattice)
-    Mdy=sum(mag_lattice%M%modes_v,2) !works only for one M in unit cell
-    !check this?
-    do iomp=1,N_cell
-        dumy=get_charge(iomp)
-        q_plus=q_plus+dumy(1)/pi(4.0d0)
-        q_moins=q_moins+dumy(2)/pi(4.0d0)
-        vx=vx+dumy(3)
-        vy=vy+dumy(4)
-        vz=vz+dumy(5)
-    enddo
-    vortex=(/vx,vy,vz/)/3.0d0/sqrt(3.0d0)
-    Edy=Edy/real(N_cell)
-    Mdy=Mdy/real(N_cell)
+    Edy=energy_all(Hams,mag_lattice)/real(N_cell)
     
     !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
     
@@ -253,6 +222,13 @@ do j=1,duration
     endif
     
     if (mod(j-1,Efreq).eq.0) then
+        !get values to plot (Mavg,topo)
+        Mdy=sum(mag_lattice%M%modes_v,2)/real(N_cell) !works only for one M in unit cell
+        dumy=get_charge(lat_1,Q_neigh)
+        q_plus=dumy(1)/pi(4.0d0)
+        q_moins=dumy(2)/pi(4.0d0)
+        vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
+        !write data files
         Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
          &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
          &   kT/k_B,(security(i),i=1,2),H_int
@@ -286,7 +262,7 @@ do j=1,duration
     
         if (io_simu%io_Force) call forces(j/gra_freq,lat_1%ordpar%all_l_modes,mag_lattice%dim_mode,mag_lattice%areal)
     
-        if(io_simu%io_fft_Xstruct) call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%boundary,mag_lattice%dim_mode,j/gra_freq)
+        if(io_simu%io_fft_Xstruct) call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%periodic,mag_lattice%dim_mode,j/gra_freq)
     endif
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!

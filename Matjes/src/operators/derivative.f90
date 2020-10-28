@@ -36,7 +36,7 @@ logical :: periodic(3)
 real(kind=8) :: DF(3,2)
 
 dim_lat=shape(mag_lattice%ordpar%l_modes)
-periodic=mag_lattice%boundary
+periodic=mag_lattice%periodic
 N_world=size(mag_lattice%world)
 
 n=1
@@ -86,7 +86,7 @@ integer :: N_cell,i,dim_lat(4),N_world,j,k,location,shape_D(3),N_vois
 logical :: periodic(3)
 
 dim_lat=shape(mag_lattice%ordpar%l_modes)
-periodic=mag_lattice%boundary
+periodic=mag_lattice%periodic
 N_world=size(mag_lattice%world)
 shape_D=shape(derivat_point)
 N_cell=shape_D(3)

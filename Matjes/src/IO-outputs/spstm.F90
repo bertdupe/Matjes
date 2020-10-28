@@ -66,7 +66,7 @@
       i_user_spin=.False.
       spstmonly=.False.
       net=my_lattice%areal
-      Periodic_log=my_lattice%boundary
+      Periodic_log=my_lattice%periodic
       dim_lat=my_lattice%dim_lat
 ! ###################################################################
 ! ################ Vorgabe der Rahmenbedingungen: ###################

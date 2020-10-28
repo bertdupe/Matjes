@@ -307,7 +307,7 @@ call get_position(positions,'positions.dat')
 ! prepare the dipolar matrix (the matrix of the r to calculate the 1/r)
 !
 
-call calculate_distances(distances,positions,r,my_lattice%dim_lat,my_lattice%boundary)
+call calculate_distances(distances,positions,r,my_lattice%dim_lat,my_lattice%periodic)
 
 !
 !

@@ -60,7 +60,7 @@ type(lattice) :: start_lattice
 start_lattice%areal=0.0
 start_lattice%astar=0.0
 
-start_lattice%boundary=.True.
+start_lattice%periodic=.True.
 
 !nullify(start_lattice%ordpar%l_modes)
 

@@ -38,7 +38,7 @@
       X=shape_spin(1)-3
       Y=shape_spin(1)-2
       Z=shape_spin(1)-1
-      Periodic_log=my_lattice%boundary
+      Periodic_log=my_lattice%periodic
 
 #ifdef CPP_OPENMP
 !$OMP parallel DO private(i,j) default(shared)
@@ -110,7 +110,7 @@
       integer :: Xstart,Xstop,Ystart,Ystop
       logical :: Periodic_log(3)
 
-      Periodic_log=my_lattice%boundary
+      Periodic_log=my_lattice%periodic
       Xstart=1
       Xstop=shape_spin(2)
       Ystart=1

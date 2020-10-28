@@ -29,9 +29,8 @@
        charge=0.0d0
        qm=0.0d0
        qp=0.0d0
-       Periodic_log=my_lattice%boundary
+       Periodic_log=my_lattice%periodic
        nmag_motif=real(shape_spin(5))
-
 !
 ! part with 1 atom per unit cell
 !
@@ -150,7 +149,7 @@
        qp=0.0d0
        charge=0.0d0
        nmag_motif=real(shape_spin(5))
-       Periodic_log=my_lattice%boundary
+       Periodic_log=my_lattice%periodic
 
        do j=-1,1,2
         do i=-1,1,2
@@ -227,7 +226,7 @@
        logical :: Periodic_log(3)
 
        v=0.0d0
-       Periodic_log=my_lattice%boundary
+       Periodic_log=my_lattice%periodic
 
        do j=-1,1,2
         do i=-1,1,2
