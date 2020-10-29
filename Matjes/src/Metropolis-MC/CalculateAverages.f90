@@ -98,37 +98,37 @@ if (Cor_log) chi_l(:)=total_MC_steps
 END subroutine Calculate_thermo_serial
 
 ! ===============================================================
-subroutine update_ave(sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum_vortex,vortex, &
+subroutine update_ave(lat,Q_neigh,sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum_vortex,vortex, &
      & E_sum,E_sq_sum,M_sum,M_sq_sum,E,Magnetization)
-use m_topo_commons
-Implicit none
-real(kind=8), intent(in) :: E,Magnetization(:),vortex(:)
-real(kind=8), intent(inout) ::sum_qm,sum_qp,sum_vortex(:),Q_sq_sum,Qp_sq_sum,Qm_sq_sum
-real(kind=8), intent(inout) :: E_sum,E_sq_sum,M_sum(:),M_sq_sum(:)
-! internal variables
-real(kind=8) :: dumy(5),qeulerp,qeulerm
-
-qeulerp=0.0d0
-qeulerm=0.0d0
-!     estimating the values M_av, E_av, S and C
-!     and do so for any sublattice
-
-E_sum=E_sum+E
-E_sq_sum=E_sq_sum+E**2
-! calculate the topocharge
-dumy=get_charge()
-qeulerp=dumy(1)
-qeulerm=dumy(2)
-
-sum_qp=sum_qp+qeulerp
-sum_qm=sum_qm+qeulerm
-Q_sq_sum=Q_sq_sum+(qeulerp+qeulerm)**2
-Qp_sq_sum=Qp_sq_sum+qeulerp**2
-Qm_sq_sum=Qm_sq_sum+qeulerm**2
-M_sum=M_sum+Magnetization
-M_sq_sum=M_sq_sum+Magnetization**2
-sum_vortex=sum_vortex+dumy(3:5)
-STOP 'update_ave'
+    use m_topo_commons
+    use m_derived_types,only: lattice
+    Implicit none
+    type(lattice),intent(in)  :: lat
+    integer,intent(in)        :: Q_neigh(:,:)
+    real(kind=8), intent(in) :: E,Magnetization(:),vortex(:)
+    real(kind=8), intent(inout) ::sum_qm,sum_qp,sum_vortex(:),Q_sq_sum,Qp_sq_sum,Qm_sq_sum
+    real(kind=8), intent(inout) :: E_sum,E_sq_sum,M_sum(:),M_sq_sum(:)
+    ! internal variables
+    real(kind=8) :: dumy(5),qeulerp,qeulerm
+    
+    !     estimating the values M_av, E_av, S and C
+    !     and do so for any sublattice
+    
+    E_sum=E_sum+E
+    E_sq_sum=E_sq_sum+E**2
+    ! calculate the topocharge
+    dumy=get_charge(lat,Q_neigh)
+    qeulerp=dumy(1)
+    qeulerm=dumy(2)
+    
+    sum_qp=sum_qp+qeulerp
+    sum_qm=sum_qm+qeulerm
+    Q_sq_sum=Q_sq_sum+(qeulerp+qeulerm)**2
+    Qp_sq_sum=Qp_sq_sum+qeulerp**2
+    Qm_sq_sum=Qm_sq_sum+qeulerm**2
+    M_sum=M_sum+Magnetization
+    M_sq_sum=M_sq_sum+Magnetization**2
+    sum_vortex=sum_vortex+dumy(3:5)
 
 END subroutine update_ave
 
@@ -136,7 +136,7 @@ END subroutine update_ave
 subroutine initialize_ave(lat,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
 !THIS RETURNS NO AVERAGES... IS THIS REALLY WHAT IS INTENDED TO BE CALCULATED?
     use m_topo_commons
-    use m_derived_types
+    use m_derived_types,only: lattice
     Implicit none
     type(lattice),intent(in)  :: lat
     integer,intent(in)        :: Q_neigh(:,:)

@@ -378,14 +378,15 @@ do j_optset=1,N_temp
 !
 ! In case T_relax set to zero at least one MCstep is done
 !            Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
-            STOP "THIS HAS TO BE IMPLEMENTED"
+            ERROR STOP "THIS HAS TO BE IMPLEMENTED"
 
 ! calculate the topocharge
             dumy=get_charge()
 
 ! CalculateAverages makes the averages from the sums
-            Call CalculateAverages(qeulerp_av(i_temp),qeulerm_av(i_temp),Q_sq_sum_av(i_temp),Qp_sq_sum_av(i_temp),Qm_sq_sum_av(i_temp),vortex_av(:,i_temp),vortex &
-                &  ,E_sum_av(i_temp),E_sq_sum_av(i_temp),M_sum_av(:,i_temp),M_sq_sum_av(:,i_temp),E_total,Magnetization)
+            !Call CalculateAverages(qeulerp_av(i_temp),qeulerm_av(i_temp),Q_sq_sum_av(i_temp),Qp_sq_sum_av(i_temp),Qm_sq_sum_av(i_temp),vortex_av(:,i_temp),vortex &
+            !    &  ,E_sum_av(i_temp),E_sq_sum_av(i_temp),M_sum_av(:,i_temp),M_sq_sum_av(:,i_temp),E_total,Magnetization)
+            ERROR STOP "UPDATE CALCULATE AVERAGES"
 
 !           save the data for thermalization
 

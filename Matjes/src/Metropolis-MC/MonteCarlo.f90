@@ -32,10 +32,6 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     use m_topocharge_all
     use m_createspinfile
     use m_derived_types
-!#ifdef CPP_MPI
-!    use m_mpi_prop, only : MPI_COMM
-!    use m_gather_reduce
-!#endif
 
     type(lattice), intent(inout) :: my_lattice
     type(io_parameter), intent(in) :: io_simu
@@ -69,21 +65,12 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     integer,allocatable ::  Q_neigh(:,:)
     integer ::  filen_kt_acc(2)
     
-!    type(vec_point),pointer :: all_mode(:)
-!    type(vec_point),allocatable,dimension(:) :: mode_magnetic,mode_temp
-    
     ! initialize the variables
     call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
     size_table=n_Tsteps
     
-!#ifdef CPP_MPI
-!    if (i_separate) size_table=isize*nRepProc
-!    !      if (i_ghost) size_table=isize/n_ghost
-!    if (irank_working.eq.0) write(6,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
-!#else
     size_table=n_Tsteps
     write(6,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
-!#endif
     
     allocate(E_av(size_table))
     !     Errors for energy and magnetization
@@ -152,11 +139,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     nb=0.0d0
     
     ! initialize the temperatures
-!#ifdef CPP_MPI
-!    call ini_temp(kt_all,kTfin,kTini,size_table,irank_working,nRepProc,i_print_W)
-!#else
     call ini_temp(kt_all,kTfin,kTini,size_table,i_print_W)
-!#endif
     filen_kt_acc(1)=max(int(log10(maxval(kt_all))),1)
     
     
@@ -165,27 +148,16 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     write(6,'(a/)') '---------------------'
     
     Do n_kT=1,n_Tsteps
-    
       kt=kt_all(n_kT)
-    !  do i=1,N_cell
-    !     mode_temp(i)%w=kt
-    !  enddo
-    !  call set_E_matrix(my_lattice%dim_mode,kt/k_b)
-    
-      call Relaxation(my_lattice,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax,hams)
-    
-    !       Monte Carlo steps, calculate the values
-    
+      call Relaxation(my_lattice,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose&
+                        &,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel&
+                        &,sphere,underrel,print_relax,hams,Q_neigh)
+    !Monte Carlo steps, calculate the values
         do n_MC=1+restart_MC_steps,Total_MC_Steps+restart_MC_steps
-    
-    !         Monte Carlo steps for independency
-    
+    !      Monte Carlo steps for independency
            Do i_relax=1,T_auto*N_cell
-    
               Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
-    
            End do
-    
            Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
     
     ! Calculate the topological charge and the vorticity
@@ -193,15 +165,10 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
            qeulerp_av(n_kT)=qeulerp_av(n_kT)+dumy(1)
            qeulerm_av(n_kT)=qeulerm_av(n_kT)+dumy(2)
            vortex_av(:,n_kT)=vortex_av(:,n_kT)+dumy(3:5)
-    
+    !PB: this seems stupid, CalcuateAverage also calls get_charge... TODO understand
     ! CalculateAverages makes the averages from the sums
-           Call CalculateAverages(qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
+           Call CalculateAverages(my_lattice,Q_neigh,qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
                     &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),E_total,Magnetization)
-    !      if (Cor_log) chi_l(:,n_kT)=chi_l(:,n_kT)+Correlation(spin_sum,spin(4:6,:,:,:,:),shape_spin,n_MC,dble(N_cell))
-    
-    
-    ! Calculate the sum of the spin components and angles for average
-    !      if (CalTheta) Call SphericalCoordinates(spin(4:6,:,:,:,:),shape_spin,angle_sum)
     
     !**************************
     !!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -223,38 +190,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     
     
        if (Gra_log) then
-          !call CreateSpinFile(kt,mode_magnetic)
           Call write_config('MC',kt,my_lattice,filen_kt_acc)
-          !call WriteSpinAndCorrFile(kt,all_mode,'SpinSTM_')
        endif
-    
-    !ccccccccccccccccccccccccccccccccccccc
-    ! Calculate the topological charge
-    !cccccccccccccccccccccccccccccccccccc
-    
-    
-    !ccccccccccccccccccccccccccccccccccccc
-    ! Calculate the oriented topological charge
-    !cccccccccccccccccccccccccccccccccccc
-    
-    
-    ! ===========================================================
-    ! Write the averaged coordinate of spin in spherical coordinates
-    ! ===========================================================
-    
-    ! ===========================================================
-    ! Computation of the energy density on the lattice
-    ! ===========================================================
-    
-    !   if (CalEnergy) then
-    !
-    !      write(fname,'(a,14a,a)')'Energy_T_',(toto(i:i),i=1, &
-    !            &  len_trim(toto)),'.dat'
-    !      write(fname2,'(a,14a,a)')'DensityOfEnergy_T_',(toto(i:i),i=1, &
-    !            &  len_trim(toto)),'.dat'
-    !
-    !      Call EnergyDensity(fname,fname2,spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index)
-    !   endif
     
       Write(6,'(I6,a,I6,a,f8.4,a,/)')  n_kT, ' nd step out of ', n_Tsteps,' steps. T=', kT/k_B,' Kelvin'
     
@@ -262,77 +199,26 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     !--------------------------------------------------------------
     !!!!!!!!!!!!!***************************!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!!!!!!!!***************************!!!!!!!!!!!!!!!!!!!!!!!
-    
+
     ! The program of Tobias is used only at last iteration
-!#ifdef CPP_MPI
-!            if ((irank_working.eq.0).AND.spstmL) call spstm
-!#else
-            if (spstmL) call spstm
-!#endif
-    
-!#ifdef CPP_MPI
-!        if (irank_working.eq.0) then
-!#endif
-          OPEN(7,FILE='EM.dat',action='write',status='unknown', &
-            & position='append',form='formatted')
-            Write(7,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
-            & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
-            & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
-            & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
-!#ifdef CPP_MPI
-!        endif
-!#endif
-    
-!#ifdef CPP_MPI
-!    
-!    if (i_separate) call end_gather(kT_all,E_av,E_err_av,C_av,M_sum_av,M_err_av,chi_M,vortex_av,chi_Q,qeulerp_av,qeulerm_av,chi_l, &
-!                              & size_table,irank_working,n_Tsteps,MPI_COMM)
-!    
-!       ! case of the ghost
-!    !        if (i_ghost) then
-!    !            n_Tsteps=isize/n_ghost
-!    !            if (irank_box.eq.0) call end_gather(shape_masque,vortex_mpi,qeulerp_mpi,qeulerm_mpi,Im_mpi,Qim_mpi,kt_mpi,mpi_l, &
-!    !            &     E_av(:),C(:),M_err(:),E_err(:),chi(:),M(:,:),n_Tsteps,MPI_COMM_MASTER)
-!    !        endif
-!    
-!    !        if ((i_separate.or.i_paratemp).and.(.not.i_ghost)) then
-!    !            n_Tsteps=isize
-!    
-!    !            call end_gather(shape_masque,vortex_mpi,qeulerp_mpi,qeulerm_mpi,Im_mpi,Qim_mpi,kt_mpi,mpi_l, &
-!    !            &    E_av(:),C(:),M_err(:),E_err(:),chi(:),M(:,:),isize,MPI_COMM)
-!    !        endif
-!    
-!    !        if ((irank_working.eq.0).and.(.not.i_paratemp)) then
-!    !            do i=1,n_Tsteps
-!    !                Write(7,'(23(E20.10E3,2x),E20.10E3)') kt_mpi(i)/k_B,E_av(i),E_err(i),C(i), &
-!    !                & norm(M(:,i)), M(:,i),M_err(:,i), chi(i), vortex_mpi(:,i) &
-!    !                & ,qeulerp_mpi(i)+qeulerm_mpi(i),qeulerp_mpi(i),qeulerm_mpi(i), &
-!    !                & Im_mpi(i,1),Qim_mpi(i,1),mpi_l(:,i)
-!    !            enddo
-!    !        endif
-!#endif
-!    
-!#ifdef CPP_MPI
-!    if (irank_working.eq.0) then
-!    
-!       do i=1,size_table
-!          Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(Total_MC_Steps+restart_MC_steps), &
-!         &             M_sum_av(:,i), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
-!         &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
-!       enddo
-!    
-!       close(7) !Close EM.dat
-!    
-!    endif
-!#else
+    if (spstmL) call spstm
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!! write EM.dat output
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    OPEN(7,FILE='EM.dat',action='write',status='unknown', &
+      & position='append',form='formatted')
+      Write(7,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
+      & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
+      & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
+      & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
     ! write the data into a file
     do i=1,n_Tsteps
        Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(Total_MC_Steps+restart_MC_steps), &
          &             M_sum_av(:,i)/N_cell/(Total_MC_Steps+restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
          &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
     enddo
-    
-    close(7) !Close EM.dat
-!#endif
+    close(7) 
+
 end subroutine montecarlo
 end module

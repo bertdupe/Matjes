@@ -2,6 +2,7 @@
 module m_H_sparse_mkl
 #if defined(CPP_MKL_SPBLAS)
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
+!eval_single single energy evaluation is rather cumbersome...
 use m_H_type
 use MKL_SPBLAS
 use m_H_coo
@@ -12,7 +13,7 @@ USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE,C_INT
 type,extends(t_H) :: t_H_mkl_csr
     private
     type(SPARSE_MATRIX_T) :: H
-    TYPE(matrix_descr)    :: descr
+    type(matrix_descr)    :: descr
 contains
     !necessary t_H routines
     procedure :: eval_single
@@ -230,28 +231,63 @@ end subroutine
 subroutine eval_single(this,E,i_m,lat)
     use m_derived_types, only: lattice
     ! input
-    class(t_H_mkl_csr),intent(in)    :: this
+    class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
     ! output
-    real(kind=8), intent(out)       :: E
+    real(8), intent(out)            :: E
     ! internal
-    real(C_DOUBLE)      :: tmp(this%dimH(1))
-    real(8),pointer             :: modes_l(:)
-    real(8),allocatable,target  :: vec_l(:)
-    integer             :: i
+    real(8),pointer             :: modes_l(:),modes_r(:)
+    real(8),allocatable,target  :: vec_l(:),vec_r(:)
+    real(C_DOUBLE)              :: tmp(this%dimH(1),1)
+
+    integer(C_int)        :: stat
+    type(SPARSE_MATRIX_T) :: vec
+    real(8),external      :: ddot !blas routine
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call this%mult_r(lat,tmp)
+    Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 
-    write(*,*) this%dim_mode
+    Call create_sparse_vec(i_m,modes_r,this%dim_mode(2),this%dimH(2),vec)
+    stat=mkl_sparse_d_spmmd(SPARSE_OPERATION_NON_TRANSPOSE , this%H , vec , SPARSE_LAYOUT_ROW_MAJOR , tmp ,1)
+    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+    E=ddot(this%dimH(1),modes_l,1,tmp,1)
 
-
-
-    ERROR STOP "UPDATE EVAL_SINGLE FOR HIGHER RANKS, AND ALSO DIM_MODES SEEMS BROKEN..." !there is some function to get those already
-    ! try sparse matrix product to substitute sparse matrix times sparse vector product
-    E=dot_product(modes_l((i_m-1)*this%dim_mode(1)+1:i_m*this%dim_mode(1)),tmp((i_m-1)*this%dim_mode(1)+1:i_m*this%dim_mode(1)))
+    stat=mkl_sparse_destroy(vec)
+    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+    nullify(modes_l,modes_r)
+    if(allocated(vec_l)) deallocate(vec_l)
+    if(allocated(vec_r)) deallocate(vec_r)
 end subroutine 
+
+subroutine create_sparse_vec(i_m,modes,dim_mode,dim_H,vec)
+    !returns a sparse matrix (vec) in csr-format which describes a sparse (dim_H,1) vector
+    !with the ((i_m-1)*dim_mode+1:i_m*dim_mode)) values from modes
+    type(SPARSE_MATRIX_T),intent(out) :: vec
+    real(8),pointer,intent(in)        :: modes(:)
+    integer,intent(in)                :: i_m
+    integer,intent(in)                :: dim_mode,dim_H
+
+    integer                 :: col(dim_mode)
+    integer                 :: row(dim_mode)
+    type(SPARSE_MATRIX_T)   :: vec_coo
+    integer(C_int)          :: stat
+    integer                 :: i
+
+    col=1
+    row=dim_mode*(i_m-1)
+    do i=1,dim_mode
+        row(i)=row(i)+i
+    enddo
+
+    stat=mkl_sparse_d_create_coo(vec_coo, SPARSE_INDEX_BASE_ONE , dim_H , 1 , dim_mode , row , col , modes((i_m-1)*dim_mode+1:i_m*dim_mode))
+    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+    stat = MKL_SPARSE_CONVERT_CSR(vec_coo,SPARSE_OPERATION_NON_TRANSPOSE,vec)
+    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+    stat=mkl_sparse_destroy(vec_coo)
+    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+
+end subroutine
 
 #endif
 end module

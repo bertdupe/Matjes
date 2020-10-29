@@ -77,7 +77,7 @@ end subroutine
 
         E=0.0d0
         do i=1,size(ham)
-          Call ham(i)%eval_single(tmp_E(i),i,lat)
+          Call ham(i)%eval_single(tmp_E(i),i_m,lat)
         enddo
         E=sum(tmp_E)
     end function
