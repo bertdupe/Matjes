@@ -4,13 +4,12 @@ module m_H_public
 
 #if defined CPP_MKL_SPBLAS
 use m_H_sparse_mkl
-#elif defined CPP_DENSE_BARE
-use m_H_dense
-#elif defined CPP_DENSE_BLAS
+#elif defined CPP_DENSE && defined(CPP_BLAS)
 use m_H_dense_blas
-#elif defined CPP_MATMUL_EIGEN_SPARSE
-TODO 
+#elif defined CPP_DENSE
+use m_H_dense
 #else
+!TODO MORE
 use m_H_manual
 #endif
 
@@ -20,34 +19,32 @@ implicit none
 public
 
 contains
-subroutine get_Htype(H_out)
-    class(t_h),intent(out),allocatable      :: H_out 
+    subroutine get_Htype(H_out)
+        class(t_h),intent(out),allocatable      :: H_out 
 #if defined CPP_MKL_SPBLAS
-   allocate(H_out,source=t_H_mkl_csr())
-#elif defined CPP_DENSE_BARE
-   allocate(H_out,source=t_H_dense())
-#elif defined CPP_DENSE_BLAS
-   allocate(H_out,source=t_H_dense_blas())
-!#elif defined CPP_MATMUL_EIGEN_SPARSE
-!    TOTO 
+       allocate(H_out,source=t_H_mkl_csr())
+#elif defined CPP_DENSE && defined(CPP_BLAS)
+       allocate(H_out,source=t_H_dense_blas())
+#elif defined CPP_DENSE
+       allocate(H_out,source=t_H_dense())
 #else
-   allocate(H_out,source=t_H_manual())
+       allocate(H_out,source=t_H_manual())
 #endif
-end subroutine
-
-subroutine get_Htype_N(H_out,N)
-    class(t_h),intent(out),allocatable      :: H_out (:)
-    integer,intent(in)                      :: N
+    end subroutine
+    
+    subroutine get_Htype_N(H_out,N)
+        class(t_h),intent(out),allocatable      :: H_out (:)
+        integer,intent(in)                      :: N
 #if defined CPP_MKL_SPBLAS
-   allocate(H_out(N),source=t_H_mkl_csr())
-#elif defined CPP_DENSE_BARE
-   allocate(H_out(N),source=t_H_dense())
-#elif defined CPP_DENSE_BLAS
-   allocate(H_out(N),source=t_H_dense_blas())
+       allocate(H_out(N),source=t_H_mkl_csr())
+#elif defined CPP_DENSE && defined(CPP_BLAS)
+       allocate(H_out(N),source=t_H_dense_blas())
+#elif defined CPP_DENSE
+       allocate(H_out(N),source=t_H_dense())
 #else
-   allocate(H_out(N),source=t_H_manual())
+       allocate(H_out(N),source=t_H_manual())
 #endif
-end subroutine
+    end subroutine
 
     function energy_all(ham,lat)result(E)
         !get all energies from an energy array

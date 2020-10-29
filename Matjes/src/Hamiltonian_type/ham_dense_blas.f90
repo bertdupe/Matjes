@@ -1,4 +1,5 @@
 module m_H_dense_blas
+#ifdef CPP_BLAS
 !Hamiltonian type specifications using dense matrices and no external library
 use m_H_type
 use m_H_dense
@@ -79,5 +80,5 @@ subroutine eval_single(this,E,i_m,lat)
     Call DGEMV('N',this%dimH(1),this%dim_mode(2),alpha,this%H(1,ind),this%dimH(1),modes_r(ind),1,beta,tmp,1)
     E=ddot(this%dimH(2),modes_l,1,tmp,1)
 end subroutine 
-
+#endif
 end module
