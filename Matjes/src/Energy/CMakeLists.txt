@@ -15,13 +15,4 @@ src/Energy/summerfeld_exp.f90
 src/Energy/total_Hamiltonian_TB.f90
 src/Energy/total_Heisenberg_Ham.f90
 src/Energy/zeeman.f90
-
-src/Energy/ham_public.f90
-src/Energy/ham_base.f90
-src/Energy/ham_coo.f90
-src/Energy/ham_dense.f90
-src/Energy/ham_dense_blas.f90
-src/Energy/ham_manual.f90
-src/Energy/ham_sparse_mkl.f90
-src/Energy/ham_set_util.f90
 )
