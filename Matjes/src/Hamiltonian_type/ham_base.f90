@@ -7,7 +7,7 @@ implicit none
 type,abstract :: t_H
     integer                 :: dimH(2)=0 !dimension of Hamiltonian
     integer,allocatable     :: op_l(:),op_r(:)  !operator indices which have to be combined to get the space of the left/right side of the Hamiltonian
-    integer                 :: dim_mode(2)     !size of left/right mode after multiplying out order parameters (size per lattice point)
+    integer                 :: dim_mode(2)=0     !size of left/right mode after multiplying out order parameters (size per lattice point)
     logical,private         :: set=.false. !has this object been set?
 contains
 

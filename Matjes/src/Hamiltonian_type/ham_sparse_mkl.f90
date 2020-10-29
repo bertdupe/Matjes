@@ -248,6 +248,9 @@ subroutine eval_single(this,E,i_m,lat)
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 
+
+    !is it smarter to multiply in the other direction first with 1 entry only?-> probably easier to use different implementation 
+    !where this is required
     Call create_sparse_vec(i_m,modes_r,this%dim_mode(2),this%dimH(2),vec)
     stat=mkl_sparse_d_spmmd(SPARSE_OPERATION_NON_TRANSPOSE , this%H , vec , SPARSE_LAYOUT_ROW_MAJOR , tmp ,1)
     if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"

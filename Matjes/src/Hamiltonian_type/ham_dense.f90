@@ -180,23 +180,21 @@ end subroutine
 subroutine eval_single(this,E,i_m,lat)
     use m_derived_types, only: lattice
     ! input
-    class(t_h_dense),intent(in)    :: this
+    class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
     ! output
     real(kind=8), intent(out)       :: E
     ! internal
-    real(8)                         :: tmp(this%dimH(1))
-    real(8),pointer             :: modes_l(:)
-    real(8),allocatable,target  :: vec_l(:)
-    integer             :: dim_modes(2)
+    real(8),pointer                 :: modes_l(:),modes_r(:)
+    real(8),allocatable,target      :: vec_l(:),vec_r(:)
+    real(8)                         :: tmp(this%dimH(2))
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call this%mult_r(lat,tmp)
+    Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 
-    STOP "UPDATE EVAL_SINGLE FOR HIGHER RANKS, AND ALSO DIM_MODES SEEMS BROKEN...ALSO NOT ADJUSTED FOR t_h_dense at all" !there is some function to get those already
-    ! try sparse matrix product to substitute sparse matrix times sparse vector product
-    E=dot_product(modes_l((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)),tmp((i_m-1)*dim_modes(1)+1:i_m*dim_modes(1)))
+    tmp=matmul(this%H(:,1+(i_m-1)*this%dim_mode(2):i_m*this%dim_mode(2)),modes_r(1+(i_m-1)*this%dim_mode(2):i_m*this%dim_mode(2)))
+    E=dot_product(modes_l,tmp)
 end subroutine 
 
 end module
