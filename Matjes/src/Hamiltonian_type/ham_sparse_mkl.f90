@@ -222,9 +222,7 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     stat=MKL_SPARSE_DESTROY(H)
     if(stat /= 0) STOP "error destroying H"
 
-    allocate(this%op_l,source=H_coo%op_l)
-    allocate(this%op_r,source=H_coo%op_r)
-    Call this%init_base(lat)
+    Call this%init_base(lat,H_coo%op_l,H_coo%op_r)
 end subroutine 
 
 

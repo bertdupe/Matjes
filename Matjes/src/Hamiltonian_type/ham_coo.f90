@@ -143,8 +143,6 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     enddo
 
     !fill type
-    allocate(this%op_l(1),source=order(1))
-    allocate(this%op_r(1),source=order(2))
     this%nnz=ii
     this%dimH=N_site*dim_mode
     allocate(this%colind,source=colind(1:this%nnz))
@@ -153,7 +151,7 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     deallocate(rowind)
     allocate(this%val,source=val(1:this%nnz))
     deallocate(val)
-    Call this%init_base(lat)
+    Call this%init_base(lat,order(1:1),order(2:2))
     Call check_H(this)
 
 end subroutine 
@@ -205,11 +203,9 @@ subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     enddo
 
     !fill additional type parameters
-    allocate(this%op_l,source=op_l)
-    allocate(this%op_r,source=op_r)
     this%nnz=nnz
     this%dimH=lat%Ncell*dim_mode
-    Call this%init_base(lat)
+    Call this%init_base(lat,op_l,op_r)
     Call check_H(this)
 end subroutine 
 
@@ -229,7 +225,7 @@ end subroutine
 
 subroutine init(this,energy_in,lat)
     use m_derived_types, only: operator_real_order_N,lattice
-    class(t_H_coo),intent(inout)  :: this
+    class(t_H_coo),intent(inout)    :: this
     type(operator_real_order_N)     :: energy_in
     type(lattice),intent(in)        :: lat
 
@@ -284,7 +280,8 @@ subroutine init(this,energy_in,lat)
     deallocate(rowind)
     allocate(this%val,source=val(1:this%nnz))
     deallocate(val)
-    Call this%init_base(lat)
+    ERROR STOP "NEEDS op_l op_R do be set somewhere"
+!    Call this%init_base(lat)
     Call check_H(this)
 
 end subroutine 

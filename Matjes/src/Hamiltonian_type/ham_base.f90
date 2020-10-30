@@ -143,11 +143,18 @@ contains
         real(C_DOUBLE)              :: tmp(this%dimH(1))
         real(8),pointer             :: modes_l(:)
         real(8),allocatable,target  :: vec_l(:)
+#ifdef CPP_BLAS
+        real(8),external            :: ddot !blas routine
+#endif
     
         Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     
         Call this%mult_r(lat,tmp)
+#ifdef CPP_BLAS
+        E=ddot(this%dimH(1),modes_l,1,tmp,1)
+#else
         E=dot_product(modes_l,tmp)
+#endif
     
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
@@ -250,11 +257,14 @@ contains
         Call this%set_prepared(.false.)
     end subroutine
 
-    subroutine init_base(this,lat)
+    subroutine init_base(this,lat,op_l,op_r)
         class(t_H),intent(inout)    :: this
         class(lattice),intent(in)   :: lat
+        integer,intent(in)          :: op_l(:),op_r(:)
         integer     ::  i
 
+        allocate(this%op_l,source=op_l)
+        allocate(this%op_r,source=op_r)
         this%dim_mode=1
         do i=1,size(this%op_l)
             this%dim_mode(1)=this%dim_mode(1)*lat%get_order_dim(this%op_l(i))

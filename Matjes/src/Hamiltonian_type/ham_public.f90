@@ -4,6 +4,8 @@ module m_H_public
 
 #if defined CPP_MKL_SPBLAS
 use m_H_sparse_mkl
+#elif defined CPP_EIGEN_H
+use m_H_eigen
 #elif defined CPP_DENSE && defined(CPP_BLAS)
 use m_H_dense_blas
 #elif defined CPP_DENSE
@@ -23,6 +25,8 @@ contains
         class(t_h),intent(out),allocatable      :: H_out 
 #if defined CPP_MKL_SPBLAS
        allocate(H_out,source=t_H_mkl_csr())
+#elif defined CPP_EIGEN_H
+       allocate(H_out,source=t_H_eigen())
 #elif defined CPP_DENSE && defined(CPP_BLAS)
        allocate(H_out,source=t_H_dense_blas())
 #elif defined CPP_DENSE
@@ -37,6 +41,8 @@ contains
         integer,intent(in)                      :: N
 #if defined CPP_MKL_SPBLAS
        allocate(H_out(N),source=t_H_mkl_csr())
+#elif defined CPP_EIGEN_H
+       allocate(H_out(N),source=t_H_eigen())
 #elif defined CPP_DENSE && defined(CPP_BLAS)
        allocate(H_out(N),source=t_H_dense_blas())
 #elif defined CPP_DENSE

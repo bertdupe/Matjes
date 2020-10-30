@@ -4,6 +4,12 @@ src/Hamiltonian_type/ham_base.f90
 src/Hamiltonian_type/ham_coo.f90
 src/Hamiltonian_type/ham_dense.f90
 src/Hamiltonian_type/ham_dense_blas.f90
+src/Hamiltonian_type/ham_eigen.f90
 src/Hamiltonian_type/ham_manual.f90
 src/Hamiltonian_type/ham_sparse_mkl.f90
+)
+
+set(eigen_H ${eigen_H}
+src/Hamiltonian_type/eigen_H_interface.f90
+src/Hamiltonian_type/eigen_H.cpp
 )
