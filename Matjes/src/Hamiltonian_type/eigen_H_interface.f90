@@ -25,6 +25,14 @@ module m_eigen_H_interface
            real( kind = c_double ),intent(in)      :: vec_in(*)
            real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
+
+        subroutine eigen_H_eval_single(ind,dim_mode,vec_l,vec_r,H,E) bind( c, name="eigen_H_eval_single" )
+           use, intrinsic :: iso_c_binding
+           integer( kind = c_int ),value           :: ind,dim_mode
+           real( kind = c_double ),intent(in)      :: vec_l(*),vec_r(*)
+           type(C_PTR),intent(in)                  :: H
+           real( kind = c_double ),intent(out)     :: E
+        end subroutine
         
         subroutine eigen_H_copy(H_in,H_out) bind( c, name="eigen_H_copy" )
            use, intrinsic :: iso_c_binding

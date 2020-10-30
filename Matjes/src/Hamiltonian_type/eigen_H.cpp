@@ -61,6 +61,20 @@ void eigen_H_copy(
     **Ham_out=**Ham_in;
 }
 
+void eigen_H_eval_single(
+    int ind,
+    int dim_mode,
+    double vec_l[],
+    double vec_r[],
+    SpMat **mat,
+    double *E){
+
+    int rows=(*mat)->rows();
+    Map<VectorXd> r_vec(vec_r,dim_mode);
+    Map<VectorXd> l_vec(vec_l,rows);
+    *E=l_vec.dot((*mat)->block(0,ind,rows,dim_mode) * r_vec);
+}
+
 void eigen_H_destroy(
     SpMat **Ham){
 

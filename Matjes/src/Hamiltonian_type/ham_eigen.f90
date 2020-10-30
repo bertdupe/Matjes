@@ -175,16 +175,18 @@ subroutine eval_single(this,E,i_m,lat)
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
     ! output
-    real(kind=8), intent(out)       :: E
+    real(8), intent(out)            :: E
     ! internal
     real(8),pointer                 :: modes_l(:),modes_r(:)
     real(8),allocatable,target      :: vec_l(:),vec_r(:)
     real(8)                         :: tmp(this%dimH(2))
+    integer     ::  ind
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 
-    ERROR STOP "NOT IMPLEMENTED" 
+    ind=1+(i_m-1)*this%dim_mode(2)
+    Call eigen_H_eval_single(ind-1,this%dim_mode(2),modes_l,modes_r(ind:),this%H,E)
 end subroutine 
 #endif 
 end module
