@@ -70,9 +70,12 @@ void eigen_H_eval_single(
     double *E){
 
     int rows=(*mat)->rows();
-    Map<VectorXd> r_vec(vec_r,dim_mode);
-    Map<VectorXd> l_vec(vec_l,rows);
-    *E=l_vec.dot((*mat)->block(0,ind,rows,dim_mode) * r_vec);
+    Map<Matrix<double,1,Dynamic>> l_vec(vec_l,rows);
+    Eigen::SparseVector<double> r_vec(dim_mode);
+    for(int i=0; i < dim_mode; i++ ){
+        r_vec.coeffRef(i)=vec_r[i];   
+    }
+    *E = l_vec * (((*mat)->block(0,ind,rows,dim_mode) * r_vec).pruned());
 }
 
 void eigen_H_destroy(
