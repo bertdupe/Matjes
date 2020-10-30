@@ -15,7 +15,7 @@ contains
         real(8),intent(in)      ::  eigval(:),E_f_in,kt
         complex(8),intent(in)   ::  eigvec(:,:)
         character(len=*),intent(in) ::  fname
-		procedure(int_distrib),pointer,intent(in)	:: dist_ptr
+        procedure(int_distrib),pointer,intent(in)   :: dist_ptr
 
         real(8),allocatable     ::  occ(:)
         integer                 ::  n_occ 
@@ -79,7 +79,7 @@ contains
         real(8),intent(in)      ::  eigval(:),E_f,kt
         complex(8),intent(in)   ::  eigvec(:,:)
         real(8),intent(out)     ::  occ(:)
-		procedure(int_distrib),pointer,intent(in)	:: dist_ptr
+        procedure(int_distrib),pointer,intent(in)   :: dist_ptr
 
         integer                 ::  i
         real(8)                 ::  fd
@@ -96,7 +96,7 @@ contains
         real(8),intent(in)      ::   eigval(:),E_f,kt
         complex(8),intent(in)   ::   eigvec(:,:)
         real(8),intent(out)     ::   occ(:)
-		procedure(int_distrib),pointer,intent(in)	:: dist_ptr
+        procedure(int_distrib),pointer,intent(in)   :: dist_ptr
 
         integer                 ::  i
         integer                 ::  n_state

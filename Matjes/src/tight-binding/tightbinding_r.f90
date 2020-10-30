@@ -1,8 +1,8 @@
 module m_tightbinding_r
 use m_tb_params, only : TB_params
 use m_tb_types
-use m_basic_types, only : vec_point
-use m_energy_r, only: get_eigenval_r,get_eigenvec_r
+use m_derived_types, only : lattice
+use m_energy_r, only: get_eigenval_r,get_eigenvec_r,init_Hr
 use m_occupation, only: calc_occupation
 use m_occupation_mult, only: occupation_mult
 use m_fermi, only: calc_fermi 
@@ -15,9 +15,9 @@ private
 public :: tightbinding_r
 contains
 
-subroutine tightbinding_r(h_par,mode_mag)
+subroutine tightbinding_r(lat,h_par)
+    type(lattice), intent(in) :: lat
     type(parameters_TB_Hsolve),intent(in)     ::  h_par
-    type(vec_point),intent(in)                ::  mode_mag(:)
 
     real(8),allocatable         ::  eigval(:)
     complex(8),allocatable      ::  eigvec(:,:)
@@ -27,7 +27,7 @@ subroutine tightbinding_r(h_par,mode_mag)
 
     logical                     :: read_success
 
-	procedure(int_distrib),pointer	:: dist_ptr => null()
+    procedure(int_distrib),pointer  :: dist_ptr => null()
 
     !check what to calculate (eigenvalue/eigenvector)
     calc_eigval=TB_params%flow%dos_r.or.TB_params%flow%occ_r.or.TB_params%flow%spec_r.or.TB_params%flow%fermi_r
@@ -42,14 +42,16 @@ subroutine tightbinding_r(h_par,mode_mag)
         read_success=.false.
     endif
 
+    if(calc_eigvec.or.calc_eigval) Call init_Hr(lat,h_par,TB_params%io_H,lat%M%modes_v)
+
     !calculate eigenvalue/eigenvector
     if(calc_eigvec)then
         write(*,*) 'start eigenvec_r'
-        Call get_eigenvec_r(h_par,eigval,eigvec,mode_mag)
+        Call get_eigenvec_r(lat,h_par,eigval,eigvec,lat%M%modes_v)
         read_success=.false.
     elseif(calc_eigval)then
         write(*,*) 'start eigenval_r'
-        Call get_eigenval_r(h_par,eigval,mode_mag)
+        Call get_eigenval_r(lat,h_par,eigval,lat%M%modes_v)
         read_success=.false.
     endif
 

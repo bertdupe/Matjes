@@ -1,6 +1,5 @@
 module m_energy_set_real
 use m_energy_commons, only : energy
-use m_basic_types, only : vec_point
 use m_tb_types
 implicit none
 private
@@ -12,7 +11,7 @@ contains
     subroutine set_Hr_dense_nc(h_par,mode_mag,Hr)
         use m_tb_params, only : TB_params
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
-        type(vec_point),intent(in)   ::  mode_mag(:)
+        real(8),intent(in)                       ::  mode_mag(:,:)
         complex(8),allocatable,intent(inout)    ::  Hr(:,:)
 
         if(.not. allocated(Hr))then
@@ -31,21 +30,22 @@ contains
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
         complex(8),allocatable,intent(inout)    ::  Hr(:,:)
 
-        integer                 ::  N_neighbours,N_cells,dim_mode
+        integer                 ::  N_neighbours,dim_mode
         integer                 ::  i,j,k
 
         N_neighbours = size( energy%line, 1 )
-        N_cells = size( energy%line, 2 )
-        dim_mode=h_par%pos_ext(2)-h_par%pos_ext(1)+1
+        dim_mode=h_par%norb*h_par%nspin
+        !dim_mode=h_par%pos_ext(2)-h_par%pos_ext(1)+1
         if(.not. allocated(Hr))then
            allocate(Hr(h_par%dimH,h_par%dimH))
         endif
         if(size(Hr,1)/=h_par%dimH.or.size(Hr,2)/=h_par%dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
         Hr=cmplx(0.0d0,0.0d0, kind=8)
-        do i=1, N_cells
+        ERROR STOP "SET exjcamge mmanually for TB in dense case"
+        do i=1, h_par%ncell
             do j=1, N_neighbours
-                k = energy%line(j, i) 
-                Hr((i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode) = energy%value(j,k)%order_op(1)%Op_loc(h_par%pos_ext(1):h_par%pos_ext(2),h_par%pos_ext(1):h_par%pos_ext(2))
+                !k = energy%line(j, i) 
+                !Hr((i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode) = energy%value(j,k)%order_op(1)%Op_loc(h_par%pos_ext(1):h_par%pos_ext(2),h_par%pos_ext(1):h_par%pos_ext(2))
             enddo
         enddo
     end subroutine 
@@ -54,7 +54,7 @@ contains
         !adds the Jsd coupling to a local real-space Hamiltonian Hr
         type(parameters_TB_Hsolve),intent(in)        ::  h_par
         real(8),intent(in)                          ::  Jsd(:)
-        type(vec_point),intent(in)                  ::  mode_mag(:)
+        real(8),intent(in)                       ::  mode_mag(:,:)
         complex(8),allocatable,intent(inout)        ::  Hr(:,:)
 
         integer                 ::  i,j
@@ -68,6 +68,7 @@ contains
         if(h_par%nsc/=1) STOP "nsc/=1 in set_jsd"
         if(size(Hr,1)/=h_par%dimH.or.size(Hr,2)/=h_par%dimH) STOP "Hr has wrong size" 
         if(size(Jsd) /= h_par%norb) STOP "JSD has wrong size"
+        if(size(mode_mag,1)>3) ERROR STOP "will not work with nmag>1"
 
         allocate(add_Jsd(h_par%nsite,h_par%nsite))
         do i=1,h_par%ncell
@@ -76,10 +77,10 @@ contains
                 i1=j*2-1
                 i2=j*2
                 !could be done be elegant with pauli matrices...
-                add_Jsd(i1,i1)=Jsd(j)*cmplx( mode_mag(i)%w(3), 0.0d0           ,8)
-                add_Jsd(i2,i1)=Jsd(j)*cmplx( mode_mag(i)%w(1), mode_mag(i)%w(2),8)
-                add_Jsd(i1,i2)=Jsd(j)*cmplx( mode_mag(i)%w(1),-mode_mag(i)%w(2),8)
-                add_Jsd(i2,i2)=Jsd(j)*cmplx(-mode_mag(i)%w(3), 0.0d0           ,8)
+                add_Jsd(i1,i1)=Jsd(j)*cmplx( mode_mag(3,i), 0.0d0        ,8)
+                add_Jsd(i2,i1)=Jsd(j)*cmplx( mode_mag(1,i), mode_mag(2,i),8)
+                add_Jsd(i1,i2)=Jsd(j)*cmplx( mode_mag(1,i),-mode_mag(2,i),8)
+                add_Jsd(i2,i2)=Jsd(j)*cmplx(-mode_mag(3,i), 0.0d0        ,8)
             enddo
             a=(i-1)*h_par%nsite+1
             b=i*h_par%nsite

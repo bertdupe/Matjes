@@ -9,10 +9,10 @@ character(len=*),parameter  ::  subdir='data_state_dist/'
 
 contains
 subroutine occupation_mult(h_par,io_par,eigval,eigvec)
-    type(parameters_TB_Hsolve),intent(in)     ::  h_par
-    type(parameters_TB_IO_OCC_MULT),intent(in)  ::  io_par
-    real(8),allocatable,intent(in)            ::  eigval(:)
-    complex(8),allocatable,intent(in)         ::  eigvec(:,:)
+    type(parameters_TB_Hsolve),intent(in)       :: h_par
+    type(parameters_TB_IO_OCC_MULT),intent(in)  :: io_par
+    real(8),intent(in)                          :: eigval(:)
+    complex(8),intent(in)                       :: eigvec(:,:)
     
     !input parameters
     real(8)                     ::  E_ext(2),dE
@@ -23,7 +23,7 @@ subroutine occupation_mult(h_par,io_par,eigval,eigvec)
     real(8),allocatable         ::  E(:)
     integer                     ::  i
     character(len=3)            ::  i_char
-	procedure(int_distrib),pointer	:: dist_ptr => null()
+    procedure(int_distrib),pointer  :: dist_ptr => null()
 
     !check input parameters
     if(io_par%dE<0.or.io_par%dE>io_par%E_ext(2)-io_par%E_ext(1))then

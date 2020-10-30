@@ -26,9 +26,9 @@ type parameters_TB_IO_EF
 end type
 
 type parameters_TB_IO_DOS
-    real(8)                     :: E_ext(2)=[-1.0d0,1.0d0]      !minimum and maximum energy to plot in dos
-    real(8)                     :: dE=1.0d-2                    !energy binning size
-    real(8)                     :: sigma=1.0d-2                 !gauss smearing parameter for dos
+    real(8)     :: E_ext(2)=[-1.0d0,1.0d0]      !minimum and maximum energy to plot in dos
+    real(8)     :: dE=1.0d-2                    !energy binning size
+    real(8)     :: sigma=1.0d-2                 !gauss smearing parameter for dos
 end type
 
 type parameters_TB_IO_HIGHS
@@ -56,8 +56,8 @@ type parameters_TB_Hsolve
     !set through upd
     integer         ::  dimH=-1     !final size of Hamiltonian including all modifications
     integer         ::  nsite=1     !overall number of states in each cells
-    !externally set for compatibility with Energy routines
-    integer         ::  pos_ext(2)  !values to access outside parameters 
+!    !externally set for compatibility with Energy routines
+!    integer         ::  pos_ext(2)  !values to access outside parameters 
     !which method to use
     logical         ::  sparse=.False.
     integer         ::  i_diag=1  !different diagonalization methods

@@ -6,10 +6,9 @@ public
 type(parameters_TB),public,protected :: TB_params
 
 contains
-subroutine set_TB_params(Ncell,TB_pos_ext)
+subroutine set_TB_params(Ncell)
     use m_rw_TB, only: get_parameters_io_TB
     integer,intent(in)      ::  Ncell
-    integer,intent(in)      ::  TB_pos_ext(2)
 
     Call get_parameters_io_TB(TB_params)
 
@@ -30,7 +29,6 @@ subroutine set_TB_params(Ncell,TB_pos_ext)
     if(TB_params%is_mag) TB_params%H%nspin=2
     TB_params%H%ncell=Ncell
     TB_params%H%norb=TB_params%io_H%nb_orbitals
-    TB_params%H%pos_ext=TB_pos_ext
     Call TB_params%H%upd()
 
     TB_params%H%sparse=TB_params%io_H%sparse

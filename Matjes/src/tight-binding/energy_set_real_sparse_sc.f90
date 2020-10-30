@@ -2,9 +2,9 @@
 
 module m_energy_set_real_sparse_sc
 use m_energy_commons, only : energy
-use m_basic_types, only : vec_point
 use m_tb_types
 use MKL_SPBLAS
+use m_derived_types, only: lattice
 use mkl_spblas_util, only: unpack_csr 
 use  m_energy_set_real_sparse, only: set_Hr_sparse_nc
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX,C_PTR,C_F_POINTER
@@ -14,11 +14,13 @@ public set_Hr_sparse_sc
 
 contains
 
-    subroutine set_Hr_sparse_sc(h_par,mode_mag,H_r)
+    subroutine set_Hr_sparse_sc(lat,h_par,h_io,mode_mag,H_r)
         use m_tb_params, only : TB_params
+        type(lattice),intent(in)                :: lat
         type(parameters_TB_Hsolve),intent(in)   ::  h_par
+        type(parameters_TB_IO_H),intent(in)     :: h_io
         type(SPARSE_MATRIX_T),intent(out)       ::  H_r
-        type(vec_point),intent(in)              ::  mode_mag(:)
+        real(8),intent(in)                       ::  mode_mag(:,:)
 
         type(parameters_TB_Hsolve)              ::  h_par_nc
         type(SPARSE_MATRIX_T)        :: H_nc
@@ -33,7 +35,7 @@ contains
         h_par_nc=h_par
         h_par_nc%nsc=1
         Call h_par_nc%upd()
-        Call set_Hr_sparse_nc(h_par_nc,mode_mag,H_nc)
+        Call set_Hr_sparse_nc(lat,h_par_nc,h_io, mode_mag,H_nc)
         Call get_Hr_double_sc(h_par,h_par_nc,H_nc,H_double)
         Call get_delta(TB_params%io_H%delta,h_par,H_delta)
 

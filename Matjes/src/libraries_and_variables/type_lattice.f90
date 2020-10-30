@@ -4,10 +4,10 @@ use m_basic_types
 integer,parameter :: number_different_order_parameters=4    !m,E,B,T
 
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
-								&	'magnetic   ',&
-								&	'Efield     ',&
-								&	'Bfield     ',&
-								&	'temperature']
+                                &   'magnetic   ',&
+                                &   'Efield     ',&
+                                &   'Bfield     ',&
+                                &   'temperature']
 
 ! unit cells
 ! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
@@ -259,11 +259,11 @@ function index_1_3(this,ind1)result(indm)
     integer                     :: tmp,prod
 
     prod=product(this%dim_lat(:2))
-    indm(3)=ind1/prod
-    tmp=ind1-prod*indm(3)
+    indm(3)=(ind1-1)/prod+1
+    tmp=ind1-prod*(indm(3)-1)
     prod=this%dim_lat(1)
-    indm(2)=tmp/prod
-    indm(1)=tmp-indm(2)*prod
+    indm(2)=(tmp-1)/prod+1
+    indm(1)=(tmp-1)-prod*(indm(2)-1)+1
 end function
 
 
@@ -692,12 +692,12 @@ subroutine copy_val_lattice(self,copy)
 end subroutine
 
 function op_name_to_int(name_in)result(int_out)
-	character(len=*),intent(in)	::	name_in
-	integer            			::	int_out
+    character(len=*),intent(in) ::  name_in
+    integer                     ::  int_out
 
-	integer			::	i
-	
-	do i=1,number_different_order_parameters
+    integer         ::  i
+    
+    do i=1,number_different_order_parameters
         if(trim(adjustl(name_in))==order_parameter_name(i))then
             int_out=i
             return

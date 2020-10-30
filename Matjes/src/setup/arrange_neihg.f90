@@ -33,6 +33,11 @@ integer, intent(in) :: indexNN(:,:)
 ! internal
 integer :: i,j
 
+if(allocated(map))then
+    WRITE(*,*) "WARNING, GET_MAP more than once CALLED"    
+    !I only added this in order to hack the tight-binding neighbors
+    deallocate(map) !added ugly
+endif
 allocate( map(size(indexNN,1)) )
 do i=1,size(indexNN,1)
   allocate( map(i)%bond( indexNN(i,1) ) )

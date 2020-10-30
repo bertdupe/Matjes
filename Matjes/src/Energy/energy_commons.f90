@@ -66,8 +66,8 @@ call get_total_Heisenberg_Ham(fname,dim_ham,Ms)
 if (ham_tot_heisenberg%i_exist) number_hamiltonian=number_hamiltonian+1
 
 ! get the TB Hamiltonian
-call get_total_Hamiltonian_TB(fname,dim_ham)
-if (ham_tot_TB%i_exist) number_hamiltonian=number_hamiltonian+1
+!call get_total_Hamiltonian_TB(fname,dim_ham)
+!if (ham_tot_TB%i_exist) number_hamiltonian=number_hamiltonian+1
 
 ! get the magnetoelectric coefficients
 call get_ham_ME(fname,dim_ham)

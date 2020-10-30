@@ -64,7 +64,7 @@ set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} ${compadd} ${com
 set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} ${compadd} ${com_deb_add}")
 
 
-if(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
    message("g++ detected")
    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")   #add here general lines
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")

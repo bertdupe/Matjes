@@ -1,6 +1,5 @@
 module m_energy_set_real_sc
 use m_energy_commons, only : energy
-use m_basic_types, only : vec_point
 use m_tb_types
 use m_energy_set_real, only: set_Hr_dense_nc
 implicit none
@@ -21,7 +20,7 @@ contains
         !extract the real space Hamiltonian Hr from the electronic part in energy
         use m_tb_params, only : TB_params
         type(parameters_TB_Hsolve),intent(in)     ::  h_par
-        type(vec_point),intent(in)   :: mode_mag(:)
+        real(8),intent(in)                       ::  mode_mag(:,:)
         complex(8),allocatable,intent(inout)    ::  Hr(:,:)
         complex(8),allocatable                  :: Hr_nc(:,:)
 
