@@ -16,12 +16,11 @@ public set_Hr_sparse_nc!set_Jsd!,Hr_eigval,Hr_eigvec
 contains
 
     subroutine set_Hr_sparse_nc(lat,h_par,h_io,mode_mag,H_r)
-        use m_tb_params, only : TB_params
         type(lattice),intent(in)                :: lat
         type(parameters_TB_Hsolve),intent(in)   :: h_par
         type(parameters_TB_IO_H),intent(in)     :: h_io
         type(SPARSE_MATRIX_T),intent(out)       ::  H_r
-        real(8),intent(in)                       ::  mode_mag(:,:)
+        real(8),intent(in)                      ::  mode_mag(:,:)
         !local
         type(SPARSE_MATRIX_T)        :: H_ee
         type(SPARSE_MATRIX_T)        :: H_jsd
@@ -29,8 +28,8 @@ contains
         type(MATRIX_DESCR)           :: desc
 
         Call set_Hr_ee(lat,h_par,h_io,H_ee)
-        if(any(TB_params%io_H%Jsd /= 0.0d0))then
-            Call set_Hr_Jsd(h_par,mode_mag,TB_params%io_H%Jsd,H_jsd)
+        if(any(h_io%Jsd /= 0.0d0))then
+            Call set_Hr_Jsd(h_par,mode_mag,h_io%Jsd,H_jsd)
             stat=MKL_SPARSE_Z_ADD(SPARSE_OPERATION_NON_TRANSPOSE,H_ee,cmplx(1.0,0.0,C_DOUBLE_COMPLEX),H_jsd,H_r)
             if(stat /= 0) ERROR STOP "error adding sparse H_ee and H_jsd"
             stat=MKL_SPARSE_DESTROY(H_ee)
@@ -65,6 +64,7 @@ contains
         integer                 :: ind_orb
         integer                 :: offset
         integer                 :: ilat_1(3),ilat_2(3),i_other
+        complex(8)              :: H_entry
 
 !sparse Hamiltonian
         integer(C_INT)                          :: nnz
@@ -100,9 +100,10 @@ contains
             ind_orb=(i_orb-1)*h_io%nb_spin
             do i_s=1,h_io%nb_spin
                 if(h_io%onsite(i_s,i_orb)==0.0d0) cycle
+                H_entry=cmplx(h_io%onsite(i_s,i_orb),0.0d0,8)
                 do i_cell=1,Ncell
                     ii=ii+1
-                    val(ii)=cmplx(h_io%onsite(i_s,i_orb),0.0d0,8)
+                    val(ii)=H_entry
                     rowind(ii)=i_s+ind_orb+(i_cell-1)*dim_mode
                     colind(ii)=rowind(ii)
                 enddo
@@ -117,6 +118,7 @@ contains
                 ind_orb=(i_orb-1)*h_io%nb_spin
                 do i_s=1,h_io%nb_spin
                     if(h_io%hopping(i_s,i_orb,i_neigh)==0.0d0) cycle
+                    H_entry=cmplx(h_io%hopping(i_s,i_orb,i_neigh),0.0d0,8)
                     do i_cell=1,Ncell
                         ilat_1=lat%index_1_3(i_cell)
                         do i_vois=1,indexNN(i_neigh)
@@ -124,7 +126,7 @@ contains
                             ilat_2=tableNN(1:3,i_vois+offset,ilat_1(1),ilat_1(2),ilat_1(3),1)
                             i_other=lat%index_m_1(ilat_2)
                             ii=ii+1
-                            val(ii)=cmplx(h_io%hopping(i_s,i_orb,i_neigh),0.0d0,8)
+                            val(ii)=H_entry
                             rowind(ii)=i_s+ind_orb+(i_cell-1)*dim_mode
                             colind(ii)=i_s+ind_orb+(i_other-1)*dim_mode
                         enddo

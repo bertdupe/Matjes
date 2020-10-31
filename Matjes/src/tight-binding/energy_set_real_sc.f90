@@ -1,5 +1,6 @@
 module m_energy_set_real_sc
 use m_energy_commons, only : energy
+use m_derived_types, only: lattice
 use m_tb_types
 use m_energy_set_real, only: set_Hr_dense_nc
 implicit none
@@ -16,12 +17,13 @@ public set_Hr_dense_sc
 contains
 
 
-    subroutine set_Hr_dense_sc(h_par,mode_mag,Hr)
+    subroutine set_Hr_dense_sc(lat,h_par,h_io,mode_mag,Hr)
         !extract the real space Hamiltonian Hr from the electronic part in energy
-        use m_tb_params, only : TB_params
-        type(parameters_TB_Hsolve),intent(in)     ::  h_par
-        real(8),intent(in)                       ::  mode_mag(:,:)
-        complex(8),allocatable,intent(inout)    ::  Hr(:,:)
+        type(lattice),intent(in)                :: lat
+        type(parameters_TB_Hsolve),intent(in)   :: h_par
+        type(parameters_TB_IO_H),intent(in)     :: h_io
+        real(8),intent(in)                      :: mode_mag(:,:)
+        complex(8),allocatable,intent(inout)    :: Hr(:,:)
         complex(8),allocatable                  :: Hr_nc(:,:)
 
         type(parameters_TB_Hsolve)     ::  h_par_nc
@@ -35,7 +37,7 @@ contains
         h_par_nc=h_par
         h_par_nc%nsc=1
         Call h_par_nc%upd()
-        Call set_Hr_dense_nc(h_par_nc,mode_mag,Hr_nc)
+        Call set_Hr_dense_nc(lat,h_par_nc,h_io,mode_mag,Hr_nc)
 
         !fill local Hamiltonian and add SC_delta
         Hr=cmplx(0.0d0,0.0d0, kind=8)
@@ -45,7 +47,7 @@ contains
         !Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1:h_par%dimH)=Hr_nc
         !Hr(h_par_nc%dimH+1:h_par%dimH:2,h_par_nc%dimH+1:h_par%dimH)=-Hr(h_par_nc%dimH+1:h_par%dimH:2,h_par_nc%dimH+1:h_par%dimH)
         !Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1+1:h_par%dimH:2)=-Hr(h_par_nc%dimH+1:h_par%dimH,h_par_nc%dimH+1+1:h_par%dimH:2)
-        Call set_delta(h_par,TB_params%io_H%delta,Hr)
+        Call set_delta(h_par,h_io%delta,Hr)
 
         if(h_par%rearrange) Call rearange_H(h_par%dimH,Hr)
     end subroutine 

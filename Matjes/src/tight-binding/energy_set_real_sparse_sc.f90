@@ -15,7 +15,6 @@ public set_Hr_sparse_sc
 contains
 
     subroutine set_Hr_sparse_sc(lat,h_par,h_io,mode_mag,H_r)
-        use m_tb_params, only : TB_params
         type(lattice),intent(in)                :: lat
         type(parameters_TB_Hsolve),intent(in)   ::  h_par
         type(parameters_TB_IO_H),intent(in)     :: h_io
@@ -37,7 +36,7 @@ contains
         Call h_par_nc%upd()
         Call set_Hr_sparse_nc(lat,h_par_nc,h_io, mode_mag,H_nc)
         Call get_Hr_double_sc(h_par,h_par_nc,H_nc,H_double)
-        Call get_delta(TB_params%io_H%delta,h_par,H_delta)
+        Call get_delta(h_io%delta,h_par,H_delta)
 
         stat=MKL_SPARSE_Z_ADD(SPARSE_OPERATION_NON_TRANSPOSE,H_double,cmplx(1.0,0.0,C_DOUBLE_COMPLEX),H_delta,H_r)
         if(stat/=0) STOP 'failed to add H_double and H_delta'

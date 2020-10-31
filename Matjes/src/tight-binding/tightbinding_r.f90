@@ -42,16 +42,17 @@ subroutine tightbinding_r(lat,h_par)
         read_success=.false.
     endif
 
+    !initialize Hamiltonian
     if(calc_eigvec.or.calc_eigval) Call init_Hr(lat,h_par,TB_params%io_H,lat%M%modes_v)
 
     !calculate eigenvalue/eigenvector
     if(calc_eigvec)then
         write(*,*) 'start eigenvec_r'
-        Call get_eigenvec_r(lat,h_par,eigval,eigvec,lat%M%modes_v)
+        Call get_eigenvec_r(h_par,eigval,eigvec)
         read_success=.false.
     elseif(calc_eigval)then
         write(*,*) 'start eigenval_r'
-        Call get_eigenval_r(lat,h_par,eigval,lat%M%modes_v)
+        Call get_eigenval_r(h_par,eigval)
         read_success=.false.
     endif
 

@@ -23,16 +23,17 @@ public
 contains
     subroutine get_Htype(H_out)
         class(t_h),intent(out),allocatable      :: H_out 
+
 #if defined CPP_MKL_SPBLAS
-       allocate(H_out,source=t_H_mkl_csr())
+       allocate(t_H_mkl_csr::H_out)
 #elif defined CPP_EIGEN_H
-       allocate(H_out,source=t_H_eigen())
+       allocate(t_H_eigen::H_out)
 #elif defined CPP_DENSE && defined(CPP_BLAS)
-       allocate(H_out,source=t_H_dense_blas())
+       allocate(t_H_dense_blas::H_out)
 #elif defined CPP_DENSE
-       allocate(H_out,source=t_H_dense())
+       allocate(t_H_dense::H_out)
 #else
-       allocate(H_out,source=t_H_manual())
+       allocate(t_H_manual::H_out)
 #endif
     end subroutine
     
@@ -40,15 +41,15 @@ contains
         class(t_h),intent(out),allocatable      :: H_out (:)
         integer,intent(in)                      :: N
 #if defined CPP_MKL_SPBLAS
-       allocate(H_out(N),source=t_H_mkl_csr())
+       allocate(t_H_mkl_csr::H_out(N))
 #elif defined CPP_EIGEN_H
-       allocate(H_out(N),source=t_H_eigen())
+       allocate(t_H_eigen::H_out(N))
 #elif defined CPP_DENSE && defined(CPP_BLAS)
-       allocate(H_out(N),source=t_H_dense_blas())
+       allocate(t_H_dense_blas::H_out(N))
 #elif defined CPP_DENSE
-       allocate(H_out(N),source=t_H_dense())
+       allocate(t_H_dense::H_out(N))
 #else
-       allocate(H_out(N),source=t_H_manual())
+       allocate(t_H_manual::H_out(N))
 #endif
     end subroutine
 

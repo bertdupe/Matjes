@@ -153,11 +153,8 @@ subroutine get_exchange_H(Ham,tableNN,indexNN,lat,DM_vector)
     integer,allocatable         :: ind_tmp(:,:)
     integer,allocatable         :: line(:,:)
 
-
     class(t_H),allocatable    :: Ham_tmp
     integer :: shape_tableNN(6)
-    integer :: i1,i2,ii
-    integer :: N_nonzero
     integer :: x_start,x_end
     integer :: y_start,y_end
     integer :: Ncell

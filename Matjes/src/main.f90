@@ -146,7 +146,7 @@ endif
 
 if (my_simu%name == 'tight-binding') then
             write(6,'(a)') 'entering into the tight-binding routines'
-             call tightbinding(all_lattices,motif,io_simu,ext_param)
+             call tightbinding(all_lattices,io_simu)
 endif
 
 if (my_simu%name == 'minimization')then

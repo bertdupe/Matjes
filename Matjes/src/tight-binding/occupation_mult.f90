@@ -42,7 +42,7 @@ subroutine occupation_mult(h_par,io_par,eigval,eigvec)
     E_ext=io_par%E_ext
     kt=io_par%kt
 !get fermi energies to consider
-    NE=(E_ext(2)-E_ext(1))/dE+1
+    NE=nint((E_ext(2)-E_ext(1))/dE)+1
     !more would require larger i_char, but this is probably 
     !a reasonable check anyways to prevent IO-madness
     if(NE>=999)then   

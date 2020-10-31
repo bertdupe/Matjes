@@ -7,7 +7,6 @@ use m_Hamiltonian_variables, only : coeff_ham_inter_spec,coeff_ham_inter_spec_po
 use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters
 use m_symmetry_operators
-use m_total_Hamiltonian_TB
 use m_total_Heisenberg_Ham
 use m_couplage_ME
 use m_summer_exp
@@ -65,10 +64,6 @@ number_hamiltonian=0
 call get_total_Heisenberg_Ham(fname,dim_ham,Ms)
 if (ham_tot_heisenberg%i_exist) number_hamiltonian=number_hamiltonian+1
 
-! get the TB Hamiltonian
-!call get_total_Hamiltonian_TB(fname,dim_ham)
-!if (ham_tot_TB%i_exist) number_hamiltonian=number_hamiltonian+1
-
 ! get the magnetoelectric coefficients
 call get_ham_ME(fname,dim_ham)
 if (ME%i_exist) number_hamiltonian=number_hamiltonian+1
@@ -109,22 +104,6 @@ if (ME%i_exist) then
   do i=1,n_shell
      Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>ME%ham(i)%H
   enddo
-endif
-
-! Tight-binding
-if (ham_tot_TB%i_exist) then
-  number_hamiltonian=number_hamiltonian+1
-  Hamiltonians(number_hamiltonian)%name=ham_tot_TB%name
-  Hamiltonians(number_hamiltonian)%order=ham_tot_TB%order
-  Hamiltonians(number_hamiltonian)%onsite=.true.
-  n_shell=size(ham_tot_TB%ham)
-
-  allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
-
-  do i=1,n_shell
-    Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>ham_tot_TB%ham(i)%H
-  enddo
-
 endif
 
 end subroutine get_Hamiltonians
@@ -358,13 +337,6 @@ do i=1,n_ham
     enddo
   endif
   
-  if ('Total-Tight-Binding'.eq.trim(Hamiltonians(i)%name)) then
-    do j=1,size(Hamiltonians(i)%ham)
-      do l=1,size(total_hamiltonian%shell_num(j)%order(1)%atom)
-        total_hamiltonian%shell_num(j)%order(1)%atom(l)%H=total_hamiltonian%shell_num(j)%order(1)%atom(l)%H+ham_tot_TB%ham(j)%H
-      enddo
-    enddo
-  endif
 enddo
 
 ! prepare the translator for the summerfeld expansion

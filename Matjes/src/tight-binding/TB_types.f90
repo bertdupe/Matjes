@@ -9,8 +9,8 @@ type parameters_TB_IO_H
     integer :: nb_shell=-1
     integer :: nb_orbitals=-1
     integer :: nb_spin=1
-    real(kind=8), allocatable :: Jsd(:)  !1: orbital
-    complex(kind=8), allocatable :: delta(:)  !1: orbital   !super conductivity delta
+    real(8), allocatable :: Jsd(:)  !1: orbital
+    complex(8), allocatable :: delta(:)  !1: orbital   !super conductivity delta
     integer             ::  i_diag=3  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
     logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other

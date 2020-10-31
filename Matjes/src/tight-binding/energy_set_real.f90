@@ -1,51 +1,88 @@
 module m_energy_set_real
-use m_energy_commons, only : energy
+use m_derived_types, only: lattice
 use m_tb_types
+use m_get_table_nn,only :get_table_nn
 implicit none
 private
 public set_Hr_dense_nc
 
-
 contains
 
-    subroutine set_Hr_dense_nc(h_par,mode_mag,Hr)
-        use m_tb_params, only : TB_params
-        type(parameters_TB_Hsolve),intent(in)     ::  h_par
-        real(8),intent(in)                       ::  mode_mag(:,:)
-        complex(8),allocatable,intent(inout)    ::  Hr(:,:)
+    subroutine set_Hr_dense_nc(lat,h_par,h_io,mode_mag,Hr)
+        type(lattice),intent(in)                :: lat
+        type(parameters_TB_Hsolve),intent(in)   :: h_par
+        type(parameters_TB_IO_H),intent(in)     :: h_io
+        real(8),intent(in)                      :: mode_mag(:,:)
+        complex(8),allocatable,intent(inout)    :: Hr(:,:)
 
         if(.not. allocated(Hr))then
            allocate(Hr(h_par%dimH,h_par%dimH))
         endif
         if(size(Hr,1)/=h_par%dimH.or.size(Hr,2)/=h_par%dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
         Hr=cmplx(0.0d0,0.0d0, 8)
-        Call set_Hr_ee(h_par,Hr)
-        if(any(TB_params%io_H%Jsd /= 0.0d0))then
-            Call set_Jsd(h_par,mode_mag,TB_params%io_H%Jsd,Hr)
+        Call set_Hr_ee(lat,h_io,h_par,Hr)
+        if(any(h_io%Jsd /= 0.0d0))then
+            Call set_Jsd(h_par,mode_mag,h_io%Jsd,Hr)
         endif
     end subroutine 
 
-    subroutine set_Hr_ee(h_par,Hr)
+    subroutine set_Hr_ee(lat,h_io,h_par,Hr)
         !extract the real space Hamiltonian Hr from the electronic part in energy
-        type(parameters_TB_Hsolve),intent(in)     ::  h_par
-        complex(8),allocatable,intent(inout)    ::  Hr(:,:)
+        type(lattice),intent(in)                :: lat
+        type(parameters_TB_Hsolve),intent(in)   :: h_par
+        type(parameters_TB_IO_H),intent(in)     :: h_io
+        complex(8),allocatable,intent(inout)    :: Hr(:,:)
 
-        integer                 ::  N_neighbours,dim_mode
-        integer                 ::  i,j,k
+        integer                 :: dimH
+        integer                 :: N_neighbours,Ncell,dim_mode
+        integer, allocatable    :: indexNN(:),tableNN(:,:,:,:,:,:)
+        integer                 :: i_cell,i_orb,i_s,i_neigh,i_vois
+        integer                 :: ind_orb,i_other
+        integer                 :: offset
+        integer                 :: ilat_1(3),ilat_2(3),i1,i2
+        complex(8)              :: H_entry
 
-        N_neighbours = size( energy%line, 1 )
+        N_neighbours = size(h_io%hopping,3)
+        Call get_table_nn(lat,N_neighbours,indexNN,tableNN)
+        dimH=h_par%dimH
+        Ncell = lat%Ncell
         dim_mode=h_par%norb*h_par%nspin
-        !dim_mode=h_par%pos_ext(2)-h_par%pos_ext(1)+1
         if(.not. allocated(Hr))then
-           allocate(Hr(h_par%dimH,h_par%dimH))
+           allocate(Hr(dimH,dimH),source=cmplx(0.0d0,0.0d0,8))
         endif
-        if(size(Hr,1)/=h_par%dimH.or.size(Hr,2)/=h_par%dimH) STOP "Hr has wrong size"  !could easily reallocate, but this should never happen, I guess
-        Hr=cmplx(0.0d0,0.0d0, kind=8)
-        ERROR STOP "SET exjcamge mmanually for TB in dense case"
-        do i=1, h_par%ncell
-            do j=1, N_neighbours
-                !k = energy%line(j, i) 
-                !Hr((i-1)*dim_mode+1:i*dim_mode, (k-1)*dim_mode+1:k*dim_mode) = energy%value(j,k)%order_op(1)%Op_loc(h_par%pos_ext(1):h_par%pos_ext(2),h_par%pos_ext(1):h_par%pos_ext(2))
+        !set onsite terms
+        do i_orb=1,h_io%nb_orbitals
+            ind_orb=(i_orb-1)*h_io%nb_spin
+            do i_s=1,h_io%nb_spin
+                if(h_io%onsite(i_s,i_orb)==0.0d0) cycle
+                H_entry=cmplx(h_io%onsite(i_s,i_orb),0.0d0,8)
+                do i_cell=1,Ncell
+                    i1=i_s+ind_orb+(i_cell-1)*dim_mode
+                    Hr(i1,i1)=Hr(i1,i1)+H_entry
+                enddo
+            enddo
+        enddo
+        !super ugly with tables, translate i_x,i_y,i_z to one index?, also loop order is questionable
+        !hopping terms
+        do i_neigh=1,N_neighbours
+            offset=sum(indexNN(1:i_neigh-1))
+            do i_orb=1,h_io%nb_orbitals
+                ind_orb=(i_orb-1)*h_io%nb_spin
+                do i_s=1,h_io%nb_spin
+                    if(h_io%hopping(i_s,i_orb,i_neigh)==0.0d0) cycle
+                    H_entry=cmplx(h_io%hopping(i_s,i_orb,i_neigh),0.0d0,8)
+                    do i_cell=1,Ncell
+                        ilat_1=lat%index_1_3(i_cell)
+                        i1=i_s+ind_orb+(i_cell-1)*dim_mode
+                        do i_vois=1,indexNN(i_neigh)
+                            if(tableNN(5,i_vois,ilat_1(1),ilat_1(2),ilat_1(3),1)/=1) cycle
+                            ilat_2=tableNN(1:3,i_vois+offset,ilat_1(1),ilat_1(2),ilat_1(3),1)
+                            i_other=lat%index_m_1(ilat_2)
+                            i2=i_s+ind_orb+(i_other-1)*dim_mode
+                            Hr(i1,i2)=Hr(i1,i2)+H_entry
+                        enddo
+                    enddo
+                enddo
             enddo
         enddo
     end subroutine 

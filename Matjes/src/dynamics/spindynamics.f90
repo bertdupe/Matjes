@@ -2,12 +2,9 @@ module m_spindynamics
 implicit none
 contains
 subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams)
-use m_basic_types, only : vec_point
 use m_derived_types, only : t_cell,io_parameter,simulation_parameters,point_shell_Operator
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_modes_variables, only : point_shell_mode
-!use m_torques, only : get_torques
-use m_lattice, only : my_order_parameters
 use m_measure_temp
 use m_topo_commons
 use m_update_time
@@ -44,8 +41,6 @@ logical :: gra_log,io_stochafield
 integer :: i,j,gra_freq,i_loop,input_excitations
 ! lattices that are used during the calculations
 type(lattice)                         :: lat_1,lat_2
-! pointers specific for the modes
-type(vec_point),target,allocatable,dimension(:,:) :: mode_excitation_field,lattice_ini_excitation_field
 
 !intermediate values for dynamics
 real(8),allocatable                     :: Dmag(:,:,:),Dmag_int(:,:)
