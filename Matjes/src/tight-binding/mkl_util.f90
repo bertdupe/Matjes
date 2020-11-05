@@ -5,6 +5,24 @@ USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX,C_PTR,C_F_POINTER,C_IN
 private
 public :: unpack_csr_to_coo,unpack_csr
 
+
+INTERFACE
+FUNCTION MKL_SPARSE_Z_EXPORT_CSR_CF(source,indexing,rows,cols,rows_start,rows_end,col_indx,values) BIND(C, name='MKL_SPARSE_Z_EXPORT_CSR')
+USE ISO_C_BINDING
+IMPORT SPARSE_MATRIX_T
+TYPE(SPARSE_MATRIX_T) , INTENT(IN) :: source
+INTEGER(C_INT), INTENT(INOUT) :: indexing
+INTEGER(C_int) , INTENT(INOUT) :: rows
+INTEGER(C_int) , INTENT(INOUT) :: cols
+TYPE(C_PTR) , INTENT(INOUT) :: rows_start
+TYPE(C_PTR) , INTENT(INOUT) :: rows_end
+TYPE(C_PTR) , INTENT(INOUT) :: col_indx
+TYPE(C_PTR) , INTENT(INOUT) :: values
+INTEGER(C_INT) MKL_SPARSE_Z_EXPORT_CSR_CF
+END FUNCTION
+END INTERFACE
+
+
 contains
 
 
@@ -26,8 +44,8 @@ contains
         type(C_PTR)                        :: rows_start,rows_end,col_indx
 
         !get csr matrix out of SPARSE_MATRIX_T
-        ERROR STOP "UPDATE unpack_csr to also work with potentially different mkl interface, so far comment out at TB not immediately necessary"
-        !stat=mkl_sparse_z_export_csr ( H , indexing , nrows , ncols , rows_start , rows_end , col_indx , values ) 
+        !ERROR STOP "UPDATE unpack_csr to also work with potentially different mkl interface, so far comment out at TB not immediately necessary"
+        stat=mkl_sparse_z_export_csr_cf ( H , indexing , nrows , ncols , rows_start , rows_end , col_indx , values ) 
         if(stat/=0) STOP 'sparse_z_export_csr in uppack_csr failed'
         CAll C_F_POINTER(rows_end, tmp,[nrows] )
         nnz=tmp(nrows)-indexing
