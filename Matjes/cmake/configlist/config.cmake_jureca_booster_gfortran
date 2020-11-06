@@ -1,0 +1,33 @@
+message("reading config.cmake")
+
+##modules to load, so far only gfortran working
+#module purge
+#module load Architecture/KNL
+#module load GCC/8.3.0
+#module load ParaStationMPI
+#module load CMake/3.14.0
+#module load imkl/2019.5.281
+#module load Eigen
+
+set(CMAKE_Fortran_COMPILER gfortran)
+set(CMAKE_CXX_COMPILER g++)
+
+#manual adds to fortran compiler
+set(compadd "")							#add to release and debug
+set(com_rel_add "")  #add to release
+set(com_deb_add "")						#add to debug 
+
+
+set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl")
+set(add_inc ${add_inc} "/home/pbuhl/programs/matjes/Matjes/Matjes" "${MKLROOT}/include" )
+
+set(MKLROOT $ENV{MKLROOT})
+set(add_inc ${add_inc} "${MKLROOT}/include" )
+#PREPROCESSOR FLAGS
+add_compile_definitions(CPP_MKL_SPBLAS)
+add_compile_definitions(CPP_BRUTDIP)
+set(Eigen3_DIR "/usr/local/software/jurecabooster/Stages/2019a/software/Eigen/3.3.7-GCCcore-8.3.0/share/eigen3/cmake/")
+
+#add_compile_definitions(CPP_DEBUG)
+#add_compile_definitions(CPP_DENSE_BLAS)
+#add_compile_definitions(CPP_DENSE_BARE)

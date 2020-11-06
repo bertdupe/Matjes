@@ -3,7 +3,7 @@ use m_derived_types, only : site_Ham
 !
 ! create a matrix of 0 to points to
 !
-type(site_Ham), target, public, protected, save :: nunull
+type(site_Ham), target, public,  save :: nunull
 
 private
 public :: get_null_matrix

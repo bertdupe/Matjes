@@ -2,7 +2,7 @@ module m_anisotropy_heisenberg
 use m_symmetry_operators
 use m_lattice, only : my_order_parameters
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
-type(coeff_ham_inter_spec), target, public, protected :: anisotropy
+type(coeff_ham_inter_spec), target, public:: anisotropy
 
 private
 public :: get_ham_anisotropy,get_anisotropy_H

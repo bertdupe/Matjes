@@ -24,8 +24,8 @@ type order_par
 !UNDER NO CIRCUMSTANCES REMOVE PRIVATE FROM data_real OR data_vecpoint
 !THAT COULD LEAD TO A GIGANTIC MESS WITH MEMORY LEAK
 
-    type(vec_point),pointer,private         :: data_vecpoint(:)=>null()
-    real(8),pointer,private                 :: data_real(:)=>null()
+    type(vec_point),pointer,private,contiguous         :: data_vecpoint(:)=>null()
+    real(8),pointer,private,contiguous                 :: data_real(:)=>null()
 
     type(vec_point),pointer,contiguous      :: all_l_modes(:) => null()
     type(vec_point),pointer,contiguous      :: l_modes(:,:,:,:) => null() !main vec_type get allocated

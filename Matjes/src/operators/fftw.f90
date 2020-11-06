@@ -187,7 +187,7 @@ module m_fftw
                 r=pos(:,j)
                 phase=dot_product(kvec,r)
                 do k=1,dim_mode
-                    get_FFT_vec_point(k)=get_FFT_vec_point(k)+complex(field(j)%w(k)*cos(sense*phase),field(j)%w(k)*sin(sense*phase))
+                    get_FFT_vec_point(k)=get_FFT_vec_point(k)+cmplx(field(j)%w(k)*cos(sense*phase),field(j)%w(k)*sin(sense*phase),8)
                 enddo
             enddo
             get_FFT_vec_point=get_FFT_vec_point/sqrt(real(Nsize))
@@ -213,7 +213,7 @@ module m_fftw
                 phase=dot_product(kvec,r)
                 do l=1,3
                     do m=1,3
-                        get_FFT_Dr_matrix(m,l)=get_FFT_Dr_matrix(m,l)+complex(pos_D(m,l,i)*cos(sense*phase),pos_D(m,l,i)*sin(sense*phase))
+                        get_FFT_Dr_matrix(m,l)=get_FFT_Dr_matrix(m,l)+cmplx(pos_D(m,l,i)*cos(sense*phase),pos_D(m,l,i)*sin(sense*phase),8)
                     enddo
                 enddo
             enddo
@@ -241,7 +241,7 @@ module m_fftw
                 r=real_dist(:,i)
                 alpha=dot_product(kvec,r)
                 do l=1,shape_pos(1)
-                    get_FFT_matrix(l)=get_FFT_matrix(l)+complex(field(l,i)*cos(sense*alpha),field(l,i)*sin(sense*alpha))
+                    get_FFT_matrix(l)=get_FFT_matrix(l)+cmplx(field(l,i)*cos(sense*alpha),field(l,i)*sin(sense*alpha),8)
                 enddo
             enddo
             get_FFT_matrix=get_FFT_matrix/real(shape_pos(2))
@@ -270,7 +270,7 @@ module m_fftw
 
             do i=1, size_all_vectors, dim_mode
                 alpha = dot_product( pos(:,(i/dim_mode)+1), kmesh(:,pos_k) )
-                intermediate_sum(i:i+dim_mode-1) = all_vectors(i:i+dim_mode-1)*complex( cos(sense*alpha), sin(sense*alpha) )!gives exp[i*k*(r-r')] (all r' and one particular r)
+                intermediate_sum(i:i+dim_mode-1) = all_vectors(i:i+dim_mode-1)*cmplx( cos(sense*alpha), sin(sense*alpha),8 )!gives exp[i*k*(r-r')] (all r' and one particular r)
             enddo
             
             get_E_k_local=dot_product( X_site, matmul(all_energy, intermediate_sum) )

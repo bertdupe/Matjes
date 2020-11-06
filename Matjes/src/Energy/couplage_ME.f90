@@ -4,7 +4,7 @@ use m_lattice, only : my_order_parameters
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 use m_convert
 implicit none
-type(coeff_ham_inter_spec), target, public, protected :: ME
+type(coeff_ham_inter_spec), target, public:: ME
 
 private
 public :: get_ham_ME,get_number_EM_DMI,get_coupling_ME

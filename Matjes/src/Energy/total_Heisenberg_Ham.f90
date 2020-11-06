@@ -6,7 +6,7 @@ use m_anisotropy_heisenberg
 use m_summer_exp
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 
-type(coeff_ham_inter_spec), target, public, protected :: ham_tot_heisenberg
+type(coeff_ham_inter_spec), target, public :: ham_tot_heisenberg
 
 private
 public :: get_total_Heisenberg_Ham

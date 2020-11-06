@@ -185,7 +185,7 @@ B_int=0.0d0
 do i=1,N_k
 
     phase=dot_product(distances(:,iomp),kmesh(:,i))
-    D_int=FFT_pos_D(:,:,i)*complex(cos(phase),sin(phase))
+    D_int=FFT_pos_D(:,:,i)*cmplx(cos(phase),sin(phase),8)
     B_int=B_int+matmul(FFT_mode(:,i),D_int)
 
 enddo

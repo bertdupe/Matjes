@@ -248,49 +248,50 @@ STOP 'ANYTHING TO DO WITH lines directly below?'
 !call get_B_matrix(N_dim)
 !call set_E_matrix(N_dim)
 
-Call sum_energy(Edy,lat)
-write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!           Begin minimization
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-iter=0
-max_torque=10.0d0
-do while (max_torque.gt.conv_torque)
-    max_torque=0.0d0
-    do iomp=1,N_cell
-
-      call calculate_Beff(F_eff,iomp,lat%ordpar%all_l_modes)
-
-      !we don't divide by 0
-      F_norm=norm(F_eff(1:3))
-      if (F_norm.lt.1.0d-8) stop 'problem in the infinite damping minimization routine'
-
-      torque=cross(mode_magnetic(iomp)%w,F_eff,1,3)
-      test_torque=maxval(torque)
-      if ( dabs(test_torque).gt.max_torque ) max_torque=test_torque
-
-      !align the moments onto normalized field
-      mode_magnetic(iomp)%w=F_eff(1:3)/F_norm
-
-    enddo
-
-    iter=iter+1
-    !print max_torque every 100 iterations
-    if (mod(iter,100).eq.0) write(*,*) 'Max torque =',max_torque
-
-    !write config to files
-    if ((gra_log).and.(mod(iter,gra_freq).eq.0)) then
-         call CreateSpinFile(iter/gra_freq,lat%ordpar%all_l_modes)
-         call WriteSpinAndCorrFile(iter/gra_freq,lat%ordpar%all_l_modes,'SpinSTM_')
-         write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq
-      endif
-
-enddo
-
-write(*,*) 'Max_torque=',max_torque,' tolerance reached, minimization completed in ',iter,' iterations.'
-
-Call sum_energy(Edy,lat)
+!Call sum_energy(Edy,lat)
+!
+!write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell)
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!           Begin minimization
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!iter=0
+!max_torque=10.0d0
+!do while (max_torque.gt.conv_torque)
+!    max_torque=0.0d0
+!    do iomp=1,N_cell
+!
+!      call calculate_Beff(F_eff,iomp,lat%ordpar%all_l_modes)
+!
+!      !we don't divide by 0
+!      F_norm=norm(F_eff(1:3))
+!      if (F_norm.lt.1.0d-8) stop 'problem in the infinite damping minimization routine'
+!
+!      torque=cross(mode_magnetic(iomp)%w,F_eff,1,3)
+!      test_torque=maxval(torque)
+!      if ( dabs(test_torque).gt.max_torque ) max_torque=test_torque
+!
+!      !align the moments onto normalized field
+!      mode_magnetic(iomp)%w=F_eff(1:3)/F_norm
+!
+!    enddo
+!
+!    iter=iter+1
+!    !print max_torque every 100 iterations
+!    if (mod(iter,100).eq.0) write(*,*) 'Max torque =',max_torque
+!
+!    !write config to files
+!    if ((gra_log).and.(mod(iter,gra_freq).eq.0)) then
+!         call CreateSpinFile(iter/gra_freq,lat%ordpar%all_l_modes)
+!         call WriteSpinAndCorrFile(iter/gra_freq,lat%ordpar%all_l_modes,'SpinSTM_')
+!         write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq
+!      endif
+!
+!enddo
+!
+!write(*,*) 'Max_torque=',max_torque,' tolerance reached, minimization completed in ',iter,' iterations.'
+!
+!!Call sum_energy(Edy,lat)
 
 write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell)
 
