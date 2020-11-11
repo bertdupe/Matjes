@@ -221,8 +221,8 @@ do j=1,duration
         if(mag_lattice%nmag>1) ERROR STOP "WILL NOT WORK FOR nmag>1"
         Mdy=sum(mag_lattice%M%modes_v,2)/real(N_cell) !works only for one M in unit cell
         dumy=get_charge(lat_1,Q_neigh)
-        q_plus=dumy(1)/pi(4.0d0)
-        q_moins=dumy(2)/pi(4.0d0)
+        q_plus=dumy(1)/pi/4.0d0
+        q_moins=dumy(2)/pi/4.0d0
         vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
         !write data files
         Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &

@@ -49,8 +49,8 @@ call get_parameter(io,fname,'I_0',I_0)
 call get_parameter(io,fname,'t_0',EM_Pulse%t_0)
 
 ! en fs-1
-!EM_Pulse%omega_l=pi(2.0d0)*c/lambda_l
-EM_Pulse%omega_l=pi(2.0d0)/lambda_l
+!EM_Pulse%omega_l=2.0d0*pi*c/lambda_l
+EM_Pulse%omega_l=2.0d0*pi/lambda_l
 
 if (EM_Pulse%t_start.lt.0) then
    write(6,'(a)') 't_start is negative or not read in input'

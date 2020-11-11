@@ -30,8 +30,8 @@
 !        E_av=E_mpi(i)/cell/steps
 !        E_err=sqrt(abs(E_sq_mpi(i)-E_mpi(i)**2/steps)/(steps-1.0d0))/dble(N_cell)
 !        M_err=sqrt(abs(M_sq_mpi(i)-norm(M(:,i))**2/steps)/(steps-1.0d0))/dble(N_cell)
-!        qp=qeulerp_mpi(i)/pi(4.0d0)/steps
-!        qm=qeulerm_mpi(i)/pi(4.0d0)/steps
+!        qp=qeulerp_mpi(i)/pi/4.0d0/steps
+!        qm=qeulerm_mpi(i)/pi/4.0d0/steps
 !        vortex=vortex_mpi(:,i)/3.0d0/sqrt(3.0d0)/steps
 !
 !        Write(7,'(15(E20.10E3,2x),E20.10E3)') kt_mpi(i)/k_B,E_av,E_err,C, &
@@ -68,8 +68,8 @@
         E_av=E_mpi(i)/cell/steps
         E_err=sqrt(abs(E_sq_mpi(i)-E_mpi(i)**2/steps)/(steps-1.0d0))/dble(N_cell)
         M_err=sqrt(abs(M_sq_mpi(i)-norm(M(:,i))**2/steps)/(steps-1.0d0))/dble(N_cell)
-        qp=qeulerp_mpi(i)/pi(4.0d0)/steps
-        qm=qeulerm_mpi(i)/pi(4.0d0)/steps
+        qp=qeulerp_mpi(i)/pi/4.0d0/steps
+        qm=qeulerm_mpi(i)/pi/4.0d0/steps
         vortex=vortex_mpi(:,i)/3.0d0/sqrt(3.0d0)/steps
 
         Write(7,'(15(E20.10E3,2x),E20.10E3)') kt_mpi(i)/k_B,E_av,E_err,C, &
@@ -107,8 +107,8 @@
         E_av=E_mpi(i)/cell/steps
         E_err=sqrt(abs(E_sq_mpi(i)-E_mpi(i)**2/steps)/(steps-1.0d0))/dble(N_cell)
         M_err=sqrt(abs(M_sq_mpi(i)-norm(M(:,i))**2/steps)/(steps-1.0d0))/dble(N_cell)
-        qp=qeulerp_mpi(i)/pi(4.0d0)/steps
-        qm=qeulerm_mpi(i)/pi(4.0d0)/steps
+        qp=qeulerp_mpi(i)/pi/4.0d0/steps
+        qm=qeulerm_mpi(i)/pi/4.0d0/steps
         vortex=vortex_mpi(:,i)/3.0d0/sqrt(3.0d0)/steps
 
         Write(7,'(15(E20.10E3,2x),E20.10E3)') kt_mpi(i)/k_B,E_av,E_err,C, &

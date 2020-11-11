@@ -73,7 +73,7 @@ if (angle<eps) then
       path(:,i)=path(:,i)/norm_local
    end do
 
-elseif (dabs(angle-pi(1.0d0))<eps) then
+elseif (dabs(angle-pi)<eps) then
       !   write(*,*) 'i am here!'
    pr = 0d0
    do j=1,dim_mode
@@ -92,7 +92,7 @@ elseif (dabs(angle-pi(1.0d0))<eps) then
    end do
    norm_local=norm(ax)
    ax=ax/norm_local
-   dtheta = pi(1.0d0)/real(nim-1)
+   dtheta = pi/real(nim-1)
    path(:,1) = ni(:)
    path(:,nim) = nf(:)
 

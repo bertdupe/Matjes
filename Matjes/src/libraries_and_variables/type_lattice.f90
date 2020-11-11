@@ -133,9 +133,10 @@ subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
 
     ! build up the reciprocal lattice vectors
     volume=dot_product(this%areal(1,:),cross(this%areal(2,:),this%areal(3,:)))
-    this%astar(1,:) = pi(2.0d0)*cross(this%areal(2,:),this%areal(3,:))/volume
-    this%astar(2,:) = pi(2.0d0)*cross(this%areal(3,:),this%areal(1,:))/volume
-    this%astar(3,:) = pi(2.0d0)*cross(this%areal(1,:),this%areal(2,:))/volume
+    this%astar(1,:) = cross(this%areal(2,:),this%areal(3,:))/volume
+    this%astar(2,:) = cross(this%areal(3,:),this%areal(1,:))/volume
+    this%astar(3,:) = cross(this%areal(1,:),this%areal(2,:))/volume
+    this%astar=2.0d0*pi*this%astar
    
     !write lattice information
     write(6,'(/a)') 'real space lattice vectors (in nm)'

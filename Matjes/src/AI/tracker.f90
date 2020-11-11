@@ -62,7 +62,7 @@ call get_topoplot(field)
 
 Q=get_charge()
 
-N_pat=abs( NINT((Q(1)+Q(2))/pi(4.0d0)) )
+N_pat=abs( NINT((Q(1)+Q(2))/pi/4.0d0) )
 
 write(6,'(a,2x,I3,2x,a)') 'first guess indicates', N_pat, 'patterns found'
 

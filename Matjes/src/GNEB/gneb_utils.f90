@@ -754,7 +754,7 @@ if (angle<eps) then
    tmp = dsqrt(tmp)
    nsp(:) = nsp(:)/tmp
                
-elseif (dabs(angle-pi(1.0d0))<eps) then
+elseif (dabs(angle-pi)<eps) then
 !write(*,*) 'i am here!'
          
    pr = 0.0d0
@@ -776,7 +776,7 @@ elseif (dabs(angle-pi(1.0d0))<eps) then
    norm_local=norm(ax)
    ax=ax/norm_local
          
-   theta = pi(1.0d0)*dl/(l2-l1)
+   theta = pi*dl/(l2-l1)
          
    nsp(1) = ni(1)*dcos(theta) + dsin(theta)*(ax(2)*ni(3)-ax(3)*ni(2))
    nsp(2) = ni(2)*dcos(theta) - dsin(theta)*(ax(1)*ni(3)-ax(3)*ni(1))

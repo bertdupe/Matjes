@@ -76,7 +76,7 @@ enddo
 
 if (max_B.gt.1.0d-8) then
    dumy_BT=dumy_BT/real(size_BT)
-   timestep=pi(2.0d0)*hbar/(max_B+dumy_BT)/discretization
+   timestep=2.0d0*pi*hbar/(max_B+dumy_BT)/discretization
 else
    stop 'error in update_time'
 endif
@@ -115,7 +115,7 @@ do i=1,size_B
 enddo
 
 if (max_B.gt.1.0d-8) then
-   timestep=pi(2.0d0)*hbar/max_B/discretization
+   timestep=2.0d0*pi*hbar/max_B/discretization
 else
    stop 'error in update_time'
 endif

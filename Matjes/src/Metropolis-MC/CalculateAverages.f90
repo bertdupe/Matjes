@@ -42,13 +42,13 @@ do i=1,size_table
      if (n_average.gt.1) M_err_av(:,i)=sqrt(abs(M_sq_sum_av(:,i)-M_sum_av(:,i)**2/Total_MC_Steps)/(Total_MC_Steps-1))/N_cell
      E_av(i)=E_sum_av(i)/Total_MC_Steps/N_cell
      M_av(:,i)=M_sum_av(:,i)/Total_MC_Steps/N_cell
-     qeulerp_av(i)=qeulerp_av(i)/Total_MC_Steps/pi(4.0d0)
-     qeulerm_av(i)=qeulerm_av(i)/Total_MC_Steps/pi(4.0d0)
-     chi_Q(1,i)=(Q_sq_sum_av(i)/Total_MC_Steps/pi(4.0d0)**2-(qeulerp_av(i)+qeulerm_av(i))**2)/kT(i)
-     chi_Q(2,i)=(Qp_sq_sum_av(i)/Total_MC_Steps/pi(4.0d0)**2-qeulerp_av(i)**2)/kT(i)
-     chi_Q(3,i)=(Qm_sq_sum_av(i)/Total_MC_Steps/pi(4.0d0)**2-qeulerm_av(i)**2)/kT(i)
-     chi_Q(4,i)=((-Qm_sq_sum_av(i)/Total_MC_Steps/pi(4.0d0)**2-qeulerm_av(i)**2)* &
-     &    (Qp_sq_sum_av(i)/Total_MC_Steps/pi(4.0d0)**2-qeulerp_av(i)**2))/kT(i)
+     qeulerp_av(i)=qeulerp_av(i)/Total_MC_Steps/pi/4.0d0
+     qeulerm_av(i)=qeulerm_av(i)/Total_MC_Steps/pi/4.0d0
+     chi_Q(1,i)= (Q_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-(qeulerp_av(i)+qeulerm_av(i))**2)/kT(i)
+     chi_Q(2,i)=(Qp_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-qeulerp_av(i)**2)/kT(i)
+     chi_Q(3,i)=(Qm_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-qeulerm_av(i)**2)/kT(i)
+     chi_Q(4,i)=((-Qm_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-qeulerm_av(i)**2)* &
+     &    (Qp_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-qeulerp_av(i)**2))/kT(i)
      vortex_av(:,i)=vortex_av(:,i)/Total_MC_Steps/3.0d0/sqrt(3.0d0)
      if (Cor_log) chi_l(:,i)=total_MC_steps
 enddo
@@ -85,13 +85,13 @@ if (n_average.gt.1) E_err_av=sqrt(abs(E_sq_sum_av-(E_sum_av)**2/Total_MC_Steps)/
 if (n_average.gt.1) M_err_av(:)=sqrt(abs(M_sq_sum_av(:)-M_sum_av(:)**2/Total_MC_Steps)/(Total_MC_Steps-1))/N_cell
 E_av=E_sum_av/Total_MC_Steps/N_cell
 M_av=M_sum_av(:)/Total_MC_Steps/N_cell
-qeulerp_av=qeulerp_av/Total_MC_Steps/pi(4.0d0)
-qeulerm_av=qeulerm_av/Total_MC_Steps/pi(4.0d0)
-chi_Q(1)=((qeulerp_av+qeulerm_av)**2-Q_sq_sum/Total_MC_Steps/pi(4.0d0)**2)/kT
-chi_Q(2)=(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/pi(4.0d0)**2)/kT
-chi_Q(3)=(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/pi(4.0d0)**2)/kT
-chi_Q(4)=((-Qm_sq_sum/Total_MC_Steps/pi(4.0d0)**2-qeulerm_av**2)* &
-     &   (Qm_sq_sum/Total_MC_Steps/pi(4.0d0)**2-qeulerp_av**2))/kT
+qeulerp_av=qeulerp_av/Total_MC_Steps/pi/4.0d0
+qeulerm_av=qeulerm_av/Total_MC_Steps/pi/4.0d0
+chi_Q(1)=((qeulerp_av+qeulerm_av)**2-Q_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
+chi_Q(2)=(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
+chi_Q(3)=(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
+chi_Q(4)=((-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerm_av**2)* &
+     &   (Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerp_av**2))/kT
 vortex_av(:)=vortex_av(:)/Total_MC_Steps/3.0d0/sqrt(3.0d0)
 if (Cor_log) chi_l(:)=total_MC_steps
 

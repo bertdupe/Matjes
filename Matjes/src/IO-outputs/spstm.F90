@@ -387,22 +387,22 @@
       write(78,*) '<0.0,0.0,-1.0>, 0.18'
 
         if (dabs(Spins(k,3)).lt.1.0d0) then
-          angly=acos(Spins(k,3))*180.0d0/pi(1.0d0)
+          angly=acos(Spins(k,3))*180.0d0/pi
         else
           angly=90.0d0-dsign(90.0d0,Spins(k,3))
         endif
 
         anglz=atan2(Spins(k,2),Spins(k,1))
-        anglz=anglz*180.0d0/pi(1.0d0)
+        anglz=anglz*180.0d0/pi
 
 !       Calcualting the color as a function of the angle in or
 !       out of the plane
-        phi_color=pi(angly/300.0d0*2.0d0)
-        Rc = 5.0d0*(cos(phi_color+0*PI(2.0d0/3.0d0)))
+        phi_color=pi*angly/300.0d0*2.0d0
+        Rc = 5.0d0*(cos(phi_color+0*PI*2.0d0/3.0d0))
         if (Rc.lt.0.000001d0)  Rc=0.0d0
-        Gc = 5.0d0*(cos(phi_color+1*PI(2.0d0/3.0d0)))
+        Gc = 5.0d0*(cos(phi_color+1*PI*2.0d0/3.0d0))
         if (Gc.lt.0.000001d0)  Gc=0.0d0
-        Bc = 5.0d0*(cos(phi_color+2*PI(2.0d0/3.0d0)))
+        Bc = 5.0d0*(cos(phi_color+2*PI*2.0d0/3.0d0))
         if (Bc.lt.0.000001d0)  Bc=0.0d0
 
       write(78,*) 'rotate   < 0.0 ,' ,angly, ' , 0.0 >'
@@ -574,7 +574,7 @@
        fieldx=3.0d0*vec_test(1)*(vec_test(1)*spins(k,1)+vec_test(2)*spins(k,2)+height*spins(k,3))-(r**2+height**2)*spins(k,1)
        fieldy=3.0d0*vec_test(2)*(vec_test(1)*spins(k,1)+vec_test(2)*spins(k,2)+height*spins(k,3))-(r**2+height**2)*spins(k,2)
        fieldz=3.0d0*height*(vec_test(1)*spins(k,1)+vec_test(2)*spins(k,2)+height*spins(k,3))-(r**2+height**2)*spins(k,3)
-       field(i,j)=field(i,j)+sqrt(fieldx**2+fieldy**2+fieldz**2)/pi(4.0d0)/vec_test_dist(n_count)**5
+       field(i,j)=field(i,j)+sqrt(fieldx**2+fieldy**2+fieldz**2)/pi/4.0d0/vec_test_dist(n_count)**5
            
       endif
      end do ! end loop n_raster

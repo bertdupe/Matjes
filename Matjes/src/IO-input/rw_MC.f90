@@ -19,7 +19,7 @@ integer :: io_input
 n_Tsteps=10
 n_sizerelax=1
 n_thousand=1000
-cone=pi(1.0d0)
+cone=pi
 restart_MC_steps=0
 i_restart=.False.
 ising=.False.

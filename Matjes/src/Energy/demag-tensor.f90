@@ -33,7 +33,7 @@
       demag_tensor(5)=r(2)*r(3)
       demag_tensor(6)=r(1)*r(3)
 
-      demag_tensor=3.0d0*alpha*demag_tensor/norm(r)**5/pi(4.0d0)
+      demag_tensor=3.0d0*alpha*demag_tensor/norm(r)**5/pi/4.0d0
 
       end function  demag_tensor
 

@@ -268,8 +268,8 @@
        M_err(n_kT)=dsqrt(dabs(allreduce(M_sq_sum,MPI_COMM)-norm(allreduce(M_sum,3,MPI_COMM))**2/MC_Steps)/(MC_Steps-1.0d0))/N_site
        E_av(n_kT)=allreduce(E_sum,MPI_COMM)/N_site/MC_Steps
        M(:,n_kT)=allreduce(M_sum,3,MPI_COMM)/N_site/MC_Steps
-       qeulerp_mpi(n_kT)=allreduce(qeulerp,MPI_COMM)/MC_Steps/pi(4.0d0)
-       qeulerm_mpi(n_kT)=allreduce(qeulerm,MPI_COMM)/MC_Steps/pi(4.0d0)
+       qeulerp_mpi(n_kT)=allreduce(qeulerp,MPI_COMM)/MC_Steps/pi/4.0d0
+       qeulerm_mpi(n_kT)=allreduce(qeulerm,MPI_COMM)/MC_Steps/pi/4.0d0
        vortex_mpi(:,n_kT)=allreduce(vortex,4,MPI_COMM)/MC_Steps/3.0d0/dsqrt(3.0d0)
        Im_mpi(n_kT,:)=allreduce(Im,dim_lat(3),MPI_COMM)/MC_Steps
        Qim_mpi(n_kT,:)=allreduce(Qim,dim_lat(3),MPI_COMM)/MC_Steps
@@ -280,8 +280,8 @@
        M_err(n_kT)=sqrt(abs(M_sq_sum-norm(M_sum)**2/MC_Steps)/(MC_Steps-1.0d0))/N_site
        E_av(n_kT)=E_sum/N_site/MC_Steps
        M(:,n_kT)=M_sum/N_site/MC_Steps
-       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi(4.0d0)
-       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi(4.0d0)
+       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi/4.0d0
+       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi/4.0d0
        vortex_mpi(:,n_kT)=vortex/MC_Steps/3.0d0/dsqrt(3.0d0)
        Im_mpi(n_kT,:)=Im/MC_Steps
        Qim_mpi(n_kT,:)=Qim/MC_Steps
@@ -293,8 +293,8 @@
        M_err(n_kT)=sqrt(abs(M_sq_sum-norm(M_sum)**2/MC_Steps)/(MC_Steps-1.0d0))/N_site
        E_av(n_kT)=E_sum/N_site/MC_Steps
        M(:,n_kT)=M_sum/N_site/MC_Steps
-       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi(4.0d0)
-       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi(4.0d0)
+       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi/4.0d0
+       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi/4.0d0
        vortex_mpi(:,n_kT)=vortex/MC_Steps/3.0d0/dsqrt(3.0d0)
        Im_mpi(n_kT,:)=Im/MC_Steps
        Qim_mpi(n_kT,:)=Qim/MC_Steps
@@ -307,7 +307,7 @@
        do i_y=1,dim_lat(2)
         do i_x=1,dim_lat(1)
         mapvort_mpi(i_x,i_y,i_z,:,n_kT)=map_vort(i_x,i_y,i_z,:)/MC_Steps/3.0d0/dsqrt(3.0d0)
-        mapeul_mpi(i_x,i_y,i_z,n_kT)=map_toto(i_x,i_y,i_z)/MC_Steps/pi(4.0d0)
+        mapeul_mpi(i_x,i_y,i_z,n_kT)=map_toto(i_x,i_y,i_z)/MC_Steps/pi/4.0d0
         enddo
        enddo
       enddo
@@ -348,8 +348,8 @@
       M_err=sqrt(dabs(allreduce(M_sq_sum,MPI_COMM)-norm(allreduce(M_sum,3,MPI_COMM))**2/MC_Steps)/(MC_Steps-1.0d0))
       E_av=allreduce(E_sum,MPI_COMM)/MC_Steps
       M(:)=allreduce(M_sum,3,MPI_COMM)/MC_Steps
-      qeulerp_mpi=allreduce(qeulerp,MPI_COMM)/MC_Steps/pi(4.0d0)
-      qeulerm_mpi=allreduce(qeulerm,MPI_COMM)/MC_Steps/pi(4.0d0)
+      qeulerp_mpi=allreduce(qeulerp,MPI_COMM)/MC_Steps/pi/4.0d0
+      qeulerm_mpi=allreduce(qeulerm,MPI_COMM)/MC_Steps/pi/4.0d0
       vortex_mpi(:)=allreduce(vortex,4,MPI_COMM)/MC_Steps/3.0d0/dsqrt(3.0d0)
       Im_mpi(:)=allreduce(Im,dim_lat(3),MPI_COMM)/MC_Steps
       Qim_mpi(:)=allreduce(Qim,dim_lat(3),MPI_COMM)/MC_Steps
@@ -396,8 +396,8 @@
        M_err(n_kT)=sqrt(dabs(allreduce(M_sq_sum,MPI_COMM)-norm(allreduce(M_sum,3,MPI_COMM))**2/MC_Steps)/(MC_Steps-1.0d0))/N_site
        E_av(n_kT)=allreduce(E_sum,MPI_COMM)/MC_Steps
        M(:,n_kT)=allreduce(M_sum,3,MPI_COMM)/MC_Steps
-       qeulerp_mpi(n_kT)=allreduce(qeulerp,MPI_COMM)/MC_Steps/pi(4.0d0)
-       qeulerm_mpi(n_kT)=allreduce(qeulerm,MPI_COMM)/MC_Steps/pi(4.0d0)
+       qeulerp_mpi(n_kT)=allreduce(qeulerp,MPI_COMM)/MC_Steps/pi/4.0d0
+       qeulerm_mpi(n_kT)=allreduce(qeulerm,MPI_COMM)/MC_Steps/pi/4.0d0
        vortex_mpi(:,n_kT)=allreduce(vortex,4,MPI_COMM)/MC_Steps/3.0d0/dsqrt(3.0d0)
        Im_mpi(n_kT,:)=allreduce(Im,dim_lat(3),MPI_COMM)/MC_Steps
        Qim_mpi(n_kT,:)=allreduce(Qim,dim_lat(3),MPI_COMM)/MC_Steps
@@ -408,8 +408,8 @@
        M_err(n_kT)=sqrt(dabs(M_sq_sum-norm(M_sum)**2/MC_Steps)/(MC_Steps-1.0d0))/N_site
        E_av(n_kT)=E_sum/MC_Steps
        M(:,n_kT)=M_sum/MC_Steps
-       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi(4.0d0)
-       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi(4.0d0)
+       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi/4.0d0
+       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi/4.0d0
        vortex_mpi(:,n_kT)=vortex/MC_Steps/3.0d0/dsqrt(3.0d0)
        Im_mpi(n_kT,:)=Im/MC_Steps
        Qim_mpi(n_kT,:)=Qim/MC_Steps
@@ -421,8 +421,8 @@
        M_err(n_kT)=sqrt(dabs(M_sq_sum-norm(M_sum)**2/MC_Steps)/(MC_Steps-1.0d0))/N_site
        E_av(n_kT)=E_sum/MC_Steps
        M(:,n_kT)=M_sum/MC_Steps
-       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi(4.0d0)
-       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi(4.0d0)
+       qeulerp_mpi(n_kT)=qeulerp/MC_Steps/pi/4.0d0
+       qeulerm_mpi(n_kT)=qeulerm/MC_Steps/pi/4.0d0
        vortex_mpi(:,n_kT)=vortex/MC_Steps/3.0d0/dsqrt(3.0d0)
        Im_mpi(n_kT,:)=Im/MC_Steps
        Qim_mpi(n_kT,:)=Qim/MC_Steps

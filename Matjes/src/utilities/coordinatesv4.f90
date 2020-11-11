@@ -79,7 +79,7 @@
                                Spins(1,i,j,k,i_m))
            else
              angle_Sum(2,i,j,k,i_m) = angle_Sum(2,i,j,k,i_m)+dATAN(Spins(2,i,j,k,i_m)/ &
-                               Spins(1,i,j,k,i_m))+pi(1.0d0)
+                               Spins(1,i,j,k,i_m))+pi
            endif
 
            enddo
@@ -145,14 +145,14 @@
            if (varx.gt.0.0d0) then
             angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+ATAN(vary/varx)
            else
-            angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+ATAN(vary/varx)+pi(1.0d0)
+            angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+ATAN(vary/varx)+pi
            endif
 
 !            if ((dSIGN(1.0d0,vary).LE.testnull).AND. &
 !             (dSIGN(1.0d0,-varx).LE.testnull)) then
-!              angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+ pi(2.0d0)+ATAN(vary/varx)
+!              angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+ pi*2.0d0+ATAN(vary/varx)
 !             elseif ( dSIGN(1.0d0,varx).LE.testnull) then
-!              angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+pi(1.0d0)-ATAN(vary/varx)
+!              angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+pi-ATAN(vary/varx)
 !             else
 !              angle_Sum(2,i,j,k,i_m)=angle_Sum(2,i,j,k,i_m)+ATAN(vary/varx)
 !            endif

@@ -26,7 +26,7 @@
 
       ss=dot_product(r(1,:),r(2,:))/norm(r(1,:))/norm(r(2,:))
 
-      order_zaxis=360/nint(180.0d0/pi(1.0d0)*dacos(ss))
+      order_zaxis=360/nint(180.0d0/pi*dacos(ss))
 
       order_zaxis=order_zaxis*int(dsign(1.0d0,datan(r(2,2)/r(1,1))))
 
@@ -77,7 +77,7 @@
       write(1,'(3(f10.7,3x))') 0.0d0,0.0d0,0.0d0
 
       if (mod(order_z_axis,3).eq.0) then
-       rot_ang=30.0d0/360.0d0*pi(2.0d0) 
+       rot_ang=30.0d0/360.0d0*pi*2.0d0 
        rotation=reshape((/dcos(rot_ang),-dsin(rot_ang),0.0d0,&
        dsin(rot_ang),dcos(rot_ang),0.0d0,&
        0.0d0,0.0d0,1.0d0/),(/3,3/))
@@ -86,7 +86,7 @@
        s=norm(v1)
        v1 = len_v1*v1/s
 
-       rot_ang=-60.0d0/360.0d0*pi(2.0d0)
+       rot_ang=-60.0d0/360.0d0*pi*2.0d0
        rotation=reshape((/dcos(rot_ang),-dsin(rot_ang),0.0d0,&
        dsin(rot_ang),dcos(rot_ang),0.0d0,&
        0.0d0,0.0d0,1.0d0/),(/3,3/))
@@ -328,8 +328,8 @@
       !dummy
       real(kind=8) :: c,s,an(3)
 
-      c=cos(-theta*pi(1.0d0)/180.0d0)
-      s=sin(-theta*pi(1.0d0)/180.0d0)
+      c=cos(-theta*pi/180.0d0)
+      s=sin(-theta*pi/180.0d0)
       an=dble(a)/norm(dble(a))
 
       rot_mat_I= &
@@ -349,8 +349,8 @@
       !dummy
       real(kind=8) :: c,s,an(3)
 
-      c=cos(theta*pi(1.0d0)/180.0d0)
-      s=sin(theta*pi(1.0d0)/180.0d0)
+      c=cos(theta*pi/180.0d0)
+      s=sin(theta*pi/180.0d0)
       an=a/norm(a)
 
       rot_mat_R= &
@@ -404,7 +404,7 @@
       i=0
 
       do while (i.lt.zorder)
-       rot_ang=dble(i)*pi(2.0d0)/dble(zorder)
+       rot_ang=dble(i)*pi*2.0d0/dble(zorder)
        rotation=reshape((/dcos(rot_ang),-dsin(rot_ang),0.0d0,&
         dsin(rot_ang),dcos(rot_ang),0.0d0,&
         0.0d0,0.0d0,1.0d0/),(/3,3/))
@@ -439,7 +439,7 @@
        i=0
 
        do while (i.lt.abs(zorder))
-        rot_ang=dble(i)*pi(2.0d0)/dble(zorder)
+        rot_ang=dble(i)*pi*2.0d0/dble(zorder)
         rotation=reshape((/dcos(rot_ang),-dsin(rot_ang),0.0d0,&
          dsin(rot_ang),dcos(rot_ang),0.0d0,&
          0.0d0,0.0d0,1.0d0/),(/3,3/))

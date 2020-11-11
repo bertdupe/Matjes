@@ -28,7 +28,7 @@
         normq=sqrt(map_qorien(1,i_x,i_y,i_z)**2+map_qorien(2,i_x,i_y,i_z)**2+map_qorien(3,i_x,i_y,i_z)**2)
         if (normq.lt.1.0d-7) normq=1.0d0
         Write(70,'(5(E20.10E3,2x))') acos(map_qorien(3,i_x,i_y,i_z)/normq),atan2(map_qorien(2,i_x,i_y,i_z),map_qorien(1,i_x,i_y,i_z)), &
-     &   (map_qorien(j,i_x,i_y,i_z)/pi(4.0d0),j=1,3)
+     &   (map_qorien(j,i_x,i_y,i_z)/pi/4.0d0,j=1,3)
 
          enddo
         enddo

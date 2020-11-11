@@ -40,7 +40,7 @@ integer :: iomp
 call choose_spin(iomp,N_spin)
 
 ! cone angle update and maximal magnetic moment change
-if ((rate.gt.0.5d0).and.(cone.lt.pi(1.0d0)))then
+if ((rate.gt.0.5d0).and.(cone.lt.pi))then
      cone=cone+0.0001d0
 elseif ((rate.lt.0.50d0).and.(cone.gt.0.01d0)) then
      cone=cone-0.0001d0

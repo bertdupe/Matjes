@@ -168,7 +168,7 @@ dummyvar=1.0d0
 
 !       widt = 2.0d0*R0/(pi*COSH(0.5d0*dummyvar))
 inflexparam = 2.0d0 *ACOSH( 0.5d0*SQRT(2.0d0+SQRT(6.0d0+2.0d0*COSH( 2.0d0*dummyvar ) ) ) )
-ThetaInflex = pi(1.0d0)-ASIN( TANH (Inflexparam-dummyvar))-ASIN( TANH (Inflexparam+dummyvar))
+ThetaInflex = pi-ASIN( TANH (Inflexparam-dummyvar))-ASIN( TANH (Inflexparam+dummyvar))
 DThetaInflex =  -(1.0d0/COSH(Inflexparam-dummyvar) + 1.0d0/COSH(Inflexparam+dummyvar))
 widt = 2.d0*R0/(Inflexparam-ThetaInflex/DThetaInflex)
 
@@ -195,7 +195,7 @@ If (R0.gt. 0.0d0) then
 
           If (dist.lt.(1.4d0*R0)) then
 
-             Theta = pi(1.0d0)-Asin( tanh( 2*(dist-cen)/widt ))- &
+             Theta = pi-Asin( tanh( 2*(dist-cen)/widt ))- &
                                Asin( tanh( 2*(dist+cen)/widt ))
 !             Phi   = ACOS( xpoint/dist )
 
@@ -206,10 +206,10 @@ If (R0.gt. 0.0d0) then
 ! Be careful. The Psi coordinate, as stated in Leonov's thesis, depends
 ! on the crystal symmetries.
 ! to write a skyrmion, x->-x i.e. a symmetry around the y axis
-             Psi = Phi(position(1:2,i_x,i_y,i_z,i_m),x0,y0,dim_lat,net)+pi(1.0d0)
+             Psi = Phi(position(1:2,i_x,i_y,i_z,i_m),x0,y0,dim_lat,net)+pi
 
-             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi(1.0d0))
-             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start+1) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi(1.0d0))
+             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi)
+             my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(start+1) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi)
              my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(end) = Cos(Theta)
 
            else
