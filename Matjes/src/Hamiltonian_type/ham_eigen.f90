@@ -49,6 +49,7 @@ subroutine mult_r(this,lat,res)
 
     Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
     Call eigen_H_mult_mat_vec(this%H,modes,res)
+    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
 
@@ -63,6 +64,7 @@ subroutine mult_l(this,lat,res)
 
     Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
     Call eigen_H_mult_vec_mat(this%H,modes,res)
+    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
 
@@ -183,10 +185,14 @@ subroutine eval_single(this,E,i_m,lat)
     integer     ::  ind
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
+    Call lat%point_order_single(this%op_r,i_m,this%dim_mode(2),modes_r,vec_r)
 
     ind=1+(i_m-1)*this%dim_mode(2)
-    Call eigen_H_eval_single(ind-1,this%dim_mode(2),modes_l,modes_r(ind:),this%H,E)
+    Call eigen_H_eval_single(ind-1,this%dim_mode(2),modes_l,modes_r,this%H,E)
+    
+    if(allocated(vec_l)) deallocate(vec_l)
+    if(allocated(vec_r)) deallocate(vec_r)
 end subroutine 
+
 #endif 
 end module

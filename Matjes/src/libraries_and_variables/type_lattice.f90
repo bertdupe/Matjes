@@ -72,10 +72,11 @@ contains
     procedure :: copy => copy_lattice
     procedure :: copy_val_to => copy_val_lattice
     !get correct order parameter (or combination thereof)
-    procedure :: set_order_point => set_order_point
+    procedure :: set_order_point
     procedure :: set_order_comb
     procedure :: set_order_comb_exc
     procedure :: point_order => point_order_onsite
+    procedure :: point_order_single => point_order_onsite_single
     !!reduce that order paramter again
     procedure :: reduce
     !real space position functions
@@ -306,6 +307,33 @@ subroutine set_order_point(this,order,point)
 
 end subroutine
 
+subroutine set_order_point_single(this,order,ilat,point)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: order,ilat
+    real(8),pointer,intent(out) :: point(:)
+
+    integer                     :: bnd(2),dim_mode
+
+    dim_mode=this%get_order_dim(order)
+    bnd(1)=dim_mode*(ilat-1)+1
+    bnd(2)=dim_mode*ilat
+    select case(order)
+    case(1)
+        point=>this%M%all_modes(bnd(1):bnd(2))
+    case(2)
+        point=>this%E%all_modes(bnd(1):bnd(2))
+    case(3)
+        point=>this%B%all_modes(bnd(1):bnd(2))
+    case(4)
+        point=>this%T%all_modes(bnd(1):bnd(2))
+    case default
+        write(*,*) 'order:',order
+        STOP 'failed to associate pointer in set_order_point'
+    end select
+
+end subroutine
+
+
 
 subroutine reduce(this,vec_in,order,order_keep,vec_out)
     class(lattice),intent(in)       ::  this
@@ -352,6 +380,50 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
 
 end subroutine
 
+
+
+subroutine set_order_comb_single(this,order,i_site,vec)
+    !fills the combination of several order parameters according to order
+    !probably quite slow implementation, but should at least work for any reasonable size of order
+    !I SHOULD CHECK HOW SLOW THIS IS
+    !vec should already be allocated to the size of the final vector ->product(dim_modes)
+    use m_user_info
+    class(lattice),intent(in)         ::  this
+    integer,intent(in)                ::  order(:),i_site
+    real(8),intent(inout)             ::  vec(:)
+
+    type(point_arr)         :: points(size(order))
+    integer                 :: dim_modes(size(order))
+    integer                 :: dim_mode_sum
+    integer                 :: i,i_entry,i_ord
+    integer                 :: ind_site(size(order))
+    integer                 :: ind(size(order))
+    integer                 :: ind_div(size(order))
+    integer                 :: entry_per_site
+    
+    do i=1,size(order)
+        Call this%set_order_point(order(i),points(i)%v)
+        dim_modes(i)=this%get_order_dim(order(i))
+    enddo
+    dim_mode_sum=product(dim_modes)
+    do i=1,size(order)
+        ind_div(i)=product(dim_modes(:i-1))
+    enddo
+    vec=1.0d0
+    entry_per_site=product(dim_modes)
+    ind_site=(i_site-1)*dim_modes
+    do i=1,entry_per_site
+        ind=(i-1)/ind_div
+        ind=modulo(ind,dim_modes)+1+ind_site
+        i_entry=i
+        do i_ord=1,size(order)
+            vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
+        enddo
+    enddo
+
+end subroutine
+
+
 subroutine set_order_comb(this,order,vec)
     !fills the combination of several order parameters according to order
     !probably quite slow implementation, but should at least work for any reasonable size of order
@@ -368,8 +440,8 @@ subroutine set_order_comb(this,order,vec)
     integer                 :: ind_site(size(order))
     integer                 :: ind(size(order))
     integer                 :: ind_div(size(order))
-
-
+    integer                 :: entry_per_site
+    
     do i=1,size(order)
         Call this%set_order_point(order(i),points(i)%v)
         dim_modes(i)=this%get_order_dim(order(i))
@@ -379,9 +451,10 @@ subroutine set_order_comb(this,order,vec)
         ind_div(i)=product(dim_modes(:i-1))
     enddo
     vec=1.0d0
+    entry_per_site=product(dim_modes)
     do i_site=1,this%ncell
         ind_site=(i_site-1)*dim_modes
-        do i=1,product(dim_modes)
+        do i=1,entry_per_site
             ind=(i-1)/ind_div
             ind=modulo(ind,dim_modes)+1+ind_site
             i_entry=i+(i_site-1)*dim_mode_sum
@@ -390,6 +463,7 @@ subroutine set_order_comb(this,order,vec)
             enddo
         enddo
     enddo
+
 end subroutine
 
 
@@ -441,7 +515,7 @@ subroutine point_order_onsite(lat,op,dimH,modes,vec)
     !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
     !, and points modes
     !This only works if the unfolded order paramters are only considered on the same site
-    class(lattice), intent(in)               :: lat
+    class(lattice), intent(in)              :: lat
     integer,intent(in)                      :: op(:)
     integer,intent(in)                      :: dimH
     real(8),pointer,intent(out)             :: modes(:)
@@ -455,6 +529,27 @@ subroutine point_order_onsite(lat,op,dimH,modes,vec)
         modes=>vec
     endif
 end subroutine
+
+subroutine point_order_onsite_single(lat,op,i_site,dim_mode,modes,vec)
+    !Subroutine that points modes to the order parameter vector according to op and dimH input
+    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
+    !, and points modes
+    !This only works if the unfolded order paramters are only considered on the same site
+    class(lattice), intent(in)              :: lat
+    integer,intent(in)                      :: op(:)
+    integer,intent(in)                      :: dim_mode,i_site
+    real(8),pointer,intent(out)             :: modes(:)
+    real(8),allocatable,target,intent(out)  :: vec(:)
+
+    if(size(op)==1)then
+        Call set_order_point_single(lat,op(1),i_site,modes)
+    else
+        allocate(vec(dim_mode),source=0.0d0)
+        Call set_order_comb_single(lat,op,i_site,vec)
+        modes=>vec
+    endif
+end subroutine
+
 
 
 

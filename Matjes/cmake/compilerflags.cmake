@@ -69,7 +69,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${compadd} ${com_deb_add}")
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
    message("g++ detected")
-   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")   #add here general lines
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")   #add here general lines
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 	if(${COMPOP} STREQUAL "check")
 		set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -Wall")
