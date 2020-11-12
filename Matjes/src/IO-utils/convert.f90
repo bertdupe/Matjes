@@ -112,6 +112,7 @@ integer :: l1,l2,l_tot,l3
 character(len=50) :: str3
 character(len=50) :: form
 
+
 l1=len_trim(str1)
 str3=real_to_str(x)
 l3=len_trim(str3)
@@ -123,7 +124,7 @@ if (l_tot.gt.50) then
    stop
 endif
 
-write(form,'(a,f10.5,a)') '(',l_tot,'a)'
+write(form,'(a,I6,a)') '(',l_tot,'a)'
 write(string_plus_real_plus_string_to_string,form) str1(1:l1),str3(1:l3),str2(1:l2)
 
 end function

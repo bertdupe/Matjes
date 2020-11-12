@@ -49,7 +49,7 @@ SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magn
     !         the step to an unordered structure
                 !Relaxation of the System
         Do i_MC=1,T_relax*N_cell
-           Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
+            Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
         enddo
         !In case T_relax set to zero at least one MCstep is done
         Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
@@ -59,9 +59,7 @@ SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magn
         qeulerp=dumy(1)
         qeulerm=dumy(2)
     
-    
     ! Write the Equilibrium files
-    
         if (print_relax) then
             if (mod(i_relaxation,n_w_step).eq.0) call store_relaxation(Relax,i_relaxation,dble(i_relaxation), &
                   &  sum(E)/dble(N_cell),E,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)

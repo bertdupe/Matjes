@@ -22,6 +22,8 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
+    !overriding mult_l/r_single for better efficiency
+    procedure :: mult_r_single,mult_l_single
 end type
 
 interface t_H_mkl_csr
@@ -49,6 +51,46 @@ subroutine mult_r(this,lat,res)
 
     Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
     Call eigen_H_mult_mat_vec(this%H,modes,res)
+    if(allocated(vec)) deallocate(vec)
+end subroutine 
+
+
+subroutine mult_r_single(this,i_site,lat,res)
+    !mult
+    use m_derived_types, only: lattice
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: i_site
+    type(lattice), intent(in)       :: lat
+    real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    ! internal
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+    integer                    :: bnd(2)
+
+    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
+    bnd(1)=this%dim_mode(1)*(i_site-1)
+    bnd(2)=this%dim_mode(1)*(i_site)-1
+    Call eigen_H_mult_mat_vec_single(this%H,bnd(1),bnd(2),modes,res)
+    if(allocated(vec)) deallocate(vec)
+end subroutine 
+
+
+subroutine mult_l_single(this,i_site,lat,res)
+    !mult
+    use m_derived_types, only: lattice
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: i_site
+    type(lattice), intent(in)       :: lat
+    real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    ! internal
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+    integer                    :: bnd(2)
+
+    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
+    bnd(1)=this%dim_mode(2)*(i_site-1)
+    bnd(2)=this%dim_mode(2)*(i_site)-1
+    Call eigen_H_mult_vec_mat_single(this%H,bnd(1),bnd(2),modes,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 

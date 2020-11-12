@@ -20,6 +20,7 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
+    procedure :: mult_r_single,mult_l_single
 end type
 
 private
@@ -60,6 +61,52 @@ subroutine mult_l(this,lat,res)
     if(allocated(vec)) deallocate(vec)
     
 end subroutine 
+
+
+subroutine mult_r_single(this,i_site,lat,res)
+    !mult
+    use m_derived_types, only: lattice
+    class(t_h_dense),intent(in) :: this
+    integer,intent(in)          :: i_site
+    type(lattice), intent(in)   :: lat
+    real(8), intent(inout)      :: res(:)   !result matrix-vector product
+    ! internal
+    integer                     :: bnd(2)
+    real(8),pointer             :: modes(:)
+    real(8),allocatable,target  :: vec(:)
+
+    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
+    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
+    bnd(1)=this%dim_mode(1)*(i_site-1)+1
+    bnd(2)=this%dim_mode(1)*(i_site)
+    !terrible implementation striding-wise
+    res=matmul(this%H(bnd(1):bnd(2),:),modes)
+
+    if(allocated(vec)) deallocate(vec)
+end subroutine 
+
+subroutine mult_l_single(this,i_site,lat,res)
+    !mult
+    use m_derived_types, only: lattice
+    class(t_h_dense),intent(in) :: this
+    integer,intent(in)          :: i_site
+    type(lattice), intent(in)   :: lat
+    real(8), intent(inout)      :: res(:)   !result matrix-vector product
+    ! internal
+    integer                     :: bnd(2)
+    real(8),pointer             :: modes(:)
+    real(8),allocatable,target  :: vec(:)
+
+    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
+    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
+    bnd(1)=this%dim_mode(2)*(i_site-1)+1
+    bnd(2)=this%dim_mode(2)*(i_site)
+    !terrible implementation striding-wise
+    res=matmul(modes,this%H(:,bnd(1):bnd(2)))
+
+    if(allocated(vec)) deallocate(vec)
+end subroutine 
+
 
 
 subroutine optimize(this)

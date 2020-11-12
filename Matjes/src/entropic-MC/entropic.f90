@@ -154,9 +154,9 @@ do i_loop=1,n_loop
 ! different relaxation process
 !---------------------------------
       if (underrel) then
-         S_new=underrelax(iomp,my_lattice)
+         S_new=underrelax(iomp,my_lattice,Hams)
       elseif (overrel) then
-         S_new=overrelax(iomp,my_lattice)
+         S_new=overrelax(iomp,my_lattice,Hams)
       endif
 
       if (ising) S_new=-mode_magnetic(iomp)%w

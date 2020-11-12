@@ -43,6 +43,40 @@ void eigen_H_mult_mat_vec(
     res= (**mat) * vec;
 }
 
+void eigen_H_mult_mat_vec_single(
+    SpMat **mat,
+    int bnd_min,
+    int bnd_max,
+    double vec_in[],
+    double vec_out[]){
+
+    int cols =(*mat)->cols();
+    int size_out = bnd_max-bnd_min+1;
+    Map<VectorXd> vec(vec_in,cols);
+    Map<VectorXd> res(vec_out,size_out);
+
+    res = ((*mat)->block(bnd_min,0,size_out,cols) * vec);
+}
+
+
+void eigen_H_mult_vec_mat_single(
+    SpMat **mat,
+    int bnd_min,
+    int bnd_max,
+    double vec_in[],
+    double vec_out[]){
+
+    int rows =(*mat)->rows();
+    int size_out = bnd_max-bnd_min+1;
+    Map<VectorXd> vec(vec_in,rows);
+    Map<VectorXd> res(vec_out,size_out);
+    // might be worth checking out if it is better to input vec as colvec instead
+
+    auto slice=(*mat)->block(0,bnd_min,rows,size_out);
+    res=slice.transpose() * vec ;
+}
+
+
 void eigen_H_mult_vec_mat(
     SpMat **mat,
     double vec_in[],

@@ -64,9 +64,9 @@ endif
 ! different relaxation process
 !---------------------------------
 if (underrel) then
-   S_new=underrelax(iomp,lat)
+   S_new=underrelax(iomp,lat,Hams)
 elseif (overrel) then
-   S_new=overrelax(iomp,lat)
+   S_new=overrelax(iomp,lat,Hams)
 endif
 if (ising) S_new=-lat%M%modes_v(:,iomp)
 
@@ -87,7 +87,6 @@ if(lat%nmag>1) ERROR STOP "THIS WILL NOT WORK WITH NMAG>1"
 lat%M%modes_v(:,iomp)=S_old
 !! variation of the energy for this step
 DE=E_new-E_old
-
 
 nb=nb+1.0d0
 if ( accept(kt,DE) ) then

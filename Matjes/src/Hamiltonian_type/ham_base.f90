@@ -20,9 +20,13 @@ contains
     procedure(int_mult),deferred            :: mult_r,mult_l !multipy out with left/right side
 
     !evaluation routines
-            !actually these could be overridable, but so far used to check no old implementation still has these wrongly
+        !actually these could be overridable, but so far used to check no old implementation still has these wrongly
     procedure ,NON_OVERRIDABLE              :: eval_all !evaluates energy of full lattice
     procedure ,NON_OVERRIDABLE              :: mult_r_red,mult_l_red !multiplied out left/right and reduces result to only one order-parameter
+    procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single
+
+        !should be implemented more efficiently, where possible
+    procedure                               :: mult_r_single,mult_l_single !multipy out with left/right side
 
     !really non_overridable
     procedure,NON_OVERRIDABLE               :: destroy
@@ -50,6 +54,15 @@ interface
     subroutine int_mult(this,lat,res)
         import t_H,lattice
         class(t_H),intent(in)     :: this
+        type(lattice),intent(in)  :: lat
+        real(8),intent(inout)     :: res(:)
+    end subroutine
+
+
+    subroutine int_mult_single(this,i_site,lat,res)
+        import t_H,lattice
+        class(t_H),intent(in)     :: this
+        integer,intent(in)        :: i_site
         type(lattice),intent(in)  :: lat
         real(8),intent(inout)     :: res(:)
     end subroutine
@@ -204,6 +217,52 @@ contains
         deallocate(tmp,vec)
     end subroutine 
 
+    subroutine mult_r_red_single(this,i_site,lat,res,op_keep)
+        !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
+        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
+        use m_derived_types, only: lattice
+        class(t_H),intent(in)           :: this
+        type(lattice), intent(in)       :: lat
+        integer,intent(in)              :: i_site
+        real(8), intent(inout)          :: res(:)   !result matrix-vector product
+        integer,intent(in)              :: op_keep
+        ! internal
+        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+        real(8),pointer                 :: modes(:)
+        real(8),allocatable,target      :: vec(:)
+    
+        allocate(tmp(this%dim_mode(1)))
+        Call this%mult_r_single(i_site,lat,tmp)
+        allocate(vec(this%dim_mode(1)),source=0.0d0)
+        Call lat%set_order_comb_exc_single(i_site,this%op_l,vec,this%op_l==op_keep)
+        tmp=tmp*vec
+        Call lat%reduce_single(i_site,tmp,this%op_l,op_keep,res)
+        deallocate(tmp,vec)
+    end subroutine 
+    
+    subroutine mult_l_red_single(this,i_site,lat,res,op_keep)
+        !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
+        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
+        use m_derived_types, only: lattice
+        class(t_H),intent(in)           :: this
+        integer,intent(in)              :: i_site
+        type(lattice), intent(in)       :: lat
+        real(8), intent(inout)          :: res(:)   !result matrix-vector product
+        integer,intent(in)              :: op_keep
+        ! internal
+        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+        real(8),allocatable,target      :: vec(:)
+    
+        allocate(tmp(this%dim_mode(2)))
+        Call this%mult_l_single(i_site,lat,tmp)
+        allocate(vec(this%dim_mode(2)),source=0.0d0)
+        Call lat%set_order_comb_exc_single(i_site,this%op_r,vec,this%op_r==op_keep)
+        tmp=tmp*vec
+        Call lat%reduce_single(i_site,tmp,this%op_r,op_keep,res)
+        deallocate(tmp,vec)
+    end subroutine 
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!                    BASE ROUTINES                                !!!!!!!!!!!
@@ -288,6 +347,37 @@ contains
 
         this%set=l
     end subroutine
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!        ROUTINES THAT SHOULD BE IMPLEMENTED MORE EFFICIENTLY    !!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine mult_l_single(this,i_site,lat,res)
+    use m_derived_types, only: lattice
+    class(t_H),intent(in)        :: this
+    integer,intent(in)           :: i_site
+    type(lattice),intent(in)     :: lat
+    real(8),intent(inout)        :: res(:)
+
+    real(8)                      :: tmp(this%dimH(2))
+
+    Call this%mult_l(lat,tmp)
+    res=tmp((i_site-1)*this%dim_mode(1)+1:i_site*this%dim_mode(1))
+
+end subroutine
+
+subroutine mult_r_single(this,i_site,lat,res)
+    use m_derived_types, only: lattice
+    class(t_H),intent(in)        :: this
+    integer,intent(in)           :: i_site
+    type(lattice),intent(in)     :: lat
+    real(8),intent(inout)        :: res(:)
+
+    real(8)                      :: tmp(this%dimH(1))
+
+    Call this%mult_r(lat,tmp)
+    res=tmp((i_site-1)*this%dim_mode(2)+1:i_site*this%dim_mode(2))
+end subroutine
 
 
 end module

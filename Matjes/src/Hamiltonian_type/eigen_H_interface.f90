@@ -18,10 +18,26 @@ module m_eigen_H_interface
            real( kind = c_double ),intent(in)      :: vec_in(*)
            real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
+
+        subroutine eigen_H_mult_mat_vec_single(mat,bnd_min,bnd_max,vec_in,vec_out) bind( c, name="eigen_H_mult_mat_vec_single" )
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: mat
+           integer(c_int),value                    :: bnd_min,bnd_max               
+           real( kind = c_double ),intent(in)      :: vec_in(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
+        end subroutine
         
         subroutine eigen_H_mult_vec_mat(mat,vec_in,vec_out) bind( c, name="eigen_H_mult_vec_mat" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(in)                  :: mat
+           real( kind = c_double ),intent(in)      :: vec_in(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
+        end subroutine
+
+        subroutine eigen_H_mult_vec_mat_single(mat,bnd_min,bnd_max,vec_in,vec_out) bind( c, name="eigen_H_mult_vec_mat_single" )
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: mat
+           integer(c_int),value                    :: bnd_min,bnd_max               
            real( kind = c_double ),intent(in)      :: vec_in(*)
            real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
