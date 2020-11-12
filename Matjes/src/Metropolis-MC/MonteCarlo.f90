@@ -107,9 +107,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     Call neighbor_Q(my_lattice,Q_neigh)
-    
     E_total=energy_all(Hams,my_lattice)
-    
     call CalculateAverages(my_lattice,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
     
     ! Measured data
@@ -144,7 +142,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     
     
     write(6,'(/a)') 'Initialization done'
-    write(6,'(2(a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', qeulerp+qeulerm
+    write(6,'((a,3x,f14.5,a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', (qeulerp+qeulerm)/pi*0.25d0
     write(6,'(a/)') '---------------------'
     
     Do n_kT=1,n_Tsteps
@@ -160,12 +158,6 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
            End do
            Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
     
-    ! Calculate the topological charge and the vorticity
-           dumy=get_charge(my_lattice,Q_neigh)
-           qeulerp_av(n_kT)=qeulerp_av(n_kT)+dumy(1)
-           qeulerm_av(n_kT)=qeulerm_av(n_kT)+dumy(2)
-           vortex_av(:,n_kT)=vortex_av(:,n_kT)+dumy(3:5)
-    !PB: this seems stupid, CalcuateAverage also calls get_charge... TODO understand
     ! CalculateAverages makes the averages from the sums
            Call CalculateAverages(my_lattice,Q_neigh,qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
                     &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),E_total,Magnetization)

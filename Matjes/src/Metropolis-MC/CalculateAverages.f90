@@ -61,39 +61,39 @@ subroutine Calculate_thermo_serial(Cor_log,n_average, &
     &    C,chi_M,E_av,E_err_av,M_err_av,qeulerp_av,qeulerm_av,vortex_av,Q_sq_sum,Qp_sq_sum,Qm_sq_sum, &
     &    chi_Q,chi_l, &
     &    M_sum_av,M_av)
-use m_constants, only : pi
-Implicit none
-logical, intent(in) :: Cor_log
-integer, intent(in) :: n_average
-real(kind=8), intent(in) :: N_cell,kT,E_sq_sum_av,E_sum_av,M_sq_sum_av(:),M_sum_av(:),Q_sq_sum,Qp_sq_sum,Qm_sq_sum
-real(kind=8), intent(out) :: C,chi_M(:),E_av,chi_l(:),E_err_av,M_err_av(:),chi_Q(:),M_av(:)
-real(kind=8), intent(inout) :: qeulerp_av,qeulerm_av,vortex_av(:)
-! internal variables
-real(kind=8) :: Total_MC_Steps
-! components of teh spins
-
-chi_l=0.0d0
-E_err_av=0.0d0
-M_err_av=0.0d0
-Total_MC_Steps=dble(n_average)
-chi_Q=0.0d0
-
-!      If compiled serial!
-C=(E_sq_sum_av/Total_MC_Steps-(E_sum_av/(Total_MC_Steps))**2)/kT**2/N_cell
-chi_M=(M_sq_sum_av(:)/Total_MC_Steps-(M_sum_av(:)/Total_MC_Steps)**2)/kT/N_cell
-if (n_average.gt.1) E_err_av=sqrt(abs(E_sq_sum_av-(E_sum_av)**2/Total_MC_Steps)/(Total_MC_Steps-1))/N_cell
-if (n_average.gt.1) M_err_av(:)=sqrt(abs(M_sq_sum_av(:)-M_sum_av(:)**2/Total_MC_Steps)/(Total_MC_Steps-1))/N_cell
-E_av=E_sum_av/Total_MC_Steps/N_cell
-M_av=M_sum_av(:)/Total_MC_Steps/N_cell
-qeulerp_av=qeulerp_av/Total_MC_Steps/pi/4.0d0
-qeulerm_av=qeulerm_av/Total_MC_Steps/pi/4.0d0
-chi_Q(1)=((qeulerp_av+qeulerm_av)**2-Q_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
-chi_Q(2)=(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
-chi_Q(3)=(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
-chi_Q(4)=((-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerm_av**2)* &
-     &   (Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerp_av**2))/kT
-vortex_av(:)=vortex_av(:)/Total_MC_Steps/3.0d0/sqrt(3.0d0)
-if (Cor_log) chi_l(:)=total_MC_steps
+    use m_constants, only : pi
+    Implicit none
+    logical, intent(in) :: Cor_log
+    integer, intent(in) :: n_average
+    real(kind=8), intent(in) :: N_cell,kT,E_sq_sum_av,E_sum_av,M_sq_sum_av(:),M_sum_av(:),Q_sq_sum,Qp_sq_sum,Qm_sq_sum
+    real(kind=8), intent(out) :: C,chi_M(:),E_av,chi_l(:),E_err_av,M_err_av(:),chi_Q(:),M_av(:)
+    real(kind=8), intent(inout) :: qeulerp_av,qeulerm_av,vortex_av(:)
+    ! internal variables
+    real(kind=8) :: Total_MC_Steps
+    ! components of teh spins
+    
+    chi_l=0.0d0
+    E_err_av=0.0d0
+    M_err_av=0.0d0
+    Total_MC_Steps=dble(n_average)
+    chi_Q=0.0d0
+    
+    !      If compiled serial!
+    C=(E_sq_sum_av/Total_MC_Steps-(E_sum_av/(Total_MC_Steps))**2)/kT**2/N_cell
+    chi_M=(M_sq_sum_av(:)/Total_MC_Steps-(M_sum_av(:)/Total_MC_Steps)**2)/kT/N_cell
+    if (n_average.gt.1) E_err_av=sqrt(abs(E_sq_sum_av-(E_sum_av)**2/Total_MC_Steps)/(Total_MC_Steps-1))/N_cell
+    if (n_average.gt.1) M_err_av(:)=sqrt(abs(M_sq_sum_av(:)-M_sum_av(:)**2/Total_MC_Steps)/(Total_MC_Steps-1))/N_cell
+    E_av=E_sum_av/Total_MC_Steps/N_cell
+    M_av=M_sum_av(:)/Total_MC_Steps/N_cell
+    qeulerp_av=qeulerp_av/Total_MC_Steps/pi/4.0d0
+    qeulerm_av=qeulerm_av/Total_MC_Steps/pi/4.0d0
+    chi_Q(1)=((qeulerp_av+qeulerm_av)**2-Q_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
+    chi_Q(2)=(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
+    chi_Q(3)=(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
+    chi_Q(4)=((-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerm_av**2)* &
+         &   (Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerp_av**2))/kT
+    vortex_av(:)=vortex_av(:)/Total_MC_Steps/3.0d0/sqrt(3.0d0)
+    if (Cor_log) chi_l(:)=total_MC_steps
 
 END subroutine Calculate_thermo_serial
 
