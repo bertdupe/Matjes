@@ -19,12 +19,12 @@ subroutine read_anisotropy_input(io_param,fname,io)
         io%is_set=.false.
         return
     endif
-    io%is_set=.true.
     allocate(io%val(3*max_entry),source=0.0d0)
     call get_coeff(io_param,fname,'ani_',io%val,3)
     const_mult=1.0d0
     call get_parameter(io_param,fname,'c_ani',const_mult)
     io%val=io%val*const_mult
+    io%is_set=maxval(abs(io%val))/=0.0d0
 end subroutine
 
 subroutine get_anisotropy_H(Ham,io,lat)
