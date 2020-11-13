@@ -3,7 +3,7 @@ module m_forces
 contains
 
 subroutine forces(tag,field,N_dim,r)
-use m_eval_Beff
+!use m_eval_Beff
 use m_basic_types, only : vec_point
 use m_modes_variables, only : point_shell_mode
 use m_derivative, only : calculate_derivative
@@ -39,7 +39,8 @@ do iomp=1,N_cell
    dmdr=0.0d0
    dmdr_int=0.0d0
    B=0.0d0
-   call calculate_Beff(B,iomp,field,N_dim)
+!   call calculate_Beff(B,iomp,field,N_dim)
+    ERROR STOP "FORCES HAS TO UPDATE CALCULATE_BEFF"
    call calculate_derivative(dmdr_int,iomp)
 !
 ! dmdr_int(:,1) is the derivative along the first unit vector

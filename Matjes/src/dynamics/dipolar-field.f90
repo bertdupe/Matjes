@@ -1,4 +1,5 @@
 module m_dipolar_field
+#if 0 
 use m_derived_types, only : vec_point
 use m_fftw
 
@@ -332,5 +333,5 @@ call dissociate(all_mode,N)
 
 end subroutine get_ham_dipole
 
-
+#endif
 end module m_dipolar_field

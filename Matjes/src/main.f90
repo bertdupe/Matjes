@@ -36,7 +36,7 @@ type(t_cell) :: motif
 ! external parameter
 type(simulation_parameters) :: ext_param
 ! Hamiltonian used (extend to array with different basis + higher ranks)
-class(t_H),allocatable      :: Ham(:)
+class(t_H),allocatable      :: Ham_res(:), Ham_comb(:)
 ! tag that defines the system
       integer :: n_system
       Integer :: N_cell
@@ -71,7 +71,7 @@ call get_parameter(io_param,'input',my_simu)
 call close_file('input',io_param)
 
 ! read the input and prepare the lattices, the Hamitlonian and all this mess
-call setup_simu(io_simu,all_lattices,motif,ext_param,Ham)
+call setup_simu(io_simu,all_lattices,motif,ext_param,Ham_res,Ham_comb)
 !call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param)
 
 ! number of cell in the simulation
@@ -109,7 +109,7 @@ Call write_config('start',all_lattices)
 !---------------------------------
 
 if (my_simu%name == 'metropolis')then
-    call MonteCarlo(all_lattices,io_simu,ext_param,Ham)
+    call MonteCarlo(all_lattices,io_simu,ext_param,Ham_comb)
 endif
 
 !---------------------------------
@@ -117,7 +117,7 @@ endif
 !    Loop for Spin dynamics
 !---------------------------------
 
-if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,io_simu,ext_param,Ham)
+if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,io_simu,ext_param,Ham_comb)
 
 !---------------------------------
 !  Part which does Entropic Sampling

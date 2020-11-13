@@ -1,4 +1,5 @@
 module m_internal_fields_commons
+#if 0
 use m_basic_types, only : vec_point
 use m_derived_types, only : operator_real_order_N,point_shell_Operator
 use m_Hamiltonian_variables, only : shell_Ham,H_vois
@@ -130,4 +131,5 @@ enddo
 
 end subroutine associate_internal_Beff
 
+#endif
 end module m_internal_fields_commons

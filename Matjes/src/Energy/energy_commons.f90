@@ -1,4 +1,5 @@
 module m_energy_commons
+#if 0
 use m_basic_types, only : vec_point
 use m_modes_variables, only : point_shell_mode
 use m_derived_types, only : operator_real_order_N,point_shell_Operator,point_shell_Operator
@@ -58,10 +59,6 @@ integer, intent(in) :: dim_Ham
 integer :: number_hamiltonian,n_shell,i
 
 number_hamiltonian=0
-
-! get the Heisenberg Hamiltonian
-!call get_total_Heisenberg_Ham(fname,dim_ham,Ms)
-!if (ham_tot_heisenberg%i_exist) number_hamiltonian=number_hamiltonian+1
 
 ! get the Hamiltonian for the summerfeld expansion
 call get_Temperature_H(dim_ham)
@@ -467,13 +464,6 @@ end subroutine rw_hamiltonian
 
 
 
-
-
-
-
-
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! prepare the Hamiltonian matrix and the pointers for the matrix Hamiltonian static association
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -499,5 +489,5 @@ energy%line=0
 call associate_pointer(energy,total_hamiltonian,my_lattice,tableNN,indexNN)
 
 end subroutine associate_energy_Hamiltonian
-
+#endif
 end module m_energy_commons

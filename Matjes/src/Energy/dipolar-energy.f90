@@ -1,4 +1,5 @@
 module m_dipole_energy
+#if 0
 use m_dipolar_field
 !
 ! contains all the routines to calculate the dipole dipole energy interaction
@@ -36,5 +37,5 @@ call get_dipole_B(B,iomp)
 get_dipole_E=-dot_product(mode_dipole(iomp)%w,B)/2.0d0
 
 end function get_dipole_E
-
+#endif
 end module m_dipole_energy

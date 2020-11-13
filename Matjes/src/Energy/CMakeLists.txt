@@ -11,6 +11,7 @@ src/Energy/exchange_Heisenberg_J.f90
 src/Energy/exchange_Heisenberg_D.f90
 src/Energy/exchange_tight_binding.f90
 src/Energy/setH_util.f90
+src/Energy/set_Hamiltonians.f90
 src/Energy/summerfeld_exp.f90
 src/Energy/total_Heisenberg_Ham.f90
 src/Energy/zeeman.f90

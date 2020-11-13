@@ -1,4 +1,5 @@
 module m_energyfield
+#if 0
 use m_basic_types, only : vec_point, site_ham
 use m_derived_types, only : operator_real_order_N,lattice,Op_real_order_N,point_shell_Operator
 use m_modes_variables, only : point_shell_mode
@@ -201,5 +202,5 @@ enddo
 call close_file(fname,io)
 
 end subroutine get_Energy_distrib
-
+#endif
 end module

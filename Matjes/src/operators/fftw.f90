@@ -1,23 +1,25 @@
 module m_fftw
 
-    ! kmesh in internal units
+!    ! kmesh in internal units
     integer, protected, public :: N_kpoint(3)
     real(kind=8), protected, public, allocatable :: kmesh(:,:)
 
-    ! FFT of the dipolar martix D(r)
-    complex(kind=8), allocatable, protected, public :: FFT_pos_D(:,:,:)
-
-    interface calculate_fft
-      module procedure calculate_fft_vec_point,calculate_FFT_matrix
-    end interface
-
-    interface get_FFT
-      module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix,get_E_k_local, Fourier_transform_H,Fourier_H_at_k
-    end interface
+!    ! FFT of the dipolar martix D(r)
+!    complex(kind=8), allocatable, protected, public :: FFT_pos_D(:,:,:)
+!
+!    interface calculate_fft
+!      module procedure calculate_fft_vec_point,calculate_FFT_matrix
+!    end interface
+!
+!    interface get_FFT
+!      module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix,get_E_k_local, Fourier_transform_H,Fourier_H_at_k
+!    end interface
 
     private
-    public :: set_k_mesh,calculate_fft,calculate_FFT_Dr,get_FFT, Fourier_H_at_k
+    public :: set_k_mesh
+!    public :: calculate_fft,calculate_FFT_Dr,get_FFT, Fourier_H_at_k
     contains
+#if 0
 #ifdef CPP_FFTW
         !!!!!!!!!!!!!!!!!!!!!!
         ! FFT dipole
@@ -348,6 +350,7 @@ module m_fftw
 
 
 
+#endif
 
         ! Get the mesh for the Fourrier transform
         subroutine set_k_mesh(fname,my_lattice)
@@ -414,5 +417,4 @@ module m_fftw
                 kmesh(:,iomp)=matmul(kmesh(:,iomp),my_lattice%astar)
             enddo
         end subroutine set_k_mesh
-
 end module m_fftw

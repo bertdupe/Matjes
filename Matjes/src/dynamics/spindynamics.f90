@@ -12,7 +12,7 @@ use m_randist
 use m_constants, only : pi,k_b,hbar
 use m_eval_Beff
 use m_write_spin
-use m_energyfield, only : get_Energy_distrib
+!use m_energyfield, only : get_Energy_distrib
 use m_createspinfile
 use m_dyna_utils
 use m_user_info
@@ -246,7 +246,8 @@ do j=1,duration
         if (io_simu%io_Beff) call print_Beff(j/gra_freq,Beff_v)
     
         if (io_simu%io_Energy_Distrib) &
-           &  call get_Energy_distrib(j/gra_freq,mag_lattice%ordpar%all_l_modes) !CHANGE!!!
+            ERROR STOP "ENERGY DISTRIBUTION MUST BE REIMPLEMENTED"
+!           &  call get_Energy_distrib(j/gra_freq,mag_lattice%ordpar%all_l_modes) !CHANGE!!!
     
         if(gra_log) then
             call CreateSpinFile(j/gra_freq,mag_lattice%M%all_l_modes)
@@ -258,7 +259,8 @@ do j=1,duration
     
         if (io_simu%io_Force) call forces(j/gra_freq,lat_1%ordpar%all_l_modes,mag_lattice%dim_mode,mag_lattice%areal)
     
-        if(io_simu%io_fft_Xstruct) call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%periodic,mag_lattice%dim_mode,j/gra_freq)
+        if(io_simu%io_fft_Xstruct) &!call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%periodic,mag_lattice%dim_mode,j/gra_freq)
+            & ERROR STOP "PLOT FFT HAS TO BE REIMPLEMENTED"
     endif
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!

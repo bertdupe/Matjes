@@ -1,4 +1,6 @@
 module m_eval_Beff
+#if 0
+!old method to calculate Beff with old Hamiltonian
 use m_dipolar_field, only : i_dip,get_dipole_B
 use m_internal_fields_commons, only : B_total
 ! the version norm of the calculation of Beff is 90% of the running time. Really too slow
@@ -349,5 +351,5 @@ subroutine energy_B(Bini,dimmode,Ncell,mode)
 end subroutine
 #endif
 
-
+#endif
 end module m_eval_Beff

@@ -1,5 +1,4 @@
 module m_energy_set_real_sc
-use m_energy_commons, only : energy
 use m_derived_types, only: lattice
 use m_tb_types
 use m_energy_set_real, only: set_Hr_dense_nc

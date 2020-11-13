@@ -1,4 +1,5 @@
 module m_plot_FFT
+#if 0
 
 interface plot
   module procedure plot_2D,plot_3D
@@ -131,5 +132,5 @@ enddo
 
 call close_file(fname,io_out)
 end subroutine plot_3D
-
+#endif
 end module m_plot_FFT
