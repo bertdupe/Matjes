@@ -1,60 +1,49 @@
-module m_couplage_ME
-use m_input_H_types, only: io_H_ME
+module m_coupling_ME_D
+use m_input_H_types, only: io_H_ME_D
 use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 implicit none
 
 private
-public :: get_coupling_ME, read_ME_input
+public :: get_coupling_ME_D, read_ME_D_input
 
 contains
 
-subroutine read_ME_input(io_param,fname,io)
+subroutine read_ME_D_input(io_param,fname,io)
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
-    type(io_H_ME),intent(out)       :: io
+    type(io_H_ME_D),intent(out)     :: io
     !internal
-    integer :: neighbor_sym,neighbor_asym
-    real(8) :: c_ham
+    integer :: max_entry
+    real(8) :: const_mult
 
-    neighbor_sym=0
-    neighbor_asym=0
-    c_ham=-1.0d0 !minus one to be consistent with older version
-    call get_parameter(io_param,fname,'c_ME',c_ham)
-
-    neighbor_sym=max_ind_variable(io_param,'ME_sym_',fname)
-    if (neighbor_sym.ne.0) then
-       allocate(io%sym(neighbor_sym),source=0.0d0)
-       call get_coeff(io_param,fname,'ME_sym_',io%sym)
-       neighbor_sym=number_nonzero_coeff(io%sym,'ME_sym')
-       io%sym=c_ham*io%sym
+    max_entry=max_ind_variable(io_param,'ME_antisym_',fname)
+    if (max_entry==0) then
+        io%is_set=.false.
+        return
     endif
-    
-    neighbor_asym=max_ind_variable(io_param,'ME_antisym_',fname)
-    if (neighbor_asym.ne.0) then
-       allocate(io%asym(neighbor_asym),source=0.0d0)
-       call get_coeff(io_param,fname,'ME_antisym_',io%asym)
-       neighbor_asym=number_nonzero_coeff(io%asym,'ME_antisym')
-       io%asym=c_ham*io%asym
-    endif
-    
-    io%is_set=max(neighbor_sym,neighbor_asym)/=0
+    allocate(io%val(max_entry),source=0.0d0)
+    call get_coeff(io_param,fname,'ME_antisym_',io%val)
+    const_mult=-1.0d0 !minus one to be consistent with older version
+    call get_parameter(io_param,fname,'c_ME',const_mult)
+    io%val=const_mult*io%val
+    io%is_set=maxval(abs(io%val))/=0.0d0
 end subroutine
 
-subroutine get_coupling_ME(Ham,io,tableNN,indexNN,lat)
+subroutine get_coupling_ME_D(Ham,io,tableNN,indexNN,lat)
     !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
     use m_setH_util,only: get_coo
 
     class(t_H),intent(inout)    :: Ham
-    type(io_H_ME),intent(in)    :: io
+    type(io_H_ME_D),intent(in)    :: io
     integer,intent(in)          :: tableNN(:,:,:,:,:,:) !!tableNN(5,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
     integer,intent(in)          :: indexNN(:)
     type(lattice),intent(in)    :: lat
 
     !local parameters
     !ME_parameters
-    real(8), allocatable :: sym(:),asym(:)
+    real(8), allocatable :: D(:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)
@@ -78,9 +67,10 @@ subroutine get_coupling_ME(Ham,io,tableNN,indexNN,lat)
     integer :: i_x,i_y,i_z
 
     if(io%is_set)then
+        if(lat%E%dim_mode==0) STOP "E-field has to be set when using coupling_ME"
         Call get_Htype(Ham_tmp)
-        sym=io%sym;asym=io%asym
-        Nshell=max(size(sym),size(asym))
+        D=io%val
+        Nshell=size(D)
         Ncell=product(lat%dim_lat)
         shape_tableNN=shape(tableNN)
         if(shape_tableNN(6)/=1) STOP "implement several mag atoms for ME-coupling"
@@ -90,10 +80,7 @@ subroutine get_coupling_ME(Ham,io,tableNN,indexNN,lat)
         allocate(connect(2,Ncell),source=0) ! at most Ncell connections for each neighbor
 
         do i_sh=1,Nshell
-            l_sym=.False.;l_asym=.False.
-            if(i_sh<=size( sym)) l_sym = sym(i_sh)/=0.0d0
-            if(i_sh<=size(asym)) l_asym=asym(i_sh)/=0.0d0
-            if(.not.(l_sym.or.l_asym)) cycle
+            if(D(i_sh)==0.0d0) cycle
             
             Nvois=indexNN(i_sh)
             offset=sum(indexNN(1:i_sh-1))
@@ -107,32 +94,24 @@ subroutine get_coupling_ME(Ham,io,tableNN,indexNN,lat)
                 !explicitly assuming M only has dim_mode 3
                 !fast index is M for second index of Htmp
                 Htmp=0.0d0
-                if(l_sym)then 
-                    Htmp(1,1)=sym(i_sh)     ! Mi_x Mj_x E_x
-                    Htmp(2,5)=sym(i_sh)     ! Mi_y Mj_y E_y
-                    Htmp(3,9)=sym(i_sh)     ! Mi_z Mj_z E_z
-                endif
-                if(l_asym)then
-                    !use lagrange identity to write as
-                    !(mi.Ei)(mj.r)-(mj.Ei)(mi.r)
+                !use lagrange identity to write as
+                !(mi.Ei)(mj.r)-(mj.Ei)(mi.r)
 
-                    !better with function resolving Mi*E
-                    !drop index of E in comment
-                    Htmp(2,1)= asym(i_sh)*diff_pos(2)    ! Mi_x Mj_y E_x r_y
-                    Htmp(3,1)= asym(i_sh)*diff_pos(3)    ! Mi_x Mj_z E_x r_z
-                    Htmp(1,5)= asym(i_sh)*diff_pos(1)    ! Mi_y Mj_x E_y r_x
-                    Htmp(3,5)= asym(i_sh)*diff_pos(3)    ! Mi_y Mj_z E_y r_z
-                    Htmp(1,9)= asym(i_sh)*diff_pos(1)    ! Mi_z Mj_x E_z r_x
-                    Htmp(2,9)= asym(i_sh)*diff_pos(2)    ! Mi_z Mj_y E_z r_y
+                !better with function resolving Mi*E
+                !drop index of E in comment
+                Htmp(2,1)= D(i_sh)*diff_pos(2)    ! Mi_x Mj_y E_x r_y
+                Htmp(3,1)= D(i_sh)*diff_pos(3)    ! Mi_x Mj_z E_x r_z
+                Htmp(1,5)= D(i_sh)*diff_pos(1)    ! Mi_y Mj_x E_y r_x
+                Htmp(3,5)= D(i_sh)*diff_pos(3)    ! Mi_y Mj_z E_y r_z
+                Htmp(1,9)= D(i_sh)*diff_pos(1)    ! Mi_z Mj_x E_z r_x
+                Htmp(2,9)= D(i_sh)*diff_pos(2)    ! Mi_z Mj_y E_z r_y
 
-                    Htmp(1,2)=-asym(i_sh)*diff_pos(2)    ! Mi_y Mj_x E_x r_y
-                    Htmp(1,3)=-asym(i_sh)*diff_pos(3)    ! Mi_z Mj_x E_x r_z
-                    Htmp(2,4)=-asym(i_sh)*diff_pos(1)    ! Mi_x Mj_y E_y r_x
-                    Htmp(2,6)=-asym(i_sh)*diff_pos(3)    ! Mi_z Mj_y E_y r_z
-                    Htmp(3,7)=-asym(i_sh)*diff_pos(1)    ! Mi_x Mj_z E_z r_x
-                    Htmp(3,8)=-asym(i_sh)*diff_pos(2)    ! Mi_y Mj_z E_z r_y
-
-                endif
+                Htmp(1,2)=-D(i_sh)*diff_pos(2)    ! Mi_y Mj_x E_x r_y
+                Htmp(1,3)=-D(i_sh)*diff_pos(3)    ! Mi_z Mj_x E_x r_z
+                Htmp(2,4)=-D(i_sh)*diff_pos(1)    ! Mi_x Mj_y E_y r_x
+                Htmp(2,6)=-D(i_sh)*diff_pos(3)    ! Mi_z Mj_y E_y r_z
+                Htmp(3,7)=-D(i_sh)*diff_pos(1)    ! Mi_x Mj_z E_z r_x
+                Htmp(3,8)=-D(i_sh)*diff_pos(2)    ! Mi_y Mj_z E_z r_y
                 Call get_coo(Htmp,val_tmp,ind_tmp)
 
             !get lattice sites that have to be connected
@@ -161,6 +140,4 @@ subroutine get_coupling_ME(Ham,io,tableNN,indexNN,lat)
     endif
 
 end subroutine 
-
-
-end module m_couplage_ME
+end module 

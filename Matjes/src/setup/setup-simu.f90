@@ -318,9 +318,10 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     use m_anisotropy_heisenberg,only: get_anisotropy_H
     !use m_exchange_heisenberg,only: get_exchange_H,exchange
     use m_zeeman,only: get_zeeman_H
-    use m_couplage_ME,only: get_coupling_ME
     use m_exchange_heisenberg_J, only: get_exchange_J
     use m_exchange_heisenberg_D, only: get_exchange_D
+    use m_coupling_ME_J,only: get_coupling_ME_J
+    use m_coupling_ME_D,only: get_coupling_ME_D
     class(t_H),allocatable,intent(out)  :: Ham(:)
     type(io_h),intent(in)               :: H_io
     real(8), intent(in) :: DM_vector(:,:,:)
@@ -329,13 +330,14 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     type(lattice), intent(inout) :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(5)
+    logical :: use_Ham(6)
 
     use_ham(1)=H_io%J%is_set
     use_ham(2)=H_io%D%is_set
     use_ham(3)=H_io%aniso%is_set
     use_ham(4)=H_io%zeeman%is_set
-    use_ham(5)=H_io%ME%is_set
+    use_ham(5)=H_io%ME_J%is_set
+    use_ham(6)=H_io%ME_D%is_set
     N_ham=count(use_ham)
     Call get_Htype_N(Ham,N_ham)
 
@@ -360,9 +362,14 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
         Call get_zeeman_H(Ham(i_H),H_io%zeeman,lat)
         if(Ham(i_H)%is_set()) i_H=i_H+1
     endif
-    !ME-coupling
+    !ME-coupling symmetric (J)
     if(use_ham(5))then
-        Call get_coupling_ME(Ham(i_H),H_io%ME,tableNN,indexNN,lat)
+        Call get_coupling_ME_J(Ham(i_H),H_io%ME_J,tableNN,indexNN,lat)
+        if(Ham(i_H)%is_set()) i_H=i_H+1
+    endif
+    !ME-coupling antisymmetric (D)
+    if(use_ham(5))then
+        Call get_coupling_ME_D(Ham(i_H),H_io%ME_D,tableNN,indexNN,lat)
         if(Ham(i_H)%is_set()) i_H=i_H+1
     endif
 

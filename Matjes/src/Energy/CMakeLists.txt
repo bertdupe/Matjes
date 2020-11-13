@@ -1,6 +1,7 @@
 set(main_f90 ${main_f90}
 src/Energy/anisotropy_heisenberg.f90
-src/Energy/couplage_ME.f90
+src/Energy/coupling_ME_J.f90
+src/Energy/coupling_ME_D.f90
 src/Energy/demag-tensor.f90
 src/Energy/dipolar-energy.f90
 src/Energy/energy_commons.f90

@@ -659,7 +659,7 @@ function get_order_dim(this,order) result(dim_mode)
     end select
     if(dim_mode<1)then
         write(*,*) 'trying to get dim_mode for order=',order 
-        STOP "dim_mode not positive, requested order parameter not set?"
+        ERROR STOP "dim_mode not positive, requested order parameter not set?"
     endif
 
 end function
