@@ -1,132 +1,61 @@
 module m_anisotropy_heisenberg
-use m_symmetry_operators
-use m_lattice, only : my_order_parameters
-use m_Hamiltonian_variables, only : coeff_ham_inter_spec
-type(coeff_ham_inter_spec), target, public:: anisotropy
-
 private
-public :: get_ham_anisotropy,get_anisotropy_H
+public :: get_anisotropy_H,read_anisotropy_input
 
 contains
 
-subroutine get_ham_anisotropy(fname,dim_ham)
-use m_io_files_utils
-use m_io_utils
-use m_convert
-implicit none
-integer, intent(in) :: dim_ham
-character(len=*), intent(in) ::fname
-! internal
-integer :: neighbor_ani,io_param
-real(kind=8), allocatable :: ani_local_sym(:,:),ham_local(:,:,:)
-! anisotropy
-integer :: x_start,x_end
-! electric field
-integer :: y_start,y_end
-! slope
-integer :: i
-character(len=50) :: form
+subroutine read_anisotropy_input(io_param,fname,io_aniso)
+    use m_io_utils
+    use m_input_H_types, only: io_H_aniso
+    integer,intent(in)              :: io_param
+    character(len=*), intent(in)    :: fname
+    type(io_H_aniso),intent(out)    :: io_aniso
+    !internal
+    integer         :: max_entry
+    real(8)         :: const_mult
 
-neighbor_ani=0
-anisotropy%name='anisotropy'
-anisotropy%c_ham=1.0d0
-anisotropy%N_shell=-1
-anisotropy%order=2
+    max_entry=max_ind_variable(io_param,'ani_',fname)
+    if(max_entry==0)then
+        io_aniso%is_set=.false.
+        return
+    endif
+    io_aniso%is_set=.true.
+    allocate(io_aniso%val(3*max_entry),source=0.0d0)
+    call get_coeff(io_param,fname,'ani_',io_aniso%val,3)
+    const_mult=1.0d0
+    call get_parameter(io_param,fname,'c_ani',const_mult)
+    io_aniso%val=io_aniso%val*const_mult
+end subroutine
 
-io_param=open_file_read(fname)
-call get_parameter(io_param,fname,'c_ani',anisotropy%c_ham)
-! count the number of anisotropy coefficients if present
-call get_parameter(io_param,fname,'N_ani',anisotropy%N_shell)
-if (anisotropy%N_shell.eq.-1) then
-   neighbor_ani=count_variables(io_param,'ani_',fname)
-else
-   neighbor_ani=anisotropy%N_shell
-endif
-
-
-if (neighbor_ani.ne.0) then
-   allocate(ani_local_sym(3,neighbor_ani))
-   ani_local_sym=0.0d0
-
-   do i=1,neighbor_ani
-      call get_parameter(io_param,fname,'ani_',3,ani_local_sym(:,1))
-   enddo
-   neighbor_ani=number_nonzero_coeff(ani_local_sym,'anisotropy')
-endif
-
-call close_file(fname,io_param)
-
-if (neighbor_ani.ne.0) then
-   anisotropy%i_exist=.true.
-  else
-   return
-endif
-
-allocate(anisotropy%ham(neighbor_ani))
-do i=1,neighbor_ani
-   allocate(anisotropy%ham(i)%H(dim_ham,dim_ham))
-   anisotropy%ham(i)%H=0.0d0
-enddo
-
-call get_borders('magnetic',x_start,x_end,'magnetic',y_start,y_end,my_order_parameters)
-
-! get the symmetric exchange
-allocate(ham_local(dim_ham,dim_ham,neighbor_ani))
-ham_local=0.0d0
-call get_diagonal_Op(ham_local,ani_local_sym,anisotropy%c_ham,x_start,x_end)
-
-do i=1,neighbor_ani
-   anisotropy%ham(i)%h=ham_local(:,:,i)
-enddo
-
-form=convert('(',dim_ham,'(f12.8,2x))')
-write(6,'(a)') ''
-write(6,'(a)') 'Anisotropy tensor of order 2'
-do i=1,dim_ham
-    write(6,form) anisotropy%ham(1)%H(:,i)
-enddo
-write(6,'(a)') ''
-
-end subroutine get_ham_anisotropy
-
-subroutine get_anisotropy_H(Ham,lat)
+subroutine get_anisotropy_H(Ham,io,lat)
     !get anisotropy in t_H Hamiltonian format
-    !so far anisotropy has to be set before
-    use m_H_public
-    use m_derived_types
+    use m_H_public, only: t_H
+    use m_derived_types, only: lattice
     use m_setH_util,only: get_coo
+    use m_input_H_types, only: io_H_aniso
 
     class(t_H),intent(inout)    :: Ham
-!    integer, intent(in)         :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
-!    integer, intent(in)         :: indexNN(:)
+    type(io_H_aniso),intent(in) :: io
     type(lattice),intent(in)    :: lat
-   
+    !local 
     integer :: i
-    integer :: x_start,x_end
-    integer :: y_start,y_end
-    
     real(8),allocatable :: Htmp(:,:)
     real(8),allocatable :: val_tmp(:)
     integer,allocatable :: ind_tmp(:,:)
-    
     integer,allocatable :: line(:,:)
-    
-    integer :: Ncell
 
-    if(anisotropy%i_exist)then
-        Ncell=product(lat%dim_lat)
-        allocate(line(1,Ncell),source=0) !1, since always onsite
-        call get_borders('magnetic',x_start,x_end,'magnetic',y_start,y_end,my_order_parameters)
-        allocate(Htmp,source=anisotropy%ham(1)%H(x_start:x_end,y_start:y_end))
-    
+    if(io%is_set)then
+        allocate(line(1,lat%Ncell),source=0) !1, since always onsite
+        allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode),source=0.d0)
+        do i=1,size(io%val)
+            Htmp(i,i)=io%val(i)
+        enddo
         !get local Hamiltonian in coo format
         Call get_coo(Htmp,val_tmp,ind_tmp)
-
         !Anisotropy only has simple onsite terms
-        do i=1,Ncell
+        do i=1,lat%Ncell
             line(1,i)=i
         enddo
-    
         Call Ham%init_1(line,val_tmp,ind_tmp,[1,1],lat)
     endif
 end subroutine

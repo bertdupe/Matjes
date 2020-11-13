@@ -428,18 +428,24 @@ end function count_variables
 ! in: file name
 ! in: varibale name (for example J_ D_ or whatever)
 ! in: matrix of the coefficients
+! in: stride_in, optional striding parameter which allows read-in of array values
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine get_coeff(io,fname,var_name,coeff)
+subroutine get_coeff(io,fname,var_name,coeff,stride_in)
 implicit none
 integer, intent(in) :: io
 character(len=*), intent(in) :: var_name,fname
 real(kind=8), intent(inout) :: coeff(:)
+integer,intent(in),optional :: stride_in
 ! internal
 integer :: N,i,length_string
 character(len=100) :: var_name_local,integer_number
+integer :: stride
 
-N=size(coeff)
+stride=1
+if(present(stride_in)) stride=stride_in
+
+N=size(coeff)/stride
 integer_number=convert(N)
 var_name_local=convert(var_name,integer_number)
 length_string=len_trim(var_name_local)
@@ -449,8 +455,9 @@ write(6,'(/)')
 do i=1,N
    integer_number=convert(i)
    var_name_local=convert(var_name,integer_number)
+   length_string=len_trim(var_name_local)
    write(*,*) var_name_local
-   call get_parameter(io,fname,var_name_local(1:length_string),coeff(i))
+   call get_parameter(io,fname,var_name_local(1:length_string),stride,coeff((i-1)*stride+1:i*stride))
 enddo
 
 write(6,'(/)')

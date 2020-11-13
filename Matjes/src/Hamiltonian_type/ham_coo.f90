@@ -130,6 +130,7 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
 
     ii=0
     do i=1,N_site
+        !this could give problems where there are different numbers of neighborsper line
         do l=1,N_neigh
             j=line(l,i)
             do ival=1,size(Hval) 

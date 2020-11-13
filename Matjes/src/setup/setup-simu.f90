@@ -26,7 +26,9 @@ use m_dipolar_field
 use m_null
 use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
 use m_summer_exp, only : get_coeff_TStra
+use m_input_H_types
 
+use m_rw_H
 use m_H_public
 
 #ifdef CPP_MPI
@@ -58,6 +60,8 @@ logical :: i_usestruct
 integer :: alloc_check
 ! Nb orbitals in TB
 integer :: nb_orbitals = 0
+! Hamiltonian input parameters
+type(io_h)  ::  H_io
 
 
 ! innitialisation of dummy
@@ -78,6 +82,10 @@ call rw_lattice(my_lattice)
 call user_info(6,time,'reading the motif in the input file',.False.)
 
 call rw_motif(my_motif,my_lattice)
+
+!read the Hamiltonian parameters
+Call rw_H(H_io)
+
 
 ! read the TB parameters
 call rw_TB('input')
@@ -280,7 +288,7 @@ call get_ham_dipole('input',my_lattice,my_motif)
 !Call get_Htype(Ham)
 !Call Ham%set_H(energy,my_lattice)
 !
-Call set_Hamiltonians(Ham,tableNN,indexNN(:,1),DM_vector,my_lattice)
+Call set_Hamiltonians(Ham,H_io,tableNN,indexNN(:,1),DM_vector,my_lattice)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 deallocate(tabledist,tableNN,indexNN)
 
@@ -300,18 +308,19 @@ if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
 
 end subroutine setup_simu
 
-subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
+subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     use m_derived_types
     use m_H_public
-    
+    use m_input_H_types 
     use m_get_position,only :get_position_ND_to_1D 
     
     use m_symmetry_operators
-    use m_anisotropy_heisenberg,only: get_anisotropy_H,anisotropy
+    use m_anisotropy_heisenberg,only: get_anisotropy_H
     use m_exchange_heisenberg,only: get_exchange_H,exchange
     use m_zeeman,only: get_zeeman_H,zeeman
     use m_couplage_ME,only: ME,get_coupling_ME
     class(t_H),allocatable,intent(out)  :: Ham(:)
+    type(io_h),intent(in)               :: H_io
     real(8), intent(in) :: DM_vector(:,:,:)
     integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
     integer, intent(in) :: indexNN(:)
@@ -321,7 +330,7 @@ subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
     logical :: use_Ham(4)
 
     use_ham(1)=exchange%i_exist
-    use_ham(2)=anisotropy%i_exist
+    use_ham(2)=H_io%aniso%is_set
     use_ham(3)=zeeman%i_exist
     use_ham(4)=ME%i_exist
     N_ham=count(use_ham)
@@ -335,7 +344,7 @@ subroutine set_Hamiltonians(Ham,tableNN,indexNN,DM_vector,lat)
     endif
     !anisotropy
     if(use_ham(2))then
-        Call get_anisotropy_H(Ham(i_H),lat)
+        Call get_anisotropy_H(Ham(i_H),H_io%aniso,lat)
         if(Ham(i_H)%is_set()) i_H=i_H+1
     endif
     !zeeman

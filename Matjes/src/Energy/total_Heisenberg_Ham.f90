@@ -1,6 +1,5 @@
 module m_total_Heisenberg_Ham
 use m_exchange_heisenberg
-use m_anisotropy_heisenberg
 use m_zeeman
 use m_anisotropy_heisenberg
 use m_summer_exp
@@ -28,8 +27,6 @@ character(len=50) :: form
 ham_tot_heisenberg%order=2
 ham_tot_heisenberg%name='heisenberg'
 
-! get the anisotropy Hamiltonian
-call get_ham_anisotropy(fname,dim_ham)
 ! get the zeeman
 call get_ham_zeeman(fname,dim_ham,Ms)
 ! get the exchange Hamiltonian
@@ -55,7 +52,6 @@ do i=1,n_shell
    ham_tot_heisenberg%ham(i)%H=0.0d0
 enddo
 
-if (anisotropy%i_exist) ham_tot_heisenberg%ham(1)%H=ham_tot_heisenberg%ham(1)%H+anisotropy%ham(1)%H
 if (Zeeman%i_exist) ham_tot_heisenberg%ham(1)%H=ham_tot_heisenberg%ham(1)%H+zeeman%ham(1)%H
 
 if (exchange%i_exist) then
