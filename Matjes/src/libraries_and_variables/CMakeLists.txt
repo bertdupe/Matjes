@@ -1,5 +1,6 @@
 set(main_f90 ${main_f90}
 src/libraries_and_variables/basic_types.f90
+src/libraries_and_variables/cell.f90
 src/libraries_and_variables/derived_types.f90
 src/libraries_and_variables/Hamiltonian_variables.f90
 src/libraries_and_variables/modes_variables.f90

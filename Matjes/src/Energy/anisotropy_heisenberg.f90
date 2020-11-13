@@ -4,27 +4,27 @@ public :: get_anisotropy_H,read_anisotropy_input
 
 contains
 
-subroutine read_anisotropy_input(io_param,fname,io_aniso)
+subroutine read_anisotropy_input(io_param,fname,io)
     use m_io_utils
     use m_input_H_types, only: io_H_aniso
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
-    type(io_H_aniso),intent(out)    :: io_aniso
+    type(io_H_aniso),intent(out)    :: io
     !internal
     integer         :: max_entry
     real(8)         :: const_mult
 
     max_entry=max_ind_variable(io_param,'ani_',fname)
     if(max_entry==0)then
-        io_aniso%is_set=.false.
+        io%is_set=.false.
         return
     endif
-    io_aniso%is_set=.true.
-    allocate(io_aniso%val(3*max_entry),source=0.0d0)
-    call get_coeff(io_param,fname,'ani_',io_aniso%val,3)
+    io%is_set=.true.
+    allocate(io%val(3*max_entry),source=0.0d0)
+    call get_coeff(io_param,fname,'ani_',io%val,3)
     const_mult=1.0d0
     call get_parameter(io_param,fname,'c_ani',const_mult)
-    io_aniso%val=io_aniso%val*const_mult
+    io%val=io%val*const_mult
 end subroutine
 
 subroutine get_anisotropy_H(Ham,io,lat)

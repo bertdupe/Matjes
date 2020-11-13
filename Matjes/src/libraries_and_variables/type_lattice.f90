@@ -1,5 +1,6 @@
 module m_type_lattice
 use m_basic_types
+use m_cell,only : t_cell
 
 integer,parameter :: number_different_order_parameters=4    !m,E,B,T
 
@@ -11,11 +12,6 @@ character(len=*),parameter :: order_parameter_name(number_different_order_parame
 
 ! unit cells
 ! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
-type t_cell
-     type(atom), allocatable :: atomic(:)
-     contains
-     procedure :: ind_mag => cell_get_ind_mag
-end type 
 
 type order_par
 !variable that contains all order parameters as vec_point and the
@@ -667,27 +663,6 @@ function get_order_dim(this,order) result(dim_mode)
     endif
 
 end function
-
-subroutine cell_get_ind_mag(this,ind_Nat)
-    class(t_cell),intent(in)    ::  this
-    integer                     ::  Nat
-    integer                     ::  i,j
-    integer,allocatable         ::  ind_Nat(:)
-
-    Nat=0
-    do i=1,size(this%atomic)
-        if(this%atomic(i)%moment/=0.0d0) Nat=Nat+1
-    enddo
-    allocate(ind_Nat(Nat),source=0)
-    j=0
-    do i=1,size(this%atomic)
-        if(this%atomic(i)%moment/=0.0d0)then
-            j=j+1
-            ind_Nat(j)=i
-        endif
-    enddo
-
-end subroutine
 
 subroutine lattice_get_position_mag(this,pos)
     class(lattice),intent(in)       :: this

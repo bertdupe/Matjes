@@ -1,6 +1,5 @@
 module m_total_Heisenberg_Ham
 use m_exchange_heisenberg
-use m_zeeman
 use m_anisotropy_heisenberg
 use m_summer_exp
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
@@ -27,8 +26,6 @@ character(len=50) :: form
 ham_tot_heisenberg%order=2
 ham_tot_heisenberg%name='heisenberg'
 
-! get the zeeman
-call get_ham_zeeman(fname,dim_ham,Ms)
 ! get the exchange Hamiltonian
 call get_ham_exchange(fname,dim_ham)
 
@@ -51,8 +48,6 @@ do i=1,n_shell
    allocate(ham_tot_heisenberg%ham(i)%H(dim_ham,dim_ham))
    ham_tot_heisenberg%ham(i)%H=0.0d0
 enddo
-
-if (Zeeman%i_exist) ham_tot_heisenberg%ham(1)%H=ham_tot_heisenberg%ham(1)%H+zeeman%ham(1)%H
 
 if (exchange%i_exist) then
   do i=2,n_shell
