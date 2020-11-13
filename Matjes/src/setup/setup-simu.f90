@@ -318,7 +318,7 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     use m_anisotropy_heisenberg,only: get_anisotropy_H
     use m_exchange_heisenberg,only: get_exchange_H,exchange
     use m_zeeman,only: get_zeeman_H
-    use m_couplage_ME,only: ME,get_coupling_ME
+    use m_couplage_ME,only: get_coupling_ME
     class(t_H),allocatable,intent(out)  :: Ham(:)
     type(io_h),intent(in)               :: H_io
     real(8), intent(in) :: DM_vector(:,:,:)
@@ -332,7 +332,7 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     use_ham(1)=exchange%i_exist
     use_ham(2)=H_io%aniso%is_set
     use_ham(3)=H_io%zeeman%is_set
-    use_ham(4)=ME%i_exist
+    use_ham(4)=H_io%ME%is_set
     N_ham=count(use_ham)
     Call get_Htype_N(Ham,N_ham)
 
@@ -354,7 +354,7 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     endif
     !ME-coupling
     if(use_ham(4))then
-        Call get_coupling_ME(Ham(i_H),tableNN,indexNN,lat)
+        Call get_coupling_ME(Ham(i_H),H_io%ME,tableNN,indexNN,lat)
         if(Ham(i_H)%is_set()) i_H=i_H+1
     endif
 

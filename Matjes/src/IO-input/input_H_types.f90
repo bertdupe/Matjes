@@ -15,10 +15,15 @@ type,extends(io_H_base) :: io_H_zeeman
     real(8)     :: c_zeeman=1.0d0 !constant factor to furthermore rescale zeeman energy 
 end type
 
+type,extends(io_H_base) :: io_H_ME
+    real(8), allocatable   ::  sym(:),asym(:)
+end type
+
 
 type :: io_H
     type(io_H_aniso)    :: aniso
     type(io_H_zeeman)   :: zeeman
+    type(io_H_ME)       :: ME
 end type
 
 end module

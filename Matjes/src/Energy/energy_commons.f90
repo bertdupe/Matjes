@@ -8,7 +8,6 @@ use m_operator_pointer_utils
 use m_lattice, only : my_order_parameters
 use m_symmetry_operators
 use m_total_Heisenberg_Ham
-use m_couplage_ME
 use m_summer_exp
 !
 ! This has to be public so the variable can be accessed from elsewhere
@@ -64,10 +63,6 @@ number_hamiltonian=0
 call get_total_Heisenberg_Ham(fname,dim_ham,Ms)
 if (ham_tot_heisenberg%i_exist) number_hamiltonian=number_hamiltonian+1
 
-! get the magnetoelectric coefficients
-call get_ham_ME(fname,dim_ham)
-if (ME%i_exist) number_hamiltonian=number_hamiltonian+1
-
 ! get the Hamiltonian for the summerfeld expansion
 call get_Temperature_H(dim_ham)
 
@@ -91,19 +86,6 @@ if (ham_tot_heisenberg%i_exist) then
     Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>ham_tot_heisenberg%ham(i)%H
   enddo
   
-endif
-
-! Magnetoelectric coupling
-if (ME%i_exist) then
-  number_hamiltonian=number_hamiltonian+1
-  Hamiltonians(number_hamiltonian)%name=ME%name
-  Hamiltonians(number_hamiltonian)%order=ME%order
-  Hamiltonians(number_hamiltonian)%onsite=.false.
-  n_shell=size(ME%ham)
-  allocate(Hamiltonians(number_hamiltonian)%ham(n_shell))
-  do i=1,n_shell
-     Hamiltonians(number_hamiltonian)%ham(i)%Op_loc=>ME%ham(i)%H
-  enddo
 endif
 
 end subroutine get_Hamiltonians

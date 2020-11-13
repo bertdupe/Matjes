@@ -1,164 +1,60 @@
 module m_couplage_ME
-use m_symmetry_operators
-use m_lattice, only : my_order_parameters
-use m_Hamiltonian_variables, only : coeff_ham_inter_spec
-use m_convert
+use m_input_H_types, only: io_H_ME
+use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 implicit none
-type(coeff_ham_inter_spec), target, public:: ME
 
 private
-public :: get_ham_ME,get_number_EM_DMI,get_coupling_ME
+public :: get_coupling_ME, read_ME_input
 
 contains
 
-
-integer function get_number_EM_DMI(fname)
-use m_io_files_utils
-use m_io_utils
-character(len=*), intent(in) ::fname
-! internal variables
-integer :: io
-
-io=open_file_read(fname)
-get_number_EM_DMI=count_variables(io,'ME_antisym_',fname)
-call close_file(fname,io)
-
-end function get_number_EM_DMI
-
-
-subroutine get_ME_input(fname,c_ham,sym,asym,N_me)
-    use m_io_files_utils
-    use m_io_utils
-    character(len=*), intent(in)        ::  fname
-    real(8), allocatable,intent(out)    ::  sym(:),asym(:)
-    real(8),intent(out)                 ::  c_ham
-    integer,intent(out)                 ::  N_me
-
-    integer :: neighbor_sym,io_param,neighbor_asym
+subroutine read_ME_input(io_param,fname,io)
+    integer,intent(in)              :: io_param
+    character(len=*), intent(in)    :: fname
+    type(io_H_ME),intent(out)       :: io
+    !internal
+    integer :: neighbor_sym,neighbor_asym
+    real(8) :: c_ham
 
     neighbor_sym=0
     neighbor_asym=0
-    io_param=open_file_read(fname)
-    c_ham=-1.0d0
+    c_ham=-1.0d0 !minus one to be consistent with older version
     call get_parameter(io_param,fname,'c_ME',c_ham)
-    !
-    ! count the ME coefficients if present
-    !
+
     neighbor_sym=max_ind_variable(io_param,'ME_sym_',fname)
     if (neighbor_sym.ne.0) then
-       allocate(sym(neighbor_sym),source=0.0d0)
-       call get_coeff(io_param,fname,'ME_sym_',sym)
-       neighbor_sym=number_nonzero_coeff(sym,'ME_sym')
+       allocate(io%sym(neighbor_sym),source=0.0d0)
+       call get_coeff(io_param,fname,'ME_sym_',io%sym)
+       neighbor_sym=number_nonzero_coeff(io%sym,'ME_sym')
+       io%sym=c_ham*io%sym
     endif
     
     neighbor_asym=max_ind_variable(io_param,'ME_antisym_',fname)
     if (neighbor_asym.ne.0) then
-       allocate(asym(neighbor_asym),source=0.0d0)
-       call get_coeff(io_param,fname,'ME_antisym_',asym)
-       neighbor_asym=number_nonzero_coeff(asym,'ME_antisym')
+       allocate(io%asym(neighbor_asym),source=0.0d0)
+       call get_coeff(io_param,fname,'ME_antisym_',io%asym)
+       neighbor_asym=number_nonzero_coeff(io%asym,'ME_antisym')
+       io%asym=c_ham*io%asym
     endif
     
-    call close_file(fname,io_param)
-    
-    N_ME=max(neighbor_sym,neighbor_asym)
-    if (N_ME==0) then
-       return
-    else
-       ME%i_exist=.true.
-       write(6,'(a)') 'WARNING!!!! ME coupling found. You need E_ext different from 0'
-    endif
-
+    io%is_set=max(neighbor_sym,neighbor_asym)/=0
 end subroutine
 
-
-subroutine get_ham_ME(fname,dim_ham)
-    integer, intent(in) :: dim_ham
-    character(len=*), intent(in) ::fname
-    ! internal
-    integer :: N_ME
-    real(kind=8), allocatable :: ME_local_sym(:),ME_local_antisym(:)
-    real(8) :: c_ham
-    ! magnetization
-    integer :: x_start,x_end
-    ! electric field
-    integer :: y_start,y_end
-    ! slope
-    integer :: i,j
-    character(len=50) :: form
-    
-    ME%name='magnetoelectric'
-    ME%order=3
-    
-    Call get_ME_input(fname,c_ham,ME_local_sym,ME_local_antisym,N_ME)
-    ME%c_ham=c_ham
-    
-    allocate(ME%ham(N_ME))
-    do i=1,N_ME
-       allocate(ME%ham(i)%H(dim_ham,dim_ham**2))
-       ME%ham(i)%H=0.0d0
-    enddo
-    
-    call get_borders('magnetic',x_start,x_end,'Efield',y_start,y_end,my_order_parameters)
-#if 0
-    ! get the symmetric ME effect
-    do i=1,n_ME
-      ! get diagonal terms
-      ME%ham(i)%H(y_start,x_start)=ME_local_sym(i)*ME%c_ham
-      ME%ham(i)%H(y_start+1,x_start+dim_ham+1)=ME_local_sym(i)*ME%c_ham
-      ME%ham(i)%H(y_start+2,x_start+2*(dim_ham+1))=ME_local_sym(i)*ME%c_ham
-    
-      ! get the off-diagonal terms
-    !  ME%ham(i)%H(y_start,x_start+1)=ME_local_antisym(i)*ME%c_ham
-      ME%ham(i)%H(y_start+1,x_start+1)=ME_local_antisym(i)*ME%c_ham
-    
-    !  ME%ham(i)%H(y_start,x_start+2)=-ME_local_antisym(i)*ME%c_ham
-      ME%ham(i)%H(y_start+2,x_start+2)=-ME_local_antisym(i)*ME%c_ham
-    
-    !  ME%ham(i)%H(y_start,x_start+dim_ham)=-ME_local_antisym(i)*ME%c_ham
-      ME%ham(i)%H(y_start+1,x_start+dim_ham)=-ME_local_antisym(i)*ME%c_ham
-    
-    !  ME%ham(i)%H(y_start+1,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
-    !  ME%ham(i)%H(y_start+2,x_start+dim_ham+2)=ME_local_antisym(i)*ME%c_ham
-    
-    !  ME%ham(i)%H(y_start,x_start+2*dim_ham)=ME_local_antisym(i)*ME%c_ham
-      ME%ham(i)%H(y_start+2,x_start+2*dim_ham)=ME_local_antisym(i)*ME%c_ham
-    
-    !  ME%ham(i)%H(y_start+1,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
-    !  ME%ham(i)%H(y_start+2,x_start+2*dim_ham+1)=-ME_local_antisym(i)*ME%c_ham
-    enddo
-    
-    form=convert('(',dim_ham,'(f12.8,2x))')
-    
-    write(6,'(a)') ''
-    write(6,'(a)') 'Magnetoelectric Hamiltonian of order 3'
-    do i=1,N_ME
-      write(6,'(a,I3)') 'Shell  ',i
-      do j=1,dim_ham**2
-        write(6,form) ME%ham(i)%H(:,j)
-      enddo
-      write(6,'(a)') ''
-    enddo
-#endif
-    
-end subroutine get_ham_ME
-
-subroutine get_coupling_ME(Ham,tableNN,indexNN,lat)
-    !get coupling  in t_H Hamiltonian format
-    !so far ME has to be set before
+subroutine get_coupling_ME(Ham,io,tableNN,indexNN,lat)
+    !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
     use m_setH_util,only: get_coo
 
     class(t_H),intent(inout)    :: Ham
-    integer, intent(in)         :: tableNN(:,:,:,:,:,:) !!tableNN(5,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
-    integer, intent(in)         :: indexNN(:)
+    type(io_H_ME),intent(in)    :: io
+    integer,intent(in)          :: tableNN(:,:,:,:,:,:) !!tableNN(5,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
+    integer,intent(in)          :: indexNN(:)
     type(lattice),intent(in)    :: lat
 
     !local parameters
     !ME_parameters
-    real(8)              :: c_ham
     real(8), allocatable :: sym(:),asym(:)
-    integer              :: N_ME
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)
@@ -181,18 +77,15 @@ subroutine get_coupling_ME(Ham,tableNN,indexNN,lat)
     integer :: ilat_1(3),ilat_2(3)
     integer :: i_x,i_y,i_z
 
-    if(ME%i_exist)then
-        Call get_ME_input('input',c_ham,sym,asym,N_ME)
-        sym=sym*c_ham;asym=asym*c_ham
-
+    if(io%is_set)then
         Call get_Htype(Ham_tmp)
+        sym=io%sym;asym=io%asym
         Nshell=max(size(sym),size(asym))
         Ncell=product(lat%dim_lat)
         shape_tableNN=shape(tableNN)
         if(shape_tableNN(6)/=1) STOP "implement several mag atoms for ME-coupling"
         if(lat%M%dim_mode/=3) STOP "lat%M%dim_mode!=0, implement several mag atoms for ME-coupling"
 
-        !size so far only terms like E \cdot M -> same size as MxM Hamiltonian 
         allocate(Htmp(lat%M%dim_mode,lat%E%dim_mode*lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
         allocate(connect(2,Ncell),source=0) ! at most Ncell connections for each neighbor
 

@@ -6,6 +6,7 @@ module m_rw_H
     subroutine rw_H(H_io)
         use m_io_files_utils, only : open_file_read,close_file
         use m_anisotropy_heisenberg, only: read_anisotropy_input
+        use m_couplage_ME, only: read_ME_input
         use m_zeeman, only: read_zeeman_input
         
         type(io_H),intent(out)      :: H_io
@@ -16,6 +17,7 @@ module m_rw_H
 
         Call read_anisotropy_input(io_param,fname,H_io%aniso)
         Call read_zeeman_input(io_param,fname,H_io%zeeman)
+        Call read_ME_input(io_param,fname,H_io%ME)
 
         call close_file(fname,io_param)
 
