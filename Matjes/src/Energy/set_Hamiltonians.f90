@@ -122,7 +122,7 @@ subroutine combine_Hamiltonians(H_in,H_comb)
 
     Call get_Htype_N(H_comb,N_out)
     do i=1,N_in
-        Call H_in(i)%copy(H_comb(i_unique(i)))
+        Call H_comb(i_unique(i))%add(H_in(i))
     enddo
 
 end subroutine

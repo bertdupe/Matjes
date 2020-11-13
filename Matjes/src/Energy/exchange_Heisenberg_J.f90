@@ -21,7 +21,7 @@ subroutine read_J_input(io_param,fname,io)
     endif
     allocate(io%val(max_entry),source=0.0d0)
     call get_coeff(io_param,fname,'J_',io%val)
-    const_mult=1.0d0
+    const_mult=-1.0d0
     call get_parameter(io_param,fname,'c_Jij',const_mult)
     io%val=io%val*const_mult
     io%is_set=maxval(abs(io%val))/=0.0d0

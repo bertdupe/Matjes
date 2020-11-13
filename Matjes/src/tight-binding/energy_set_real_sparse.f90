@@ -1,7 +1,6 @@
 #ifdef CPP_MKL_SPBLAS
 
 module m_energy_set_real_sparse
-use m_energy_commons, only : energy
 use m_tb_types
 use MKL_SPBLAS
 use m_derived_types, only: lattice
