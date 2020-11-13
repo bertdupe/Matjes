@@ -135,7 +135,6 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
             j=line(l,i)
             do ival=1,size(Hval) 
                 ii=ii+1
-                !CHECK COLIND<->ROWIND
                 colind(ii)=(j-1)*dim_mode(1)+Hval_ind(1,ival)
                 rowind(ii)=(i-1)*dim_mode(2)+Hval_ind(2,ival)
                 val(ii)=Hval(ival)

@@ -1,4 +1,5 @@
 module m_exchange_heisenberg
+#if 0
 use m_symmetry_operators
 use m_lattice, only : my_order_parameters
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
@@ -227,5 +228,5 @@ subroutine convoluate_Op_2D_SOC_vector_1D(D,Op_DMI,H)
     H(3,3)=Op_DMI(3,3)
 
 end subroutine convoluate_Op_2D_SOC_vector_1D
-
+#endif
 end module m_exchange_heisenberg

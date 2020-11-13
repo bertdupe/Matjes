@@ -136,9 +136,9 @@ call get_coeff_TStra(my_lattice,my_motif)
 ! One need the dimension of the order parameter before the hamiltonians can be created
 call get_Hamiltonians('input',my_motif%atomic(1)%moment,my_lattice%dim_mode)
 
-N_Nneigh=get_number_shell()
 
 ! get the table of neighbors and the numbers of atom per shell
+N_Nneigh=H_io%get_shell_number()
 allocate(tabledist(N_Nneigh,1),stat=alloc_check)
 if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate table of distance'
 tabledist=0.0d0
@@ -248,30 +248,30 @@ call get_null_matrix(my_lattice%dim_mode)
 !!!! important part that associates the different NxN matrices with the local static operators
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-call user_info(6,time,'associating the operator matrices with the different local variables',.true.)
+!call user_info(6,time,'associating the operator matrices with the different local variables',.true.)
 !
 ! prepare the total Hamiltonian depending on the different interactions
 !
-call  get_total_Hamiltonian(DM_vector,indexNN)
+! call  get_total_Hamiltonian(DM_vector,indexNN)
 !
 ! update the Hamiltonian to take into account the lattice i.e. SOC (DMI...)
 !
-
-call associate_energy_Hamiltonian(my_lattice,tableNN,indexNN(:,1))
-
-call associate_internal_Beff(my_lattice,tableNN,indexNN(:,1))
-
-call associate_external_fields(tableNN)
-
-call user_info(6,time,'done',.true.)
+!
+!call associate_energy_Hamiltonian(my_lattice,tableNN,indexNN(:,1))
+!
+!call associate_internal_Beff(my_lattice,tableNN,indexNN(:,1))
+!
+!call associate_external_fields(tableNN)
+!
+!call user_info(6,time,'done',.true.)
 
 !!--------------------------------------------------------------------
 
-call user_info(6,time,'allocating the different variables for the energy/angle... density distribution',.true.)
-
-if (io_simu%io_Energy_Distrib) call init_Energy_distrib(my_lattice,tableNN,indexNN(:,1))
-
-call user_info(6,time,'done',.true.)
+!call user_info(6,time,'allocating the different variables for the energy/angle... density distribution',.true.)
+!
+!if (io_simu%io_Energy_Distrib) call init_Energy_distrib(my_lattice,tableNN,indexNN(:,1))
+!
+!call user_info(6,time,'done',.true.)
 
 
 
@@ -316,9 +316,10 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     
     use m_symmetry_operators
     use m_anisotropy_heisenberg,only: get_anisotropy_H
-    use m_exchange_heisenberg,only: get_exchange_H,exchange
+    !use m_exchange_heisenberg,only: get_exchange_H,exchange
     use m_zeeman,only: get_zeeman_H
     use m_couplage_ME,only: get_coupling_ME
+    use m_exchange_heisenberg_J, only: get_exchange_J
     class(t_H),allocatable,intent(out)  :: Ham(:)
     type(io_h),intent(in)               :: H_io
     real(8), intent(in) :: DM_vector(:,:,:)
@@ -329,7 +330,7 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     integer :: i_H,N_ham
     logical :: use_Ham(4)
 
-    use_ham(1)=exchange%i_exist
+    use_ham(1)=H_io%J%is_set
     use_ham(2)=H_io%aniso%is_set
     use_ham(3)=H_io%zeeman%is_set
     use_ham(4)=H_io%ME%is_set
@@ -337,9 +338,9 @@ subroutine set_Hamiltonians(Ham,H_io,tableNN,indexNN,DM_vector,lat)
     Call get_Htype_N(Ham,N_ham)
 
     i_H=1 
-    !exchange (with DMI)
+    !exchange (without DMI)
     if(use_ham(1))then
-        Call get_exchange_H(Ham(i_H),tableNN,indexNN,lat,DM_vector)
+        Call get_exchange_J(Ham(i_H),H_io%J,tableNN,indexNN,lat)
         if(Ham(i_H)%is_set()) i_H=i_H+1
     endif
     !anisotropy

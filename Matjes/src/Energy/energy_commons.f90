@@ -60,8 +60,8 @@ integer :: number_hamiltonian,n_shell,i
 number_hamiltonian=0
 
 ! get the Heisenberg Hamiltonian
-call get_total_Heisenberg_Ham(fname,dim_ham,Ms)
-if (ham_tot_heisenberg%i_exist) number_hamiltonian=number_hamiltonian+1
+!call get_total_Heisenberg_Ham(fname,dim_ham,Ms)
+!if (ham_tot_heisenberg%i_exist) number_hamiltonian=number_hamiltonian+1
 
 ! get the Hamiltonian for the summerfeld expansion
 call get_Temperature_H(dim_ham)

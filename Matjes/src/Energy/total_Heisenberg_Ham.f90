@@ -1,6 +1,4 @@
 module m_total_Heisenberg_Ham
-use m_exchange_heisenberg
-use m_anisotropy_heisenberg
 use m_summer_exp
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 
@@ -22,38 +20,6 @@ integer :: i,j
 integer :: n_shell
 character(len=50) :: form
 
-
-ham_tot_heisenberg%order=2
-ham_tot_heisenberg%name='heisenberg'
-
-! get the exchange Hamiltonian
-call get_ham_exchange(fname,dim_ham)
-
-n_shell=size(exchange%ham)+1
-
-if (n_shell.ne.0) then
-  ham_tot_heisenberg%i_exist=.true.
-  ham_tot_heisenberg%N_shell=n_shell
-else
-  write(6,'(/a/)') 'no Heisenberg Hamiltonian found'
-  return
-endif
-
-!!!!
-!!!! The Heisenberg Hamiltonian exists
-!!!!
-
-allocate(ham_tot_heisenberg%ham(n_shell))
-do i=1,n_shell
-   allocate(ham_tot_heisenberg%ham(i)%H(dim_ham,dim_ham))
-   ham_tot_heisenberg%ham(i)%H=0.0d0
-enddo
-
-if (exchange%i_exist) then
-  do i=2,n_shell
-    ham_tot_heisenberg%ham(i)%H=ham_tot_heisenberg%ham(i)%H+exchange%ham(i-1)%H
-  enddo
-endif
 
 if (temperature_strasbourg%i_exist) then
   do i=1,n_shell
