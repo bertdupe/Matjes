@@ -3,7 +3,7 @@ implicit none
 contains
 !
 ! ===============================================================
-SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,print_relax,Hams,Q_neigh)
+SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,Hams,Q_neigh)
     use mtprng
     use m_Corre
     use m_constants, only : k_b
@@ -18,18 +18,19 @@ SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magn
     use m_io_files_utils
     use m_convert
     use m_MCstep
+    use m_input_types,only: MC_input
     ! input
-    type(lattice),intent(inout)    :: lat
-    real(kind=8), intent(inout) :: qeulerp,qeulerm,cone,acc,rate,E_total,magnetization(3),E(8)
-    real(kind=8), intent(inout) :: nb
-    real(kind=8), intent(in) :: kT
-    integer, intent(in) :: n_relaxation,T_relax,N_cell,n_sizerelax
-    logical, intent(in) :: ising,equi,overrel,sphere,underrel,print_relax
-    class(t_H), intent(in) :: Hams(:)
-    integer,intent(in)      ::  Q_neigh(:,:)
+    type(lattice),intent(inout)     :: lat
+    real(kind=8), intent(inout)     :: qeulerp,qeulerm,cone,acc,rate,E_total,magnetization(3),E(8)
+    real(kind=8), intent(inout)     :: nb
+    real(kind=8), intent(in)        :: kT
+    type(MC_input),intent(in)       :: io_MC 
+    integer, intent(in)             :: N_cell
+    class(t_H), intent(in)          :: Hams(:)
+    integer,intent(in)              :: Q_neigh(:,:) 
     ! a big table
-    real(kind=8) :: Relax(18,n_sizerelax),dumy(5)
-    !     Slope Index
+    real(kind=8) :: Relax(18,io_MC%n_sizerelax),dumy(5)
+    ! Slope Index
     integer :: i_relaxation,i_MC,io_relax
     ! dummy
     integer :: i,j,n_w_step
@@ -38,21 +39,21 @@ SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magn
     write(6,'(/,a,/)') "starting relaxation"
     
     Relax=0.0d0
-    n_w_step=n_relaxation/n_sizerelax
+    n_w_step=io_MC%n_thousand/io_MC%n_sizerelax
     
     !     Monte Carlo steps for thermal equilibrium
     !     The first time it will take longer
     !     -----------------------------------------------------------------
-    do i_relaxation=1,n_relaxation
+    do i_relaxation=1,io_MC%n_thousand
     !         T_relax_1 is probably larger then T_relax, this is because
     !         the last step might take more time to relax than an
     !         the step to an unordered structure
                 !Relaxation of the System
-        Do i_MC=1,T_relax*N_cell
-            Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
+        Do i_MC=1,io_MC%T_relax*N_cell
+            Call MCStep(lat,io_MC,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
         enddo
         !In case T_relax set to zero at least one MCstep is done
-        Call MCStep(lat,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
+        Call MCStep(lat,io_MC,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
     
     ! calculate the topocharge
         dumy=get_charge(lat,Q_neigh)
@@ -60,7 +61,7 @@ SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magn
         qeulerm=dumy(2)
     
     ! Write the Equilibrium files
-        if (print_relax) then
+        if (io_MC%print_relax) then
             if (mod(i_relaxation,n_w_step).eq.0) call store_relaxation(Relax,i_relaxation,dble(i_relaxation), &
                   &  sum(E)/dble(N_cell),E,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)
         endif
@@ -72,7 +73,7 @@ SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magn
     write(6,'(/,a,f8.4,2x,a,/)') 'System is relaxed for T= ',kT/k_B,'Kelvin'
     
     !print the Equilibrium files
-    if (print_relax) then
+    if (io_MC%print_relax) then
     
     ! numbering of the files
         fname=convert('Equilibriumphi-',kT/k_B,'.dat')
@@ -81,11 +82,11 @@ SUBROUTINE Relaxation(lat,N_cell,n_sizerelax,n_relaxation,T_relax,E_total,E,Magn
         Write(io_relax,'(a)') "#   1:n_MC  2:Etot  3:T  4:M  5:rate  6:cone  7:Q  8:Exch  9:Zeeman  10:Ani &
        &         11:4S  12:DM  13:biq  14:dip  15:stoner  16:Chi(E)(t,T)  17:Chi(M)(t,T)  18:Chi(T)(t)"
     
-        Relax(16,:)=correlation(Relax(2,:),n_sizerelax)
-        Relax(17,:)=correlation(Relax(4,:),n_sizerelax)
-        Relax(18,:)=correlation(Relax(7,:),n_sizerelax)
+        Relax(16,:)=correlation(Relax(2,:),io_MC%n_sizerelax)
+        Relax(17,:)=correlation(Relax(4,:),io_MC%n_sizerelax)
+        Relax(18,:)=correlation(Relax(7,:),io_MC%n_sizerelax)
     
-        Do i=1,n_sizerelax
+        Do i=1,io_MC%n_sizerelax
              Write(io_relax,'(i10,18(2x,E20.10E3))') int(Relax(1,i)),(Relax(j,i),j=2,18)
         enddo
     

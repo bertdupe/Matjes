@@ -33,6 +33,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     use m_createspinfile
     use m_derived_types
 
+    use m_input_types,only: MC_input
+
     type(lattice), intent(inout) :: my_lattice
     type(io_parameter), intent(in) :: io_simu
     type(simulation_parameters), intent(in) :: ext_param
@@ -42,7 +44,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     ! internal variables
     !!!!!!!!!!!!!!!!!!!!!!!
     ! slope of the MC
-    integer :: i_relax,n_kT,n_MC,T_relax,restart_MC_steps,T_auto,N_cell,n_sizerelax,n_thousand,n_Tsteps,size_table,Total_MC_Steps
+    integer :: i_relax,n_kT,n_MC,N_cell,size_table
     ! variable for the temperature
     real(kind=8) :: kT,kTini,kTfin
     ! variables that being followed during the simulation
@@ -61,15 +63,17 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     ! variable for the convergence of the MC
     real(kind=8) :: acc,rate,tries,cone,nb
     integer :: i
-    logical :: underrel,overrel,sphere,equi,i_restart,ising,print_relax,Cor_log,Gra_log,i_print_W,spstmL
+    type(MC_input)  :: io_MC
+    logical :: Gra_log,i_print_W,spstmL
     integer,allocatable ::  Q_neigh(:,:)
     integer ::  filen_kt_acc(2)
     
     ! initialize the variables
-    call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
-    size_table=n_Tsteps
-    
-    size_table=n_Tsteps
+!    call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,)
+    call rw_MC(io_MC)
+    cone=io_MC%cone
+    size_table=io_MC%n_Tsteps
+
     write(6,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
     
     allocate(E_av(size_table))
@@ -145,18 +149,16 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     write(6,'((a,3x,f14.5,a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', (qeulerp+qeulerm)/pi*0.25d0
     write(6,'(a/)') '---------------------'
     
-    Do n_kT=1,n_Tsteps
+    Do n_kT=1,io_MC%n_Tsteps
       kt=kt_all(n_kT)
-      call Relaxation(my_lattice,N_cell,n_sizerelax,n_thousand,T_relax,E_total,E_decompose&
-                        &,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,ising,equi,overrel&
-                        &,sphere,underrel,print_relax,hams,Q_neigh)
+      call Relaxation(my_lattice,io_MC,N_cell,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,hams,Q_neigh)
     !Monte Carlo steps, calculate the values
-        do n_MC=1+restart_MC_steps,Total_MC_Steps+restart_MC_steps
+        do n_MC=1+io_MC%restart_MC_steps,io_MC%Total_MC_Steps+io_MC%restart_MC_steps
     !      Monte Carlo steps for independency
-           Do i_relax=1,T_auto*N_cell
-              Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
+           Do i_relax=1,io_MC%T_auto*N_cell
+              Call MCstep(my_lattice,io_MC,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,Hams)
            End do
-           Call MCstep(my_lattice,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel,Hams)
+           Call MCstep(my_lattice,io_MC,N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,Hams)
     
     ! CalculateAverages makes the averages from the sums
            Call CalculateAverages(my_lattice,Q_neigh,qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
@@ -169,7 +171,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     !!!!!!!!!!!!!***************************!!!!!!
     !!!!!!!!!!!!!***************************!!!!!!
     
-       if (n_Tsteps.ne.0) call Calculate_thermo(Cor_log,total_MC_steps, &
+       if (io_MC%n_Tsteps.ne.0) call Calculate_thermo(io_MC%Cor_log,io_MC%total_MC_steps, &
         &    dble(N_cell),kT_all(n_kt),E_sq_sum_av(n_kt),E_sum_av(n_kt),M_sq_sum_av(:,n_kt), &
         &    C_av(n_kt),chi_M(:,n_kt),E_av(n_kt),E_err_av(n_kt),M_err_av(:,n_kt),qeulerp_av(n_kt),qeulerm_av(n_kt),vortex_av(:,n_kt), &
         &    Q_sq_sum_av(n_kt),Qp_sq_sum_av(n_kt),Qm_sq_sum_av(n_kt), &
@@ -185,7 +187,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
           Call write_config('MC',kt,my_lattice,filen_kt_acc)
        endif
     
-      Write(6,'(I6,a,I6,a,f8.4,a,/)')  n_kT, ' nd step out of ', n_Tsteps,' steps. T=', kT/k_B,' Kelvin'
+      Write(6,'(I6,a,I6,a,f8.4,a,/)')  n_kT, ' nd step out of ', io_MC%n_Tsteps,' steps. T=', kT/k_B,' Kelvin'
     
     end do !over n_kT
     !--------------------------------------------------------------
@@ -205,9 +207,9 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
       & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
       & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
     ! write the data into a file
-    do i=1,n_Tsteps
-       Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(Total_MC_Steps+restart_MC_steps), &
-         &             M_sum_av(:,i)/N_cell/(Total_MC_Steps+restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
+    do i=1,io_MC%n_Tsteps
+       Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), &
+         &             M_sum_av(:,i)/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
          &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
     enddo
     close(7) 

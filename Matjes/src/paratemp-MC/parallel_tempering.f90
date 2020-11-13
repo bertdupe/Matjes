@@ -1,23 +1,24 @@
 subroutine parallel_tempering(my_lattice,motif,io_simu,ext_param)
-use m_topocharge_all
-use m_set_temp
-use m_average_MC
-use m_constants, only : k_b
-use m_vector, only : norm
-use m_paratemp
-use m_store_relaxation
-use m_check_restart
-use m_createspinfile
-use m_derived_types, only : t_cell,io_parameter,simulation_parameters
-use m_derived_types, only : lattice
-use m_basic_types, only : vec_point
-use m_lattice, only : my_order_parameters
-use m_topo_commons
-use m_convert
-use m_io_files_utils
-use m_operator_pointer_utils
-use m_rw_MC
-use m_MCstep
+    use m_topocharge_all
+    use m_set_temp
+    use m_average_MC
+    use m_constants, only : k_b
+    use m_vector, only : norm
+    use m_paratemp
+    use m_store_relaxation
+    use m_check_restart
+    use m_createspinfile
+    use m_derived_types, only : t_cell,io_parameter,simulation_parameters
+    use m_derived_types, only : lattice
+    use m_basic_types, only : vec_point
+    use m_lattice, only : my_order_parameters
+    use m_topo_commons
+    use m_convert
+    use m_io_files_utils
+    use m_operator_pointer_utils
+    use m_rw_MC
+    use m_MCstep
+    use m_input_types,only: MC_input
 
 #ifdef CPP_MPI
       use m_mpi_prop, only : irank_working,isize,MPI_COMM,all_world,irank_box,MPI_COMM_MASTER,MPI_COMM_BOX
@@ -31,6 +32,7 @@ type(simulation_parameters), intent(in) :: ext_param
 ! internal variable
 ! parallel tempering label. can take 3 values
 ! 0: no label; +1: up; -1: down
+type(MC_input)             :: io_MC
 real(kind=8), allocatable :: label_world(:),nup(:),ndown(:),success_PT(:)
 ! convergence parameters
 real(kind=8) :: rate,cone,Nsuccess,tries
@@ -40,7 +42,7 @@ integer,allocatable :: image_temp(:)  ! contains the POSITION of temperatures
 ! slope of temperature sets
 integer :: j_optset
 ! size of the world
-integer :: world,total_MC_steps
+integer :: world
 ! slope of the MC
 integer :: i_MC,i_relax,i_pos
 real(kind=8) :: pos
@@ -81,8 +83,8 @@ real(kind=8), target, allocatable :: replicas(:,:,:)
 ! relaxation informations
 real(kind=8), allocatable :: relax(:,:,:)
 ! dummy slopes
-integer :: i,istart,istop,io_EM,io_Trange,N_cell,n_sizerelax,N_temp,n_thousand,n_Tsteps,restart_MC_steps,T_auto,T_relax
-logical :: Cor_log,gra_log,equi,i_magnetic,i_optTset,i_print_W,i_restart,ising,overrel,sphere,print_relax,underrel
+integer :: i,istart,istop,io_EM,io_Trange,N_cell,n_sizerelax,N_temp
+logical :: gra_log,i_optTset,i_print_W
 real(kind=8) :: dumy(5),nb
 
 type(lattice),allocatable,dimension(:)     :: lat_replica
@@ -92,8 +94,11 @@ type(lattice),allocatable,dimension(:)     :: lat_replica
 #endif
 
 ! initialized the size of the tables
-call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,total_MC_steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
-size_table=n_Tsteps
+call rw_MC(io_MC)
+cone=io_MC%cone
+size_table=io_MC%n_Tsteps
+n_sizerelax=io_MC%n_sizerelax
+
 world=size(my_lattice%world)
 N_cell=product(my_lattice%dim_lat)
 gra_log=io_simu%io_Xstruct
@@ -108,7 +113,7 @@ kTfin=ext_param%ktfin%value
        write(6,'(a,I6,a,/)') "you are calculating",size_table," temperatures"
       endif
 #else
-      size_M_replica=n_Tsteps
+      size_M_replica=io_MC%n_Tsteps
       write(6,'(/,a,I6,a,/)') "setup from parallel tempering"
       write(6,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
 #endif
@@ -237,7 +242,7 @@ vortex=0.0d0
 magnetization=0.0d0
 E_total=0.0d0
 E_decompose=0.0d0
-autocor_steps=T_auto
+autocor_steps=io_MC%T_auto
 kT=0.0d0
 E_temp=0.0d0
 
@@ -348,7 +353,7 @@ do j_optset=1,N_temp
 !         T_relax is T_relax_temp, this is because
 !         one might want to thermalize the first iteration more as compared with the j_optset>2
 
-   if (j_optset.gt.1) autocor_steps=T_relax
+   if (j_optset.gt.1) autocor_steps=io_MC%T_relax
 
 ! Relaxation of the System - SWAPPING!!
    do i_relax=1,relaxation_steps
@@ -390,7 +395,7 @@ do j_optset=1,N_temp
 
 !           save the data for thermalization
 
-            if (print_relax) then
+            if (io_MC%print_relax) then
 
                i_pos=i_relax+n_sizerelax*(2**(j_optset-1)-1)
 
@@ -457,9 +462,9 @@ do j_optset=1,N_temp
 !        write the Equilibrium-Files in case of paratemp
 
 #ifdef CPP_MPI
-      if (print_relax) call write_relaxation(Relax,kT_updated,irank_working,n_sizerelax,size_M_replica,size_table,Cor_log)
+      if (io_MC%print_relax) call write_relaxation(Relax,kT_updated,irank_working,n_sizerelax,size_M_replica,size_table,io_MC%Cor_log)
 #else
-      if (print_relax) call write_relaxation(Relax,kT_all,n_sizerelax,size_table,Cor_log)
+      if (io_MC%print_relax) call write_relaxation(Relax,kT_all,n_sizerelax,size_table,io_MC%Cor_log)
 #endif
 
 ! at the end of the relaxation and the image loops, calculate the thermodynamical quantitites
@@ -472,7 +477,7 @@ do j_optset=1,N_temp
 
        if (irank_working.eq.0) then
 #endif
-       call Calculate_thermo(Cor_log,relaxation_steps,dble(N_cell),kT_updated,E_sq_sum_av,E_sum_av,M_sq_sum_av, &
+       call Calculate_thermo(io_MC%Cor_log,relaxation_steps,dble(N_cell),kT_updated,E_sq_sum_av,E_sum_av,M_sq_sum_av, &
     &    C_av,chi_M,E_av,E_err_av,M_err_av,qeulerp_av,qeulerm_av,vortex_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av,chi_Q,chi_l, &
     &    M_sum_av,M_av,size_table)
 
