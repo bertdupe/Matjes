@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(Matjes NONE)
-
 
 #Some stuff might be defined in config file
 if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
    include("${CMAKE_BINARY_DIR}/config.cmake")
 endif()
-#set(CMAKE_Fortran_COMPILER ${custom_MPICCOMP_FORTRAN})
-#set(CMAKE_CXX_COMPILER ${custom_MPICCOMP_CPP})
+
+
+project(Matjes NONE)
+
 enable_language (Fortran CXX)
 
 #if(NOT DEFINED custom_MPICCOMP_FORTRAN)

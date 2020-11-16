@@ -1,7 +1,7 @@
 message("reading config.cmake")
 
-set(MPI_Fortran_COMPILER gfortran)
-set(custom_MPICCOMP_FORTRAN "gfortran")
+set(CMAKE_CXX_COMPILER "g++")
+set(CMAKE_Fortran_COMPILER "gfortran")
 
 #manual adds to fortran compiler
 set(compadd "")							#add to release and debug
@@ -13,8 +13,7 @@ if(DEFINED ENV{MKLROOT})
   set(MKLROOT $ENV{MKLROOT})
   #set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
   set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl")
-  #set(add_inc ${add_inc} "${MKLROOT}/include" "/home/pbuhl/programs/matjes/Matjes/Matjes")
-  set(add_inc ${add_inc} "/home/pbuhl/programs/matjes/Matjes/Matjes" "${MKLROOT}/include" )
+  set(add_inc ${add_inc} "${MKLROOT}/include" )
 else()
   message( FATAL_ERROR "Did not find ${MKLROOT} environment variable" )
 endif()
@@ -22,6 +21,8 @@ endif()
 #PREPROCESSOR FLAGS
 add_compile_definitions(CPP_MKL_SPBLAS)
 add_compile_definitions(CPP_BRUTDIP)
+#add_compile_definitions(CPP_EIGEN_H)
 #add_compile_definitions(CPP_DEBUG)
-#add_compile_definitions(CPP_DENSE_BLAS)
-#add_compile_definitions(CPP_DENSE_BARE)
+add_compile_definitions(CPP_BLAS)
+#add_compile_definitions(EIGEN_USE_MKL_ALL MKL_DIRECT_CALL)
+#add_compile_definitions(CPP_DENSE)
