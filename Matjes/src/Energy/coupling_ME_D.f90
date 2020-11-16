@@ -137,6 +137,7 @@ subroutine get_coupling_ME_D(Ham,io,tableNN,indexNN,lat)
                 Call Ham_tmp%destroy()
             enddo
         enddo
+        Ham%desc="antisymmetric magnetoelectric coupling"
     endif
 
 end subroutine 

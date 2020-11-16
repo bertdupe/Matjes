@@ -108,6 +108,7 @@ subroutine get_coupling_ME_J(Ham,io,tableNN,indexNN,lat)
             Call Ham%add(Ham_tmp)
             Call Ham_tmp%destroy()
         enddo
+        Ham%desc="symmetric magnetoelectric coupling"
     endif
 
 end subroutine 

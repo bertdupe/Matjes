@@ -100,6 +100,7 @@ subroutine get_exchange_J(Ham,io,tableNN,indexNN,lat)
             Call Ham%add(Ham_tmp)
             Call Ham_tmp%destroy()
         enddo
+        Ham%desc="symmetric magnetic exchange"
     endif
 
 end subroutine 

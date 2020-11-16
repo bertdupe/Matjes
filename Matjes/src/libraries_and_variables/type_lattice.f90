@@ -9,6 +9,7 @@ character(len=*),parameter :: order_parameter_name(number_different_order_parame
                                 &   'Efield     ',&
                                 &   'Bfield     ',&
                                 &   'temperature']
+character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T"]
 
 ! unit cells
 ! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
@@ -74,9 +75,11 @@ contains
     procedure :: set_order_comb_exc_single
     procedure :: point_order => point_order_onsite
     procedure :: point_order_single => point_order_onsite_single
-    !!reduce that order paramter again
+    !!reduce that order parameter again
     procedure :: reduce
     procedure :: reduce_single
+    !!reduce vector in order parameter space to the site(e.g. energy Ncell resolution )
+    procedure :: reduce_cell
     !real space position functions
     procedure :: get_pos_mag => lattice_get_position_mag
     procedure :: pos_diff_ind => lattice_position_difference
@@ -96,7 +99,7 @@ type point_arr
 end type
 
 private
-public lattice, number_different_order_parameters,op_name_to_int, t_cell, order_par
+public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, t_cell, order_par
 
 contains 
 
@@ -331,6 +334,35 @@ subroutine set_order_point_single(this,order,ilat,point)
     end select
 
 end subroutine
+
+
+subroutine reduce_cell(this,vec_in,order,vec_out)
+    !adds all parts of a vectors parts of a vector together, that correspond to the same lattice cell
+    class(lattice),intent(in)       ::  this
+    real(8),intent(in)              ::  vec_in(:)
+    integer,intent(in)              ::  order(:)
+    real(8),intent(inout)           ::  vec_out(:)
+
+    integer                 :: dim_modes(size(order))
+    integer                 :: dim_mode_sum
+    integer                 :: i
+
+    do i=1,size(order)
+        dim_modes(i)=this%get_order_dim(order(i))
+    enddo
+    dim_mode_sum=product(dim_modes)
+
+    if(size(vec_in)/=this%Ncell*dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
+    if(size(vec_out)/=this%Ncell) STOP "vec_out of reduce has wrong dimension"
+
+    vec_out=0.0d0
+    do i=1,this%Ncell
+       !probably not very efficient...
+       vec_out(i)=sum(vec_in((i-1)*dim_mode_sum+1:i*dim_mode_sum))
+    enddo
+
+end subroutine
+
 
 
 
@@ -866,5 +898,20 @@ function op_name_to_int(name_in)result(int_out)
     write(*,*) 'inserted name:',name_in
     STOP "Failed to identify name with operator"
 end function
+
+function op_int_to_abbrev(int_in)result(abbrev)
+    integer,intent(in)          ::  int_in(:)   !operator integer description
+    character(30)               ::  abbrev      
+
+    integer         ::  i
+
+    if(any(int_in>number_different_order_parameters)) ERROR STOP "too large int_in as operator description" 
+    if(any(int_in<1)) ERROR STOP "too small int_in as operator description" 
+    abbrev="" 
+    do i=1,size(int_in)
+        abbrev(i:i)=order_parameter_abbrev(int_in(i))
+    enddo
+end function
+
 
 end module

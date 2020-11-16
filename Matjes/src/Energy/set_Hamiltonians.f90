@@ -4,7 +4,7 @@ implicit none
 private
 public :: set_Hamiltonians,combine_Hamiltonians
 contains
-subroutine set_Hamiltonians(Ham_res,Ham_comb,H_io,tableNN,indexNN,DM_vector,lat)
+subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_vector,lat)
     use m_derived_types
     use m_input_H_types 
     use m_get_position,only :get_position_ND_to_1D 
@@ -19,6 +19,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,H_io,tableNN,indexNN,DM_vector,lat)
     use m_coupling_ME_D,only: get_coupling_ME_D
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
+    logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
     type(io_h),intent(in)               :: H_io
     real(8), intent(in) :: DM_vector(:,:,:)
     integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
@@ -74,16 +75,17 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,H_io,tableNN,indexNN,DM_vector,lat)
         Call Ham_res(i_h)%optimize()
     enddo
 
-    Call combine_Hamiltonians(Ham_res,Ham_comb)
+    Call combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
     do i_H=1,size(Ham_comb)
         Call Ham_comb(i_h)%optimize()
     enddo
 end subroutine
 
-subroutine combine_Hamiltonians(H_in,H_comb)
+subroutine combine_Hamiltonians(keep_in,H_in,H_comb)
     !subroutine which combines Hamiltonians from the input array, if they act on the same space
     !THIS NEEDS TO BE UPDATED IF THE SPACE IS NOT UNIQUE ANYMORE (eg. terms in one dimension that are not onsite)
-    class(t_H),intent(in)                   :: H_in(:)
+    logical,intent(in)                      :: keep_in
+    class(t_H),intent(inout)                :: H_in(:)
     class(t_H),allocatable,intent(inout)    :: H_comb(:)
     !internal
     integer         :: N_in,N_out
@@ -123,6 +125,7 @@ subroutine combine_Hamiltonians(H_in,H_comb)
     Call get_Htype_N(H_comb,N_out)
     do i=1,N_in
         Call H_comb(i_unique(i))%add(H_in(i))
+        if(.not.keep_in) Call H_in(i)%destroy()
     enddo
 
 end subroutine

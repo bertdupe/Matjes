@@ -9,6 +9,7 @@ type,abstract :: t_H
     integer,allocatable     :: op_l(:),op_r(:)  !operator indices which have to be combined to get the space of the left/right side of the Hamiltonian
     integer                 :: dim_mode(2)=0     !size of left/right mode after multiplying out order parameters (size per lattice point)
     logical,private         :: set=.false. !has this object been set?
+    character(len=100)      :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
 contains
 
     !Hamiltonian initialization routines
@@ -24,6 +25,7 @@ contains
     procedure ,NON_OVERRIDABLE              :: eval_all !evaluates energy of full lattice
     procedure ,NON_OVERRIDABLE              :: mult_r_red,mult_l_red !multiplied out left/right and reduces result to only one order-parameter
     procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single
+    procedure                               :: energy_dist
 
         !should be implemented more efficiently, where possible
     procedure                               :: mult_r_single,mult_l_single !multipy out with left/right side
@@ -172,7 +174,23 @@ contains
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 
+    subroutine energy_dist(this,lat,E)
+        !get the energy values per computational cell
+        !this only works for Hamiltonians located on 2 sites only
+        class(t_H),intent(in)       :: this
+        type(lattice), intent(in)   :: lat
+        real(8),intent(out)         :: E(lat%Ncell)
+        ! internal
+        real(8),pointer             :: modes_l(:)
+        real(8),allocatable,target  :: vec_l(:)
+        real(8)                     :: tmp(this%dimH(1))
 
+        Call this%mult_r(lat,tmp)
+        Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
+        tmp=modes_l*tmp
+        Call lat%reduce_cell(tmp,this%op_l,E)
+        if(allocated(vec_l)) deallocate(vec_l)
+    end subroutine
 
     subroutine mult_r_red(this,lat,res,op_keep)
         !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
@@ -282,12 +300,14 @@ contains
             Hout%dim_mode=this%dim_mode
             Call this%copy_child(Hout)
             Call Hout%set_prepared(.true.)
+            Hout%desc=this%desc
         else
             STOP "cannot copy H since source is not set"
         endif
     end subroutine
 
     subroutine add(this,H_in)
+        use m_type_lattice, only : op_int_to_abbrev
         !add H_in to this Hamiltonian, or set this to H_in is this is not set
         class(t_H),intent(inout)    :: this
         class(t_H),intent(in)       :: H_in
@@ -299,6 +319,7 @@ contains
             if(.not.all(this%op_r==H_in%op_r)) STOP "CANNOT ADD hamiltonians with different op_r"
             if(any(this%dimH/=H_in%dimH)) STOP "Trying to add Hamiltonians with different Hamiltonian dimensions"
             Call this%add_child(H_in)
+            this%desc="sum in "//trim(op_int_to_abbrev(this%op_l))//trim(op_int_to_abbrev(this%op_r))//"-space"
         else
             Call H_in%copy(this)
         endif
@@ -314,6 +335,7 @@ contains
         if(allocated(this%op_r)) deallocate(this%op_r)
         this%dim_mode=0
         Call this%set_prepared(.false.)
+        this%desc=""
     end subroutine
 
     subroutine init_base(this,lat,op_l,op_r)

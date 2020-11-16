@@ -117,7 +117,7 @@ endif
 !    Loop for Spin dynamics
 !---------------------------------
 
-if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,io_simu,ext_param,Ham_comb)
+if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,io_simu,ext_param,Ham_comb,Ham_res)
 
 !---------------------------------
 !  Part which does Entropic Sampling

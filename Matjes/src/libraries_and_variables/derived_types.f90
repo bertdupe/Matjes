@@ -30,6 +30,8 @@ type io_parameter
      logical :: io_Energy_Distrib=.false.
 ! field density distribution
      logical :: io_Field_Distrib=.false.
+! energy detail (keep more information about origin of energy terms) 
+     logical :: io_Energy_detail=.false.
 ! force field density distribution
      logical :: io_Force=.false.
 ! Track singularities in a vector field

@@ -106,6 +106,7 @@ subroutine get_exchange_D(Ham,io,tableNN,indexNN,lat,DM_vector)
                 Call Ham_tmp%destroy()
             enddo
         enddo
+        Ham%desc="antisymmetric magnetic exchange"
     endif
 
 end subroutine 
