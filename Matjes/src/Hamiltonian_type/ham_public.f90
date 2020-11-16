@@ -60,14 +60,24 @@ contains
         real(8)                     ::  E
 
         real(8)     ::  tmp_E(size(ham))
+        
+        Call energy_resolved(ham,lat,tmp_E)
+        E=sum(tmp_E)
+    end function
+
+    subroutine energy_resolved(ham,lat,E)
+        !get contribution-resolved energies from an energy array
+        class(t_H),intent(in)       ::  ham(:)
+        class(lattice),intent(in)   ::  lat
+        real(8),intent(out)         ::  E(size(ham))
+
         integer     ::  i
 
         E=0.0d0
         do i=1,size(ham)
-            Call ham(i)%eval_all(tmp_E(i),lat)
+            Call ham(i)%eval_all(E(i),lat)
         enddo
-        E=sum(tmp_E)
-    end function
+    end subroutine
      
     function energy_single(ham,i_m,lat)result(E)
         !get all energies from an energy array

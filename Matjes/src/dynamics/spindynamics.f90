@@ -30,6 +30,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     use m_H_public
     use m_Beff_H
     use m_write_config
+    use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     
     ! input
     type(lattice), intent(inout) :: mag_lattice
@@ -63,6 +64,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     ! dumy
     logical :: said_it_once,gra_topo
     integer,allocatable ::  Q_neigh(:,:)
+    integer :: io_Eout_contrib
     
     time=0.0d0
     input_excitations=0
@@ -75,6 +77,14 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     
     ! check the convergence
     open(8,FILE='convergence.dat',action='write',form='formatted')
+
+    if(io_simu%io_energy_cont)then
+        if(io_simu%io_energy_detail)then
+            Call Eout_contrib_init(hams_res,io_Eout_contrib)
+        else
+            Call Eout_contrib_init(hams,io_Eout_contrib)
+        endif
+    endif
     
     ! prepare the matrices for integration
     
@@ -212,10 +222,6 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
         
         !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
         
-        if (io_simu%io_tracker) then
-          if (mod(j-1,gra_freq).eq.0) call plot_tracking(j/gra_freq,lat_1,Hams)
-        endif
-        
         if (mod(j-1,Efreq).eq.0) then
             !get values to plot (Mavg,topo)
             if(mag_lattice%nmag>1) ERROR STOP "WILL NOT WORK FOR nmag>1"
@@ -229,6 +235,13 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
              &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
              &   kT/k_B,(security(i),i=1,2),H_int
             write(8,'(I10,3x,3(E20.12E3,3x))') j,Edy,test_torque,ave_torque
+            if(io_simu%io_energy_cont)then
+                if(io_simu%io_energy_detail)then
+                    Call Eout_contrib_write(j,real_time,hams_res,mag_lattice,io_Eout_contrib)
+                else
+                    Call Eout_contrib_write(j,real_time,hams,mag_lattice,io_Eout_contrib)
+                endif
+            endif
         endif
         
         ! security in case of energy increase in SD and check for convergence
@@ -254,10 +267,8 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
                 endif
             endif
 
-    
-    !            ERROR STOP "ENERGY DISTRIBUTION MUST BE REIMPLEMENTED"
-    !           &  call get_Energy_distrib(tag,mag_lattice%ordpar%all_l_modes) !CHANGE!!!
-        
+            if (io_simu%io_tracker) call plot_tracking(j/gra_freq,lat_1,Hams)
+
             if(gra_log) then
                 call CreateSpinFile(tag,mag_lattice%M%all_l_modes)
                 Call write_config(tag,mag_lattice) 
@@ -293,6 +304,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     close(7)
     close(8)
+    if(io_simu%io_energy_cont) close(io_Eout_contrib)
     
     if ((dabs(check(2)).gt.1.0d-8).and.(kt/k_B.gt.1.0d-5)) then
         write(6,'(a,2x,f16.6)') 'Final Temp (K)', check(1)/check(2)/2.0d0/k_B
