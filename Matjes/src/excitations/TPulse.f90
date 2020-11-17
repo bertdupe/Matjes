@@ -96,9 +96,9 @@ select case (TPulse%forme)
    if (time.le.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)) then !before pulse
      kt1=TPulse%T0
     elseif ((time.gt.(TPulse%t_exp+TPulse%t_start-3.0d0*TPulse%sigma)).and.(time.lt.(TPulse%t_exp+TPulse%t_start))) then !pulse
-     kt1=TPulse%T0+TPulse%I_exp*exp(-(real(time-TPulse%t_start)-TPulse%t_exp)**2/TPulse%sigma**2)
+     kt1=TPulse%T0+TPulse%I_exp*exp(-(real(time-TPulse%t_start,8)-TPulse%t_exp)**2/TPulse%sigma**2)
     elseif ((time.ge.(TPulse%t_start+TPulse%t_exp)).and.(time.lt.(TPulse%t_cut_pulse+TPulse%t_start))) then !cool down
-     kt1=TPulse%T0+TPulse%I_over_x/(real(time-TPulse%t_start)-TPulse%t_frac)**TPulse%expo
+     kt1=TPulse%T0+TPulse%I_over_x/(real(time-TPulse%t_start,8)-TPulse%t_frac)**TPulse%expo
     else
      kt1=TPulse%T0
    endif

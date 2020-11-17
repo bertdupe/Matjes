@@ -149,7 +149,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     
     Edy=energy_all(Hams,mag_lattice)
     
-    write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell)
+    write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell,8)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! part of the excitations
@@ -218,14 +218,14 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
         Call lat_2%M%copy_val(mag_lattice%M)
         call truncate(mag_lattice,used)
         
-        Edy=energy_all(Hams,mag_lattice)/real(N_cell)
+        Edy=energy_all(Hams,mag_lattice)/real(N_cell,8)
         
         !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
         
         if (mod(j-1,Efreq).eq.0) then
             !get values to plot (Mavg,topo)
             if(mag_lattice%nmag>1) ERROR STOP "WILL NOT WORK FOR nmag>1"
-            Mdy=sum(mag_lattice%M%modes_v,2)/real(N_cell) !works only for one M in unit cell
+            Mdy=sum(mag_lattice%M%modes_v,2)/real(N_cell,8) !works only for one M in unit cell
             dumy=get_charge(lat_1,Q_neigh)
             q_plus=dumy(1)/pi/4.0d0
             q_moins=dumy(2)/pi/4.0d0

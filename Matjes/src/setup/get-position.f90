@@ -43,13 +43,13 @@ do i=1,N
       do m=-1,1
 
 !    direction 1
-        if (boundary(1)) shorter_distance=test+real(k)*r(:,1)*N1
+        if (boundary(1)) shorter_distance=test+real(k,8)*r(:,1)*N1
 
 !     direction 2
-        if (boundary(2)) shorter_distance=shorter_distance+real(l)*r(:,2)*N2
+        if (boundary(2)) shorter_distance=shorter_distance+real(l,8)*r(:,2)*N2
 
 !      direction 3
-        if (boundary(3)) shorter_distance=shorter_distance+real(m)*r(:,3)*N3
+        if (boundary(3)) shorter_distance=shorter_distance+real(m,8)*r(:,3)*N3
 
         if (norm(shorter_distance).lt.norm(test)) test=shorter_distance
 

@@ -218,7 +218,7 @@ do i1=0,shell_number
        if (periodic(1)) i=i1
        if (periodic(2)) j=i2
        if (periodic(3)) k=i3
-       test=matmul(transpose(areal),real((/i,j,k/)))
+       test=matmul(transpose(areal),real((/i,j,k/),8))
        if (abs( norm(test) -distance).lt.1.0d-8) exit
      enddo
      if (abs( norm(test) -distance).lt.1.0d-8) exit
@@ -231,10 +231,10 @@ k=0
 do i=1,natom
    if (abs(my_motif%atomic(i)%moment).gt.1.0d-8) then
       j=j+1
-      R_mag(:,j)=matmul(transpose(areal),real((/i1,i2,i3/)))+my_motif%atomic(i)%position(:)
+      R_mag(:,j)=matmul(transpose(areal),real((/i1,i2,i3/),8))+my_motif%atomic(i)%position(:)
    else
       k=k+1
-      R_non_mag(:,k)=matmul(transpose(areal),real((/i1,i2,i3/)))+my_motif%atomic(i)%position(:)
+      R_non_mag(:,k)=matmul(transpose(areal),real((/i1,i2,i3/),8))+my_motif%atomic(i)%position(:)
    endif
 
 enddo

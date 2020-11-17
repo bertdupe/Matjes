@@ -674,7 +674,7 @@ integer :: test
 
 test=i_x+i
 ! make a translation of r if the test>stop
-vec=vec+real(i)*r
+vec=vec+real(i,8)*r
 ! use the periodic boundary conditions if necessary
 v=periodic(test,stop)
 

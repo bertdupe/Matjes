@@ -1,4 +1,5 @@
 module m_minimize
+use m_H_public
 
 real(kind=8) :: masse=1.0d0
 real(kind=8) :: dt=0.1d0
@@ -37,7 +38,6 @@ use m_dyna_utils, only : copy_lattice
 use m_eval_Beff
 use m_lattice, only : my_order_parameters
 use m_operator_pointer_utils
-use m_H_public
 use omp_lib
 
 implicit none
@@ -195,7 +195,7 @@ nullify(my_lattice,all_mode)
 end subroutine
 
 
-subroutine minimize_infdamp_lattice(lat,io_simu)
+subroutine minimize_infdamp_lattice(lat,io_simu,Hams)
 use m_derived_types, only : io_parameter,lattice
 use m_basic_types, only : vec_point
 use m_constants, only : pi
@@ -208,6 +208,7 @@ use m_operator_pointer_utils
 implicit none
 type(io_parameter), intent(in) :: io_simu
 type(lattice),intent(inout)    :: lat
+class(t_H), intent(in) :: Hams(:)
 ! internal
 real(kind=8) :: dummy_norm,torque(3),max_torque,test_torque,F_norm,Edy,Et
 real(kind=8), allocatable :: F_eff(:)
@@ -250,7 +251,7 @@ STOP 'ANYTHING TO DO WITH lines directly below?'
 
 !Call sum_energy(Edy,lat)
 !
-!write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell)
+!write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell,8)
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!           Begin minimization
@@ -293,7 +294,7 @@ STOP 'ANYTHING TO DO WITH lines directly below?'
 !
 !!Call sum_energy(Edy,lat)
 
-write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell)
+write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell,8)
 
 nullify(matrix)
 end subroutine

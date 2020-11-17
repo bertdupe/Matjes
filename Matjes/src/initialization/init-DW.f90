@@ -34,7 +34,7 @@ enddo
 
 do i_x=1,Nx
    do i_w=-4,4
-      alpha=real(5+i_w)/10.0d0*acos(-1.0d0)
+      alpha=real(5+i_w,8)/10.0d0*acos(-1.0d0)
       if ( i_x+i_w == dw_position ) then
          do i_y=1,Ny
             do i_z=1,Nz

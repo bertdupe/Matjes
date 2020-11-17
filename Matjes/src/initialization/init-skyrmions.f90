@@ -176,8 +176,8 @@ cen = 0.5d0*widt*dummyvar
 
 Theta = 0.0d0
 Psi   = 0.0d0
-diml1 = real(Dim_lat(1))
-diml2 = real(Dim_lat(2))
+diml1 = real(Dim_lat(1),8)
+diml2 = real(Dim_lat(2),8)
 
 minIndex = 0
 MinDist = 1.0d10
@@ -256,8 +256,8 @@ real(kind=8), allocatable :: position(:,:,:,:,:)
 
 dim_lat=my_lattice%dim_lat
 net=my_lattice%areal
-diml1 = real(Dim_lat(1))
-diml2 = real(Dim_lat(2))
+diml1 = real(Dim_lat(1),8)
+diml2 = real(Dim_lat(2),8)
 
 Nx=dim_lat(1)
 Ny=dim_lat(2)

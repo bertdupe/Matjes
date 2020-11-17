@@ -109,14 +109,14 @@ enddo
 
 ! initializing the variables above
 E_total=energy_all(Hams,my_lattice)
-write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',E_total/real(N_cell)
+write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',E_total/real(N_cell,8)
 
 
 write(6,'(a)') "in entropic sampling subroutine"
 ! find the energy range
 
-E_min=-8.0d-3*real(N_cell)
-E_max=8.0000001d-3*real(N_cell)
+E_min=-8.0d-3*real(N_cell,8)
+E_max=8.0000001d-3*real(N_cell,8)
 #ifdef CPP_DEBUG
 if ((E_total-E_min).lt.0.0d0) then
     write(6,'(a,f12.7)') 'the minimum of energy ', E_min
@@ -125,7 +125,7 @@ if ((E_total-E_min).lt.0.0d0) then
 endif
 #endif
 
-E_delta=(E_max-E_min)/real(n_histo)
+E_delta=(E_max-E_min)/real(n_histo,8)
 write(6,'(a,E20.10E3)') 'The size of the energy bin is ', E_delta
 
 ! open the results file
@@ -220,7 +220,7 @@ do i_loop=1,n_loop
 ! check the flatness of the histogramm
 ! The minimum of energy and the max must be taken out
       n_sweep=sum(count_E)
-      mean_histo=real(n_sweep)/real(N_cell)
+      mean_histo=real(n_sweep,8)/real(N_cell,8)
       min_histo=minval(count_E)
 
 #ifdef CPP_DEBUG
@@ -232,7 +232,7 @@ do i_loop=1,n_loop
       endif
 #endif
 
-      if ((mod(i_step,1000).eq.0).and.(real(min_histo).gt.flatness*mean_histo)) then
+      if ((mod(i_step,1000).eq.0).and.(real(min_histo,8).gt.flatness*mean_histo)) then
          write(6,'(a,2x,I10,2x,a)') 'histogramm flat enough after',i_step,'steps'
          write(6,'(a/)') 'reset the histogramm and the parameter f'
          write(6,'(/a,I10/)') 'end of loop number', i_loop
@@ -249,7 +249,7 @@ do i_loop=1,n_loop
    write(6,'(/a,I10/)') "writing the results for loop", i_loop
 
    do i=1,n_histo
-        write(7,'(3(E20.10E3,2x),I10)') (E_min+real(i-1)*E_delta)/real(N_cell),lng(i),real(count_E(i))/real(N_cell),count_E(i)
+        write(7,'(3(E20.10E3,2x),I10)') (E_min+real(i-1,8)*E_delta)/real(N_cell,8),lng(i),real(count_E(i),8)/real(N_cell,8),count_E(i)
    enddo
    write(7,'(a)') ''
 
@@ -272,14 +272,14 @@ delta_lng=minval(lng)
 
 OPEN(7,FILE='lngE.dat',action='write',status='unknown',form='formatted')
 do i=1,n_histo
-   write(7,'(2(E20.10E3,2x))') (E_min+real(i-1)*E_delta)/real(N_cell),lng(i)-delta_lng
+   write(7,'(2(E20.10E3,2x))') (E_min+real(i-1,8)*E_delta)/real(N_cell,8),lng(i)-delta_lng
 enddo
 close(7)
 
 ! calculate thermodynamical quantitites
 
 do i_T=1,n_Tsteps
-   kT=(kTfin-kTini)/real(n_Tsteps-1)*real(i_T-1)+kTini
+   kT=(kTfin-kTini)/real(n_Tsteps-1,8)*real(i_T-1,8)+kTini
    temperatures(i_T)=kT/k_B
 enddo
 
@@ -287,7 +287,7 @@ do i_T=1,n_Tsteps
    kT=temperatures(i_T)*k_B
    do i_histo=1,n_histo
 
-      DE = (real(i_histo-1)*E_delta+E_min)
+      DE = (real(i_histo-1,8)*E_delta+E_min)
       DProb=lng(i_histo)-delta_lng-(DE+E_max)/kt
 
       Z(i_T)=Z(i_T)+exp(DProb)

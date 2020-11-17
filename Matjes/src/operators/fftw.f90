@@ -192,7 +192,7 @@ module m_fftw
                     get_FFT_vec_point(k)=get_FFT_vec_point(k)+cmplx(field(j)%w(k)*cos(sense*phase),field(j)%w(k)*sin(sense*phase),8)
                 enddo
             enddo
-            get_FFT_vec_point=get_FFT_vec_point/sqrt(real(Nsize))
+            get_FFT_vec_point=get_FFT_vec_point/sqrt(real(Nsize,8))
         end function get_FFT_vec_point
 
 
@@ -219,7 +219,7 @@ module m_fftw
                     enddo
                 enddo
             enddo
-            get_FFT_Dr_matrix=get_FFT_Dr_matrix/real(Nsize)
+            get_FFT_Dr_matrix=get_FFT_Dr_matrix/real(Nsize,8)
         end function get_FFT_Dr_matrix
 
 
@@ -246,7 +246,7 @@ module m_fftw
                     get_FFT_matrix(l)=get_FFT_matrix(l)+cmplx(field(l,i)*cos(sense*alpha),field(l,i)*sin(sense*alpha),8)
                 enddo
             enddo
-            get_FFT_matrix=get_FFT_matrix/real(shape_pos(2))
+            get_FFT_matrix=get_FFT_matrix/real(shape_pos(2),8)
         end function get_FFT_matrix
 
 

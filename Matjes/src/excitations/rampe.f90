@@ -20,7 +20,7 @@ n=size(field)
 
 if ((time.ge.t_start).and.(time.le.t_end)) then
 
-   field=field+(end_value-start_value)/real(t_end-t_start)
+   field=field+(end_value-start_value)/real(t_end-t_start,8)
 
    form=convert('(a,',n,'f14.6)')
    write(6,form) 'field value ',field

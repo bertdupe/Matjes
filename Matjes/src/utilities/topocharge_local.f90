@@ -30,7 +30,7 @@
        qm=0.0d0
        qp=0.0d0
        Periodic_log=my_lattice%periodic
-       nmag_motif=real(shape_spin(5))
+       nmag_motif=real(shape_spin(5),8)
 !
 ! part with 1 atom per unit cell
 !
@@ -148,7 +148,7 @@
        qm=0.0d0
        qp=0.0d0
        charge=0.0d0
-       nmag_motif=real(shape_spin(5))
+       nmag_motif=real(shape_spin(5),8)
        Periodic_log=my_lattice%periodic
 
        do j=-1,1,2
