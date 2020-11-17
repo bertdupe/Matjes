@@ -12,7 +12,7 @@ type,extends(io_H_base) :: io_H_aniso
 end type
 
 type,extends(io_H_base) :: io_H_zeeman
-    real(8)     :: c_zeeman=1.0d0 !constant factor to furthermore rescale zeeman energy 
+    real(8)     :: c_zeeman=-1.0d0 !constant factor to furthermore rescale zeeman energy 
 end type
 
 type,extends(io_H_base) :: io_H_J
