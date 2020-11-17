@@ -131,46 +131,52 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     
     ! get the table of neighbors and the numbers of atom per shell
     N_Nneigh=H_io%get_shell_number()
-    allocate(tabledist(N_Nneigh,1),stat=alloc_check)
-    if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate table of distance'
-    tabledist=0.0d0
-    allocate(indexNN(N_Nneigh,1),stat=alloc_check)
-    if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
-    indexNN=0
-    call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,n_mag,tabledist)
-    call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_motif,indexNN)
+    if(N_Nneigh>0)then
+        !mapping of the neighbours
+        call user_info(6,time,'Calculating the table of neighbors (this can take time)',.true.)
+        allocate(tabledist(N_Nneigh,1),stat=alloc_check)
+        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate table of distance'
+        tabledist=0.0d0
+        allocate(indexNN(N_Nneigh,1),stat=alloc_check)
+        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
+        indexNN=0
+        call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,n_mag,tabledist)
+        call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_motif,indexNN)
     
+        ! allocate table of neighbors and masque
+        tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
+        allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
+        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
+        tableNN=0
+    
+        ! get table of neighbors
+        call mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice)
+        call user_info(6,time,'done',.true.)
+    else
+        write(6,'(a)') "No neighbors requested, skipping the neighbor table calculation"
+        !nonsense allocations for better trackable boundary violations
+        allocate(tableNN(1,1,1,1,1,1),source=0)
+        allocate(tabledist(1,1),source=0.0d0)
+        allocate(indexNN(1,1),source=0)
+    endif
+    
+    !-------------------------------------------------
+    
+
+
     ! prepare the lattice
     call user_info(6,time,'initializing the spin structure',.false.)
     call InitSpin(my_lattice,my_motif,ext_param)
     call user_info(6,time,'done',.false.)
-    
-    ! allocate table of neighbors and masque
-    tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
-    
-    allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
-    if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
-    
-    tableNN=0
-    
-    !-------------------------------------------------
-    !mapping of the neighbours
-    call user_info(6,time,'Calculating the table of neighbors (this can take time)',.true.)
-    
-    allocate(pos(3,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
-    if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate position for the mapping procedure'
-    
+
     ! get position
-    pos=0.0d0
+    allocate(pos(3,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),source=0.0d0,stat=alloc_check)
+    if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate position for the mapping procedure'
     call get_position(pos,dim_lat,my_lattice%areal,my_motif)
     ! write the positions into a file
     io=open_file_write('positions.dat')
     call dump_config(io,pos)
     call close_file('positions.dat',io)
-    
-    ! get table of neighbors
-    call mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice)
-    call user_info(6,time,'done',.true.)
     
     ! prepare the external electromagnetic fields
     Call user_info(6,time,'get the external magnetic field matrix',.false.)
