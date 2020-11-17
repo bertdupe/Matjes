@@ -65,7 +65,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !ME-coupling antisymmetric (D)
-    if(use_ham(5))then
+    if(use_ham(6))then
         Call get_coupling_ME_D(Ham_res(i_H),H_io%ME_D,tableNN,indexNN,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
