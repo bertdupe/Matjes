@@ -19,16 +19,12 @@ type(t_cell), intent(in) :: motif
 type(lattice), intent(inout) :: mag_lattice
 type(simulation_parameters), intent(in) :: ext_param
 ! internal
-integer :: dim_lat(3), nmag, N_mode,dim_mode
+integer ::  N_mode,dim_mode
 ! slopes
 integer :: i,j,k,l
 
 integer :: dim_mode_arr(number_different_order_parameters)
 
-mag_lattice%cell=motif
-dim_lat=mag_lattice%dim_lat
-nmag=1
-mag_lattice%nmag=nmag
 !find out how many order parameters are used
 N_mode=get_num_mode(motif,ext_param,nb_orbitals)
 
@@ -41,17 +37,7 @@ do i=1,N_mode
 enddo
 !get sizes of the order parameters
 Call get_dim_mode(motif,ext_param,nb_orbitals,dim_mode_arr)
-dim_mode=sum(dim_mode_arr)
-
-!old orderparameter format
-mag_lattice%dim_mode=dim_mode
-Call mag_lattice%ordpar%init(mag_lattice,dim_mode)
-
-!new orderparameter format
-if(dim_mode_arr(1)>0) Call mag_lattice%M%init(mag_lattice,dim_mode_arr(1))
-if(dim_mode_arr(2)>0) Call mag_lattice%E%init(mag_lattice,dim_mode_arr(2))
-if(dim_mode_arr(3)>0) Call mag_lattice%B%init(mag_lattice,dim_mode_arr(3))
-if(dim_mode_arr(4)>0) Call mag_lattice%T%init(mag_lattice,dim_mode_arr(4))
+Call mag_lattice%init_order(motif,dim_mode_arr)
 
 end subroutine create_lattice
 

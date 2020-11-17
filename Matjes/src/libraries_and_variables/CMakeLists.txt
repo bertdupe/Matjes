@@ -5,5 +5,6 @@ src/libraries_and_variables/derived_types.f90
 src/libraries_and_variables/Hamiltonian_variables.f90
 src/libraries_and_variables/modes_variables.f90
 src/libraries_and_variables/simu-parameters.f90
+src/libraries_and_variables/order_parameter.f90
 src/libraries_and_variables/type_lattice.f90
 )

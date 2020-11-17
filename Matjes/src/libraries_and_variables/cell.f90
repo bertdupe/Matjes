@@ -8,6 +8,7 @@ type t_cell
      type(atom), allocatable :: atomic(:)
      contains
      procedure :: ind_mag => get_ind_mag
+     procedure :: num_mag => get_num_mag
      procedure :: get_magmom
      procedure :: get_mag_magmom
 end type
@@ -55,10 +56,7 @@ subroutine get_ind_mag(this,ind_Nat)
     integer                     ::  i,j
     integer,allocatable         ::  ind_Nat(:)
 
-    Nat=0
-    do i=1,size(this%atomic)
-        if(this%atomic(i)%moment/=0.0d0) Nat=Nat+1
-    enddo
+    Nat=this%num_mag()
     allocate(ind_Nat(Nat),source=0)
     j=0
     do i=1,size(this%atomic)
@@ -68,5 +66,16 @@ subroutine get_ind_mag(this,ind_Nat)
         endif
     enddo
 end subroutine
+
+function get_num_mag(this)result(nmag)
+    class(t_cell),intent(in)    :: this
+    integer                     :: nmag
+    integer ::  i
+    nmag=0
+    do i=1,size(this%atomic)
+        if(this%atomic(i)%moment/=0.0d0) nmag=nmag+1
+    enddo
+end function
+    
 
 end module

@@ -1,43 +1,15 @@
 module m_type_lattice
 use m_basic_types
+use m_order_parameter
 use m_cell,only : t_cell
 
 integer,parameter :: number_different_order_parameters=4    !m,E,B,T
-
+character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T"]
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
                                 &   'magnetic   ',&
                                 &   'Efield     ',&
                                 &   'Bfield     ',&
                                 &   'temperature']
-character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T"]
-
-! unit cells
-! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
-
-type order_par
-!variable that contains all order parameters as vec_point and the
-!corresponding target
-!data_vecpoint and data_real REQUIRE UTMOST CARE, DON'T CHANGE THEM EXTERNALLY AND THINK WHAT YOU TO
-!UNDER NO CIRCUMSTANCES REMOVE PRIVATE FROM data_real OR data_vecpoint
-!THAT COULD LEAD TO A GIGANTIC MESS WITH MEMORY LEAK
-
-    type(vec_point),pointer,private,contiguous         :: data_vecpoint(:)=>null()
-    real(8),pointer,private,contiguous                 :: data_real(:)=>null()
-
-    type(vec_point),pointer,contiguous      :: all_l_modes(:) => null()
-    type(vec_point),pointer,contiguous      :: l_modes(:,:,:,:) => null() !main vec_type get allocated
-    real(8),pointer,contiguous              :: modes(:,:,:,:,:) => null() !main pointer that get allocated
-    real(8),pointer,contiguous              :: all_modes(:) => null()
-    real(8),pointer,contiguous              :: modes_v(:,:) => null()
-
-    integer                                 :: dim_mode=0
-contains 
-    procedure :: init => init_order_par
-    procedure :: copy => copy_order_par
-    procedure :: copy_val => copy_val_order_par
-    procedure :: delete => delete_order_par
-    final :: final_order_par
-end type
 
 ! variable that defines the lattice
 type lattice
@@ -61,11 +33,13 @@ type lattice
      type(order_par)  :: B !Magnetic field
      type(order_par)  :: T !Temperature
      !ultimately delete ordpar
-     type(order_par)   :: ordpar !make this an array if using separated order parameters
+     type(order_par)   :: ordpar !obsolete
 
 contains
+    !initialization function
+    procedure :: init_geo   !initialize the geometric properties (areal,Ncell,...)
+    procedure :: init_order !initialize the order parameters dimensions
     !basic function
-    procedure :: init_geo  => lattice_init_geo
     procedure :: copy => copy_lattice
     procedure :: copy_val_to => copy_val_lattice
     !get correct order parameter (or combination thereof)
@@ -103,23 +77,21 @@ public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbre
 
 contains 
 
-
-subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
+subroutine init_geo(this,areal,alat,dim_lat,boundary)
+    !initialize the lattice with the geometric inputs
     use m_vector, only : norm,cross
     use m_constants, only : pi
     class(lattice),intent(inout)    ::  this
     real(8),intent(in)              ::  areal(3,3),alat(3)
     integer,intent(in)              ::  dim_lat(3)
     logical,intent(in)              ::  boundary(3)
-    
+    !internal
     real(8)                         :: volume
     integer                         :: i
-
     !use supercell parameter
     integer,allocatable,dimension(:)     :: i1,i2,i3 
     real(8)         :: tmp_vec(3,3)
     integer         :: j,l,i_vec
-
 
     do i=1,3
        this%areal(i,:)=areal(i,:)*alat(i)
@@ -142,15 +114,11 @@ subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
     !write lattice information
     write(6,'(/a)') 'real space lattice vectors (in nm)'
     write(6,'(3(3f12.6/))') transpose(this%areal)
-
     write(6,'(a)') 'reciprocal space lattice vectors (in nm-1)'
     write(6,'(3(3f12.6/))') transpose(this%astar)
-
     write(6,'(a)') 'Supercell real space lattice vectors (in nm)'
     write(6,'(3(3f12.6/))') transpose(this%a_sc)
-
     write(6,'(a/,2X,3L3/)') 'Supercell periodicity along each direction:',this%periodic
-
 
     !get sc_vec_period for quicker check of minimal distance between positions using supercell periodicity
     if(this%periodic(1))then
@@ -181,7 +149,25 @@ subroutine lattice_init_geo(this,areal,alat,dim_lat,boundary)
             enddo
         enddo
     enddo
+end subroutine
 
+subroutine init_order(this,cell,dim_modes)
+    !initialize the lattice with the order parameter and cell properties
+    class(lattice),intent(inout)    :: this
+    type(t_cell), intent(in)        :: cell
+    integer,intent(in)              :: dim_modes(number_different_order_parameters)
+
+    this%cell=cell
+    this%nmag=cell%num_mag()
+    !obsolete orderparameter format
+    this%dim_mode=sum(dim_modes)
+    Call this%ordpar%init(this%dim_lat,this%nmag,this%dim_mode)
+    
+    !new orderparameter format
+    if(dim_modes(1)>0) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1))
+    if(dim_modes(2)>0) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2))
+    if(dim_modes(3)>0) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
+    if(dim_modes(4)>0) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
 end subroutine
 
 subroutine lattice_position(this,ind,pos)
@@ -192,7 +178,6 @@ subroutine lattice_position(this,ind,pos)
 
     pos=matmul(real(ind(1:3)-1,8),this%areal)
     pos=pos+this%cell%atomic(ind(4))%position
-
 end subroutine
 
 subroutine min_diffvec_period(this,diff)
@@ -217,9 +202,7 @@ function lattice_position_difference(this,ind1,ind2)result(diff)
     class(lattice),intent(in)   :: this
     integer,intent(in)          :: ind1(4),ind2(4)  !(i_x,i_y,i_y,i_at)
     real(8)                     :: diff(3)
-
     real(8)                     :: pos1(3),pos2(3),norm
-
 
     Call this%pos_ind(ind1,pos1)
     Call this%pos_ind(ind2,pos2)
@@ -269,7 +252,6 @@ function index_1_3(this,ind1)result(indm)
     indm(1)=(tmp-1)-prod*(indm(2)-1)+1
 end function
 
-
 function index_4_1(this,ind4)result(ind1)
     !get the correct in index from an (im,ix,iy,iz) array to the (3,Nmag*prod(Nlat)) magnetic array
     !order
@@ -306,7 +288,6 @@ subroutine set_order_point(this,order,point)
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
     end select
-
 end subroutine
 
 subroutine set_order_point_single(this,order,ilat,point)
@@ -332,9 +313,7 @@ subroutine set_order_point_single(this,order,ilat,point)
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
     end select
-
 end subroutine
-
 
 subroutine reduce_cell(this,vec_in,order,vec_out)
     !adds all parts of a vectors parts of a vector together, that correspond to the same lattice cell
@@ -360,11 +339,7 @@ subroutine reduce_cell(this,vec_in,order,vec_out)
        !probably not very efficient...
        vec_out(i)=sum(vec_in((i-1)*dim_mode_sum+1:i*dim_mode_sum))
     enddo
-
 end subroutine
-
-
-
 
 subroutine reduce(this,vec_in,order,order_keep,vec_out)
     class(lattice),intent(in)       ::  this
@@ -408,7 +383,6 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
         dir=modulo((dir-1)/ind_div,dim_mode_keep)+1
         vec_out(dir+site*dim_mode_keep)=vec_out(dir+site*dim_mode_keep)+vec_in(i)
     enddo
-
 end subroutine
 
 subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
@@ -452,11 +426,7 @@ subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
         dir=modulo((i-1)/ind_div,dim_mode_keep)+1
         vec_out(dir)=vec_out(dir)+vec_in(i)
     enddo
-
 end subroutine
-
-
-
 
 subroutine set_order_comb_single(this,order,i_site,vec)
     !fills the combination of several order parameters according to order
@@ -496,9 +466,7 @@ subroutine set_order_comb_single(this,order,i_site,vec)
             vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
         enddo
     enddo
-
 end subroutine
-
 
 subroutine set_order_comb(this,order,vec)
     !fills the combination of several order parameters according to order
@@ -508,7 +476,7 @@ subroutine set_order_comb(this,order,vec)
     class(lattice),intent(in)         ::  this
     integer,intent(in)                ::  order(:)
     real(8),intent(inout)             ::  vec(:)
-
+    !internal
     type(point_arr)         :: points(size(order))
     integer                 :: dim_modes(size(order))
     integer                 :: dim_mode_sum
@@ -539,9 +507,7 @@ subroutine set_order_comb(this,order,vec)
             enddo
         enddo
     enddo
-
 end subroutine
-
 
 subroutine set_order_comb_exc(this,order,vec,order_exc)
     !fills the combination of several order parameters according to order
@@ -560,7 +526,6 @@ subroutine set_order_comb_exc(this,order,vec,order_exc)
     integer                 :: ind_site(size(order))
     integer                 :: ind(size(order))
     integer                 :: ind_div(size(order))
-
 
     if(size(order_exc)/=size(order)) STOP 'set_order_comb_exc input array shape wrong'
     do i=1,size(order)
@@ -585,7 +550,6 @@ subroutine set_order_comb_exc(this,order,vec,order_exc)
     enddo
 end subroutine
 
-
 subroutine set_order_comb_exc_single(this,i_site,order,vec,order_exc)
     !fills the combination of several order parameters according to order
     !probably quite slow implementation, but should at least work for any reasonable size of order
@@ -595,7 +559,7 @@ subroutine set_order_comb_exc_single(this,i_site,order,vec,order_exc)
     integer,intent(in)                ::  order(:),i_site
     logical,intent(in)                ::  order_exc(:)
     real(8),intent(inout)             ::  vec(:)
-
+    !internal
     type(point_arr)         :: points(size(order))
     integer                 :: dim_modes(size(order))
     integer                 :: dim_mode_sum
@@ -603,7 +567,6 @@ subroutine set_order_comb_exc_single(this,i_site,order,vec,order_exc)
     integer                 :: ind_site(size(order))
     integer                 :: ind(size(order))
     integer                 :: ind_div(size(order))
-
 
     if(size(order_exc)/=size(order)) STOP 'set_order_comb_exc input array shape wrong'
     do i=1,size(order)
@@ -625,8 +588,6 @@ subroutine set_order_comb_exc_single(this,i_site,order,vec,order_exc)
         enddo
     enddo
 end subroutine
-
-
 
 subroutine point_order_onsite(lat,op,dimH,modes,vec)
     !Subroutine that points modes to the order parameter vector according to op and dimH input
@@ -668,9 +629,6 @@ subroutine point_order_onsite_single(lat,op,i_site,dim_mode,modes,vec)
     endif
 end subroutine
 
-
-
-
 function get_order_dim(this,order) result(dim_mode)
     class(lattice),intent(in)   ::  this
     integer,intent(in)          ::  order
@@ -693,7 +651,6 @@ function get_order_dim(this,order) result(dim_mode)
         write(*,*) 'trying to get dim_mode for order=',order 
         ERROR STOP "dim_mode not positive, requested order parameter not set?"
     endif
-
 end function
 
 subroutine lattice_get_position_mag(this,pos)
@@ -722,9 +679,7 @@ subroutine lattice_get_position_mag(this,pos)
         enddo
     enddo
     deallocate(pos_lat)
-
 end subroutine
-
 
 subroutine get_position_cell(pos,dim_lat,lat)
     !get the positions of the 0 point of each cell
@@ -748,108 +703,9 @@ subroutine get_position_cell(pos,dim_lat,lat)
     enddo
 end subroutine 
 
-
-subroutine init_order_par(self,lat,dim_mode)
-    !if the data pointers are not allocated, initialize them with 0
-    !if the data pointers are allocated, check that size requirements are identical
-    !associate public pointers to internal data storage
-    class(order_par),intent(inout) :: self
-    class(lattice),intent(in)    :: lat
-    integer,intent(in)           :: dim_mode
-    integer                      :: N
-    integer                      :: l,k,j,i          
-    
-    !initialize real array data if necessary and associate pointers
-    self%dim_mode=dim_mode
-    N=dim_mode*product(lat%dim_lat)*lat%nmag
-    if(.not.associated(self%data_real))then
-        allocate(self%data_real(N),source=0.0d0)
-    else
-        if(size(self%data_real)/=N)then
-            STOP "lattice shape does not match initializing already associated order_Par%modes"
-        endif
-    endif
-    self%all_modes(1:N)=>self%data_real
-    self%modes(1:dim_mode,1:lat%dim_lat(1),1:lat%dim_lat(2),1:lat%dim_lat(3),1:lat%nmag)=>self%data_real
-    self%modes_v(1:dim_mode,1:product(lat%dim_lat)*lat%nmag)=>self%data_real
-
-    !initialize vec_pointer data if necessary and associate pointers
-    N=product(lat%dim_lat)*lat%nmag
-    if(.not.associated(self%data_vecpoint))then
-        !allocate(self%data_vecpoint(lat%dim_lat(1),lat%dim_lat(2),lat%dim_lat(3),lat%nmag))
-        allocate(self%data_vecpoint(N))
-    else
-        if(size(self%data_vecpoint)/=N)then
-            STOP "lattice shape does not match initializing already allocated order_par%data_vecpoint"
-        endif
-    endif
-    self%l_modes(1:lat%dim_lat(1),1:lat%dim_lat(2),1:lat%dim_lat(3),1:lat%nmag)=>self%data_vecpoint
-    self%all_l_modes(1:N)=>self%data_vecpoint
-    do l=1,lat%nmag
-       do k=1,lat%dim_lat(3)
-          do j=1,lat%dim_lat(2)
-             do i=1,lat%dim_lat(1)
-                self%l_modes(i,j,k,l)%w=>self%modes(:,i,j,k,l)
-             enddo
-          enddo
-       enddo
-    enddo
-end subroutine
-
-subroutine final_order_par(self)
-    type(order_par),intent(inout) :: self
-
-    Call self%delete()
-end subroutine
-
-subroutine delete_order_par(self)
-    class(order_par),intent(inout) :: self
-    
-    nullify(self%all_l_modes,self%l_modes)
-    if(associated(self%data_vecpoint)) deallocate(self%data_vecpoint)
-
-    nullify(self%all_modes,self%modes)
-    if(associated(self%data_real)) deallocate(self%data_real)
-end subroutine
-
-subroutine copy_order_par(self,copy,lat)
-    class(order_par),intent(inout) :: self
-    class(order_par),intent(inout) :: copy
-    class(lattice),intent(in)      :: lat  !intent(in) might be a problem since a lattice might get destroyed <- check if finalization occurs
-   
-    Call copy%delete()
-    if(.not.associated(self%modes))then
-        STOP "failed to copy order_par, since the source modes are not allocated"
-    endif
-    allocate(copy%data_real,source=self%data_real)
-    Call copy%init(lat,self%dim_mode)
-
-end subroutine
-
-
-subroutine copy_val_order_par(self,copy)
-    class(order_par),intent(inout) :: self
-    class(order_par),intent(inout) :: copy
-
-   
-    if(.not.associated(self%data_real))then
-        STOP "failed to copy_val order_par, since the source modes are not allocated"
-    endif
-    if(.not.associated(copy%data_real))then
-        STOP "failed to copy_val order_par, since the target modes are not allocated"
-    endif
-
-    if(size(self%data_real)/=size(copy%data_real))then
-        STOP "failed to copy_val order_par, since their shapes are inconsistent"
-    endif
-
-    copy%all_modes=self%all_modes
-
-end subroutine
-
-
 subroutine copy_lattice(self,copy)
-    class(lattice),intent(inout)    :: self,copy
+    class(lattice),intent(in)    :: self
+    class(lattice),intent(out)   :: copy
     
     copy%areal=self%areal
     copy%astar=self%astar
@@ -862,14 +718,13 @@ subroutine copy_lattice(self,copy)
     copy%periodic=self%periodic
     if(allocated(self%world)) allocate(copy%world,source=self%world)
     if(allocated(self%sc_vec_period)) allocate(copy%sc_vec_period,source=self%sc_vec_period)
-    if(self%ordpar%dim_mode>0) Call self%ordpar%copy(copy%ordpar,self)
+    if(self%ordpar%dim_mode>0) Call self%ordpar%copy(copy%ordpar,self%dim_lat,self%nmag)
 
-    if(self%m%dim_mode>0) Call self%M%copy(copy%M,self)
-    if(self%e%dim_mode>0) Call self%E%copy(copy%E,self)
-    if(self%b%dim_mode>0) Call self%B%copy(copy%B,self)
-    if(self%t%dim_mode>0) Call self%T%copy(copy%T,self)
+    if(self%m%dim_mode>0) Call self%M%copy(copy%M,self%dim_lat,self%nmag)
+    if(self%e%dim_mode>0) Call self%E%copy(copy%E,self%dim_lat,self%nmag)
+    if(self%b%dim_mode>0) Call self%B%copy(copy%B,self%dim_lat,self%nmag)
+    if(self%t%dim_mode>0) Call self%T%copy(copy%T,self%dim_lat,self%nmag)
 end subroutine
-
 
 subroutine copy_val_lattice(self,copy)
     class(lattice),intent(inout)    :: self,copy
@@ -912,6 +767,4 @@ function op_int_to_abbrev(int_in)result(abbrev)
         abbrev(i:i)=order_parameter_abbrev(int_in(i))
     enddo
 end function
-
-
 end module
