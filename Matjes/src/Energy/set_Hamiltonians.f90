@@ -35,6 +35,13 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     use_ham(4)=H_io%zeeman%is_set
     use_ham(5)=H_io%ME_J%is_set
     use_ham(6)=H_io%ME_D%is_set
+
+    if(use_ham(2).and.all(norm2(DM_vector,2)<1.0d-8))then
+        write(*,*) "WARNING, ALL DMI-vectors are vanishing"
+        write(*,*) "Disableing DMI"
+        use_ham(2)=.false.
+    endif
+
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
 

@@ -87,6 +87,10 @@ subroutine get_exchange_D(Ham,io,tableNN,indexNN,lat,DM_vector)
             allocate(line(1,Ncell),source=0) 
             offset=sum(indexNN(1:i_sh-1))
             do i_vois=1,Nvois
+                if(norm2(DM_vector(i_vois+offset,:,1))<1.0d-8)then 
+                    write(6,'(A)') "WARNING, skipping DMI-neighbors since the DM-vector is zero"
+                    cycle
+                endif
                 Call get_loc_Ham_D(DM_vector(i_vois+offset,:,1),Hsh,Hloc)
                 Call get_coo(Hloc,val_tmp,ind_tmp)
                 do i_z=1,shape_tableNN(5)
