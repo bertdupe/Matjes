@@ -17,6 +17,7 @@ use m_H_public
 use m_spindynamics
 use m_montecarlo
 use m_entropic
+use m_GNEB, only: GNEB
 use m_write_config, only: write_config
 
 Implicit None
@@ -134,10 +135,8 @@ endif
 !---------------------------------
 if (my_simu%name == 'GNEB') then
             write(6,'(a)') 'entering into the GNEB routine'
-!!            call init_gneb()
-             STOP "PB: GNEB HAS TO BE UPDATED"
-            !call GNEB(all_lattices,motif,io_simu,ext_param)
-            !call set_gneb_defaults()
+            call GNEB(all_lattices,motif,io_simu,ext_param,Ham_comb)
+            STOP "PB: GNEB FINISHED?"
 endif
 
 !---------------------------------

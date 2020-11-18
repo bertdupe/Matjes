@@ -1,50 +1,21 @@
 module m_io_gneb
 use m_vector, only : norm
+use m_type_lattice,only: lattice
+implicit none
 
 contains
 
-subroutine read_inifin(file_ini,file_fin,amp_rnd,path)
-use m_get_random
-use m_io_files_utils
-implicit none
-character(len=*), intent(in) :: file_ini,file_fin
-real(kind=8), intent(in):: amp_rnd
-real(kind=8), intent(inout) :: path(:,:,:)
-! internal variables
-integer :: i,io_ini,io_fin,N_cell,nim,shape_path(3)
-real(kind=8) :: u(3),norm_local
-
-shape_path=shape(path)
-N_cell=shape_path(2)
-nim=shape_path(3)
-
-io_ini=open_file_read(file_ini)
-if (io_ini.lt.0) then
-    write(6,*) 'no input file for the initial state!'
-    STOP
-endif
-
-io_fin=open_file_read(file_fin)
-if (io_fin.lt.0) then
-   write(6,*) 'no input file for the final state!'
-   STOP
-endif
-
-do i=1,N_cell
-   read(io_ini,*)  path(:,i,1)
-end do
-call close_file(file_ini,io_ini)
-
-do i=1,N_cell
-    read(io_fin,*) path(:,i,nim)
-end do
-call close_file(file_fin,io_fin)
-
+subroutine read_inifin(file_ini,file_fin,images)
+    use m_get_random
+    use m_io_files_utils
+    implicit none
+    character(len=*), intent(in)    :: file_ini,file_fin
+    type(lattice), intent(inout)    :: images(:)
+    ! internal variables
+     
+    Call images(1)%M%read_file(file_ini)
+    Call images(size(images))%M%read_file(file_fin)
 end subroutine read_inifin
-
-
-
-
 
 
 subroutine write_path(path)
@@ -63,48 +34,41 @@ end do
 end subroutine write_path
 
 
-
-
 !
 !
-! Read the path into N files
+! Read the path from N files
 !
 !
-subroutine read_path(fname_part,amp_rnd,path,exists)
-use m_get_random
-use m_convert
-use m_io_files_utils
-implicit none
-character(len=*), intent(in) :: fname_part
-real(kind=8), intent(in) :: amp_rnd
-real(kind=8), intent(inout) :: path(:,:,:)
-logical, intent(out) :: exists
-! internal variables
-integer :: i,i_nim,shape_path(3),io,N_cell,nim
-real(kind=8) :: u(3),norm_local
-character(len=50) :: fname
+subroutine read_path(fname_part,images,exists)
+    use m_get_random
+    use m_convert
+    use m_io_files_utils
+    implicit none
+    character(len=*), intent(in) :: fname_part
+    type(lattice), intent(inout)    :: images(:)
+    logical, intent(out) :: exists
+    ! internal variables
+    logical ::  img_exist(size(images))
+    integer :: i,i_nim,shape_path(3),io,N_cell
+    real(kind=8) :: u(3),norm_local
+    character(len=50) :: fname
 
-shape_path=shape(path)
-nim=shape_path(3)
-N_cell=shape_path(2)
-
-do i_nim = 1,nim
-   fname=convert(fname_part,'_',i_nim,'.dat')
-   io=open_file_read(fname)
-
-   if (io.gt.0) then
-      exists=.true.
-      do i=1,N_cell
-         read(io,*) path(:,i,i_nim)
-      end do
-   else
-      exists=.false.
-      write(6,*) 'ERROR: File ',fname, ' does not exist. Path not loaded.'
-   end if
-   call close_file(fname,io)
-end do
-
-write(6,*) 'Path loaded.'
+    img_exist=.false.
+    do i_nim = 1,size(images)
+       fname=trim(fname_part)//'_'
+       fname=convert(fname,i_nim)
+       fname=trim(fname)//'.dat'
+       io=open_file_read(fname)
+       if (io.gt.0) then
+          img_exist(i_nim)=.true.
+          read(io,*) images(i)%M%modes_v
+       else
+          write(6,*) 'ERROR: File ',fname, ' does not exist. Path not loaded.'
+       end if
+       call close_file(fname,io)
+    end do
+    write(6,*) 'Path loaded.'
+    exists=img_exist(1).and.img_exist(size(images)) !does exists only care if first & last file are read?
 
 end subroutine read_path
 

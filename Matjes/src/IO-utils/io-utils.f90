@@ -322,7 +322,7 @@ function max_ind_variable(io,var_name,fname) result(max_ind)
     integer, intent(in) :: io
     integer         ::  max_ind
     ! internal variable
-    integer :: length_string,i_var,i_end_str,fin
+    integer :: length_string,i_var,i_end_str,fin,stat
     character(len=100) :: str
     
     max_ind=0
@@ -338,8 +338,8 @@ function max_ind_variable(io,var_name,fname) result(max_ind)
         if (str(1:1) == '#' ) cycle
         if ( str(1:length_string) == var_name ) then
            i_end_str=scan(str(length_string+1:),' ')
-           read(str(length_string+1:length_string+1+i_end_str),*) i_var
-           max_ind=max(i_var,max_ind)
+           read(str(length_string+1:length_string+1+i_end_str),*,iostat=stat) i_var
+           if(stat==0) max_ind=max(i_var,max_ind)
         endif
     enddo
     write(6,'(3a,I5)') 'Maximal index of ',var_name,' is:', max_ind

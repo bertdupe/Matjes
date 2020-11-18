@@ -2,7 +2,7 @@ module m_gneb_utils
 use m_vector, only : calc_ang,norm
 use m_path
 use m_write_spin
-use m_local_energy
+!use m_local_energy
 use m_createspinfile
 use m_basic_types, only : vec_point, vec
 use m_derived_types, only : io_parameter,lattice
@@ -15,8 +15,7 @@ use m_spline
 use m_io_gneb
 use m_projection
 use m_tangent
-use m_local_energy
-
+#if 0
 private
 public :: find_path,find_path_ci,find_SP,find_SP_conf
 contains
@@ -800,5 +799,5 @@ end if
    
 end subroutine find_SP_conf_one
    
-
+#endif
 end module m_gneb_utils
