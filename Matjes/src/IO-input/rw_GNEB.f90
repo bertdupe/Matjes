@@ -27,21 +27,47 @@ subroutine rw_gneb(gneb_io,fname_in)
     call get_parameter(io_param,fname,'initpath',gneb_io%initpath)
     call get_parameter(io_param,fname,'amp_rnd',gneb_io%amp_rnd)
     call get_parameter(io_param,fname,'amp_rnd_path',gneb_io%amp_rnd_path)
-    call get_parameter(io_param,fname,'min_itrmax',gneb_io%minitrmax)
+    call get_parameter(io_param,fname,'min_itrmax',gneb_io%itrmax)
     call get_parameter(io_param,fname,'mintraj_step',gneb_io%mintraj_step)
     call get_parameter(io_param,fname,'min_ftol',gneb_io%minftol)
-    call get_parameter(io_param,fname,'mep_itrmax',gneb_io%mepitrmax)
-    call get_parameter(io_param,fname,'meptraj_step',gneb_io%meptraj_step)
+    call get_parameter(io_param,fname,'mep_itrmax',gneb_io%itrmax)
+    call get_parameter(io_param,fname,'meptraj_step',gneb_io%every)
     call get_parameter(io_param,fname,'mep_ftol',gneb_io%mepftol)
     call get_parameter(io_param,fname,'mep_ftol_ci',gneb_io%mepftol_ci)
     call get_parameter(io_param,fname,'do_gneb_simple',gneb_io%do_gneb)
     call get_parameter(io_param,fname,'do_gneb_ci',gneb_io%do_gneb_ci)
     call get_parameter(io_param,fname,'do_norm_rx',gneb_io%do_norm_rx)
     call get_parameter(io_param,fname,'en_zero',gneb_io%en_zero)
-    call get_parameter(io_param,fname,'vpo_dt',gneb_io%vpodt)
-    call get_parameter(io_param,fname,'vpo_mass',gneb_io%vpomass)
+    call get_parameter(io_param,fname,'vpo_dt',gneb_io%dt)
+    call get_parameter(io_param,fname,'vpo_mass',gneb_io%mass)
     call get_parameter(io_param,fname,'sample_num',gneb_io%sample_num)
     call get_parameter(io_param,fname,'nim',gneb_io%nim)
+
+    !gneb_io%init_path to support older input format
+    select case(gneb_io%initpath)
+    case(-1)
+        continue !do nothing
+    case(1)
+        gneb_io%read_path=.False.      
+        gneb_io%read_outer=.True.      
+        gneb_io%min_type=1            
+    case(2)
+        gneb_io%read_path=.True.      
+        gneb_io%read_outer=.True.      
+        gneb_io%min_type=2            
+    case(3)
+        gneb_io%read_path=.True.      
+        gneb_io%read_outer=.True.      
+        gneb_io%min_type=1            
+    case default
+        gneb_io%read_path=.False.      
+        gneb_io%read_outer=.True.      
+        gneb_io%min_type=1            
+    end select
+    call get_parameter(io_param,fname,'gnebinit_read_path',gneb_io%read_path)
+    call get_parameter(io_param,fname,'gnebinit_read_outer',gneb_io%read_outer)
+    call get_parameter(io_param,fname,'gnebinit_min_type',gneb_io%min_type)
+
     call close_file(fname,io_param)
 end subroutine
 end module

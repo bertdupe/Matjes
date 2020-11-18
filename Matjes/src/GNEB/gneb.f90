@@ -1,6 +1,7 @@
 module m_GNEB
 use m_H_public
 use m_rw_GNEB,only: rw_gneb,GNEB_input  
+use m_io_gneb,only: write_path
 implicit none
 private
 public GNEB
@@ -43,25 +44,25 @@ subroutine GNEB(my_lattice,my_motif,io_simu,ext_param,Ham)
         Call my_lattice%copy(images(i))
     enddo
     allocate(rx(nim),ene(nim),dene(nim),source=0.0d0)
-!    allocate(spinsp(size_order,N_cell),source=0.0d0)
+    allocate(spinsp(size_order,N_cell),source=0.0d0)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! initialization of the path
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     call path_initialization(images,io_simu,io_gneb,Ham)
-#if 0
+    call write_path(images)
     
-    call write_path(path)
     
-    if (do_gneb) then
+    if (io_gneb%do_gneb) then
        write (6,'(a)') "GNEB calculation in progress..."
-       call find_path(nim,N_cell,vpodt,vpomass,spring,mepftol,mepitrmax,meptraj_step,rx,ene,dene,path,my_lattice,io_simu)
-             
+       !call find_path(nim,N_cell,vpodt,vpomass,spring,mepftol,mepitrmax,meptraj_step,rx,ene,dene,path,my_lattice,io_simu)
+       call find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb)
        write (6,'(a)') "Done!"
     end if
           
-    if (do_gneb_ci) then
+#if 0    
+    if (io_gneb%do_gneb_ci) then
        write (6,'(a)') "CI-GNEB calculation in progress..."
        call find_path_ci(nim,N_cell,vpodt,vpomass,spring,mepftol_ci,mepitrmax,meptraj_step,rx,ene,dene,ci,path,my_lattice,io_simu)
        write(6,'(a,I3)') 'ci:',ci

@@ -8,6 +8,7 @@ module m_vector
    interface cross
        module procedure cross_real_simple
        module procedure cross_real
+!       module procedure cross_realp
        module procedure cross_int
    end interface cross
 
@@ -353,6 +354,14 @@ cross_real_simple(2) = a(3) * b(1) - a(1) * b(3)
 cross_real_simple(3) = a(1) * b(2) - a(2) * b(1)
 
 END FUNCTION cross_real_simple
+
+!FUNCTION cross_realp(a, b, P, N)result(res)
+!    integer, intent(in) :: N,P
+!    real(8),pointer, INTENT(IN) :: a(:), b(:)
+!    real(8) :: res(P:N)
+!
+!    res=cross_real(a,b,P,N)
+!end function
 
 FUNCTION cross_real(a, b, P, N)
 implicit none

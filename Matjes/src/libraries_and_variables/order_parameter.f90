@@ -45,22 +45,22 @@ subroutine read_file(this,fname)
 
     io=open_file_read(fname)
     if (io.lt.0) then
-        write(ERROR_UNIT,'(2A)') 'Failed to open file:',fname
+        write(ERROR_UNIT,'(//2A)') 'Failed to open file:',fname
         ERROR STOP "ERROR READING ORDER PARAMETER"
     endif
     read(io,*,iostat=stat)  this%modes_v
     if(stat>0)then
-        write(ERROR_UNIT,'(2A)') 'ERROR READING FILE:',fname
+        write(ERROR_UNIT,'(//2A)') 'ERROR READING FILE:',fname
         write(ERROR_UNIT,'(2A)') 'Unexpected characters?'
         ERROR STOP "ERROR READING ORDER PARAMETER"
     elseif(stat<0)then
-        write(ERROR_UNIT,'(2A)') 'UNEXPECTED END OF FILE:',fname
+        write(ERROR_UNIT,'(//2A)') 'UNEXPECTED END OF FILE:',fname
         write(ERROR_UNIT,'(2A)') 'incompatible lattice size between input and file?'
         ERROR STOP "ERROR READING ORDER PARAMETER"
     else
         read(io,*,iostat=stat)  tst
         if(stat==0)then
-            write(ERROR_UNIT,'(2A)') 'UNEXPECTED FURTHER ENTRIES IN FILE:',fname
+            write(ERROR_UNIT,'(//2A)') 'UNEXPECTED FURTHER ENTRIES IN FILE:',fname
             write(ERROR_UNIT,'(2A)') 'incompatible lattice size between input and file?'
             ERROR STOP "ERROR READING ORDER PARAMETER"
         endif

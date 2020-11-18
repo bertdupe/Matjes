@@ -25,99 +25,51 @@ subroutine path_initialization(images,io_simu,io_gneb,Ham)
     type(lattice), intent(inout)    :: images(:)
     class(t_H),intent(in)           :: Ham(:)
     ! internal variable
-    integer :: i_nim,nim,N_cell
-    logical :: exists=.False.,found=.False.
-    character(35) :: num
+    integer :: nim
+    logical :: exists
     character(:),allocatable        ::  momfile_i,momfile_f
     
     nim=size(images)
-    select case(io_gneb%initpath)
-     case(3)
-!PB: WHY DOES THIS FIRST TRY TO READ IN ALL FILES?
-       write (6,'(a)') "Initial guess for the path from file"
-       call read_path(io_gneb%restartfile_path,images,exists)
-       if (.not.exists) stop
+
+    if(io_gneb%read_path)then
+        call read_path(io_gneb%restartfile_path,images,exists)
+    endif
+    if(io_gneb%read_outer)then
        momfile_i = convert(io_gneb%restartfile_path,'_1.dat')
        momfile_f = convert(io_gneb%restartfile_path,'_',nim,'.dat')
        call read_inifin(momfile_i,momfile_f,images)
-#if 0    
-       call WriteSpinAndCorrFile(path(:,:,1),'SpinSTM_GNEB_ini.dat')
-       call CreateSpinFile(path(:,:,1),'povray_GNEB_ini.dat')
-       call WriteSpinAndCorrFile(path(:,:,nim),'SpinSTM_GNEB_fin.dat')
-       call CreateSpinFile(path(:,:,nim),'povray_GNEB_fin.dat')
-    
-       write (6,'(a)') "Relaxing the first image via the infinite damping method..."
-    
-       call minimize_infdamp(path(:,:,1),io_simu,Ham)
-       write (6,'(a)') "Done!"
-    
-       write (6,'(a)') "Relaxing the first image via the infinite damping method..."
-       call minimize_infdamp(path(:,:,nim),io_simu,Ham)
-       write (6,'(a)') "Done!"
-    
-     case(2)
-    
-       write (6,'(a)') "Initial guess for the path from file"
-       call read_path(restartfile_path,path,exists)
-       if (.not.exists) stop
-       momfile_i = convert(restartfile_path,'_1.dat')
-       momfile_f = convert(restartfile_path,'_',nim,'.dat')
-       call read_inifin(momfile_i,momfile_f,path)
-       call WriteSpinAndCorrFile(path(:,:,1),'SpinSTM_GNEB_ini.dat')
-       call CreateSpinFile(path(:,:,1),'povray_GNEB_ini.dat')
-       call WriteSpinAndCorrFile(path(:,:,nim),'SpinSTM_GNEB_fin.dat')
-       call CreateSpinFile(path(:,:,nim),'povray_GNEB_fin.dat')
-    
-       write (6,'(a)') "Relaxing the first image..."
-    
-       call minimize(path(:,:,1),io_simu,Ham)
-       write (6,'(a)') "Done!"
-    
-       write (6,'(a)') "Relaxing the last image..."
-       call minimize(path(:,:,nim),io_simu,Ham)
-       write (6,'(a)') "Done!"
-    
-    
-     case(1)
-    
-       write (6,'(a)') "Initial and final states are read in file"
-       write (6,'(a)') "no minimization of the energy"
-    
-       call read_inifin(momfile_i,momfile_f,path)
-       call WriteSpinAndCorrFile(path(:,:,1),'SpinSTM_GNEB_ini.dat')
-       call CreateSpinFile(path(:,:,1),'povray_GNEB_ini.dat')
-       call WriteSpinAndCorrFile(path(:,:,nim),'SpinSTM_GNEB_fin.dat')
-       call CreateSpinFile(path(:,:,nim),'povray_GNEB_fin.dat')
-    
-       call geodesic_path(amp_rnd_path,path)
-       write (*,'(a)') "Geodesic path generated"
-    
-     case default
-    
-       write (6,'(a)') "Initial and final states are read in file"
-       write (6,'(a)') "Energy is minimized before GNEB"
-    
-       call read_inifin(momfile_i,momfile_f,path)
-       call WriteSpinAndCorrFile(path(:,:,1),'SpinSTM_GNEB_ini.dat')
-       call CreateSpinFile(path(:,:,1),'povray_GNEB_ini.dat')
-       call WriteSpinAndCorrFile(path(:,:,nim),'SpinSTM_GNEB_fin.dat')
-       call CreateSpinFile(path(:,:,nim),'povray_GNEB_fin.dat')
-    
-       write (*,'(a)') "Relaxing the first image..."
-    
-       call minimize(path(:,:,1),io_simu,Ham)
-       write (*,'(a)') "Done!"
-    
-       write (*,'(a)') "Relaxing the last image..."
-       call minimize(path(:,:,nim),io_simu,Ham)
-       write (*,'(a)') "Done!"
-    
-       call geodesic_path(amp_rnd_path,path)
-       write (*,'(a)') "Geodesic path generated"
-#endif
+    endif
+
+    call WriteSpinAndCorrFile(images(1)%M%modes_v,'SpinSTM_GNEB_ini.dat')
+    call CreateSpinFile(images(1)%M%modes_v,'povray_GNEB_ini.dat')
+    call WriteSpinAndCorrFile(images(nim)%M%modes_v,'SpinSTM_GNEB_fin.dat')
+    call CreateSpinFile(images(nim)%M%modes_v,'povray_GNEB_fin.dat')
+
+    select case(io_gneb%min_type)
+    case(0)
+       write(*,*) "WARNING, NO INITIAL MINIMIZATION FOR GNEB CHOSEN"
+    case(1)
+        write (6,'(a)') "Relaxing the first image via the infinite damping method..."
+        call minimize_infdamp(images(1),io_simu,Ham)
+        write (6,'(a)') "Done!"
+        write (6,'(a)') "Relaxing the first image via the infinite damping method..."
+        call minimize_infdamp(images(nim),io_simu,Ham)
+        write (6,'(a)') "Done!"
+    case(2)
+        write (6,'(a)') "Relaxing the first image..."
+        call minimize(images(1),io_simu,Ham)
+        write (6,'(a)') "Done!"
+        write (6,'(a)') "Relaxing the last image..."
+        call minimize(images(nim),io_simu,Ham)
+        write (6,'(a)') "Done!"
+    case default
+        ERROR STOP "UNEXPECTED io_gneb%min_type"
     end select
 
-    ERROR STOP "FINISH THIS"
+    if(.not.io_gneb%read_path)then
+        call geodesic_path(io_gneb%amp_rnd_path,images)
+        write (*,'(a)') "Geodesic path generated"
+    endif
 
 end subroutine path_initialization
 

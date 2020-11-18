@@ -11,26 +11,39 @@ subroutine read_inifin(file_ini,file_fin,images)
     implicit none
     character(len=*), intent(in)    :: file_ini,file_fin
     type(lattice), intent(inout)    :: images(:)
-    ! internal variables
      
     Call images(1)%M%read_file(file_ini)
     Call images(size(images))%M%read_file(file_fin)
 end subroutine read_inifin
 
 
-subroutine write_path(path)
-use m_write_spin
-use m_createspinfile
-implicit none
-real(kind=8), intent(in) :: path(:,:,:)
-! internal variables
-integer :: shape_path(3),i_nim
+!subroutine write_path(path)
+!use m_write_spin
+!use m_createspinfile
+!implicit none
+!real(kind=8), intent(in) :: path(:,:,:)
+!! internal variables
+!integer :: shape_path(3),i_nim
+!
+!shape_path=shape(path)
+!do i_nim=1,shape_path(3)
+!   call WriteSpinAndCorrFile(i_nim,path(:,:,i_nim),'image-GNEB_')
+!   call CreateSpinFile('povray-GNEB_',i_nim,path(:,:,i_nim))
+!end do
+!end subroutine write_path
 
-shape_path=shape(path)
-do i_nim=1,shape_path(3)
-   call WriteSpinAndCorrFile(i_nim,path(:,:,i_nim),'image-GNEB_')
-   call CreateSpinFile('povray-GNEB_',i_nim,path(:,:,i_nim))
-end do
+
+subroutine write_path(images)
+    use m_write_spin
+    use m_createspinfile
+    type(lattice), intent(in)    :: images(:)
+    ! internal variables
+    integer :: i_nim
+    
+    do i_nim=1,size(images)
+       call WriteSpinAndCorrFile(i_nim,images(i_nim)%M%modes_v,'image-GNEB_')
+       call CreateSpinFile('povray-GNEB_',i_nim,images(i_nim)%M%modes_v)
+    end do
 end subroutine write_path
 
 
@@ -49,23 +62,16 @@ subroutine read_path(fname_part,images,exists)
     logical, intent(out) :: exists
     ! internal variables
     logical ::  img_exist(size(images))
-    integer :: i,i_nim,shape_path(3),io,N_cell
+    integer :: i,i_im,shape_path(3),io,N_cell
     real(kind=8) :: u(3),norm_local
     character(len=50) :: fname
 
     img_exist=.false.
-    do i_nim = 1,size(images)
+    do i_im = 1,size(images)
        fname=trim(fname_part)//'_'
-       fname=convert(fname,i_nim)
+       fname=convert(fname,i_im)
        fname=trim(fname)//'.dat'
-       io=open_file_read(fname)
-       if (io.gt.0) then
-          img_exist(i_nim)=.true.
-          read(io,*) images(i)%M%modes_v
-       else
-          write(6,*) 'ERROR: File ',fname, ' does not exist. Path not loaded.'
-       end if
-       call close_file(fname,io)
+       Call images(i_im)%M%read_file(fname)
     end do
     write(6,*) 'Path loaded.'
     exists=img_exist(1).and.img_exist(size(images)) !does exists only care if first & last file are read?

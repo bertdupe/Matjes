@@ -15,291 +15,276 @@ use m_spline
 use m_io_gneb
 use m_projection
 use m_tangent
-#if 0
+use m_input_types,only: GNEB_input
+use m_type_lattice,only: lattice
+implicit none
 private
-public :: find_path,find_path_ci,find_SP,find_SP_conf
+public :: find_path!,find_path_ci,find_SP,find_SP_conf
 contains
 
-subroutine find_path(nim,N_cell,dt,mass,kappa,ftol,itrmax,every,rx,ene,dene,path,my_lattice,io_simu)
-implicit none
-type(io_parameter), intent(in) :: io_simu
-type(lattice), intent(in) :: my_lattice
-integer, intent(in) :: nim
-real(kind=8), intent(in) :: mass             !> mass of the point
-real(kind=8), intent(in) :: dt               !> timestep
-real(kind=8), intent(in) :: kappa            !> spring constant
-real(kind=8), intent(in) :: ftol            !> spring constant
-integer, intent(in) :: itrmax,N_cell
-real(kind=8), target, intent(inout) :: path(:,:,:)
-integer, intent(in) :: every !< Save path every 'every' step
-real(kind=8), intent(out) :: rx(nim) !< Reaction coordinate
-real(kind=8), intent(out) :: ene(nim) !< Energy of the images
-real(kind=8), intent(out) :: dene(nim) !< Derivative of the energy with respect to reaction coordinate
-! internal
-integer :: iomp,i_nim,itr
-real(kind=8), allocatable, dimension(:,:,:) :: vel,fxyz1,fxyz2,ax,coo
-real(kind=8), allocatable, dimension(:,:) :: tau_i,tau,ang
-real(kind=8), allocatable, dimension(:) :: ftmp,veltmp
-real(kind=8) :: fchk,u0,u(nim),fpp(nim)
-real(kind=8) :: pathlen(nim)
-real(kind=8) :: fv,fd,fp,E_int,norm_local,norm_Beff
-integer :: i,imax,dim_mode,dim_mode_mag,maximum(3)
-logical :: found
-!!!!!!!!!!! allocate the pointers to find the path
-type(vec_point),allocatable,dimension(:,:) :: all_mode_path,magnetic_mode_path
-!!!!!!!!!!!!!!!
-
-! initialize all pointers
-allocate(all_mode_path(N_cell,nim),magnetic_mode_path(N_cell,nim))
-found=.false.
-do i_nim=1,nim
-   call associate_pointer(magnetic_mode_path(:,i_nim),path(:,:,i_nim),'magnetic',found)
-enddo
-call get_B_matrix(my_lattice%dim_mode)
-call set_E_matrix(my_lattice%dim_mode)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! allocate the pointers for the B-field and the energy
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-do i_nim=1,nim
-  do i=1,N_cell
-    all_mode_path(i,i_nim)%w=>path(:,i,i_nim)
-  enddo
-enddo
-
-dim_mode_mag=size(magnetic_mode_path(1,1)%w)
-allocate(vel(dim_mode_mag,N_cell,nim),fxyz1(dim_mode_mag,N_cell,nim),fxyz2(dim_mode_mag,N_cell,nim),ax(dim_mode_mag,N_cell,nim),coo(dim_mode_mag,N_cell,nim),ang(N_cell,nim))
-allocate(tau_i(dim_mode_mag,N_cell),tau(dim_mode_mag,N_cell))
-vel=0.0d0
-fxyz1=0.0d0
-fxyz2=0.0d0
-ax=0.0d0
-coo=0.0d0
-ang=0.0d0
-tau_i=0.0d0
-tau=0.0d0
-norm_Beff=0.0d0
-
-fchk=1d0+ftol
-itr=1
-dim_mode=my_lattice%dim_mode
-allocate(ftmp(dim_mode),veltmp(dim_mode_mag))
-ftmp=0.0d0
-veltmp=0.0d0
-
-call the_path(nim,magnetic_mode_path,pathlen)
+!subroutine find_path(nim,N_cell,dt,mass,kappa,ftol,itrmax,every,rx,ene,dene,path,my_lattice,io_simu,io_gneb)
+subroutine find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb)
+    type(io_parameter), intent(in)  :: io_simu
+    type(lattice), intent(in)       :: my_lattice
+    integer, intent(in)             :: nim
+    type(GNEB_input)                :: io_gneb
+    integer, intent(in)             :: N_cell
+    type(lattice), intent(inout)    :: images(:)
+    real(8), intent(out)            :: rx(nim) !< Reaction coordinate
+    real(8), intent(out)            :: ene(nim) !< Energy of the images
+    real(8), intent(out)            :: dene(nim) !< Derivative of the energy with respect to reaction coordinate
+    ! internal
+    integer :: iomp,i_nim,itr
+    real(kind=8), allocatable, dimension(:,:,:) :: vel,fxyz1,fxyz2,ax,coo
+    real(kind=8), allocatable, dimension(:,:) :: tau_i,tau,ang
+    real(kind=8), allocatable, dimension(:) :: ftmp,veltmp
+    real(kind=8) :: fchk,u0,u(nim),fpp(nim)
+    real(kind=8) :: pathlen(nim)
+    real(kind=8) :: fv,fd,fp,E_int,norm_local,norm_Beff
+    integer :: i,imax,dim_mode,dim_mode_mag,maximum(3)
+    logical :: found
+    !!!!!!!!!!! allocate the pointers to find the path
+    type(vec_point),allocatable,dimension(:,:) :: all_mode_path,magnetic_mode_path! (NCELL,NIM)
+    !!!!!!!!!!!!!!!
+    
+!    ! initialize all pointers
+!    allocate(all_mode_path(N_cell,nim),magnetic_mode_path(N_cell,nim))
+!    found=.false.
+!    do i_nim=1,nim
+!       call associate_pointer(magnetic_mode_path(:,i_nim),path(:,:,i_nim),'magnetic',found)
+!    enddo
+!    call get_B_matrix(my_lattice%dim_mode)
+!    call set_E_matrix(my_lattice%dim_mode)
+!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!    !!!! allocate the pointers for the B-field and the energy
+!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!    do i_nim=1,nim
+!      do i=1,N_cell
+!        all_mode_path(i,i_nim)%w=>path(:,i,i_nim)
+!      enddo
+!    enddo
+    
+    dim_mode_mag=images(1)%M%dim_mode
+    allocate(vel(dim_mode_mag,N_cell,nim),fxyz1(dim_mode_mag,N_cell,nim),fxyz2(dim_mode_mag,N_cell,nim),ax(dim_mode_mag,N_cell,nim),coo(dim_mode_mag,N_cell,nim),ang(N_cell,nim),source=0.0d0)
+    allocate(tau_i(dim_mode_mag,N_cell),tau(dim_mode_mag,N_cell),source=0.0d0)
+    
+    fchk=1d0+io_gneb%mepftol
+    !dim_mode=my_lattice%dim_mode
+    !allocate(ftmp(dim_mode),veltmp(dim_mode_mag),source=0.0d0)
    
-do i_nim=1,nim
-
-   u(i_nim) = 0d0
-   do iomp=1,N_cell
-
-      coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w
-
-      call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
-
-      norm_Beff=norm(ftmp(1:3))
-      call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
-
-      call local_energy(E_int,iomp,all_mode_path(:,i_nim))
-
-      u(i_nim) = u(i_nim) + E_int
-
-   enddo
-enddo
-   
-
-if (en_zero=='I') then
-      u0 = u(1)
-elseif (en_zero=='F') then
-      u0 = u(nim)
-else
-      u0 = 0d0
-end if
-   
-!   !fname_work = 'triven_'//trim(adjustl(simid))
-!      !open(777,file = fname_work, access = 'sequential', action = 'write',status = 'replace')
-
-! Calculation of the tangent trajectory of constant energy
-call tang(nim,1,coo,tau_i)
-fpp = 0d0
-fpp(1)=sum( fxyz1(:,:,1) * tau_i )
-
-! calculation of the tangent trajectory for all the images
-do i_nim=2,nim-1
-   call tang(i_nim,coo,u,tau)
-
-   call tang(nim,i_nim,coo,tau_i)
-
-   fpp(i_nim)=sum( fxyz1(:,:,i_nim) *tau_i )
-   fp = sum( fxyz1(:,:,i_nim) * tau )
-
-   do iomp=1,N_cell
-     fxyz1(:,iomp,i_nim) = fxyz1(:,iomp,i_nim) - tau(:,iomp)*fp + kappa*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
-   end do
-
-end do
-
-call tang(nim,nim,coo,tau_i)
-fpp(nim) = 0d0
-fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
-
-fchk=0d0
-imax = 1
-fchk=maxval( abs(fxyz1) )
-maximum=maxloc(fxyz1)
-imax=maximum(3)
-
-itr=1
-      
-open(99,file = 'force_mep.txt',access = 'sequential',action='write',status='replace')
-close(99)
-      
-open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-write(99,'(i12,a,E20.12E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
-      
-close(99)
-call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.in',do_norm_rx)
-call write_path(path)
-      
-      
-!======================MAIN LOOP============================
-!
-! This part is the integrator
-!
-!
-write(6,'(/a)') 'Main loop'
-write(6,'(2(a,I8))') 'maximum iteration  ', itrmax, ' iteration number', itr
-write(6,'(2(a,E20.12E3)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
-
-do while ((fchk.gt.ftol).and.(itr.le.itrmax))
-   do i_nim=2,nim-1
-      do iomp=1,N_cell
-            
-         !print *,'i)nim:',i_nim
-         ax(:,iomp,i_nim) = rotation_axis(coo(:,iomp,i_nim),fxyz1(:,iomp,i_nim))
-                        
-         coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w+vel(:,iomp,i_nim)*dt+0.5d0*fxyz1(:,iomp,i_nim)/mass*dt**2
-
-         norm_local=norm(coo(:,iomp,i_nim))
-         coo(:,iomp,i_nim)=coo(:,iomp,i_nim)/norm_local
-         ang(iomp,i_nim) = calc_ang(coo(:,iomp,i_nim),magnetic_mode_path(iomp,i_nim)%w)
-         magnetic_mode_path(iomp,i_nim)%w = coo(:,iomp,i_nim)
-         !print *,'ang:',ang(iomp,i_nim)
-      end do
-   end do
-            
-         
-   do i_nim=2,nim-1
-      u(i_nim) = 0d0
-
-      do iomp=1,N_cell
-
-         call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
-
-         norm_Beff=norm(ftmp(1:3))
-         call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
-
-         call local_energy(E_int,iomp,all_mode_path(:,i_nim))
-
-         u(i_nim) = u(i_nim) + E_int
-
-      enddo
-
-   end do
-
-         
-   call the_path(nim,magnetic_mode_path,pathlen)
-
-
-   do i_nim=2,nim-1
-     call tang(i_nim,coo,u,tau)
-     call tang(nim,i_nim,coo,tau_i)
-
-     fp = 0d0
-     fpp(i_nim) = 0d0
-
-     fpp(i_nim)=sum( fxyz2(:,:,i_nim) * tau_i )
-     fp = sum( fxyz2(:,:,i_nim) * tau )
-
-     do iomp=1,N_cell
-       fxyz2(:,iomp,i_nim) = fxyz2(:,iomp,i_nim) - tau(:,iomp)*fp + kappa*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
-     enddo
-
-   enddo
-   !stop
-
-   do i_nim=2,nim-1
-      do iomp=1,N_cell
-         call rotate(vel(:,iomp,i_nim),ax(:,iomp,i_nim),ang(iomp,i_nim),veltmp)
-         call rotate(fxyz1(:,iomp,i_nim),ax(:,iomp,i_nim),ang(iomp,i_nim),ftmp(1:3))
-
-         vel(:,iomp,i_nim) = veltmp + 0.5d0*(ftmp(1:3)+fxyz2(:,iomp,i_nim))/mass*dt
-
-      enddo
-   enddo
-         
-         
-   fv = 0d0
-   fd = 0d0
-
-   fv= sum( vel * fxyz2 )/real(nim)
-   fd= sum( fxyz2**2 )/real(nim)
-         
-   if (fv<0d0) then
-     vel = 0d0
-   else
-     vel=fxyz2*fv/fd
-   end if
-         
-         
-         
-         
-   imax=1
-   fchk=0d0
-   fxyz1 = fxyz2
-
-   fchk=maxval( abs(fxyz1) )
-   maximum=maxloc(fxyz1)
-   imax=maximum(3)
-         
-   call tang(nim,1,coo,tau_i)
-   fpp(1) = sum( fxyz1(:,:,1)*tau_i )
-         
-         
-   call tang(nim,nim,coo,tau_i)
-   fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
-
-   itr=itr+1
-
-   if (mod(itr,every).eq.0) then
-      call prn_gneb_progress(itr, itrmax, fchk, imax,'N',0)
-      
-      open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
-      write(99,'(i12,a,E20.12E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
-      close(99)
-            
-      call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.out',do_norm_rx)
-      call write_path(path)
-            
-         
-   end if
-
-end do
-
-if (itr>itrmax) then
-   write(6,'(a)') 'WARNING: exceeded maximum iterations in GNEB'
-end if
-   
-      
-
-ene = u-u0
-dene = -fpp
-rx = pathlen
+   if(dim_mode_mag/=3) ERROR STOP "THE_PATH MIGHT NOT MAKE SENSE FOR MORE THAN ONE NMAG"
+   call the_path(images,pathlen)
+#if 0
+    do i_nim=1,nim
+    
+       u(i_nim) = 0d0
+       do iomp=1,N_cell
+    
+          coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w
+    
+          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
+    
+          norm_Beff=norm(ftmp(1:3))
+          call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
+    
+          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
+    
+          u(i_nim) = u(i_nim) + E_int
+    
+       enddo
+    enddo
+       
+    
+    if (en_zero=='I') then
+          u0 = u(1)
+    elseif (en_zero=='F') then
+          u0 = u(nim)
+    else
+          u0 = 0d0
+    end if
+       
+    
+    ! Calculation of the tangent trajectory of constant energy
+    call tang(nim,1,coo,tau_i)
+    fpp = 0d0
+    fpp(1)=sum( fxyz1(:,:,1) * tau_i )
+    
+    ! calculation of the tangent trajectory for all the images
+    do i_nim=2,nim-1
+       call tang(i_nim,coo,u,tau)
+    
+       call tang(nim,i_nim,coo,tau_i)
+    
+       fpp(i_nim)=sum( fxyz1(:,:,i_nim) *tau_i )
+       fp = sum( fxyz1(:,:,i_nim) * tau )
+    
+       do iomp=1,N_cell
+         fxyz1(:,iomp,i_nim) = fxyz1(:,iomp,i_nim) - tau(:,iomp)*fp + io_gneb%spring*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
+       end do
+    
+    end do
+    
+    call tang(nim,nim,coo,tau_i)
+    fpp(nim) = 0d0
+    fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
+    
+    fchk=0d0
+    imax = 1
+    fchk=maxval( abs(fxyz1) )
+    maximum=maxloc(fxyz1)
+    imax=maximum(3)
+    
+    itr=1
+          
+    open(99,file = 'force_mep.txt',access = 'sequential',action='write',status='replace')
+    close(99)
+          
+    open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
+    write(99,'(i12,a,E20.12E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
+          
+    close(99)
+    call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.in',do_norm_rx)
+          
+    !======================MAIN LOOP============================
+    !
+    ! This part is the integrator
+    !
+    !
+    write(6,'(/a)') 'Main loop'
+    write(6,'(2(a,I8))') 'maximum iteration  ', io_gneb%itrmax, ' iteration number', itr
+    write(6,'(2(a,E20.12E3)/)') 'distance to tolerance ', fchk, ' tolerance', io_gneb%mepftol
+    
+    do while ((fchk.gt.io_gneb%mepftol).and.(itr.le.io_gneb%itrmax))
+       do i_nim=2,nim-1
+          do iomp=1,N_cell
+                
+             !print *,'i)nim:',i_nim
+             ax(:,iomp,i_nim) = rotation_axis(coo(:,iomp,i_nim),fxyz1(:,iomp,i_nim))
+                            
+             coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w+vel(:,iomp,i_nim)*io_gneb%dt+0.5d0*fxyz1(:,iomp,i_nim)/io_gneb%mass*io_gneb%dt**2
+    
+             norm_local=norm(coo(:,iomp,i_nim))
+             coo(:,iomp,i_nim)=coo(:,iomp,i_nim)/norm_local
+             ang(iomp,i_nim) = calc_ang(coo(:,iomp,i_nim),magnetic_mode_path(iomp,i_nim)%w)
+             magnetic_mode_path(iomp,i_nim)%w = coo(:,iomp,i_nim)
+             !print *,'ang:',ang(iomp,i_nim)
+          end do
+       end do
+                
+             
+       do i_nim=2,nim-1
+          u(i_nim) = 0d0
+    
+          do iomp=1,N_cell
+    
+             call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
+    
+             norm_Beff=norm(ftmp(1:3))
+             call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz2(:,iomp,i_nim))
+    
+             call local_energy(E_int,iomp,all_mode_path(:,i_nim))
+    
+             u(i_nim) = u(i_nim) + E_int
+    
+          enddo
+    
+       end do
+    
+             
+       call the_path(nim,magnetic_mode_path,pathlen)
+    
+    
+       do i_nim=2,nim-1
+         call tang(i_nim,coo,u,tau)
+         call tang(nim,i_nim,coo,tau_i)
+    
+         fp = 0d0
+         fpp(i_nim) = 0d0
+    
+         fpp(i_nim)=sum( fxyz2(:,:,i_nim) * tau_i )
+         fp = sum( fxyz2(:,:,i_nim) * tau )
+    
+         do iomp=1,N_cell
+           fxyz2(:,iomp,i_nim) = fxyz2(:,iomp,i_nim) - tau(:,iomp)*fp + io_gneb%spring*tau(:,iomp)*(pathlen(i_nim+1)+pathlen(i_nim-1)-2d0*pathlen(i_nim))
+         enddo
+    
+       enddo
+       !stop
+    
+       do i_nim=2,nim-1
+          do iomp=1,N_cell
+             call rotate(vel(:,iomp,i_nim),ax(:,iomp,i_nim),ang(iomp,i_nim),veltmp)
+             call rotate(fxyz1(:,iomp,i_nim),ax(:,iomp,i_nim),ang(iomp,i_nim),ftmp(1:3))
+    
+             vel(:,iomp,i_nim) = veltmp + 0.5d0*(ftmp(1:3)+fxyz2(:,iomp,i_nim))/io_gneb%mass*io_gneb%dt
+    
+          enddo
+       enddo
+             
+             
+       fv = 0d0
+       fd = 0d0
+    
+       fv= sum( vel * fxyz2 )/real(nim)
+       fd= sum( fxyz2**2 )/real(nim)
+             
+       if (fv<0d0) then
+         vel = 0d0
+       else
+         vel=fxyz2*fv/fd
+       end if
+             
+             
+             
+             
+       imax=1
+       fchk=0d0
+       fxyz1 = fxyz2
+    
+       fchk=maxval( abs(fxyz1) )
+       maximum=maxloc(fxyz1)
+       imax=maximum(3)
+             
+       call tang(nim,1,coo,tau_i)
+       fpp(1) = sum( fxyz1(:,:,1)*tau_i )
+             
+             
+       call tang(nim,nim,coo,tau_i)
+       fpp(nim) = sum( fxyz1(:,:,nim)*tau_i )
+    
+       itr=itr+1
+    
+       if (mod(itr,io_gneb%every).eq.0) then
+          call prn_gneb_progress(itr, io_gneb%itrmax, fchk, imax,'N',0)
+          
+          open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
+          write(99,'(i12,a,E20.12E3,a,i3)',advance = 'no') itr,'   ',fchk,'   ',imax
+          close(99)
+                
+          call write_en(nim,pathlen,u-u0,-fpp,pathlen(nim),'en_path.out',do_norm_rx)
+          !call write_path(path) !put back in
+                
+             
+       end if
+    
+    end do
+    
+    if (itr>io_gneb%itrmax) then
+       write(6,'(a)') 'WARNING: exceeded maximum iterations in GNEB'
+    end if
+       
+          
+    
+    ene = u-u0
+    dene = -fpp
+    rx = pathlen
+#endif
    
 
 end subroutine find_path
 
 
+#if 0
 
 
 
