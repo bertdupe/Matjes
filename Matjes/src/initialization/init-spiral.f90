@@ -33,8 +33,9 @@ integer         :: i
 
 kvec=my_lattice%astar
 r=my_lattice%areal
-Rq=(/0.0,0.0,1.0/)
-Iq=(/1.0,0.0,0.0/)
+qvec=0.0d0
+Rq=[0.0d0,0.0d0,1.0d0]
+Iq=[1.0d0,0.0d0,0.0d0]
 
 variable_name=convert('qvec_',mode_name)
 call get_parameter(io,fname,variable_name,3,qvec)

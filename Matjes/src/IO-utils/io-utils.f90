@@ -324,6 +324,7 @@ function max_ind_variable(io,var_name,fname) result(max_ind)
     ! internal variable
     integer :: length_string,i_var,i_end_str,fin
     character(len=100) :: str
+    integer         ::  stat
     
     max_ind=0
     length_string=len_trim(var_name)
@@ -338,7 +339,8 @@ function max_ind_variable(io,var_name,fname) result(max_ind)
         if (str(1:1) == '#' ) cycle
         if ( str(1:length_string) == var_name ) then
            i_end_str=scan(str(length_string+1:),' ')
-           read(str(length_string+1:length_string+1+i_end_str),*) i_var
+           read(str(length_string+1:length_string+1+i_end_str),*,iostat=stat) i_var
+           if(stat/=0) cycle
            max_ind=max(i_var,max_ind)
         endif
     enddo
