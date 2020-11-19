@@ -57,7 +57,7 @@ subroutine GNEB(my_lattice,my_motif,io_simu,ext_param,Ham)
     if (io_gneb%do_gneb) then
        write (6,'(a)') "GNEB calculation in progress..."
        !call find_path(nim,N_cell,vpodt,vpomass,spring,mepftol,mepitrmax,meptraj_step,rx,ene,dene,path,my_lattice,io_simu)
-       call find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb)
+       call find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb,Ham)
        write (6,'(a)') "Done!"
     end if
           

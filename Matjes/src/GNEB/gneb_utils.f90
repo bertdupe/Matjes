@@ -17,13 +17,19 @@ use m_projection
 use m_tangent
 use m_input_types,only: GNEB_input
 use m_type_lattice,only: lattice
+use m_H_public
+use m_Beff_H,only: get_B
 implicit none
 private
 public :: find_path!,find_path_ci,find_SP,find_SP_conf
+
+type :: point3arr
+    real(8),pointer ::  p(:,:)
+end type
 contains
 
 !subroutine find_path(nim,N_cell,dt,mass,kappa,ftol,itrmax,every,rx,ene,dene,path,my_lattice,io_simu,io_gneb)
-subroutine find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb)
+subroutine find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb,Hams)
     type(io_parameter), intent(in)  :: io_simu
     type(lattice), intent(in)       :: my_lattice
     integer, intent(in)             :: nim
@@ -33,18 +39,27 @@ subroutine find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb)
     real(8), intent(out)            :: rx(nim) !< Reaction coordinate
     real(8), intent(out)            :: ene(nim) !< Energy of the images
     real(8), intent(out)            :: dene(nim) !< Derivative of the energy with respect to reaction coordinate
+    class(t_H),intent(in)           :: Hams(:)
     ! internal
-    integer :: iomp,i_nim,itr
-    real(kind=8), allocatable, dimension(:,:,:) :: vel,fxyz1,fxyz2,ax,coo
-    real(kind=8), allocatable, dimension(:,:) :: tau_i,tau,ang
-    real(kind=8), allocatable, dimension(:) :: ftmp,veltmp
-    real(kind=8) :: fchk,u0,u(nim),fpp(nim)
-    real(kind=8) :: pathlen(nim)
-    real(kind=8) :: fv,fd,fp,E_int,norm_local,norm_Beff
-    integer :: i,imax,dim_mode,dim_mode_mag,maximum(3)
-    logical :: found
+    integer ::  N_mag
+    integer :: iomp,itr
+    !integer :: iomp,i_nim,itr
+    real(8), allocatable, dimension(:,:,:) :: vel,fxyz1,fxyz2,ax,coo
+    real(8), allocatable, dimension(:,:) :: tau_i,tau,ang
+    real(8), allocatable, dimension(:) :: ftmp,veltmp
+    real(8)             :: fchk,u0,u(nim),fpp(nim)
+    real(8)             :: pathlen(nim)
+    real(8)             :: fv,fd,fp,E_int,norm_local,norm_Beff
+    integer             :: i,imax,dim_mode,dim_mode_mag,maximum(3)
+    logical             :: found
+    real(8),target,allocatable      :: force(:,:)
+    integer             :: im
+    real(8),pointer     :: force3(:,:)
+!    real(8),pointer     :: force3(:,:)
+!    real(8),pointer     :: M3(:,:)
+
     !!!!!!!!!!! allocate the pointers to find the path
-    type(vec_point),allocatable,dimension(:,:) :: all_mode_path,magnetic_mode_path! (NCELL,NIM)
+!    type(vec_point),allocatable,dimension(:,:) :: all_mode_path,magnetic_mode_path! (NCELL,NIM)
     !!!!!!!!!!!!!!!
     
 !    ! initialize all pointers
@@ -65,35 +80,41 @@ subroutine find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb)
 !    enddo
     
     dim_mode_mag=images(1)%M%dim_mode
+    N_mag=dim_mode_mag/3
     allocate(vel(dim_mode_mag,N_cell,nim),fxyz1(dim_mode_mag,N_cell,nim),fxyz2(dim_mode_mag,N_cell,nim),ax(dim_mode_mag,N_cell,nim),coo(dim_mode_mag,N_cell,nim),ang(N_cell,nim),source=0.0d0)
     allocate(tau_i(dim_mode_mag,N_cell),tau(dim_mode_mag,N_cell),source=0.0d0)
+
+    allocate(force(dim_mode_mag*N_cell,nim),source=0.d0)
     
     fchk=1d0+io_gneb%mepftol
     !dim_mode=my_lattice%dim_mode
     !allocate(ftmp(dim_mode),veltmp(dim_mode_mag),source=0.0d0)
    
-   if(dim_mode_mag/=3) ERROR STOP "THE_PATH MIGHT NOT MAKE SENSE FOR MORE THAN ONE NMAG"
-   call the_path(images,pathlen)
-#if 0
-    do i_nim=1,nim
-    
-       u(i_nim) = 0d0
-       do iomp=1,N_cell
-    
-          coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w
-    
-          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
-    
-          norm_Beff=norm(ftmp(1:3))
-          call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
-    
-          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
-    
-          u(i_nim) = u(i_nim) + E_int
-    
-       enddo
+    if(dim_mode_mag/=3) ERROR STOP "THE_PATH MIGHT NOT MAKE SENSE FOR MORE THAN ONE NMAG"
+    call the_path(images,pathlen)
+
+    u = 0d0
+    do im=1,nim
+        force3(1:3,1:N_mag*N_cell)=>force(:,im)
+
+        u(im)=energy_all(Hams,images(im))
+        Call get_B(Hams,images(im),force(:,im))
+        write(*,*) force3(:,2)
+        Call vec_norm(force3)
+        write(*,*) force3(:,2)
+        STOP
+
+!!          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
+!       do iomp=1,N_cell
+!!          coo(:,iomp,i_nim) = magnetic_mode_path(iomp,i_nim)%w   !definitely needed later
+!          call calculate_Beff(ftmp,iomp,all_mode_path(:,i_nim))
+!          norm_Beff=norm(ftmp(1:3))
+!          call project_force(ftmp(1:3)/norm_Beff,magnetic_mode_path(iomp,i_nim)%w,fxyz1(:,iomp,i_nim))
+!          call local_energy(E_int,iomp,all_mode_path(:,i_nim))
+!          u(i_nim) = u(i_nim) + E_int
+!       endd0
     enddo
-       
+#if 0       
     
     if (en_zero=='I') then
           u0 = u(1)
@@ -282,6 +303,17 @@ subroutine find_path(nim,N_cell,rx,ene,dene,images,my_lattice,io_simu,io_gneb)
    
 
 end subroutine find_path
+
+pure subroutine vec_norm(vec)
+    real(8),intent(inout)   :: vec(:,:)
+    !internal
+    real(8)     :: nrm(size(vec,2))
+    integer     :: i
+
+    nrm=norm2(vec,1)
+    forall(i=1:size(nrm), nrm(i)>1.0d-8 ) vec(:,i)=vec(:,i)/nrm(i)
+end subroutine
+
 
 
 #if 0
