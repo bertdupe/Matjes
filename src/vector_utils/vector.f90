@@ -1,5 +1,14 @@
 module m_vector
 
+
+   interface project
+       module procedure vec_project
+   end interface 
+
+   interface normalize
+       module procedure vec_normalize
+   end interface
+
    interface norm
        module procedure norm_real
        module procedure norm_int
@@ -39,6 +48,34 @@ module m_vector
 public
 
 contains
+
+! ==============================================================
+!> projects vector vec on reference
+pure subroutine vec_project(vec,ref)
+    real(8),intent(inout)   :: vec(:,:)
+    real(8),intent(in)      :: ref(:,:)
+    !internal
+    real(8)     :: prod
+    integer     :: i
+
+    do i=1,size(vec,2)
+        prod=DOT_PRODUCT(vec(:,i),ref(:,i))
+        vec(:,i)=vec(:,i)-prod*ref(:,i)
+    enddo
+end subroutine
+
+! ==============================================================
+!> Normalizes a vector
+pure subroutine vec_normalize(vec)
+    real(8),intent(inout)   :: vec(:,:)
+    !internal
+    real(8)     :: nrm(size(vec,2))
+    integer     :: i
+
+    nrm=norm2(vec,1)
+    forall(i=1:size(nrm), nrm(i)>1.0d-8 ) vec(:,i)=vec(:,i)/nrm(i)
+end subroutine
+
 
 
 ! ==============================================================
