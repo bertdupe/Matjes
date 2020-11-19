@@ -35,5 +35,3 @@
 *.out
 *.app
 
-# Ignores the file called make.sys
-make.sys
