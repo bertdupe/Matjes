@@ -50,7 +50,7 @@ subroutine rw_gneb(gneb_io,fname_in)
     case(1)
         gneb_io%read_path=.False.      
         gneb_io%read_outer=.True.      
-        gneb_io%min_type=1            
+        gneb_io%min_type=0            
     case(2)
         gneb_io%read_path=.True.      
         gneb_io%read_outer=.True.      

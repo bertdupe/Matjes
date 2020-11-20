@@ -136,7 +136,6 @@ endif
 if (my_simu%name == 'GNEB') then
             write(6,'(a)') 'entering into the GNEB routine'
             call GNEB(all_lattices,io_simu,ext_param,Ham_comb)
-            STOP "PB: GNEB FINISHED?"
 endif
 
 !---------------------------------
