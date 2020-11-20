@@ -1,4 +1,5 @@
 module m_vector
+implicit none
 
 
    interface project
@@ -7,6 +8,7 @@ module m_vector
 
    interface normalize
        module procedure vec_normalize
+       module procedure vec_normalize_eps
    end interface
 
    interface norm
@@ -39,6 +41,7 @@ module m_vector
 
    interface calc_ang
       module procedure calc_ang_real
+      module procedure calc_ang_realarr
    end interface calc_ang
 
    interface calculate_damping
@@ -77,6 +80,18 @@ pure subroutine vec_normalize(vec)
 end subroutine
 
 
+pure subroutine vec_normalize_eps(vec,eps)
+    real(8),intent(inout)   :: vec(:,:)
+    real(8),intent(in)      :: eps
+    !internal
+    real(8)     :: nrm(size(vec,2))
+    integer     :: i
+
+    nrm=norm2(vec,1)
+    forall(i=1:size(nrm), nrm(i)>eps ) vec(:,i)=vec(:,i)/nrm(i)
+end subroutine
+
+
 
 ! ==============================================================
 !> Calculate angle between two 3-vectors
@@ -95,6 +110,32 @@ prod = dot_product(n1,n2)
 
 calc_ang_real = datan2(tmp,prod)
 end function calc_ang_real
+
+
+function calc_ang_realarr(n1,n2)result(res)
+real(8), intent(in),contiguous,target :: n1(:,:), n2(:,:) !n1 and n2 have to be normalized
+!real(kind=8) :: calc_ang
+!internal variables
+real(8),pointer     :: flat_1(:),flat_2(:),flat_tmp(:)
+real(8)             ::  res(size(n1,2))
+real(8),target      :: tmp(3,size(n1,2))
+real(8)             :: nrm(size(n1,2))
+real(8)             :: prod(size(n1,2))
+integer :: N, i
+
+N=size(n1)
+flat_1(1:N)=>n1
+flat_2(1:N)=>n2
+flat_tmp(1:N)=>tmp
+
+flat_tmp = cross(flat_1,flat_2,1,N)
+nrm=norm2(tmp,1)
+tmp=n1*n2
+prod=sum(tmp,1)
+
+res = datan2(nrm,prod)
+end function 
+
 
 ! ==============================================================
 
@@ -382,7 +423,7 @@ END FUNCTION norm_cross_int
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 FUNCTION cross_real_simple(a, b)
 implicit none
-real(kind=8), INTENT(IN) :: a(:), b(:)
+real(kind=8), INTENT(IN) :: a(3), b(3)
 real(kind=8) :: cross_real_simple(3)
 ! internal
 

@@ -48,7 +48,9 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
     real(8),pointer,contiguous     :: force_all_3(:,:,:)
     real(8),pointer,contiguous     :: M3(:,:)
     real(8)             :: tmp_mag(3)
+    real(8),allocatable,target :: magarr_tmp(:,:)
     integer             :: ci
+    real(8), allocatable, dimension(:,:) :: vel_tmp_arr
 
     ci=0
     if(present(ci_out)) ci=1
@@ -58,8 +60,10 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
     allocate(ftmp(dim_mode_mag),veltmp(dim_mode_mag),source=0.0d0)
     N_mag=dim_mode_mag/3
     allocate(vel(dim_mode_mag,N_cell,nim),ax(dim_mode_mag,N_cell,nim),ang(N_cell,nim),source=0.0d0)
+    allocate(vel_tmp_arr(dim_mode_mag,N_cell),source=0.0d0)
     allocate(tau_i(dim_mode_mag,N_cell),tau(dim_mode_mag,N_cell),source=0.0d0)
     allocate(force1(dim_mode_mag*N_cell,nim),force2(dim_mode_mag*N_cell,nim),source=0.d0)
+    allocate(magarr_tmp(3,N_mag*N_cell),source=0.0d0)
     
     fchk=1d0+ftol
    
@@ -73,7 +77,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
 
         energy(im)=energy_all(Hams,images(im))
         Call get_B(Hams,images(im),force1(:,im))
-        !Call normalize(force1_3)
+        !Call normalize(force1_3) !temporary taken out, think about normalizations
         Call project(force1_3,M3)
     enddo
     if(present(ci_out))then
@@ -137,14 +141,11 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
         do im=2,nim-1
             M3(1:3,1:N_mag*N_cell)=>images(im)%M%modes
             force1_3(1:3,1:N_mag*N_cell)=>force1(:,im)
-            !should be easy to make this array operations...
-            do iomp=1,N_mag*N_cell
-                ax(:,iomp,im) = rotation_axis(M3(:,iomp),force1_3(:,iomp))
-                tmp_mag = M3(:,iomp)+vel(:,iomp,im)*io_gneb%dt+0.5d0*force1_3(:,iomp)/io_gneb%mass*io_gneb%dt**2
-                tmp_mag=tmp_mag/norm2(tmp_mag)
-                ang(iomp,im) = calc_ang(tmp_mag,M3(:,iomp))
-                M3(:,iomp)=tmp_mag
-            enddo
+            ax(:,:,im)= rotation_axis(M3,force1_3)
+            magarr_tmp=M3+vel(:,:,im)*io_gneb%dt+0.5d0*force1_3/io_gneb%mass*io_gneb%dt**2
+            Call normalize(magarr_tmp,1.0d-30)
+            ang(:,im)=calc_ang(magarr_tmp,M3)
+            M3=magarr_tmp
         enddo
 
         do im=2,nim-1
@@ -153,7 +154,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
 
             energy(im)=energy_all(Hams,images(im)) !total energy at each image
             Call get_B(Hams,images(im),force2(:,im)) !get effective field (eV)
-            !Call normalize(force2_3)
+            !Call normalize(force2_3) !temporary taken out, think about normalizations
             Call project(force2_3,M3)
         enddo
         if(present(ci_out)) ci=maxloc(energy,dim=1)  !change ci if an image is higher in energy
@@ -176,12 +177,18 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
         do im=2,nim-1
             force1_3(1:3,1:N_mag*N_cell)=>force1(:,im)
             force2_3(1:3,1:N_mag*N_cell)=>force2(:,im)
-            do iomp=1,N_cell
-                call rotate(vel(:,iomp,im),ax(:,iomp,im),ang(iomp,im),veltmp)
-                call rotate(force1_3(:,iomp),ax(:,iomp,im),ang(iomp,im),ftmp(1:3))
-                vel(:,iomp,im) = veltmp + 0.5d0*(ftmp(1:3)+force2_3(:,iomp))/io_gneb%mass*io_gneb%dt
-            enddo
+
+            call rotate(vel(:,:,im),ax(:,:,im),ang(:,im),vel_tmp_arr)
+            vel(:,:,im)=vel_tmp_arr
+            call rotate(force1_3,ax(:,:,im),ang(:,im),vel_tmp_arr)
+            vel(:,:,im)=vel(:,:,im)+0.5d0*(vel_tmp_arr+force2_3)/io_gneb%mass*io_gneb%dt
+            !do iomp=1,N_cell
+            !    call rotate(vel(:,iomp,im),ax(:,iomp,im),ang(iomp,im),veltmp)
+            !    call rotate(force1_3(:,iomp),ax(:,iomp,im),ang(iomp,im),ftmp(1:3))
+            !    vel(:,iomp,im) = veltmp + 0.5d0*(ftmp(1:3)+force2_3(:,iomp))/io_gneb%mass*io_gneb%dt
+            !enddo
         enddo
+        !if(maxval(vel_tmp_arr)>0.0d-5) STOP "DERP"
         force_all_3(1:dim_mode_mag,1:N_cell,1:nim)=>force2
         fv= sum( vel * force_all_3 )/real(nim,8)
         fd= sum(force2**2)/real(nim,8)
