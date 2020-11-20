@@ -17,9 +17,8 @@ public :: find_path,find_SP,find_SP_conf
 
 contains
 
-subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,my_lattice,io_simu,io_gneb,Hams,ci_out)
+subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_out)
     type(io_parameter), intent(in)  :: io_simu
-    type(lattice), intent(in)       :: my_lattice
     real(8),intent(in)              :: ftol
     integer, intent(in)             :: nim
     type(GNEB_input)                :: io_gneb
@@ -39,9 +38,8 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,my_lattice,io_simu,io_gn
     real(8), allocatable, dimension(:) :: ftmp,veltmp
     real(8)             :: fchk,energy_ref,energy(nim),fpp(nim)
     real(8)             :: pathlen(nim)
-    real(8)             :: fv,fd,fp,E_int,norm_local,norm_Beff
-    integer             :: i,imax,dim_mode,dim_mode_mag,maximum(2)
-    logical             :: found
+    real(8)             :: fv,fd,fp
+    integer             :: imax,dim_mode_mag,maximum(2)
     real(8),target,allocatable      :: force1(:,:)
     real(8),target,allocatable      :: force2(:,:)
     integer             :: im
@@ -75,11 +73,11 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,my_lattice,io_simu,io_gn
 
         energy(im)=energy_all(Hams,images(im))
         Call get_B(Hams,images(im),force1(:,im))
-        Call normalize(force1_3)
+        !Call normalize(force1_3)
         Call project(force1_3,M3)
     enddo
     if(present(ci_out))then
-        ci=maxloc(energy,dim=1)
+        ci=maxloc(energy,dim=1)  !change ci if an image is higher in energy
         write(6,'(a,2x,I4)') 'first guess image saddle point', ci
     endif
     
@@ -153,20 +151,20 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,my_lattice,io_simu,io_gn
             force2_3(1:3,1:N_mag*N_cell)=>force2(:,im)
             M3(1:3,1:N_mag*N_cell)=>images(im)%M%modes
 
-            energy(im)=energy_all(Hams,images(im))
-            Call get_B(Hams,images(im),force2(:,im))
-            Call normalize(force2_3)
+            energy(im)=energy_all(Hams,images(im)) !total energy at each image
+            Call get_B(Hams,images(im),force2(:,im)) !get effective field (eV)
+            !Call normalize(force2_3)
             Call project(force2_3,M3)
         enddo
-        if(present(ci_out)) ci=maxloc(energy,dim=1)
+        if(present(ci_out)) ci=maxloc(energy,dim=1)  !change ci if an image is higher in energy
 
-        call the_path(images,pathlen)
+        call the_path(images,pathlen) !polygeodesic length of the path in computed and stored in pathlen (rad?)
 
         do im=2,nim-1
             force2_mode(1:dim_mode_mag,1:N_cell)=>force2(:,im)
-            call tang(im,images,energy,tau)
-            call tang(im,images  ,tau_i)
-            fpp(im)=sum(force2_mode*tau_i)
+            call tang(im,images,energy,tau) ! gets tau: normalized tangent to the path at image i_nim, projected onto tangent space
+            call tang(im,images  ,tau_i)    ! outputs tau_i at image i_nim?
+            fpp(im)=sum(force2_mode*tau_i)  !force is Beff projected on tangent space
             fp=sum(force2_mode*tau)
             if(im/=ci)then
                 force2_mode = force2_mode - tau*fp + io_gneb%spring*tau*(pathlen(im+1)+pathlen(im-1)-2d0*pathlen(im))
@@ -196,19 +194,20 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,my_lattice,io_simu,io_gn
 
         force1=force2
         fchk=maxval(abs(force1))
-        maximum=maxloc(force1)
-        imax=maximum(2)
-              
-        call tang(1,images,tau_i)
-        force1_mode(1:dim_mode_mag,1:N_cell)=>force1(:,1)
-        fpp(1)=sum(force1_mode*tau_i)
-
-        call tang(nim,images,tau_i)
-        force1_mode(1:dim_mode_mag,1:N_cell)=>force1(:,nim)
-        fpp(nim)=sum(force1_mode*tau_i)
     
         itr=itr+1
         if (mod(itr,io_gneb%every).eq.0) then
+            maximum=maxloc(force1)
+            imax=maximum(2)
+              
+            call tang(1,images,tau_i)
+            force1_mode(1:dim_mode_mag,1:N_cell)=>force1(:,1)
+            fpp(1)=sum(force1_mode*tau_i)
+
+            call tang(nim,images,tau_i)
+            force1_mode(1:dim_mode_mag,1:N_cell)=>force1(:,nim)
+            fpp(nim)=sum(force1_mode*tau_i)
+
             if(present(ci_out))then
                 call prn_gneb_progress(itr, io_gneb%itrmax, fchk, imax,'Y',ci)
             else
@@ -232,6 +231,14 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,my_lattice,io_simu,io_gn
     if (itr>io_gneb%itrmax) then
        write(6,'(a)') 'WARNING: exceeded maximum iterations in GNEB'
     end if
+
+    call tang(1,images,tau_i)
+    force1_mode(1:dim_mode_mag,1:N_cell)=>force1(:,1)
+    fpp(1)=sum(force1_mode*tau_i)
+
+    call tang(nim,images,tau_i)
+    force1_mode(1:dim_mode_mag,1:N_cell)=>force1(:,nim)
+    fpp(nim)=sum(force1_mode*tau_i)
     
     ene = energy-energy_ref
     dene = -fpp

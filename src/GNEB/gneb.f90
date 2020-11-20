@@ -54,12 +54,12 @@ subroutine GNEB(my_lattice,io_simu,ext_param,Ham)
 
     if (io_gneb%do_gneb) then
        write (6,'(a)') "GNEB calculation in progress..."
-       call find_path(nim,N_cell,io_gneb%mepftol,rx,ene,dene,images,my_lattice,io_simu,io_gneb,Ham)
+       call find_path(nim,N_cell,io_gneb%mepftol,rx,ene,dene,images,io_simu,io_gneb,Ham)
        write (6,'(a)') "Done!"
     end if
     if (io_gneb%do_gneb_ci) then
        write (6,'(a)') "CI-GNEB calculation in progress..."
-       call find_path(nim,N_cell,io_gneb%mepftol_ci,rx,ene,dene,images,my_lattice,io_simu,io_gneb,Ham,ci)
+       call find_path(nim,N_cell,io_gneb%mepftol_ci,rx,ene,dene,images,io_simu,io_gneb,Ham,ci)
        write(6,'(a,I3)') 'ci:',ci
        write (6,'(a)') "Done!"
     end if
