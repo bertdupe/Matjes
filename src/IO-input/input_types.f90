@@ -26,6 +26,15 @@ type MC_input
     logical     :: sphere=.false.
 end type
 
+type min_input
+    real(8)     :: mass=1.0d0      ! mass used for minimize
+    real(8)     :: dt=0.1d0         ! timestep
+    integer(8)  :: N_minimization=huge(int(1,8))     !number of minimization steps
+    integer     :: Efreq=100            ! frequency of printing the current energy/torque during the mimization
+    real(8)     :: conv_torque=1.0d-6   !torque convergence criterion
+end type
+
+
 type GNEB_input  
     character(len=35)   :: momfile_i='momfile_i'            !< File name for initial magn. configuration
     character(len=35)   :: momfile_f='momfile_f'            !< File name for final magn. configuration
@@ -41,7 +50,7 @@ type GNEB_input
     real(8)             :: dt=1.0d-2                        !< VPO timestep
     real(8)             :: mass=1.0d0                       !< VPO mass
     real(8)             :: spring=0.5d0                     !< Magnitude of the spring constant in GNEB calculations
-    integer             :: itrmax=10000000               !< Maximum number of iterations in MEP finding procedure
+    integer(8)          :: itrmax=huge(int(1,8))            !< Maximum number of iterations in MEP finding procedure
     real(8)             :: mepftol=1.0d-3                   !< Convergence criterion in the GNEB method, in mRy
     real(8)             :: mepftol_ci=1.0d-5                !< Convergence criterion in the CI-GNEB method, in mRy
     integer             :: every=10                         !< Save configuration every 'meptraj_step' step during MEP finding procedure
@@ -56,6 +65,7 @@ type GNEB_input
     logical             :: read_path=.False.                  !< read the entire path and do not initialize with geodesic spins
     logical             :: read_outer=.True.                  !< read the outer images 
     integer             :: min_type=1                         !< minimalization routine to minimize outer images (0=none,1=minimize_infdamp, 2=minimize)
+    type(min_input)     :: io_min                        !input for the minimize_infdamp/minimize routine
 end type
 
 

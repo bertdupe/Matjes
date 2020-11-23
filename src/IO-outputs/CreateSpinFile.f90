@@ -19,6 +19,7 @@ implicit none
        module procedure CreateSpinFile_2d_sreal
        module procedure CreateSpinFile_usernamed_spin
        module procedure CreateSpinFile_orderpar_name
+       module procedure CreateSpinFile_sig_orderpar
   end interface
 
 private
@@ -31,6 +32,16 @@ contains
 !
 
 ! ===============================================================
+
+
+subroutine CreateSpinFile_sig_orderpar(signature,ordpar)
+    type(order_par), intent(in) :: ordpar
+    integer,intent(in)          :: signature
+    character(len=50) :: fname
+
+    fname=convert('Spinse_',signature,'.dat')
+    Call CreateSpinFile_usernamed_spin(ordpar%modes_v,fname)   
+end subroutine
 
 subroutine CreateSpinFile_orderpar_name(ordpar,fname)
     type(order_par), intent(in) :: ordpar

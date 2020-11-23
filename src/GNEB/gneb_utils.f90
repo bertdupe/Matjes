@@ -30,9 +30,9 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
     class(t_H),intent(in)           :: Hams(:)
     integer,intent(out),optional    :: ci_out
     ! internal
-    integer ::  N_mag
-    integer :: iomp,itr
-    !integer :: iomp,i_nim,itr
+    integer     :: N_mag
+    integer     :: iomp
+    integer(8)  :: itr
     real(8), allocatable, dimension(:,:,:) :: vel,ax
     real(8), allocatable, dimension(:,:) :: tau_i,tau,ang
     real(8), allocatable, dimension(:) :: ftmp,veltmp
@@ -51,8 +51,10 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
     real(8),allocatable,target :: magarr_tmp(:,:)
     integer             :: ci
     real(8), allocatable, dimension(:,:) :: vel_tmp_arr
+    logical             :: converged
 
     ci=0
+    converged=.false.
     if(present(ci_out)) ci=1
     energy_ref = 0.0d0
 
@@ -136,8 +138,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
     write(6,'(2(a,I22))') 'maximum iteration  ', io_gneb%itrmax, ' iteration number', itr
     write(6,'(2(a,E20.12E3)/)') 'distance to tolerance ', fchk, ' tolerance', ftol
 
-    do while ((fchk.gt.ftol).and.(itr.le.io_gneb%itrmax))
-
+    do itr=1,io_gneb%itrmax
         do im=2,nim-1
             M3(1:3,1:N_mag*N_cell)=>images(im)%M%modes
             force1_3(1:3,1:N_mag*N_cell)=>force1(:,im)
@@ -182,13 +183,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
             vel(:,:,im)=vel_tmp_arr
             call rotate(force1_3,ax(:,:,im),ang(:,im),vel_tmp_arr)
             vel(:,:,im)=vel(:,:,im)+0.5d0*(vel_tmp_arr+force2_3)/io_gneb%mass*io_gneb%dt
-            !do iomp=1,N_cell
-            !    call rotate(vel(:,iomp,im),ax(:,iomp,im),ang(iomp,im),veltmp)
-            !    call rotate(force1_3(:,iomp),ax(:,iomp,im),ang(iomp,im),ftmp(1:3))
-            !    vel(:,iomp,im) = veltmp + 0.5d0*(ftmp(1:3)+force2_3(:,iomp))/io_gneb%mass*io_gneb%dt
-            !enddo
         enddo
-        !if(maxval(vel_tmp_arr)>0.0d-5) STOP "DERP"
         force_all_3(1:dim_mode_mag,1:N_cell,1:nim)=>force2
         fv= sum( vel * force_all_3 )/real(nim,8)
         fd= sum(force2**2)/real(nim,8)
@@ -201,8 +196,6 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
 
         force1=force2
         fchk=maxval(abs(force1))
-    
-        itr=itr+1
         if (mod(itr,io_gneb%every).eq.0) then
             maximum=maxloc(force1)
             imax=maximum(2)
@@ -232,11 +225,16 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
             call write_en(nim,pathlen,energy-energy_ref,-fpp,pathlen(nim),'en_path.out',io_gneb%do_norm_rx)
             call write_path(images)
         end if
-    
+
+        converged=fchk.lt.ftol
+        if(converged)then
+            write(6,'(//A//)') "GNEB convergence threshold reached"
+            exit
+        endif
     end do
     
-    if (itr>io_gneb%itrmax) then
-       write(6,'(a)') 'WARNING: exceeded maximum iterations in GNEB'
+    if (.not.converged) then
+       write(6,'(///a///)') 'WARNING: exceeded maximum iterations in GNEB'
     end if
 
     call tang(1,images,tau_i)

@@ -26,18 +26,15 @@ subroutine path_initialization(images,io_simu,io_gneb,Ham)
     class(t_H),intent(in)           :: Ham(:)
     ! internal variable
     integer :: nim
-    logical :: exists
     character(:),allocatable        ::  momfile_i,momfile_f
     
     nim=size(images)
 
     if(io_gneb%read_path)then
-        call read_path(io_gneb%restartfile_path,images,exists)
+        call read_path(io_gneb%restartfile_path,images)
     endif
     if(io_gneb%read_outer)then
-       momfile_i = convert(io_gneb%restartfile_path,'_1.dat')
-       momfile_f = convert(io_gneb%restartfile_path,'_',nim,'.dat')
-       call read_inifin(momfile_i,momfile_f,images)
+        Call read_path_inifin(io_gneb,images)
     endif
 
     call WriteSpinAndCorrFile(images(1)%M%modes_v,'SpinSTM_GNEB_ini.dat')
@@ -50,17 +47,17 @@ subroutine path_initialization(images,io_simu,io_gneb,Ham)
        write(*,*) "WARNING, NO INITIAL MINIMIZATION FOR GNEB CHOSEN"
     case(1)
         write (6,'(a)') "Relaxing the first image via the infinite damping method..."
-        call minimize_infdamp(images(1),io_simu,Ham)
+        call minimize_infdamp(images(1),io_simu,io_gneb%io_min,Ham)
         write (6,'(a)') "Done!"
         write (6,'(a)') "Relaxing the first image via the infinite damping method..."
-        call minimize_infdamp(images(nim),io_simu,Ham)
+        call minimize_infdamp(images(nim),io_simu,io_gneb%io_min,Ham)
         write (6,'(a)') "Done!"
     case(2)
         write (6,'(a)') "Relaxing the first image..."
-        call minimize(images(1),io_simu,Ham)
+        call minimize(images(1),io_simu,io_gneb%io_min,Ham)
         write (6,'(a)') "Done!"
         write (6,'(a)') "Relaxing the last image..."
-        call minimize(images(nim),io_simu,Ham)
+        call minimize(images(nim),io_simu,io_gneb%io_min,Ham)
         write (6,'(a)') "Done!"
     case default
         ERROR STOP "UNEXPECTED io_gneb%min_type"

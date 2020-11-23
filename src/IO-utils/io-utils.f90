@@ -42,6 +42,7 @@ interface get_parameter
  module procedure get_1D_vec_int
  module procedure get_1D_vec_bool
  module procedure get_int
+ module procedure get_int8
  module procedure get_real
  module procedure get_bool
  module procedure get_character
@@ -766,6 +767,50 @@ check=check_read(nread,vname,fname)
 if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', number
 
 end subroutine get_int
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! get a INTEGER number parameter (check the string and so on)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine get_int8(io,fname,vname,number)
+use m_vector
+implicit none
+integer(8), intent(inout)       :: number
+integer, intent(in)             :: io
+character(len=*), intent(in)    :: vname,fname
+! internal variable
+integer :: fin,len_string,nread,check
+character(len=100) :: str
+character(len=100) :: dummy
+
+nread=0
+len_string=len(trim(adjustl(vname)))
+
+rewind(io)
+do
+   read (io,'(a)',iostat=fin) str
+   if (fin /= 0) exit
+   str= trim(adjustl(str))
+
+   if (len_trim(str)==0) cycle
+   if (str(1:1) == '#' ) cycle
+
+!cccc We start to read the input
+   if (( str(1:len_string) == trim(adjustl(vname))) .and. ( check_last_char(str(len_string+1:len_string+1)) )) then
+      nread=nread+1
+      backspace(io)
+      read(io,*) dummy, number
+   endif
+
+enddo
+
+check=check_read(nread,vname,fname)
+
+if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', number
+
+end subroutine 
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get a BOOLEAN vector parameter (check the string and so on)

@@ -1,36 +1,46 @@
 module m_io_gneb
 use m_vector, only : norm
 use m_type_lattice,only: lattice
+use m_input_types, only: GNEB_input
+use m_convert, only: convert
+use,intrinsic :: ISO_FORTRAN_ENV, only: OUTPUT_UNIT
 implicit none
+private
+public :: read_path,read_path_inifin,prn_gneb_progress,write_en,write_path
 
 contains
 
-subroutine read_inifin(file_ini,file_fin,images)
-    use m_get_random
-    use m_io_files_utils
-    implicit none
-    character(len=*), intent(in)    :: file_ini,file_fin
+subroutine read_path_inifin(io_gneb,images)
+    type(GNEB_input),intent(in)     :: io_gneb
     type(lattice), intent(inout)    :: images(:)
-     
-    Call images(1)%M%read_file(file_ini)
-    Call images(size(images))%M%read_file(file_fin)
-end subroutine read_inifin
 
+    logical     ::  exists
+    character(:),allocatable        ::  momfile
+    integer     :: nim
 
-!subroutine write_path(path)
-!use m_write_spin
-!use m_createspinfile
-!implicit none
-!real(kind=8), intent(in) :: path(:,:,:)
-!! internal variables
-!integer :: shape_path(3),i_nim
-!
-!shape_path=shape(path)
-!do i_nim=1,shape_path(3)
-!   call WriteSpinAndCorrFile(i_nim,path(:,:,i_nim),'image-GNEB_')
-!   call CreateSpinFile('povray-GNEB_',i_nim,path(:,:,i_nim))
-!end do
-!end subroutine write_path
+    inquire(file=io_gneb%momfile_i,exist=exists)
+    if(exists)then
+        write(OUTPUT_UNIT,'(2A)') "Reading initial GNEB image from: ",io_gneb%momfile_i
+        Call images(1)%M%read_file(io_gneb%momfile_i)
+    else
+        momfile=convert(io_gneb%restartfile_if,'_1.dat')
+        write(OUTPUT_UNIT,'(2A)') "Reading initial GNEB image from: ",momfile
+        Call images(1)%M%read_file(momfile)
+    endif
+    if(allocated(momfile)) deallocate(momfile)
+
+    nim=size(images)
+    inquire(file=io_gneb%momfile_f,exist=exists)
+    if(exists)then
+        write(OUTPUT_UNIT,'(2A)') "Reading final GNEB image from: ",io_gneb%momfile_f
+        Call images(nim)%M%read_file(io_gneb%momfile_f)
+    else
+        momfile=convert(io_gneb%restartfile_if,'_',nim,'.dat')
+        write(OUTPUT_UNIT,'(2A)') "Reading final GNEB image from: ",momfile
+        Call images(nim)%M%read_file(momfile)
+    endif
+
+end subroutine
 
 
 subroutine write_path(images)
@@ -52,14 +62,13 @@ end subroutine write_path
 ! Read the path from N files
 !
 !
-subroutine read_path(fname_part,images,exists)
+subroutine read_path(fname_part,images)
     use m_get_random
     use m_convert
     use m_io_files_utils
     implicit none
     character(len=*), intent(in) :: fname_part
     type(lattice), intent(inout)    :: images(:)
-    logical, intent(out) :: exists
     ! internal variables
     logical ::  img_exist(size(images))
     integer :: i,i_im,shape_path(3),io,N_cell
@@ -73,8 +82,6 @@ subroutine read_path(fname_part,images,exists)
        fname=trim(fname)//'.dat'
        Call images(i_im)%M%read_file(fname)
     end do
-    write(6,*) 'Path loaded.'
-    exists=img_exist(1).and.img_exist(size(images)) !does exists only care if first & last file are read?
 
 end subroutine read_path
 
@@ -115,7 +122,7 @@ end subroutine write_en
 
 subroutine prn_gneb_progress(itr,itrmax,fchk,imax,do_ci,ci)
 implicit none
-integer, intent(in) :: itr, itrmax
+integer(8), intent(in) :: itr, itrmax
 real(kind=8), intent(in) :: fchk
 integer, intent(in) :: imax,ci
 character(len=1), intent(in) :: do_ci

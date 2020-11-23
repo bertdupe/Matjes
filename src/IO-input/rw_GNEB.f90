@@ -1,5 +1,6 @@
 module m_rw_GNEB
 use m_input_types, only: GNEB_input
+use m_rw_minimize, only: rw_minimize
 implicit none
 public
 contains
@@ -27,7 +28,6 @@ subroutine rw_gneb(gneb_io,fname_in)
     call get_parameter(io_param,fname,'initpath',gneb_io%initpath)
     call get_parameter(io_param,fname,'amp_rnd',gneb_io%amp_rnd)
     call get_parameter(io_param,fname,'amp_rnd_path',gneb_io%amp_rnd_path)
-    call get_parameter(io_param,fname,'min_itrmax',gneb_io%itrmax)
     call get_parameter(io_param,fname,'mintraj_step',gneb_io%mintraj_step)
     call get_parameter(io_param,fname,'min_ftol',gneb_io%minftol)
     call get_parameter(io_param,fname,'mep_itrmax',gneb_io%itrmax)
@@ -67,6 +67,7 @@ subroutine rw_gneb(gneb_io,fname_in)
     call get_parameter(io_param,fname,'gnebinit_read_path',gneb_io%read_path)
     call get_parameter(io_param,fname,'gnebinit_read_outer',gneb_io%read_outer)
     call get_parameter(io_param,fname,'gnebinit_min_type',gneb_io%min_type)
+    Call rw_minimize(gneb_io%io_min,io_param,fname)
 
     call close_file(fname,io_param)
 end subroutine
