@@ -3,13 +3,164 @@ use m_derived_types
 implicit none
 private
 public :: init_Sk,get_skyrmion
+
+interface init_SK
+   module procedure init_SK_old
+   module procedure init_SK_new
+end interface
+
+
+interface get_skyrmion
+   module procedure get_skyrmion_old
+   module procedure get_skyrmion_new
+end interface
+
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Initialize the starting configuration as an isolated skyrmion
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine init_Sk(io,fname,my_lattice,my_motif,mode_name,start,end)
+subroutine init_Sk_new(io,fname,lat,ordname,dim_mode,state)
+    use m_io_utils, only: get_parameter
+    use init_util, only: get_pos_vec
+    integer,intent(in)              :: io       !init-file io-unit
+    character(*),intent(in)         :: fname    !init-file name 
+    type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
+    character(*),intent(in)         :: ordname  !name of the order parameter
+    integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
+    real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
+
+    integer :: NSkyAdd, N_Pinning
+    Logical, dimension(:), allocatable :: TabPinning
+    real(8), dimension(:), allocatable :: tab_XSky,tab_YSky,tab_RSky
+    real(8), dimension(:), allocatable :: tab_coeffx,tab_coeffy,tab_starx,tab_stary
+    real(8), dimension(:), allocatable :: chirality
+    integer :: i
+    real(8) :: R0,coeffx,coeffy,starx,stary,chi
+    character(len=30) :: variable_name
+
+    real(8),allocatable,target :: pos(:)
+    real(8),pointer :: pos_3(:,:),state_3(:,:)
+    integer         :: nmag
+    real(8)         :: pos_sky(3)
+    
+    !!!! default variables !!!!
+    NSkyAdd=1
+    N_pinning=0
+    
+    call get_parameter(io,fname,'NSkyAdd_'//ordname,NSkyAdd)
+    
+    allocate(tab_XSky(NSkyAdd),tab_YSky(NSkyAdd),tab_RSky(NSkyAdd),tab_coeffx(NSkyAdd),tab_coeffy(NSkyAdd),tab_starx(NSkyAdd),tab_stary(NSkyAdd),chirality(NSkyAdd),source=1.0d0)
+    tab_XSky=50.0d0
+    tab_YSky=50.0d0
+    tab_RSky=5.0d0
+    chirality=-1.0d0
+    !!!!
+    
+    call get_parameter(io,fname,'XSky_'//ordname,NSkyAdd,tab_XSky)
+    call get_parameter(io,fname,'YSky_'//ordname,NSkyAdd,tab_YSky)
+    call get_parameter(io,fname,'RSky_'//ordname,NSkyAdd,tab_RSky)
+    call get_parameter(io,fname,'coeffx_'//ordname,NSkyAdd,tab_coeffx)
+    call get_parameter(io,fname,'coeffy_'//ordname,NSkyAdd,tab_coeffy)
+    call get_parameter(io,fname,'starx_'//ordname,NSkyAdd,tab_starx)
+    call get_parameter(io,fname,'stary_'//ordname,NSkyAdd,tab_stary)
+    call get_parameter(io,fname,'chirality_'//ordname,NSkyAdd,chirality)
+
+    Call get_pos_vec(lat,dim_mode,ordname,pos)
+    pos_3(1:3,1:size(pos)/3)=>pos
+    state_3(1:3,1:size(pos)/3)=>state
+    
+    do i=1,NSkyAdd
+       R0=tab_RSky(i)
+       coeffx=tab_coeffx(i)
+       coeffy=tab_coeffy(i)
+       starx=tab_starx(i)
+       stary=tab_stary(i)
+       chi=chirality(i)
+       pos_sky=[tab_XSky(i),tab_YSky(i),0.0d0]
+       call get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chi,pos_3,state_3,lat)
+    enddo
+    
+    call get_parameter(io,fname,'N_pinning_'//ordname,N_pinning)
+    if (N_pinning.ne.0) then
+        ERROR STOP "pinning has to be implemented in new version" ! I don't really understand what it does
+       !allocate(TabPinning(N_pinning))
+       !call get_parameter(io,fname,'pinning',NSkyAdd,tabpinning)
+       !do i=1,NSkyAdd
+       !   if (tabpinning(i)) call pin_skyrmion(x0,y0,my_lattice,my_motif)
+       !enddo
+    endif
+!    
+!    if (N_pinning.ne.0) deallocate(TabPinning)
+    deallocate(tab_XSky,tab_YSky,tab_RSky,tab_coeffx,tab_coeffy,tab_starx,tab_stary,chirality)
+
+end subroutine 
+
+subroutine get_skyrmion_new(pos_sky,R0,coeffx,coeffy,starx,stary,chirality,pos,state,lat)
+    !subroutine to add a single skyrmion a lattice given by (pos,state,lat)
+    use m_constants, only : pi
+    real(8), intent(in)         :: pos_sky(3)
+    real(8),intent(in)          :: R0 ! R0 is the Skyrmion radius
+    real(8),intent(in)          :: coeffx,coeffy,starx,stary ! parameter to define if it is a skyrmions, antiskyrmions, Q=...
+    real(8),intent(in)          :: chirality  ! define the right or left hand chirality
+    real(8),intent(in)          :: pos(:,:)   !position of all entries(3,(Nmag)*Ncell)
+    real(8),intent(inout)       :: state(:,:) !states corresponding to the positions (3,(Nmag)*Ncell)
+    type(lattice), intent(in)   :: lat      !entire lattice containing geometric information
+    ! Internal variables
+    real(8)     :: theta,psi
+    real(8)     :: diff(3)
+    integer     :: i
+    real(8)     :: dist
+    ! Parameter to create a skyrmion woth theta profile according the paper
+    ! of Kubetzka PRB 67, 020401(R) (2003)
+    real(8)     :: widt, cen
+    ! Variables to adjust the variable widt and cen according to Lilley
+    ! criterion for Bloch walls dimension
+    real(8)     :: Inflexparam, ThetaInflex, DThetaInflex
+   
+    If (R0 <= 0.0d0) return
+    if(any(shape(pos)/=shape(state))) ERROR STOP "incorrect input for get_skyrmion_new, programming error" 
+    if(size(pos,1)/=3) ERROR STOP "position shape wrong, programming error"
+
+    write(6,'(a)') "User defined skyrmion selected"
+    if (chirality.gt.0.0d0) then
+       write(6,'(a)') "right hand chirality selected"
+    else
+       write(6,'(a)') "left hand chirality selected"
+    endif
+    write(6,*) "v_phi(x,y)",starx,stary
+    write(6,*) "xPi(x,y)",coeffx,coeffy
+    
+    inflexparam = 2.0d0 *ACOSH( 0.5d0*SQRT(2.0d0+SQRT(6.0d0+2.0d0*COSH( 2.0d0) ) ) )
+    ThetaInflex = pi-ASIN( TANH (Inflexparam-1.0d0))-ASIN( TANH (Inflexparam+1.0d0))
+    DThetaInflex =  -(1.0d0/COSH(Inflexparam-1.0d0) + 1.0d0/COSH(Inflexparam+1.0d0))
+    widt = 2.d0*R0/(Inflexparam-ThetaInflex/DThetaInflex)
+    cen = 0.5d0*widt
+
+    do i=1,size(pos,2)
+        diff=pos(:,i)-pos_sky
+        Call lat%min_diffvec(diff)
+        dist=norm2(diff(1:2))
+        !terrible parameter clculation directly translate from old implementation
+        If (dist>=(1.4d0*R0)) cycle
+        Theta = pi-Asin(tanh( 2*(dist-cen)/widt ))- &
+                   Asin(tanh( 2*(dist+cen)/widt ))
+        if(dist>1.0d-8)then
+            psi = acos(diff(1)/dist)+pi
+            if(diff(2)/dist<0.0d0) psi=-psi+2.0d0*pi
+        else
+            psi=0.0d0
+        endif
+
+        state(1,i) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi)
+        state(2,i) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi)
+        state(3,i) = Cos(Theta)
+    enddo
+end subroutine 
+
+
+subroutine init_Sk_old(io,fname,my_lattice,my_motif,mode_name,start,end)
 use m_vector
 use m_io_utils
 use m_convert
@@ -93,13 +244,13 @@ endif
 if (N_pinning.ne.0) deallocate(TabPinning)
 deallocate(tab_XSky,tab_YSky,tab_RSky,tab_coeffx,tab_coeffy,tab_starx,tab_stary,chirality)
 
-end subroutine init_Sk
+end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Initialize the set the magnetization for a particular isolated skyrmion
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine get_skyrmion(x0,y0,R0,coeffx,coeffy,starx,stary,chirality,my_lattice,my_motif,start,end)
+subroutine get_skyrmion_old(x0,y0,R0,coeffx,coeffy,starx,stary,chirality,my_lattice,my_motif,start,end)
 use m_constants, only : pi
 use m_vector, only : norm,distance,phi
 use m_get_position
@@ -182,6 +333,8 @@ diml2 = real(Dim_lat(2),8)
 minIndex = 0
 MinDist = 1.0d10
 ! Check that R0 is positive
+#if 0
+!put back in, but this given overflows which prevents my debugging
 If (R0.gt. 0.0d0) then
 
    call get_position(position,dim_lat,net,my_motif)
@@ -227,8 +380,9 @@ If (R0.gt. 0.0d0) then
    enddo
 
 Endif
+#endif
 
-end subroutine get_skyrmion
+end subroutine 
 
 ! =====================================================================
 ! SUBROUTINE to Pin a spin in the lattice

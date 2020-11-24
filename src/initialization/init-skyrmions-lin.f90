@@ -3,6 +3,10 @@ use m_derived_types
 implicit none
 private
 public :: init_sky_lin
+interface init_sky_lin
+    module procedure init_sky_lin_old
+    module procedure init_sky_lin_new
+end interface
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -19,8 +23,60 @@ contains
 ! and phi being the polar angle
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine init_sky_lin(io,fname,my_lattice,my_motif,m_start,m_end)
-!punches out an area 
+subroutine init_sky_lin_new(io,fname,lat,ordname,dim_mode,state)
+    use m_io_utils, only: get_parameter
+    use init_util, only: get_pos_vec
+    use m_constants, only : pi
+    integer,intent(in)              :: io       !init-file io-unit
+    character(*),intent(in)         :: fname    !init-file name 
+    type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
+    character(*),intent(in)         :: ordname  !name of the order parameter
+    integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
+    real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
+
+    real(8),allocatable,target :: pos(:)
+    real(8),pointer :: pos_3(:,:),state_3(:,:)
+    real(8)     ::  f_r,qphi
+    integer     :: i
+
+    real(8)     ::  slope,center(3)
+    integer     ::  q
+
+    !get parameters for punch
+    center=0.0d0
+    q=1
+    slope=10.0
+    !older input without ordername? (legacy?)
+    call get_parameter(io,fname,'skylin_pos',3,center)
+    call get_parameter(io,fname,'skylin_slope',slope)
+    call get_parameter(io,fname,'skylin_q',q)
+    call get_parameter(io,fname,'skylin_pos_'//ordname,3,center)
+    call get_parameter(io,fname,'skylin_slope_'//ordname,slope)
+    call get_parameter(io,fname,'skylin_q_'//ordname,q)
+    slope=2.0d0*pi/slope
+    
+    Call get_pos_vec(lat,dim_mode,ordname,pos)
+    pos_3(1:3,1:size(pos)/3)=>pos
+    state_3(1:3,1:size(pos)/3)=>state
+
+    do i=1,size(pos_3,2)
+        pos_3(:,i)=pos_3(:,i)-center
+    enddo
+    
+    do i=1,size(pos_3,2)
+        f_r=norm2(pos_3(:,i))*slope
+        qphi=atan2(pos_3(2,i),pos_3(1,i))*real(q,8)
+        state_3(1,i)= sin(f_r)*cos(qphi)
+        state_3(2,i)= sin(f_r)*sin(qphi)
+        state_3(3,i)= cos(f_r)
+    enddo
+
+    nullify(pos_3,state_3)
+    deallocate(pos)
+end subroutine 
+
+
+subroutine init_sky_lin_old(io,fname,my_lattice,my_motif,m_start,m_end)
 use m_io_utils
 type (lattice), intent(inout) :: my_lattice
 type(t_cell), intent(in) :: my_motif

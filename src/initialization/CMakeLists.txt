@@ -10,6 +10,7 @@ src/initialization/init-skyrmions.f90
 src/initialization/init-skyrmions-lin.f90
 src/initialization/InitSpin.f90
 src/initialization/init-spiral.f90
+src/initialization/init-util.f90
 src/initialization/init-variables.f90
 src/initialization/IO-modes.f90
 )

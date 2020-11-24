@@ -9,7 +9,7 @@ subroutine rw_gneb(gneb_io,fname_in)
     use m_io_utils,only: get_parameter
     type(GNEB_input),intent(out)        :: gneb_io
     character(*),intent(in),optional    :: fname_in
-    !integernal
+    !internal
     character(*),parameter              :: fname_default='input'
     character(:), allocatable           :: fname
     integer                             :: io_param

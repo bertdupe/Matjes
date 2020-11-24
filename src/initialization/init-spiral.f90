@@ -3,6 +3,10 @@ use m_derived_types
 implicit none
 
 private
+interface init_spiral
+   module procedure init_spiral_old
+   module procedure init_spiral_new
+end interface
 public :: init_spiral
 
 contains
@@ -11,7 +15,53 @@ contains
 ! Initialize the starting configuration as a spin spiral
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine init_spiral(io,fname,my_lattice,my_motif,mode_name,start,end)
+
+subroutine init_spiral_new(io,fname,lat,ordname,dim_mode,state)
+    use m_io_utils, only: get_parameter
+    use init_util, only: get_pos_vec
+    integer,intent(in)              :: io       !init-file io-unit
+    character(*),intent(in)         :: fname    !init-file name 
+    type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
+    character(*),intent(in)         :: ordname  !name of the order parameter
+    integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
+    real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
+
+    real(8)         :: qvec(3),Rq(3),Iq(3)
+    real(8),allocatable,target :: pos(:)
+!    real(8),allocatable ::  position(:)
+    real(8),pointer :: pos_3(:,:),state_3(:,:)
+    integer         :: i
+    integer         :: nmag
+   
+    qvec=0.0d0
+    Rq=[0.0d0,0.0d0,1.0d0]
+    Iq=[1.0d0,0.0d0,0.0d0]
+    
+    call get_parameter(io,fname,'qvec_'//ordname,3,qvec)
+    qvec=matmul(qvec,lat%astar)
+
+    call get_parameter(io,fname,'Rq_'//ordname,3,Rq,1.0d0)
+    Rq=matmul(Rq,lat%areal)
+    Rq=Rq/norm2(Rq)
+    
+    call get_parameter(io,fname,'Iq_'//ordname,3,Iq,1.0d0)
+    Iq=matmul(Iq,lat%areal)
+    Iq=Iq/norm2(Iq)
+
+    Call get_pos_vec(lat,dim_mode,ordname,pos)
+
+    pos_3(1:3,1:size(pos)/3)=>pos
+    state_3(1:3,1:size(pos)/3)=>state
+    do i=1,size(state_3,2)
+        state_3(:,i)=(cos(dot_product(qvec,pos_3(:,i)))*Rq+ &
+                      sin(dot_product(qvec,pos_3(:,i)))*Iq)
+    enddo
+    nullify(pos_3,state_3)
+    deallocate(pos)
+end subroutine 
+
+
+subroutine init_spiral_old(io,fname,my_lattice,my_motif,mode_name,start,end)
 use m_get_position
 use m_vector
 use m_io_utils
@@ -26,10 +76,10 @@ integer :: i_z,i_y,i_x,i_m,Nx,Ny,Nz,Nmag,size_mag
 real(kind=8), allocatable :: position(:,:,:,:,:)
 character(len=30) :: variable_name
 
-!new internal variables
-real(8), allocatable,target :: pos_new(:,:,:,:,:)
-real(8),pointer :: pos_new_flat(:,:),mag_point(:,:)
-integer         :: i
+!!new internal variables
+!real(8), allocatable,target :: pos_new(:,:,:,:,:)
+!real(8),pointer :: pos_new_flat(:,:),mag_point(:,:)
+!integer         :: i
 
 kvec=my_lattice%astar
 r=my_lattice%areal
@@ -78,16 +128,16 @@ do i_m=1,nmag
 enddo
 deallocate(position)
 
-Call my_lattice%get_pos_mag(pos_new)
-pos_new_flat(1:3,1:size(pos_new)/3)=>pos_new
-mag_point(1:3,1:size(pos_new)/3)=>my_lattice%M%modes
-do i=1,size_mag
-    mag_point(:,i)=(cos(dot_product(qvec,pos_new_flat(:,i)))*Rq+ &
-                    sin(dot_product(qvec,pos_new_flat(:,i)))*Iq)
-enddo
-nullify(pos_new_flat,mag_point)
-deallocate(pos_new)
+!Call my_lattice%get_pos_mag(pos_new)
+!pos_new_flat(1:3,1:size(pos_new)/3)=>pos_new
+!mag_point(1:3,1:size(pos_new)/3)=>my_lattice%M%modes
+!do i=1,size_mag
+!    mag_point(:,i)=(cos(dot_product(qvec,pos_new_flat(:,i)))*Rq+ &
+!                    sin(dot_product(qvec,pos_new_flat(:,i)))*Iq)
+!enddo
+!nullify(pos_new_flat,mag_point)
+!deallocate(pos_new)
 
-end subroutine init_spiral
+end subroutine 
 
 end module m_init_spiral

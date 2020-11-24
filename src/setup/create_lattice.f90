@@ -11,39 +11,38 @@ public :: create_lattice,my_order_parameters
 contains
 
 subroutine create_lattice(mag_lattice,motif,ext_param,nb_orbitals)
-!subroutine that initializes the the lattice and its orderparameters
-use m_derived_types
-implicit none
-integer, intent(in) :: nb_orbitals
-type(t_cell), intent(in) :: motif
-type(lattice), intent(inout) :: mag_lattice
-type(simulation_parameters), intent(in) :: ext_param
-! internal
-integer ::  N_mode,dim_mode
-! slopes
-integer :: i,j,k,l
-
-integer :: dim_mode_arr(number_different_order_parameters)
-
-!find out how many order parameters are used
-N_mode=get_num_mode(motif,ext_param,nb_orbitals)
-
-!(old) initialize variable saving information what order parameter is what
-allocate(my_order_parameters(N_mode))
-do i=1,N_mode
-    my_order_parameters(i)%name=''
-    my_order_parameters(i)%start=-1
-    my_order_parameters(i)%end=-1
-enddo
-!get sizes of the order parameters
-Call get_dim_mode(motif,ext_param,nb_orbitals,dim_mode_arr)
-Call mag_lattice%init_order(motif,dim_mode_arr)
-
+    !subroutine that initializes the the lattice and its orderparameters
+    !OBSOLETE
+    use m_derived_types
+    implicit none
+    integer, intent(in)                     :: nb_orbitals
+    type(t_cell), intent(in)                :: motif
+    type(lattice), intent(inout)            :: mag_lattice
+    type(simulation_parameters), intent(in) :: ext_param
+    ! internal
+    integer ::  N_mode,dim_mode
+    ! slopes
+    integer :: i,j,k,l
+    
+    integer :: dim_mode_arr(number_different_order_parameters)
+    
+    !find out how many order parameters are used
+    N_mode=get_num_mode(motif,ext_param,nb_orbitals)
+    
+    !(old) initialize variable saving information what order parameter is what
+    allocate(my_order_parameters(N_mode))
+    do i=1,N_mode
+        my_order_parameters(i)%name=''
+        my_order_parameters(i)%start=-1
+        my_order_parameters(i)%end=-1
+    enddo
+    !get sizes of the order parameters
+    Call get_dim_mode(motif,ext_param,nb_orbitals,dim_mode_arr)
 end subroutine create_lattice
 
-!!!!!!!!!!!!!!!!!!!!!!!!
-! function that gets the number of order parameter
-!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!
+!! function that gets the number of order parameter
+!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine get_dim_mode(motif,ext_param,nb_orbitals,dim_mode_arr)
 use m_derived_types
 implicit none

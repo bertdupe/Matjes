@@ -68,7 +68,7 @@ subroutine read_file(this,fname)
     call close_file(fname,io)
 end subroutine
 
-subroutine init_order_par(self,dim_lat,nmag,dim_mode)
+subroutine init_order_par(self,dim_lat,nmag,dim_mode,vec_val,val)
     !if the data pointers are not allocated, initialize them with 0
     !if the data pointers are allocated, check that size requirements are identical
     !associate public pointers to internal data storage
@@ -77,6 +77,7 @@ subroutine init_order_par(self,dim_lat,nmag,dim_mode)
     integer,intent(in)              :: nmag
 !    class(lattice),intent(in)    :: lat
     integer,intent(in)              :: dim_mode
+    real(8),intent(in),optional     :: vec_val(dim_mode),val    !possibities to initialize order parameters
     integer                         :: N
     integer                         :: l,k,j,i          
    
@@ -94,6 +95,14 @@ subroutine init_order_par(self,dim_lat,nmag,dim_mode)
     self%all_modes(1:N)=>self%data_real
     self%modes(1:dim_mode,1:dim_lat(1),1:dim_lat(2),1:dim_lat(3),1:nmag)=>self%data_real
     self%modes_v(1:dim_mode,1:product(dim_lat)*nmag)=>self%data_real
+
+    if(present(vec_val))then
+        do i=1,size(self%modes_v,2)
+            self%modes_v(:,i)=vec_val
+        enddo
+    endif
+
+    if(present(val)) self%all_modes=val
 
     !initialize vec_pointer data if necessary and associate pointers
     N=product(dim_lat)*nmag
