@@ -17,7 +17,9 @@ use m_H_public
 use m_spindynamics
 use m_montecarlo
 use m_entropic
+use m_GNEB, only: GNEB
 use m_write_config, only: write_config
+use m_rw_minimize, only: rw_minimize, min_input
 
 Implicit None
 
@@ -42,6 +44,7 @@ class(t_H),allocatable      :: Ham_res(:), Ham_comb(:)
       Integer :: N_cell
 ! the computation time
       real(kind=8) :: computation_time
+type(min_input)    :: io_min
 
   call welcome()
 
@@ -72,7 +75,6 @@ call close_file('input',io_param)
 
 ! read the input and prepare the lattices, the Hamitlonian and all this mess
 call setup_simu(io_simu,all_lattices,motif,ext_param,Ham_res,Ham_comb)
-!call setup_simu(my_simu,io_simu,all_lattices,motif,ext_param)
 
 ! number of cell in the simulation
 N_cell=size(all_lattices%ordpar%l_modes)
@@ -134,10 +136,7 @@ endif
 !---------------------------------
 if (my_simu%name == 'GNEB') then
             write(6,'(a)') 'entering into the GNEB routine'
-!!            call init_gneb()
-             STOP "PB: GNEB HAS TO BE UPDATED"
-            !call GNEB(all_lattices,motif,io_simu,ext_param)
-            !call set_gneb_defaults()
+            call GNEB(all_lattices,io_simu,ext_param,Ham_comb)
 endif
 
 !---------------------------------
@@ -150,13 +149,13 @@ if (my_simu%name == 'tight-binding') then
 endif
 
 if (my_simu%name == 'minimization')then
-    STOP "put minimize back in"
-    !call minimize(all_lattices,io_simu)
+    Call rw_minimize(io_min)
+    call minimize(all_lattices,io_simu,io_min,Ham_comb)
 endif
 
 if (my_simu%name == 'minimize_infdamp')then
-    STOP "put minimize back in"
-    !call minimize_infdamp(all_lattices,io_simu)
+    Call rw_minimize(io_min)
+    call minimize_infdamp(all_lattices,io_simu,io_min,Ham_comb)
 endif
 !---------------------------------
 !  Part which does the GNEB

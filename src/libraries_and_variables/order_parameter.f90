@@ -29,9 +29,44 @@ contains
     procedure :: copy => copy_order_par
     procedure :: copy_val => copy_val_order_par
     procedure :: delete => delete_order_par
+    procedure :: read_file
     final :: final_order_par
 end type
 contains
+
+subroutine read_file(this,fname)
+    use m_io_files_utils, only: open_file_read,close_file
+    use,intrinsic ::  ISO_FORTRAN_ENV ,only: ERROR_UNIT
+    class(order_par),intent(inout)      :: this
+    character(*),intent(in)             :: fname
+
+    integer     :: io,stat
+    real(8)     :: tst
+
+    io=open_file_read(fname)
+    if (io.lt.0) then
+        write(ERROR_UNIT,'(//2A)') 'Failed to open file:',fname
+        ERROR STOP "ERROR READING ORDER PARAMETER"
+    endif
+    read(io,*,iostat=stat)  this%modes_v
+    if(stat>0)then
+        write(ERROR_UNIT,'(//2A)') 'ERROR READING FILE:',fname
+        write(ERROR_UNIT,'(2A)') 'Unexpected characters?'
+        ERROR STOP "ERROR READING ORDER PARAMETER"
+    elseif(stat<0)then
+        write(ERROR_UNIT,'(//2A)') 'UNEXPECTED END OF FILE:',fname
+        write(ERROR_UNIT,'(2A)') 'incompatible lattice size between input and file?'
+        ERROR STOP "ERROR READING ORDER PARAMETER"
+    else
+        read(io,*,iostat=stat)  tst
+        if(stat==0)then
+            write(ERROR_UNIT,'(//2A)') 'UNEXPECTED FURTHER ENTRIES IN FILE:',fname
+            write(ERROR_UNIT,'(2A)') 'incompatible lattice size between input and file?'
+            ERROR STOP "ERROR READING ORDER PARAMETER"
+        endif
+    endif
+    call close_file(fname,io)
+end subroutine
 
 subroutine init_order_par(self,dim_lat,nmag,dim_mode)
     !if the data pointers are not allocated, initialize them with 0
@@ -83,8 +118,6 @@ subroutine init_order_par(self,dim_lat,nmag,dim_mode)
     enddo
 end subroutine
 
-
-
 subroutine final_order_par(self)
     type(order_par),intent(inout) :: self
 
@@ -116,11 +149,9 @@ subroutine copy_order_par(self,copy,dim_lat,nmag)
 
 end subroutine
 
-
 subroutine copy_val_order_par(self,copy)
     class(order_par),intent(inout) :: self
     class(order_par),intent(inout) :: copy
-
    
     if(.not.associated(self%data_real))then
         STOP "failed to copy_val order_par, since the source modes are not allocated"
@@ -128,12 +159,10 @@ subroutine copy_val_order_par(self,copy)
     if(.not.associated(copy%data_real))then
         STOP "failed to copy_val order_par, since the target modes are not allocated"
     endif
-
     if(size(self%data_real)/=size(copy%data_real))then
         STOP "failed to copy_val order_par, since their shapes are inconsistent"
     endif
 
     copy%all_modes=self%all_modes
-
 end subroutine
 end module

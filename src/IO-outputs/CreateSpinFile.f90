@@ -5,6 +5,7 @@ use m_derived_types
 use m_io_files_utils
 use m_io_utils
 use m_convert
+implicit none
 
   interface CreateSpinFile
        module procedure CreateSpinFile_lattice_usernamed
@@ -17,6 +18,8 @@ use m_convert
        module procedure CreateSpinFile_2d_sint
        module procedure CreateSpinFile_2d_sreal
        module procedure CreateSpinFile_usernamed_spin
+       module procedure CreateSpinFile_orderpar_name
+       module procedure CreateSpinFile_sig_orderpar
   end interface
 
 private
@@ -29,6 +32,24 @@ contains
 !
 
 ! ===============================================================
+
+
+subroutine CreateSpinFile_sig_orderpar(signature,ordpar)
+    type(order_par), intent(in) :: ordpar
+    integer,intent(in)          :: signature
+    character(len=50) :: fname
+
+    fname=convert('Spinse_',signature,'.dat')
+    Call CreateSpinFile_usernamed_spin(ordpar%modes_v,fname)   
+end subroutine
+
+subroutine CreateSpinFile_orderpar_name(ordpar,fname)
+    type(order_par), intent(in) :: ordpar
+    character(len=*), intent(in) :: fname
+    Call CreateSpinFile_usernamed_spin(ordpar%modes_v,fname)   
+END subroutine 
+
+
 subroutine CreateSpinFile_2d_sint(fname,signature,spin)
 Implicit none
 real(kind=8), intent(in) :: spin(:,:)

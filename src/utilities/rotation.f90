@@ -1,13 +1,16 @@
 module m_rotation
+implicit none
 
 ! rotation of vectors
    interface rotate
        module procedure rotate_vector
+       module procedure rotate_vector_arr
    end interface rotate
 
 ! calculate the rotation axis between 2 vectors
    interface rotation_axis
        module procedure rotation_axis_1D
+       module procedure rotation_axis_arr
    end interface rotation_axis
 
 private
@@ -33,6 +36,28 @@ v_out(2) = v_in(2)*cosang - sinang*(ax(1)*v_in(3)-ax(3)*v_in(1))+(1d0-cosang)*tm
 v_out(3) = v_in(3)*cosang + sinang*(ax(1)*v_in(2)-ax(2)*v_in(1))+(1d0-cosang)*tmp*ax(3)
 
 end subroutine rotate_vector
+
+!> Rotate 3-vector v_in by angle ang around axis ax
+pure subroutine rotate_vector_arr(v_in,ax,ang,v_out)
+use  m_vector, only: cross
+!!$ use omp_lib
+implicit none
+real(8), intent(in)         :: v_in(:,:),ax(:,:),ang(:)
+real(8), intent(out)        :: v_out(size(v_in,1),size(v_in,2))
+! internal variables
+real(8)     :: tmp(size(v_in,2)),sinang(size(v_in,2)),cosang(size(v_in,2))
+integer     :: i
+
+tmp = sum(ax*v_in,1)
+sinang = dsin(ang)
+cosang = dcos(ang)
+do i=1,size(v_in,2)
+    v_out(1,i)=v_in(1,i)*cosang(i)+sinang(i)*(ax(3,i)*v_in(2,i)-ax(2,i)*v_in(3,i))+(1.0d0-cosang(i))*tmp(i)*ax(1,i)
+    v_out(2,i)=v_in(2,i)*cosang(i)+sinang(i)*(ax(1,i)*v_in(3,i)-ax(3,i)*v_in(1,i))+(1.0d0-cosang(i))*tmp(i)*ax(2,i)
+    v_out(3,i)=v_in(3,i)*cosang(i)+sinang(i)*(ax(2,i)*v_in(1,i)-ax(1,i)*v_in(2,i))+(1.0d0-cosang(i))*tmp(i)*ax(3,i)
+end do
+end subroutine 
+
 
 ! ==============================================================
 !> Calculate axis of rotation based on two 3-vectors
@@ -71,5 +96,27 @@ else
 endif
 
 end function rotation_axis_1D
+
+! ==============================================================
+!> Calculate axis of rotation based on two 3-vectors in array
+function rotation_axis_arr(m_in,f_in)result(res)
+    use m_vector, only : norm_cross,norm,cross,normalize,vec_normalize
+    real(8),intent(in),target,contiguous   :: m_in(:,:),f_in(:,:)
+    real(8),target                         :: res(3,size(m_in,2))
+    real(8),pointer         :: m_flat(:),res_flat(:),tmp_flat(:)
+    ! internal varible
+    real(8),target          :: tmp(3,size(m_in,2))
+    real(8)                 :: eps=epsilon(f_in)
+  
+    m_flat(1:size(m_in))=>m_in
+    res_flat(1:size(res))=>res
+    tmp_flat(1:size(tmp))=>tmp
+
+    tmp=f_in
+    Call normalize(tmp,1.0d-30)
+    res_flat=cross(m_flat,tmp_flat,1,size(m_in))
+    Call normalize(res,eps)
+end function 
+
 
 end module m_rotation
