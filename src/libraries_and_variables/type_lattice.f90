@@ -169,7 +169,6 @@ subroutine init_order(this,cell,extpar_io)
     type(extpar_input),intent(in)   :: extpar_io
 
     integer                         :: dim_modes(number_different_order_parameters),i
-    real(8),allocatable             :: init_m(:)
 
     this%cell=cell
     this%nmag=cell%num_mag()
@@ -181,14 +180,10 @@ subroutine init_order(this,cell,extpar_io)
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) dim_modes(4)=1
 
     !new orderparameter format
-    allocate(init_m(dim_modes(1)),source=0.0d0)
-    do i=1,dim_modes(1)/3
-        init_m(1+(i-1)*3:i*3)=[0.0d0,0.0d0,1.0d0]
-    enddo
-    if(dim_modes(1)>0) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1),init_m)
-    if(dim_modes(2)>0) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2),extpar_io%E)
-    if(dim_modes(3)>0) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3),extpar_io%H)
-    if(dim_modes(4)>0) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4),extpar_io%T(1))
+    if(dim_modes(1)>0) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1))
+    if(dim_modes(2)>0) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2))
+    if(dim_modes(3)>0) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
+    if(dim_modes(4)>0) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
 
     !remove old vector type at some point soon...
     this%dim_mode=sum(dim_modes)

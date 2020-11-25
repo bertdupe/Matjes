@@ -174,8 +174,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
 
     ! prepare the lattice
     call user_info(6,time,'initializing the spin structure',.false.)
-    call InitSpin(my_lattice,my_motif,ext_param)    !old—to be deleted
-    Call orders_initialize(my_lattice)
+    Call orders_initialize(my_lattice,extpar_io)
     call user_info(6,time,'done',.false.)
 
     ! get position

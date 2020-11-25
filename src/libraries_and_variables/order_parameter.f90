@@ -36,7 +36,7 @@ contains
 
 subroutine read_file(this,fname,fexist)
     use m_io_files_utils, only: open_file_read,close_file
-    use,intrinsic ::  ISO_FORTRAN_ENV ,only: ERROR_UNIT
+    use,intrinsic ::  ISO_FORTRAN_ENV ,only: ERROR_UNIT,OUTPUT_UNIT
     class(order_par),intent(inout)      :: this
     character(*),intent(in)             :: fname
     logical,intent(out),optional        :: fexist
@@ -70,6 +70,7 @@ subroutine read_file(this,fname,fexist)
             ERROR STOP "ERROR READING ORDER PARAMETER"
         endif
     endif
+    write(OUTPUT_UNIT,'(/2A/)') "Read input order parameter from: ",fname
     call close_file(fname,io)
 end subroutine
 
