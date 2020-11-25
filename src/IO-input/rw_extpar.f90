@@ -31,6 +31,9 @@ subroutine rw_extpar(extpar_io,io_in,fname_in)
     call get_parameter(io_param,fname,'enable_H',extpar_io%enable_H)
     call get_parameter(io_param,fname,'enable_E',extpar_io%enable_E)
     call get_parameter(io_param,fname,'enable_T',extpar_io%enable_T)
+    call get_parameter(io_param,fname,'enable_M',extpar_io%enable_M)
+    call get_parameter(io_param,fname,'enable_u',extpar_io%enable_u)
+    call get_parameter(io_param,fname,'enable_phonon',extpar_io%enable_u)
     if(.not.present(io_in)) call close_file(fname,io_param)
 end subroutine
 end module

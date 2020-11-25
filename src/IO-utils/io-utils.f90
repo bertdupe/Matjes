@@ -478,6 +478,7 @@ integer, intent(in) :: io,natom
 character(len=*), intent(in) :: var_name,fname
 ! internal variable
 integer :: fin,nread,i,check,length_string,n_read_at
+integer :: stat
 character(len=100) :: str
 logical :: success_read
 
@@ -502,9 +503,23 @@ do
       ! find if the variable that was given in input is found in the parameters
       do i=1,natom
          n_read_at=n_read_at+1
-         read(io,*) atomic(i)%name,atomic(i)%position,atomic(i)%moment
+         read(io,'(a)',iostat=fin) str
+         read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position,atomic(i)%moment,atomic(i)%charge
+         if(stat==0)then
+            write(*,*) "Read magnetic moment and charge from atom",i
+         else
+            read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position,atomic(i)%moment
+            if(stat==0)then
+                write(*,*) "Read magnetic moment from atom",i
+            else
+                read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position
+                if(stat/=0)then
+                    write(*,*) "ERROR READING ATOM NUMBER",i
+                endif
+                write(*,*) "Read only position for atom",i
+            endif
+         endif
       enddo
-
    endif
 
 enddo

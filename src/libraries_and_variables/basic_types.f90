@@ -41,8 +41,9 @@ end type var_name
 
 type atom
      character(len=30) :: name
-     real(kind=8) :: moment
-     real(kind=8), dimension(3) :: position
+     real(8), dimension(3) :: position
+     real(8) :: moment=0.0d0
+     real(8) :: charge=0.0d0
 end type atom
 
 !!!!!!!!!!!!!!!!!!!!!!!!!
