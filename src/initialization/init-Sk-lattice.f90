@@ -17,7 +17,7 @@ subroutine init_Sk_lattice_new(io,fname,lat,ordname,dim_mode,state)
     !use m_vector
     use m_init_Sk,only: get_skyrmion
     use m_io_utils,only: get_parameter
-    use init_util, only: get_pos_vec
+    use m_init_util, only: get_pos_vec
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information

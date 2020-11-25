@@ -25,7 +25,7 @@ contains
 
 subroutine init_sky_lin_new(io,fname,lat,ordname,dim_mode,state)
     use m_io_utils, only: get_parameter
-    use init_util, only: get_pos_vec
+    use m_init_util, only: get_pos_vec
     use m_constants, only : pi
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 

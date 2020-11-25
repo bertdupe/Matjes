@@ -34,15 +34,20 @@ contains
 end type
 contains
 
-subroutine read_file(this,fname)
+subroutine read_file(this,fname,fexist)
     use m_io_files_utils, only: open_file_read,close_file
     use,intrinsic ::  ISO_FORTRAN_ENV ,only: ERROR_UNIT
     class(order_par),intent(inout)      :: this
     character(*),intent(in)             :: fname
+    logical,intent(out),optional        :: fexist
 
     integer     :: io,stat
     real(8)     :: tst
 
+    if(present(fexist))then
+        inquire(file=fname,exist=fexist)
+        if(.not.fexist) return
+    endif
     io=open_file_read(fname)
     if (io.lt.0) then
         write(ERROR_UNIT,'(//2A)') 'Failed to open file:',fname

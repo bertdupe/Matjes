@@ -6,7 +6,7 @@ use m_init_Sk
 use m_init_sky_lin, only: init_sky_lin
 use m_init_Sklattice
 use m_init_constant
-use m_init_punch, only: init_punch
+!use m_init_punch, only: init_punch
 use m_io_utils
 use m_init_heavyside
 use m_io_files_utils
@@ -19,10 +19,11 @@ public :: init_config_new, init_config
 contains
 
 
-subroutine init_config_new(lat,fname_in)
+subroutine init_config_new(lat,initialized,fname_in)
     !loops through all order parameters and checks if there is some initial configuration supplied from the file input
     use m_type_lattice,only: number_different_order_parameters,order_parameter_name
-    type(lattice), intent(inout) :: lat
+    type(lattice), intent(inout)    :: lat
+    logical,intent(inout)           :: initialized(number_different_order_parameters)
     character(len=*), intent(in),optional :: fname_in
     integer :: io
 
@@ -46,28 +47,31 @@ subroutine init_config_new(lat,fname_in)
     endif
     io=open_file_read(fname)
     do i=1,number_different_order_parameters
+        if(initialized(i)) cycle    !don't try to intialize, if already initialized before
         dim_mode=lat%get_order_dim(i,ignore=.true.)
         if(dim_mode<1) cycle
         Call lat%set_order_point(i,state)
-        Call set_init(io,fname,lat,trim(order_parameter_name(i)),dim_mode,state)
+        Call set_init(io,fname,lat,trim(order_parameter_name(i)),dim_mode,state,initialized(i))
         nullify(state)
     enddo
     call close_file(fname,io)
 end subroutine
 
-subroutine set_init(io,fname,lat,ordname,dim_mode,state)
+subroutine set_init(io,fname,lat,ordname,dim_mode,state,init)
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
     character(*),intent(in)         :: ordname  !name of the order parameter
     integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
     real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
+    logical,intent(out)             :: init     !returns if initialization has occured
 
     character(30)                   :: configuration
 
     configuration=""
     call get_parameter(io,fname,'configuration_'//ordname,configuration)
 
+    init=.true.
     select case (adjustl(configuration))
         case('spiral')
             call init_spiral(io,fname,lat,ordname,dim_mode,state)
@@ -86,8 +90,13 @@ subroutine set_init(io,fname,lat,ordname,dim_mode,state)
         case('random')
             write(6,'(3a)') 'random configuration for ',ordname,' was chosen'
             call init_random_config(dim_mode,state)
-        case default
+        case('')
             write(6,'(3a)') 'No initial configuration for ',ordname,' was found'
+            init=.false.
+        case default
+            write(6,'(3a)') 'Unknown initial configuration for ',ordname,' was found'
+            write(6,'(2a)') 'initial configuration: ', adjustl(configuration)
+            init=.false.
     end select
 end subroutine 
 
@@ -136,7 +145,7 @@ do i=1,N_mode
     case default
       call init_constant_config(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end,ext_param)
   end select
-  Call init_punch(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
+!  Call init_punch(io,fname,my_lattice,my_motif,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
 
   !Call copy_init(my_lattice,my_order_parameters(i)%name,my_order_parameters(i)%start,my_order_parameters(i)%end)
 enddo
@@ -146,6 +155,7 @@ call close_file(fname,io)
 
 end subroutine init_config
 
+#if 0
 subroutine copy_init(my_lattice,mode_name,start,end)
  !copy initialization to specific orderparameter in lattice (has to be moved further upwards, i.e. directly initialize the new array)
     type(lattice),intent(inout)     ::  my_lattice
@@ -200,6 +210,7 @@ subroutine copy_init(my_lattice,mode_name,start,end)
     endif
 
 end subroutine
+#endif
 
 
 

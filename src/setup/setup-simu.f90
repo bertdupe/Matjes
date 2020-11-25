@@ -29,7 +29,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     use m_input_H_types
     use m_set_Hamiltonians,only: set_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
-    use m_init_config, only: init_config_new
+    use m_orders_initialize, only: orders_initialize 
     
     use m_rw_H
     use m_H_public
@@ -175,7 +175,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     ! prepare the lattice
     call user_info(6,time,'initializing the spin structure',.false.)
     call InitSpin(my_lattice,my_motif,ext_param)    !old—to be deleted
-    Call init_config_new(my_lattice)
+    Call orders_initialize(my_lattice)
     call user_info(6,time,'done',.false.)
 
     ! get position

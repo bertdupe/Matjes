@@ -40,6 +40,7 @@ contains
     !initialization function
     procedure :: init_geo   !initialize the geometric properties (areal,Ncell,...)
     procedure :: init_order !initialize the order parameters dimensions
+    procedure :: read_order !reads the order parameters from initialization files
     !basic function
     procedure :: copy => copy_lattice
     procedure :: copy_val_to => copy_val_lattice
@@ -192,7 +193,29 @@ subroutine init_order(this,cell,extpar_io)
     !remove old vector type at some point soon...
     this%dim_mode=sum(dim_modes)
     Call this%ordpar%init(this%dim_lat,this%nmag,this%dim_mode)
+end subroutine
 
+subroutine read_order(this,suffix_in,fexist_out)
+    !read the order parameters from a 
+    class(lattice),intent(inout)        :: this
+    character(*),intent(in),optional    :: suffix_in
+    logical,intent(out),optional        :: fexist_out(number_different_order_parameters)
+
+    logical                             :: fexist(number_different_order_parameters)
+    character(*),parameter              :: suffix_default='_init.dat'
+    character(:), allocatable           :: suffix
+
+    if(present(suffix_in))then
+        suffix=trim(adjustl(suffix_in))
+    else
+        suffix=suffix_default
+    endif
+    fexist=.false.
+    if(this%M%dim_mode>0) Call this%M%read_file(trim(order_parameter_name(1))//suffix,fexist(1))
+    if(this%E%dim_mode>0) Call this%E%read_file(trim(order_parameter_name(2))//suffix,fexist(2))
+    if(this%B%dim_mode>0) Call this%B%read_file(trim(order_parameter_name(3))//suffix,fexist(3))
+    if(this%T%dim_mode>0) Call this%T%read_file(trim(order_parameter_name(4))//suffix,fexist(4))
+    if(present(fexist_out)) fexist_out=fexist
 end subroutine
 
 subroutine lattice_position(this,ind,pos)
