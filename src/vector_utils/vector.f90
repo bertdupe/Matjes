@@ -1,4 +1,15 @@
 module m_vector
+implicit none
+
+
+   interface project
+       module procedure vec_project
+   end interface 
+
+   interface normalize
+       module procedure vec_normalize
+       module procedure vec_normalize_eps
+   end interface
 
    interface norm
        module procedure norm_real
@@ -8,6 +19,7 @@ module m_vector
    interface cross
        module procedure cross_real_simple
        module procedure cross_real
+!       module procedure cross_realp
        module procedure cross_int
    end interface cross
 
@@ -29,6 +41,7 @@ module m_vector
 
    interface calc_ang
       module procedure calc_ang_real
+      module procedure calc_ang_realarr
    end interface calc_ang
 
    interface calculate_damping
@@ -38,6 +51,46 @@ module m_vector
 public
 
 contains
+
+! ==============================================================
+!> projects vector vec on reference
+pure subroutine vec_project(vec,ref)
+    real(8),intent(inout)   :: vec(:,:)
+    real(8),intent(in)      :: ref(:,:)
+    !internal
+    real(8)     :: prod
+    integer     :: i
+
+    do i=1,size(vec,2)
+        prod=DOT_PRODUCT(vec(:,i),ref(:,i))
+        vec(:,i)=vec(:,i)-prod*ref(:,i)
+    enddo
+end subroutine
+
+! ==============================================================
+!> Normalizes a vector
+pure subroutine vec_normalize(vec)
+    real(8),intent(inout)   :: vec(:,:)
+    !internal
+    real(8)     :: nrm(size(vec,2))
+    integer     :: i
+
+    nrm=norm2(vec,1)
+    forall(i=1:size(nrm), nrm(i)>1.0d-8 ) vec(:,i)=vec(:,i)/nrm(i)
+end subroutine
+
+
+pure subroutine vec_normalize_eps(vec,eps)
+    real(8),intent(inout)   :: vec(:,:)
+    real(8),intent(in)      :: eps
+    !internal
+    real(8)     :: nrm(size(vec,2))
+    integer     :: i
+
+    nrm=norm2(vec,1)
+    forall(i=1:size(nrm), nrm(i)>eps ) vec(:,i)=vec(:,i)/nrm(i)
+end subroutine
+
 
 
 ! ==============================================================
@@ -57,6 +110,32 @@ prod = dot_product(n1,n2)
 
 calc_ang_real = datan2(tmp,prod)
 end function calc_ang_real
+
+
+function calc_ang_realarr(n1,n2)result(res)
+real(8), intent(in),contiguous,target :: n1(:,:), n2(:,:) !n1 and n2 have to be normalized
+!real(kind=8) :: calc_ang
+!internal variables
+real(8),pointer     :: flat_1(:),flat_2(:),flat_tmp(:)
+real(8)             ::  res(size(n1,2))
+real(8),target      :: tmp(3,size(n1,2))
+real(8)             :: nrm(size(n1,2))
+real(8)             :: prod(size(n1,2))
+integer :: N, i
+
+N=size(n1)
+flat_1(1:N)=>n1
+flat_2(1:N)=>n2
+flat_tmp(1:N)=>tmp
+
+flat_tmp = cross(flat_1,flat_2,1,N)
+nrm=norm2(tmp,1)
+tmp=n1*n2
+prod=sum(tmp,1)
+
+res = datan2(nrm,prod)
+end function 
+
 
 ! ==============================================================
 
@@ -344,7 +423,7 @@ END FUNCTION norm_cross_int
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 FUNCTION cross_real_simple(a, b)
 implicit none
-real(kind=8), INTENT(IN) :: a(:), b(:)
+real(kind=8), INTENT(IN) :: a(3), b(3)
 real(kind=8) :: cross_real_simple(3)
 ! internal
 
@@ -353,6 +432,14 @@ cross_real_simple(2) = a(3) * b(1) - a(1) * b(3)
 cross_real_simple(3) = a(1) * b(2) - a(2) * b(1)
 
 END FUNCTION cross_real_simple
+
+!FUNCTION cross_realp(a, b, P, N)result(res)
+!    integer, intent(in) :: N,P
+!    real(8),pointer, INTENT(IN) :: a(:), b(:)
+!    real(8) :: res(P:N)
+!
+!    res=cross_real(a,b,P,N)
+!end function
 
 FUNCTION cross_real(a, b, P, N)
 implicit none

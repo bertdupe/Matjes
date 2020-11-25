@@ -7,9 +7,9 @@ src/Energy/dipolar-energy.f90
 src/Energy/energy_commons.f90
 src/Energy/energy_distrib.f90
 src/Energy/energy_output_contribution.f90
-src/Energy/exchange_Heisenberg.f90
 src/Energy/exchange_Heisenberg_J.f90
 src/Energy/exchange_Heisenberg_D.f90
+src/Energy/exchange_TJ.f90
 src/Energy/exchange_tight_binding.f90
 src/Energy/setH_util.f90
 src/Energy/set_Hamiltonians.f90

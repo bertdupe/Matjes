@@ -19,6 +19,7 @@ type lattice
      integer        :: dim_lat(3) !number of unit-cells in each direction in supercell
      integer        :: Ncell !number of unit-cells (product of dim_lat)
      real(8)        :: a_sc(3,3) !real space lattice vectors of supercell
+     real(8)        :: a_sc_inv(3,3) !inverse of real space lattice vectors of supercell (can be used to get back into supercell)
      integer        :: dim_mode !probably obsolete
      integer        :: n_system !no clue what this does
      integer        :: nmag  !this has to be set somewhere consistently
@@ -33,12 +34,13 @@ type lattice
      type(order_par)  :: B !Magnetic field
      type(order_par)  :: T !Temperature
      !ultimately delete ordpar
-     type(order_par)   :: ordpar !obsolete
+     type(order_par)  :: ordpar !obsolete
 
 contains
     !initialization function
     procedure :: init_geo   !initialize the geometric properties (areal,Ncell,...)
     procedure :: init_order !initialize the order parameters dimensions
+    procedure :: read_order !reads the order parameters from initialization files
     !basic function
     procedure :: copy => copy_lattice
     procedure :: copy_val_to => copy_val_lattice
@@ -56,8 +58,11 @@ contains
     procedure :: reduce_cell
     !real space position functions
     procedure :: get_pos_mag => lattice_get_position_mag
+    procedure :: get_pos_center
     procedure :: pos_diff_ind => lattice_position_difference
     procedure :: pos_ind => lattice_position
+    procedure :: dist_2vec  !distance between 2 vectors
+    procedure :: min_diffvec  !get minimal difference vector using periodicity
     !index routines
     procedure :: index_m_1 
     procedure :: index_4_1 
@@ -73,7 +78,7 @@ type point_arr
 end type
 
 private
-public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, t_cell, order_par
+public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, t_cell, order_par, order_parameter_name
 
 contains 
 
@@ -110,7 +115,12 @@ subroutine init_geo(this,areal,alat,dim_lat,boundary)
     this%astar(2,:) = cross(this%areal(3,:),this%areal(1,:))/volume
     this%astar(3,:) = cross(this%areal(1,:),this%areal(2,:))/volume
     this%astar=2.0d0*pi*this%astar
-   
+
+    this%a_sc_inv(1,:)= cross(this%a_sc(2,:),this%a_sc(3,:))
+    this%a_sc_inv(2,:)= cross(this%a_sc(3,:),this%a_sc(1,:))
+    this%a_sc_inv(3,:)= cross(this%a_sc(1,:),this%a_sc(2,:))
+    this%a_sc_inv=this%a_sc_inv/dot_product(this%a_sc(1,:),cross(this%a_sc(2,:),this%a_sc(3,:)))   
+
     !write lattice information
     write(6,'(/a)') 'real space lattice vectors (in nm)'
     write(6,'(3(3f12.6/))') transpose(this%areal)
@@ -151,23 +161,56 @@ subroutine init_geo(this,areal,alat,dim_lat,boundary)
     enddo
 end subroutine
 
-subroutine init_order(this,cell,dim_modes)
+subroutine init_order(this,cell,extpar_io)
+    use m_input_types, only: extpar_input
     !initialize the lattice with the order parameter and cell properties
     class(lattice),intent(inout)    :: this
     type(t_cell), intent(in)        :: cell
-    integer,intent(in)              :: dim_modes(number_different_order_parameters)
+    type(extpar_input),intent(in)   :: extpar_io
+
+    integer                         :: dim_modes(number_different_order_parameters),i
 
     this%cell=cell
     this%nmag=cell%num_mag()
     !obsolete orderparameter format
-    this%dim_mode=sum(dim_modes)
-    Call this%ordpar%init(this%dim_lat,this%nmag,this%dim_mode)
-    
+    dim_modes=0
+    dim_modes(1)=this%nmag*3
+    if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) dim_modes(2)=3
+    if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) dim_modes(3)=3
+    if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) dim_modes(4)=1
+
     !new orderparameter format
     if(dim_modes(1)>0) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1))
     if(dim_modes(2)>0) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2))
     if(dim_modes(3)>0) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
     if(dim_modes(4)>0) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
+
+    !remove old vector type at some point soon...
+    this%dim_mode=sum(dim_modes)
+    Call this%ordpar%init(this%dim_lat,this%nmag,this%dim_mode)
+end subroutine
+
+subroutine read_order(this,suffix_in,fexist_out)
+    !read the order parameters from a 
+    class(lattice),intent(inout)        :: this
+    character(*),intent(in),optional    :: suffix_in
+    logical,intent(out),optional        :: fexist_out(number_different_order_parameters)
+
+    logical                             :: fexist(number_different_order_parameters)
+    character(*),parameter              :: suffix_default='_init.dat'
+    character(:), allocatable           :: suffix
+
+    if(present(suffix_in))then
+        suffix=trim(adjustl(suffix_in))
+    else
+        suffix=suffix_default
+    endif
+    fexist=.false.
+    if(this%M%dim_mode>0) Call this%M%read_file(trim(order_parameter_name(1))//suffix,fexist(1))
+    if(this%E%dim_mode>0) Call this%E%read_file(trim(order_parameter_name(2))//suffix,fexist(2))
+    if(this%B%dim_mode>0) Call this%B%read_file(trim(order_parameter_name(3))//suffix,fexist(3))
+    if(this%T%dim_mode>0) Call this%T%read_file(trim(order_parameter_name(4))//suffix,fexist(4))
+    if(present(fexist_out)) fexist_out=fexist
 end subroutine
 
 subroutine lattice_position(this,ind,pos)
@@ -180,15 +223,38 @@ subroutine lattice_position(this,ind,pos)
     pos=pos+this%cell%atomic(ind(4))%position
 end subroutine
 
-subroutine min_diffvec_period(this,diff)
+
+subroutine dist_2vec(this,vec1,vec2,dist)
+    !get the minimial distance between 2 vectors on the lattice obeying the symmetries
+    class(lattice),intent(in)   :: this
+    real(8),intent(in)          :: vec1(3),vec2(3)
+    real(8),intent(out)         :: dist 
+    !internal
+    real(8)     :: vec(3,size(this%sc_vec_period,2))
+    real(8)     :: norm(size(this%sc_vec_period,2))
+    real(8)     :: vec1_sc(3),vec2_sc(3)
+    integer     :: i
+
+    vec1_sc=vec_first_sc(this,vec1)
+    vec2_sc=vec_first_sc(this,vec2)
+    do i=1,size(this%sc_vec_period,2)
+        vec(:,i)=vec2_sc-vec1_sc-this%sc_vec_period(:,i)
+    enddo
+    norm=norm2(vec,1)
+    dist=minval(norm)
+end subroutine
+
+subroutine min_diffvec(this,diff)
     !get minimal vector checking supercell perdiocity
     class(lattice),intent(in)   :: this
     real(8),intent(inout)       :: diff(3)
 
+    real(8)     :: diff_sc(3)
     real(8)     :: vec(3,size(this%sc_vec_period,2))
     real(8)     :: norm(size(this%sc_vec_period,2))
     integer     :: i
 
+    diff_sc=vec_first_sc(this,diff)
     do i=1,size(this%sc_vec_period,2)
         vec(:,i)=diff-this%sc_vec_period(:,i)
     enddo
@@ -210,7 +276,7 @@ function lattice_position_difference(this,ind1,ind2)result(diff)
     norm=norm2(diff)
     if(norm>minval(norm2(this%a_sc,2)*0.5d0))then
     !check reduce length using symmetries 
-        Call min_diffvec_period(this,diff)
+        Call min_diffvec(this,diff)
     endif
 end function
 
@@ -629,10 +695,11 @@ subroutine point_order_onsite_single(lat,op,i_site,dim_mode,modes,vec)
     endif
 end subroutine
 
-function get_order_dim(this,order) result(dim_mode)
-    class(lattice),intent(in)   ::  this
-    integer,intent(in)          ::  order
-    integer                     ::  dim_mode
+function get_order_dim(this,order,ignore) result(dim_mode)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: order
+    logical,intent(in),optional :: ignore
+    integer                     :: dim_mode
 
     select case(order)
     case(1)
@@ -647,16 +714,43 @@ function get_order_dim(this,order) result(dim_mode)
         write(*,*) "order=",order
         STOP "trying to get dim_mode for unset orderparameter"
     end select
+    if(present(ignore))then
+        if(ignore) return
+    endif
     if(dim_mode<1)then
         write(*,*) 'trying to get dim_mode for order=',order 
         ERROR STOP "dim_mode not positive, requested order parameter not set?"
     endif
 end function
 
-subroutine lattice_get_position_mag(this,pos)
-    class(lattice),intent(in)       :: this
-    real(8),allocatable,intent(out) :: pos(:,:,:,:,:)
+subroutine get_pos_center(this,pos_out)
+    class(lattice),intent(in)               :: this
+    real(8),allocatable,intent(out),target  :: pos_out(:)
 
+    real(8),pointer,contiguous      :: pos(:,:,:,:)
+    real(8),pointer,contiguous      :: pos3(:,:)
+    real(8),allocatable             :: pos_lat(:,:,:,:)
+    real(8)                         :: pos_center(3) 
+    integer                         :: i
+
+    call get_position_cell(pos_lat,this%dim_lat,this%areal)
+    allocate(pos_out(3*product(this%dim_lat)),source=0.0d0)
+    pos(1:3,1:this%dim_lat(1),1:this%dim_lat(2),1:this%dim_lat(3))=>pos_out
+    pos3(1:3,1:product(this%dim_lat))=>pos_out
+    pos_center=sum(this%areal,1)*0.5d0
+    pos=pos_lat
+    do i=1,size(pos3,2)
+        pos3(:,i)=pos3(:,i)+pos_center
+    enddo
+    deallocate(pos_lat)
+    nullify(pos,pos3)
+end subroutine
+
+subroutine lattice_get_position_mag(this,pos_out)
+    class(lattice),intent(in)               :: this
+    real(8),allocatable,intent(out),target  :: pos_out(:)
+
+    real(8),pointer                 :: pos(:,:,:,:,:)
     real(8), allocatable            :: pos_lat(:,:,:,:)
     integer, allocatable            :: ind_at_mag(:)
     integer     :: Nat_mag
@@ -666,7 +760,8 @@ subroutine lattice_get_position_mag(this,pos)
     Call this%cell%ind_mag(ind_at_mag)
     Nat_mag=size(ind_at_mag)
     call get_position_cell(pos_lat,this%dim_lat,this%areal)
-    allocate(pos(3,Nat_mag,this%dim_lat(1),this%dim_lat(2),this%dim_lat(3)),source=0.0d0)
+    allocate(pos_out(3*Nat_mag*product(this%dim_lat)),source=0.0d0)
+    pos(1:3,1:Nat_mag,1:this%dim_lat(1),1:this%dim_lat(2),1:this%dim_lat(3))=>pos_out
     do i=1,Nat_mag  !could be done smarter with position array (:,Nat)
         pos_at=this%cell%atomic(ind_at_mag(i))%position
         pos(:,i,:,:,:)=pos_lat(:,:,:,:)
@@ -679,6 +774,7 @@ subroutine lattice_get_position_mag(this,pos)
         enddo
     enddo
     deallocate(pos_lat)
+    nullify(pos)
 end subroutine
 
 subroutine get_position_cell(pos,dim_lat,lat)
@@ -710,6 +806,7 @@ subroutine copy_lattice(self,copy)
     copy%areal=self%areal
     copy%astar=self%astar
     copy%a_sc=self%a_sc
+    copy%a_sc_inv=self%a_sc_inv
     copy%dim_lat=self%dim_lat
     copy%ncell=self%ncell
     copy%n_system=self%n_system
@@ -766,5 +863,16 @@ function op_int_to_abbrev(int_in)result(abbrev)
     do i=1,size(int_in)
         abbrev(i:i)=order_parameter_abbrev(int_in(i))
     enddo
+end function
+
+function vec_first_sc(this,vec_in)result(vec_out)
+    !returns the vector position back in the first supercell
+    class(lattice),intent(in)   :: this
+    real(8),intent(in)          :: vec_in(3)
+    real(8)                     :: vec_out(3)
+    integer                     :: ind(3)
+
+    ind=floor(matmul(this%a_sc_inv,vec_in))
+    vec_out=vec_in-matmul(real(ind,8),this%a_sc)
 end function
 end module
