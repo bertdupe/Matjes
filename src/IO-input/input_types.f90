@@ -11,6 +11,8 @@ type extpar_input
     logical :: enable_H=.false.
     logical :: enable_E=.false.
     logical :: enable_T=.false.
+    logical :: enable_M=.false.
+    logical :: enable_u=.false.
 end type
 
 type MC_input

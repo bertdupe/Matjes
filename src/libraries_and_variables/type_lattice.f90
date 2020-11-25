@@ -3,13 +3,14 @@ use m_basic_types
 use m_order_parameter
 use m_cell,only : t_cell
 
-integer,parameter :: number_different_order_parameters=4    !m,E,B,T
-character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T"]
+integer,parameter :: number_different_order_parameters=5    !m,E,B,T,u
+character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T","U"]
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
                                 &   'magnetic   ',&
                                 &   'Efield     ',&
                                 &   'Bfield     ',&
-                                &   'temperature']
+                                &   'temperature',&
+                                &   'phonon     ']
 
 ! variable that defines the lattice
 type lattice
@@ -33,6 +34,7 @@ type lattice
      type(order_par)  :: E !Electric field
      type(order_par)  :: B !Magnetic field
      type(order_par)  :: T !Temperature
+     type(order_par)  :: u !phonon
      !ultimately delete ordpar
      type(order_par)  :: ordpar !obsolete
 
@@ -173,17 +175,26 @@ subroutine init_order(this,cell,extpar_io)
     this%cell=cell
     this%nmag=cell%num_mag()
     !obsolete orderparameter format
+    if(extpar_io%enable_M.and.this%nmag<1)then
+        WRITE(*,'(///A)') 'CONGRATULATIONS, you have specified "enable_M" but set no magnetic atom'
+        WRITE(*,'(A)') 'I though this should just do nothing and calculate as if there are no magnetic atoms'
+        WRITE(*,'(A)') ', since there is nothing else this flag does other than throwing this error.'
+        WRITE(*,'(A)') 'However Bertrand insists this should crash, so BAM'
+        STOP 'Please tell Bertrand if you do not think this should crash'
+    endif
     dim_modes=0
     dim_modes(1)=this%nmag*3
     if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) dim_modes(2)=3
     if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) dim_modes(3)=3
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) dim_modes(4)=1
+    if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
 
     !new orderparameter format
     if(dim_modes(1)>0) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1))
     if(dim_modes(2)>0) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2))
     if(dim_modes(3)>0) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
     if(dim_modes(4)>0) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
+    if(dim_modes(5)>0) Call this%u%init(this%dim_lat,this%nmag,dim_modes(5))
 
     !remove old vector type at some point soon...
     this%dim_mode=sum(dim_modes)
@@ -210,6 +221,7 @@ subroutine read_order(this,suffix_in,fexist_out)
     if(this%E%dim_mode>0) Call this%E%read_file(trim(order_parameter_name(2))//suffix,fexist(2))
     if(this%B%dim_mode>0) Call this%B%read_file(trim(order_parameter_name(3))//suffix,fexist(3))
     if(this%T%dim_mode>0) Call this%T%read_file(trim(order_parameter_name(4))//suffix,fexist(4))
+    if(this%u%dim_mode>0) Call this%u%read_file(trim(order_parameter_name(5))//suffix,fexist(5))
     if(present(fexist_out)) fexist_out=fexist
 end subroutine
 
@@ -290,6 +302,7 @@ subroutine lattice_used_order(this,used)
     if(this%E%dim_mode>0) used(2)=.True.
     if(this%B%dim_mode>0) used(3)=.True.
     if(this%T%dim_mode>0) used(4)=.True.
+    if(this%u%dim_mode>0) used(5)=.True.
 end subroutine
 
 function index_m_1(this,indm)result(ind1)
@@ -350,6 +363,8 @@ subroutine set_order_point(this,order,point)
         point=>this%B%all_modes
     case(4)
         point=>this%T%all_modes
+    case(5)
+        point=>this%u%all_modes
     case default
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
@@ -375,6 +390,8 @@ subroutine set_order_point_single(this,order,ilat,point)
         point=>this%B%all_modes(bnd(1):bnd(2))
     case(4)
         point=>this%T%all_modes(bnd(1):bnd(2))
+    case(5)
+        point=>this%u%all_modes(bnd(1):bnd(2))
     case default
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
@@ -710,6 +727,8 @@ function get_order_dim(this,order,ignore) result(dim_mode)
         dim_mode=this%B%dim_mode
     case(4)
         dim_mode=this%T%dim_mode
+    case(5)
+        dim_mode=this%u%dim_mode
     case default
         write(*,*) "order=",order
         STOP "trying to get dim_mode for unset orderparameter"
@@ -817,10 +836,11 @@ subroutine copy_lattice(self,copy)
     if(allocated(self%sc_vec_period)) allocate(copy%sc_vec_period,source=self%sc_vec_period)
     if(self%ordpar%dim_mode>0) Call self%ordpar%copy(copy%ordpar,self%dim_lat,self%nmag)
 
-    if(self%m%dim_mode>0) Call self%M%copy(copy%M,self%dim_lat,self%nmag)
-    if(self%e%dim_mode>0) Call self%E%copy(copy%E,self%dim_lat,self%nmag)
-    if(self%b%dim_mode>0) Call self%B%copy(copy%B,self%dim_lat,self%nmag)
-    if(self%t%dim_mode>0) Call self%T%copy(copy%T,self%dim_lat,self%nmag)
+    if(self%M%dim_mode>0) Call self%M%copy(copy%M,self%dim_lat,self%nmag)
+    if(self%E%dim_mode>0) Call self%E%copy(copy%E,self%dim_lat,self%nmag)
+    if(self%B%dim_mode>0) Call self%B%copy(copy%B,self%dim_lat,self%nmag)
+    if(self%T%dim_mode>0) Call self%T%copy(copy%T,self%dim_lat,self%nmag)
+    if(self%u%dim_mode>0) Call self%u%copy(copy%u,self%dim_lat,self%nmag)
 end subroutine
 
 subroutine copy_val_lattice(self,copy)
@@ -833,6 +853,7 @@ subroutine copy_val_lattice(self,copy)
     if(self%e%dim_mode>0) Call self%E%copy_val(copy%E)
     if(self%b%dim_mode>0) Call self%B%copy_val(copy%B)
     if(self%t%dim_mode>0) Call self%T%copy_val(copy%T)
+    if(self%u%dim_mode>0) Call self%u%copy_val(copy%u)
 end subroutine
 
 function op_name_to_int(name_in)result(int_out)

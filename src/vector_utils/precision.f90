@@ -41,6 +41,8 @@ integer :: i
     if(used(2)) where(abs(lat%E%modes) < EPS) lat%E%modes=0.0d0
     if(used(3)) where(abs(lat%B%modes) < EPS) lat%B%modes=0.0d0
     if(used(4)) where(abs(lat%T%modes) < EPS) lat%T%modes=0.0d0
+    if(used(5)) where(abs(lat%u%modes) < EPS) lat%u%modes=0.0d0
+
 
 end subroutine
 
