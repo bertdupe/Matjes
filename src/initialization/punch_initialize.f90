@@ -12,7 +12,7 @@ contains
 subroutine punch_lattice(lat,fname_in)
     !loops through all order parameters and checks if there is some punching to be done
     use m_type_lattice,only: number_different_order_parameters,order_parameter_name
-    use m_init_util,only: get_pos
+    use m_util_init,only: get_pos
     use m_io_files_utils, only: open_file_read,close_file
     type(lattice), intent(inout)    :: lat
     character(len=*), intent(in),optional :: fname_in
@@ -51,7 +51,7 @@ end subroutine
 subroutine punch_order(io,fname,lat,ordname,dim_mode,state)
 !punches out an area of an order parameter (i.e. sets magnetization to 0 outside of region)
     use m_io_utils,only: get_parameter
-    use m_init_util,only: get_pos
+    use m_util_init,only: get_pos
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information

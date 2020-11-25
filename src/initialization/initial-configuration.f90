@@ -1,33 +1,19 @@
 module m_init_config
-use m_derived_types
-use m_init_spiral
-use m_init_DW
-use m_init_Sk
-use m_init_sky_lin, only: init_sky_lin
-use m_init_Sklattice
-use m_init_constant
-use m_init_default, only: init_default
-!use m_init_punch, only: init_punch
-use m_io_utils
-use m_init_heavyside
-use m_io_files_utils
-use m_init_random_config
-use m_lattice, only : my_order_parameters
-use m_convert
+use m_derived_types, only: lattice
+use m_io_utils,only: get_parameter
 use m_input_types, only: extpar_input
-
 private
 public :: init_config_lattice
 contains
 
-
 subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
     !loops through all order parameters and checks if there is some initial configuration supplied from the file input
+    use m_io_files_utils,only : open_file_read,close_file
     use m_type_lattice,only: number_different_order_parameters,order_parameter_name
-    type(lattice), intent(inout)    :: lat
-    logical,intent(inout)           :: initialized(number_different_order_parameters)
-    type(extpar_input),intent(in)   :: extpar_io
-    character(len=*), intent(in),optional :: fname_in
+    type(lattice), intent(inout)        :: lat
+    logical,intent(inout)               :: initialized(number_different_order_parameters)
+    type(extpar_input),intent(in)       :: extpar_io
+    character(*), intent(in),optional   :: fname_in
     integer :: io
 
     character(*),parameter              :: fname_default='init.config'
@@ -61,6 +47,14 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
 end subroutine
 
 subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
+    use m_init_default
+    use m_init_DW
+    use m_init_heavyside
+    use m_init_Sk
+    use m_init_sky_lin
+    use m_init_Sklattice
+    use m_init_spiral
+    use m_init_random
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
@@ -93,7 +87,7 @@ subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
             call init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
         case('random')
             write(6,'(3a)') 'random configuration for ',ordname,' was chosen'
-            call init_random_config(dim_mode,state)
+            call init_random(dim_mode,state)
         case('')
             write(6,'(3a)') 'Using default initial configuration for: ',ordname
             call init_default(ordname,dim_mode,state,extpar_io)

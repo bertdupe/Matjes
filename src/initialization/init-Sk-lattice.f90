@@ -1,23 +1,17 @@
 module m_init_Sklattice
-use m_derived_types
 implicit none
 private
 public :: init_Sk_lattice
-interface init_Sk_lattice
-    module procedure init_Sk_lattice_old
-    module procedure init_Sk_lattice_new
-end interface
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Initialize the starting configuration as an isolated skyrmion
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine init_Sk_lattice_new(io,fname,lat,ordname,dim_mode,state)
-    !use m_vector
-    use m_init_Sk,only: get_skyrmion
+subroutine init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
     use m_io_utils,only: get_parameter
-    use m_init_util, only: get_pos_vec
+    use m_util_init, only: get_pos_vec, get_skyrmion
+    use m_derived_types,only: lattice
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
@@ -68,64 +62,6 @@ subroutine init_Sk_lattice_new(io,fname,lat,ordname,dim_mode,state)
     
     deallocate(tab_XSky,tab_YSky)
     
-end subroutine
-
-
-subroutine init_Sk_lattice_old(io,fname,my_lattice,my_motif,mode_name,start,end)
-use m_vector
-use m_io_utils
-use m_init_Sk
-use m_convert
-type (lattice), intent(inout) :: my_lattice
-type(t_cell), intent(in) :: my_motif
-integer, intent(in) :: io,start,end
-character(len=*), intent(in) :: fname,mode_name
-! internal variables
-integer :: NSkyAdd
-real(kind=8), dimension(:), allocatable :: tab_XSky,tab_YSky
-integer :: dim_lat(3),N_x,N_y,i
-real(kind=8) :: x0,y0,R0,coeffx,coeffy,starx,stary,chi,qSklattice
-character(len=30) :: variable_name
-
-dim_lat=my_lattice%dim_lat
-
-variable_name=convert('qSklattice_',mode_name)
-call get_parameter(io,fname,'qSklattice',qSklattice)
-
-N_x=nint(qSklattice*dim_lat(1))
-N_y=nint(qSklattice*dim_lat(2))
-NSkyAdd=N_x*N_y
-
-allocate(tab_XSky(NSkyAdd),tab_YSky(NSkyAdd))
-
-tab_XSky=0.0d0
-tab_YSky=0.0d0
-
-call find_XYsky(tab_XSky,tab_YSky,NSkyAdd,qSklattice,dim_lat,my_lattice%areal)
-
-variable_name=convert('RSky_',mode_name)
-call get_parameter(io,fname,variable_name,R0)
-variable_name=convert('coeffx_',mode_name)
-call get_parameter(io,fname,variable_name,coeffx)
-variable_name=convert('coeffy_',mode_name)
-call get_parameter(io,fname,variable_name,coeffy)
-variable_name=convert('starx_',mode_name)
-call get_parameter(io,fname,variable_name,starx)
-variable_name=convert('stary_',mode_name)
-call get_parameter(io,fname,variable_name,stary)
-variable_name=convert('chirality_',mode_name)
-call get_parameter(io,fname,variable_name,chi)
-
-do i=1,NSkyAdd
-   X0=tab_XSky(i)
-   Y0=tab_YSky(i)
-
-   call get_skyrmion(x0,y0,R0,coeffx,coeffy,starx,stary,chi,my_lattice,my_motif,start,end)
-
-enddo
-
-deallocate(tab_XSky,tab_YSky)
-
 end subroutine
 
 !!! find the positions of all the skyrmions in the lattice
