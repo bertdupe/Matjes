@@ -3,10 +3,11 @@ use m_basic_types
 use m_order_parameter
 use m_cell,only : t_cell
 
-integer,parameter :: number_different_order_parameters=4    !m,E,B,T
-character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T"]
+integer,parameter :: number_different_order_parameters=5    !m,u,E,B,T
+character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","u","E","B","T"]
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
                                 &   'magnetic   ',&
+                                &   'displace   ',&
                                 &   'Efield     ',&
                                 &   'Bfield     ',&
                                 &   'temperature']
@@ -32,6 +33,7 @@ type lattice
      type(order_par)  :: E !Electric field
      type(order_par)  :: B !Magnetic field
      type(order_par)  :: T !Temperature
+     type(order_par)  :: u !atomic displacements
      !ultimately delete ordpar
      type(order_par)   :: ordpar !obsolete
 

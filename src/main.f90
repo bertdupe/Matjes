@@ -159,18 +159,17 @@ if (my_simu%name == 'minimize_infdamp')then
     !call minimize_infdamp(all_lattices,io_simu)
 endif
 !---------------------------------
-!  Part which does the GNEB
+!  Part which does the molecular dynamics
 !---------------------------------
 
-!        if (my_simu%i_pimc) then
-!            write(6,'(a)') 'entering into the path integral monte carlo routine'
-!
-!            call pimc(state,i_biq,i_dm,i_four,i_dip,EA,h_ext, &
-!                    & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell)
+if (my_simu%name == 'molecular_dynamics')then
 
-!        endif
+     write(6,'(a)') 'entering into the molecular dynamics routines'
+     call molecular_dynamics(all_lattices,io_simu)
+
+endif
+
 !---------------------------------
-!  Part which does the PIMC
 !---------------------------------
 
 Call write_config('end',all_lattices)
