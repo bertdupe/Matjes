@@ -27,7 +27,7 @@ type (lattice), intent(inout) :: my_lattice
 type(t_cell), intent(in) :: my_motif
 type (simulation_parameters), intent(in) :: ext_param
 ! internal variables
-integer :: io,N_mode,index_mode,i
+integer :: io,N_mode,i
 character(len=30) :: seed_name,mode_name,configuration
 integer :: nconfig
 
@@ -35,11 +35,14 @@ nconfig=0
 seed_name='configuration_'
 io=open_file_read(fname)
 N_mode=size(my_order_parameters)
+write(*,*) N_mode
 
 do i=1,N_mode
 
   configuration='constant'
   mode_name=convert(seed_name,my_order_parameters(i)%name)
+  write(*,*) mode_name
+  pause
   call get_parameter(io,fname,mode_name,configuration)
 
   select case (adjustl(configuration))
