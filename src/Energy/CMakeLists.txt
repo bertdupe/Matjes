@@ -16,5 +16,6 @@ src/Energy/set_Hamiltonians.f90
 src/Energy/summerfeld_exp.f90
 src/Energy/total_Heisenberg_Ham.f90
 src/Energy/zeeman.f90
+src/Energy/harmonic_phonon.f90
 #src/Energy/demag-matrix.f90   #requires m_fft (not used?)
 )
