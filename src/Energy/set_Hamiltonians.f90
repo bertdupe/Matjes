@@ -3,7 +3,9 @@ use m_H_public
 implicit none
 private
 public :: set_Hamiltonians,combine_Hamiltonians
+
 contains
+
 subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_vector,lat)
     use m_derived_types
     use m_input_H_types 
@@ -29,7 +31,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     type(lattice), intent(inout) :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(7)
+    logical :: use_Ham(8)
 
     use_ham(1)=H_io%J%is_set
     use_ham(2)=H_io%D%is_set
@@ -83,6 +85,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     !Harmonic phonon (F)
     if(use_ham(7))then
         Call get_Forces_F(Ham_res(i_H),H_io%F,tableNN,indexNN,lat)
+    endif
     !TJ coupling
     if(use_ham(8))then
         Call get_exchange_TJ(Ham_res(i_H),H_io%TJ,tableNN,indexNN,lat)
