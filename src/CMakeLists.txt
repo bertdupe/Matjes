@@ -77,4 +77,5 @@ include(src/solvers/CMakeLists.txt)
 include(src/Sparselib/CMakeLists.txt)
 include(src/symmetries/CMakeLists.txt)
 include(src/tight-binding/CMakeLists.txt)
+include(src/molecule-dyna/CMakeLists.txt)
 #include(src/parallelization/CMakeLists.txt)  #requires fftw,

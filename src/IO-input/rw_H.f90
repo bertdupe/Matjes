@@ -12,6 +12,7 @@ module m_rw_H
         use m_exchange_TJ, only: read_TJ_input
         use m_coupling_ME_J, only: read_ME_J_input
         use m_coupling_ME_D, only: read_ME_D_input
+        use m_harmonic_phonon, only : read_F_input
         
         type(io_H),intent(out)      :: H_io
         character(*),parameter      :: fname='input'
@@ -26,6 +27,7 @@ module m_rw_H
         Call read_TJ_input(io_param,fname,H_io%TJ)
         Call read_ME_J_input(io_param,fname,H_io%ME_J)
         Call read_ME_D_input(io_param,fname,H_io%ME_D)
+        Call read_F_input(io_param,fname,H_io%F)
 
         call close_file(fname,io_param)
 
