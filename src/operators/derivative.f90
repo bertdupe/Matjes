@@ -22,7 +22,6 @@ contains
 ! prepare the derivative in the module
 !
 subroutine get_derivative_int(field,mag_lattice)
-use m_operator_pointer_utils
 use m_io_files_utils
 use m_io_utils
 implicit none
@@ -35,7 +34,8 @@ integer :: io_input
 logical :: periodic(3)
 real(kind=8) :: DF(3,2)
 
-dim_lat=shape(mag_lattice%ordpar%l_modes)
+dim_lat(1:3)=mag_lattice%dim_lat
+dim_lat(4)=1
 periodic=mag_lattice%periodic
 N_world=size(mag_lattice%world)
 
@@ -85,7 +85,8 @@ integer, allocatable :: pos(:,:,:)
 integer :: N_cell,i,dim_lat(4),N_world,j,k,location,shape_D(3),N_vois
 logical :: periodic(3)
 
-dim_lat=shape(mag_lattice%ordpar%l_modes)
+dim_lat(1:3)=mag_lattice%dim_lat
+dim_lat(4)=1
 periodic=mag_lattice%periodic
 N_world=size(mag_lattice%world)
 shape_D=shape(derivat_point)

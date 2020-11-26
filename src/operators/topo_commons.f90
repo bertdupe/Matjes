@@ -318,16 +318,15 @@ subroutine get_size_Q_operator(my_lattice)
 implicit none
 type(lattice), intent(in) :: my_lattice
 !internal
-integer :: n_corner,lattice_size(4),N_site
+integer :: n_corner,N_site
 integer :: i,j
 
-lattice_size=shape(my_lattice%ordpar%l_modes)
-N_site=product(lattice_size)
+N_site=product(my_lattice%dim_lat)*my_lattice%nmag
 n_corner=0
 
 if (.not.my_lattice%periodic(3)) then
    write(6,'(a)') 'no z-periodic boundary conditions'
-   n_corner=4*lattice_size(4)
+   n_corner=4*my_lattice%dim_lat(3)
 
    allocate(Q_topo(n_corner,N_site))
 

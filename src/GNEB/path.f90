@@ -137,7 +137,6 @@ end subroutine geodesic_path_one
 subroutine geodesic_path(amp_rnd,images)
     use m_get_random
     use m_basic_types, only : vec
-    use m_operator_pointer_utils
     implicit none
     real(8), intent(in)             :: amp_rnd
     type(lattice), intent(inout)    :: images(:)

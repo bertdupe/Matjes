@@ -14,8 +14,6 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     use m_topo_commons, only : neighbor_Q,get_charge
     use m_convert
     use m_io_files_utils
-    use m_operator_pointer_utils
-    use m_eval_Beff
     use m_MCstep
     use m_H_public
     use m_relaxation

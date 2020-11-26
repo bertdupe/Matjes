@@ -12,16 +12,12 @@ interface get_Op_in_Op
    module procedure get_Op_3D_in_Op_3D_Xshell,get_Op_2D_in_Op_2D
 end interface
 
-interface convoluate_Op_SOC_vector
-   module procedure convoluate_Op_2D_SOC_vector_1D
-end interface
-
 interface convoluate_Op_sym
    module procedure convoluate_Op_sym_file,convoluate_Op_sym_bond
 end interface
 
 private
-public :: get_diagonal_Op,get_symmetric_Op,get_Op_in_Op,convoluate_Op_SOC_vector,convoluate_Op_sym
+public :: get_diagonal_Op,get_symmetric_Op,get_Op_in_Op,convoluate_Op_sym
 
 contains
 
@@ -186,35 +182,6 @@ do i=1,shape_Op_big(3)
 enddo
 
 end subroutine
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-! convolutate the Hamiltonian with the D vector for the DMI rules
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine convoluate_Op_2D_SOC_vector_1D(D,Op_DMI,H)
-use m_derived_types, only : site_Ham
-implicit none
-real(kind=8), intent(in) :: D(:),Op_DMI(:,:)
-real(kind=8), intent(inout) :: H(:,:)
-! internal variable
-
-H(1,2)=Op_DMI(1,2)*D(3)
-H(1,3)=Op_DMI(1,3)*D(2)
-H(2,3)=Op_DMI(2,3)*D(1)
-
-H(2,1)=Op_DMI(2,1)*D(3)
-H(3,1)=Op_DMI(3,1)*D(2)
-H(3,2)=Op_DMI(3,2)*D(1)
-
-H(1,1)=Op_DMI(1,1)
-H(2,2)=Op_DMI(2,2)
-H(3,3)=Op_DMI(3,3)
-
-end subroutine convoluate_Op_2D_SOC_vector_1D
-
-
 
 
 

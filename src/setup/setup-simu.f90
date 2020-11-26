@@ -3,42 +3,28 @@ implicit none
 
 contains
 subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
-    use m_derived_types
-    !use m_energyfield, only : init_Energy_distrib
-    use m_energy_commons
-    use m_internal_fields_commons
-    use m_fftw
-    use m_lattice
+    use m_derived_types, only: io_parameter,t_cell,simulation_parameters
+    use m_fftw, only: set_k_mesh
     use m_setup_DM
     use m_user_info
-    use m_sym_utils
     use m_table_dist
     use m_mapping
     use m_indexation
     use m_arrange_neigh
-    use m_topoplot
     use m_get_position
-    use m_external_fields
-    use m_excitations
-    use m_io_files_utils
-    use m_io_utils
-    use m_dipolar_field
-    use m_null
+    use m_io_files_utils, only: open_file_write, close_file
+    use m_io_utils, only: dump_config
     use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
-!    use m_summer_exp, only : get_coeff_TStra
-    use m_input_H_types
     use m_set_Hamiltonians,only: set_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
     use m_orders_initialize, only: orders_initialize 
     use m_rw_motif
-    
     use m_rw_H
     use m_H_public
-    
 #ifdef CPP_MPI
-          use m_make_box
-          use m_split_work
-          use m_mpi_prop, only : isize,irank,irank_working,N,start
+    use m_make_box
+    use m_split_work
+    use m_mpi_prop, only : isize,irank,irank_working,N,start
 #endif
     
     ! this subroutine is used only to setup the simulation box
@@ -63,8 +49,6 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     logical :: i_usestruct
     ! check the allocation of memory
     integer :: alloc_check
-    ! Nb orbitals in TB
-    integer :: nb_orbitals = 0
     ! Hamiltonian input parameters
     type(io_h)  ::  H_io
     
@@ -73,55 +57,39 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     i_usestruct=.False.
     alloc_check=0
     time=0.0d0
-    
     call user_info(6,time,'entering the setup routine',.True.)
     
     ! read the important inputs
-    
     time=0.0d0
     call user_info(6,time,'reading the lattice in the input file',.False.)
-    
     call rw_lattice(my_lattice)
     
     ! read the important inputs
     call user_info(6,time,'reading the motif in the input file',.False.)
-    
     call rw_motif(my_motif,my_lattice)
-    
+
     !read the Hamiltonian parameters
     Call rw_H(H_io)
     
-    
     ! read the TB parameters
     call rw_TB('input')
-    if (check_activate_TB()) nb_orbitals=get_nb_orbitals()
     
     ! find the symmetry of the lattice here
-    
     call user_info(6,time,'reading the input file',.false.)
     time=0.0d0
-    
     call inp_rw(io_simu)
     
     call user_info(6,time,'Read external parameters',.false.)
     time=0.0d0
-    
     call ext_param_rw(ext_param)
     Call rw_extpar(extpar_io)
 
-    
-    call user_info(6,time,'reading the Hamiltonian in the input file',.false.)
-    !call get_excitations('input')
-    call user_info(6,time,'done',.true.)
-    
 #ifdef CPP_MPI
     if (irank.eq.0) write(6,'(a)') 'checking for the presence of electric field'
 #else
     write(6,'(a,/)') 'checking for the presence of electric field'
 #endif
     
-    ! check for electric field
-    call rw_efield(my_lattice%dim_lat,my_lattice%areal)
     !!!!!!!!!!!!!!!!!!!!!!!!!!
     !!! create the lattice depending on the simulation that one chooses
     call user_info(6,time,'allocating the spin, table of neighbors and the index...',.false.)
@@ -166,10 +134,8 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     
     !-------------------------------------------------
     
-
-
     ! prepare the lattice
-    call user_info(6,time,'initializing the spin structure',.false.)
+    call user_info(6,time,'initializing the order parameters',.false.)
     Call orders_initialize(my_lattice,extpar_io)
     call user_info(6,time,'done',.false.)
 
@@ -181,12 +147,6 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     io=open_file_write('positions.dat')
     call dump_config(io,pos)
     call close_file('positions.dat',io)
-    
-    !! prepare the external electromagnetic fields
-    !Call user_info(6,time,'get the external magnetic field matrix',.false.)
-    !Call get_EM_external_fields(ext_param%H_ext%value,ext_param%E_ext%value,my_motif)
-    !Call initialize_external_fields(my_lattice)
-    !Call user_info(6,time,'done',.false.)
     
     ! setup the different parameters for the interaction DM, 4-spin... 
     ! hard part: setup DM interaction

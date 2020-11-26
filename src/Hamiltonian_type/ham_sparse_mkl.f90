@@ -17,7 +17,6 @@ type,extends(t_H) :: t_H_mkl_csr
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: init      
     procedure :: init_1    
     procedure :: init_mult_2   
 
@@ -181,21 +180,6 @@ subroutine destroy_child(this)
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_csr type in m_H_sparse_mkl'
     endif
 end subroutine
-
-subroutine init(this,energy_in,lat)
-    use m_derived_types, only: operator_real_order_N,lattice
-    class(t_H_mkl_csr),intent(inout)    :: this
-    type(operator_real_order_N)         :: energy_in
-    type(lattice),intent(in)            :: lat
-
-    !local
-    type(t_H_coo)           :: H_coo
-
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%init(energy_in,lat)
-    Call set_from_Hcoo(this,H_coo,lat)
-
-end subroutine 
 
 subroutine set_from_Hcoo(this,H_coo,lat)
     type(t_H_coo),intent(inout)         :: H_coo

@@ -153,36 +153,34 @@ end subroutine dump_config_spinse_vec_point
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local spinse files
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse(io,my_lattice,position)
-use m_derived_types
-use m_derived_types, only: lattice
-use m_constants, only : pi
-implicit none
-integer, intent(in) :: io
-type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: position(:,:,:,:,:)
-! internale variables
-Integer :: i_x,i_y,i_z,i_m,N(4)
-real(kind=8) :: Rc,Gc,Bc,theta,phi
-
-N=shape(my_lattice%ordpar%l_modes)
-
-do i_m=1,N(4)
-   Do i_z=1,N(3)
-      Do i_y=1,N(2)
-         Do i_x=1,N(1)
+subroutine dump_config_spinse(io,lat,position)
+!    use m_derived_types
+    use m_derived_types, only: lattice
+    use m_constants, only : pi
+    implicit none
+    integer, intent(in) :: io
+    type(lattice), intent(in) :: lat
+    real(kind=8), intent(in) :: position(:,:,:,:,:)
+    ! internale variables
+    Integer :: i_x,i_y,i_z,i_m,N(4)
+    real(kind=8) :: Rc,Gc,Bc,theta,phi
 
 
-        call get_colors(Rc,Gc,Bc,theta,phi,my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(:))
-
-         write(io,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
-
+    do i_m=1,lat%M%dim_mode/3
+       Do i_z=1,lat%dim_lat(3)
+          Do i_y=1,lat%dim_lat(2)
+             Do i_x=1,lat%dim_lat(1)
+    
+            call get_colors(Rc,Gc,Bc,theta,phi,lat%M%modes((i_m-1)*3+1:i_m*3,i_x,i_y,i_z,1))
+    
+             write(io,'(8(a,f16.8),a)') 'Spin(', &
+         & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
+         & Rc,',',Bc,',',Gc,')'
+    
+             enddo
          enddo
-     enddo
-   enddo
-enddo
+       enddo
+    enddo
 
 end subroutine dump_config_spinse
 
@@ -238,27 +236,30 @@ enddo
 
 end subroutine dump_config_matrix_5D_real
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write the local modes configurations
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_modes(io,my_lattice)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! routine that reads and write the local modes configurations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine dump_config_modes(io,lat)
+!this probably is supposed to write out all modes, but right now I updated it to
+!just write out the M mode since I am not sure if this is still used
 use m_derived_types, only : lattice
 implicit none
 integer, intent(in) :: io
-type(lattice), intent(in) :: my_lattice
+type(lattice), intent(in) :: lat
 ! internale variables
 Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
 character(len=100) :: rw_format
 
-N=shape(my_lattice%ordpar%l_modes)
 
-write(rw_format,'( "(", I4, "f14.8,2x)" )') my_lattice%dim_mode
+N(1:3)=lat%dim_lat
+
+write(rw_format,'( "(", I4, "f14.8,2x)" )') lat%M%dim_mode
 
 do i_z=1,N(3)
   do i_y=1,N(2)
     do i_x=1,N(1)
 
-    Write(io,rw_format) ((my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(j_lat), j_lat=1,my_lattice%dim_mode),i_m=1,N(4))
+    Write(io,rw_format) ((lat%M%modes(i_m,i_x,i_y,i_z,1), j_lat=1,lat%M%dim_mode),i_m=1,N(4))
 
     enddo
   enddo

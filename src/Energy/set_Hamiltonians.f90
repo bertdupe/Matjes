@@ -29,7 +29,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     type(lattice), intent(inout) :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(7)
+    logical :: use_Ham(8)
 
     use_ham(1)=H_io%J%is_set
     use_ham(2)=H_io%D%is_set

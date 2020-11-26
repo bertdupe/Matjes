@@ -35,8 +35,6 @@ type lattice
      type(order_par)  :: B !Magnetic field
      type(order_par)  :: T !Temperature
      type(order_par)  :: u !phonon
-     !ultimately delete ordpar
-     type(order_par)  :: ordpar !obsolete
 
 contains
     !initialization function
@@ -195,10 +193,6 @@ subroutine init_order(this,cell,extpar_io)
     if(dim_modes(3)>0) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
     if(dim_modes(4)>0) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
     if(dim_modes(5)>0) Call this%u%init(this%dim_lat,this%nmag,dim_modes(5))
-
-    !remove old vector type at some point soon...
-    this%dim_mode=sum(dim_modes)
-    Call this%ordpar%init(this%dim_lat,this%nmag,this%dim_mode)
 end subroutine
 
 subroutine read_order(this,suffix_in,fexist_out)
@@ -834,7 +828,6 @@ subroutine copy_lattice(self,copy)
     copy%periodic=self%periodic
     if(allocated(self%world)) allocate(copy%world,source=self%world)
     if(allocated(self%sc_vec_period)) allocate(copy%sc_vec_period,source=self%sc_vec_period)
-    if(self%ordpar%dim_mode>0) Call self%ordpar%copy(copy%ordpar,self%dim_lat,self%nmag)
 
     if(self%M%dim_mode>0) Call self%M%copy(copy%M,self%dim_lat,self%nmag)
     if(self%E%dim_mode>0) Call self%E%copy(copy%E,self%dim_lat,self%nmag)
@@ -846,9 +839,6 @@ end subroutine
 subroutine copy_val_lattice(self,copy)
     class(lattice),intent(inout)    :: self,copy
    
-    !might make sense to check other values to make sure, but this should be faster
-    Call self%ordpar%copy_val(copy%ordpar)
-
     if(self%m%dim_mode>0) Call self%M%copy_val(copy%M)
     if(self%e%dim_mode>0) Call self%E%copy_val(copy%E)
     if(self%b%dim_mode>0) Call self%B%copy_val(copy%B)

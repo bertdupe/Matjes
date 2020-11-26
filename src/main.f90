@@ -6,7 +6,6 @@ use m_io_utils
 use m_io_files_utils
 use m_init_variables
 use m_derived_types
-use m_lattice
 use m_setup_simu
 use m_write_spin
 use m_createspinfile
@@ -77,7 +76,7 @@ call close_file('input',io_param)
 call setup_simu(io_simu,all_lattices,motif,ext_param,Ham_res,Ham_comb)
 
 ! number of cell in the simulation
-N_cell=size(all_lattices%ordpar%l_modes)
+N_cell=product(all_lattices%dim_lat)
 n_system=all_lattices%n_system
 
 write(6,'(I6,a)') N_cell, ' unit cells'

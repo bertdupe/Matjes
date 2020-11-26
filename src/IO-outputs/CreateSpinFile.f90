@@ -112,14 +112,15 @@ integer :: N(4),Natom_motif,io
 real(kind=8) :: r(3,3)
 
 
-N=shape(my_lattice%ordpar%l_modes)
-Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
+N(2:4)=my_lattice%dim_lat
+Natom_motif=my_lattice%cell%num_mag()
+N(1)=3*Natom_motif
 r=my_lattice%areal
 
 allocate(position(3,N(1),N(2),N(3),N(4)))
 position=0.0d0
 
-call get_position(position,N,r,my_motif)
+call get_position(position,N,r,my_motif)    !should probably be updated
 
 io=open_file_write(trim(adjustl(fname)))
 
@@ -144,8 +145,9 @@ integer :: N(4),Natom_motif,io
 ! calculating the angles
 real(kind=8) :: r(3,3)
 
-N=shape(my_lattice%ordpar%l_modes)
-Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
+N(2:4)=my_lattice%dim_lat
+Natom_motif=my_lattice%cell%num_mag()
+N(1)=3*Natom_motif
 r=my_lattice%areal
 
 allocate(position(3,N(1),N(2),N(3),N(4)))

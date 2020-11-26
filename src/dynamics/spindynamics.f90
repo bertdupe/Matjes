@@ -4,32 +4,26 @@ contains
 subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     use m_derived_types, only : t_cell,io_parameter,simulation_parameters
     use m_derived_types, only : lattice,number_different_order_parameters
-    use m_measure_temp
-    use m_topo_commons
-    use m_update_time
-    use m_randist
-    use m_constants, only : pi,k_b,hbar
-    use m_eval_Beff
-    use m_write_spin
+    use m_topo_commons, only: get_charge, neighbor_Q
+    use m_update_time, only: update_time,init_update_time
+    use m_constants, only : pi,k_b
     use m_energyfield, only : write_energy_field 
-    use m_createspinfile
-    use m_dyna_utils
-    use m_user_info
-    use m_excitations
-    use m_solver_commun
-    use m_topo_sd
-    use m_forces
-    use m_plot_FFT
-    use m_solver_order
-    use m_io_files_utils
-    use m_tracker
-    use m_print_Beff
-    use omp_lib
-    use m_precision
-    use m_H_public
-    use m_Beff_H
-    use m_write_config
+    use m_createspinfile, only: CreateSpinFile
+    use m_user_info, only: user_info
+    use m_excitations, only: update_ext_EM_fields, update_EMT_of_r,set_excitations
+    use m_solver_commun, only: get_integrator_field, get_propagator_field,select_propagator
+    use m_topo_sd, only: get_charge_map
+    use m_solver_order,only: get_dt_mode,get_Dmag_int
+    use m_tracker, only: init_tracking,plot_tracking
+    use m_print_Beff, only: print_Beff
+    use m_precision, only: truncate
+    use m_H_public, only: t_H, energy_all
+    use m_Beff_H, only: get_B
+    use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
+!    use m_forces
+!    use m_plot_FFT
+!$omp     use omp_lib
     
     ! input
     type(lattice), intent(inout) :: mag_lattice
@@ -47,14 +41,13 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     real(8),allocatable,dimension(:),target :: Beff(:)
     real(8),pointer,contiguous              :: Beff_v(:,:)
     
-    
     ! dummys
-    real(kind=8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
-    real(kind=8) :: check(2),test_torque,Einitial,ave_torque
-    real(kind=8) :: dumy(5),security(2)
-    real(kind=8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
-    real(kind=8) :: kt,ktini,ktfin
-    real(kind=8) :: time
+    real(8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
+    real(8) :: check(2),test_torque,Einitial,ave_torque
+    real(8) :: dumy(5),security(2)
+    real(8) :: timestep_int,real_time,h_int(3),damping,E_int(3)
+    real(8) :: kt,ktini,ktfin
+    real(8) :: time
     integer :: iomp,N_cell,N_loop,duration,Efreq,tag
     !integer :: io_test
     !! switch that controls the presence of magnetism, electric fields and magnetic fields
@@ -276,7 +269,8 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
             endif
             if(gra_topo) Call get_charge_map(tag)
         
-            if (io_simu%io_Force) call forces(tag,lat_1%ordpar%all_l_modes,mag_lattice%dim_mode,mag_lattice%areal)
+            if (io_simu%io_Force) &!call forces(tag,lat_1%ordpar%all_l_modes,mag_lattice%dim_mode,mag_lattice%areal)
+                & ERROR STOP "FORCES HAVE TO BE REIMPLEMENTED"
         
             if(io_simu%io_fft_Xstruct) &!call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%periodic,mag_lattice%dim_mode,tag)
                 & ERROR STOP "PLOT FFT HAS TO BE REIMPLEMENTED"

@@ -30,9 +30,25 @@ contains
     procedure :: copy_val => copy_val_order_par
     procedure :: delete => delete_order_par
     procedure :: read_file
+    procedure :: truncate
     final :: final_order_par
 end type
 contains
+
+subroutine truncate(this,eps_in)
+    class(order_par),intent(inout)      :: this
+    real(8),intent(in),optional         :: eps_in
+    real(8)     ::  eps
+    real(8),parameter       ::  frac=1.0d-50
+    integer     :: i
+
+    if(present(eps_in))then
+        eps=eps_in
+    else
+        eps=maxval(abs(this%all_modes))*frac
+    endif
+    where(abs(this%all_modes)<eps) this%all_modes=0.0d0
+end subroutine
 
 subroutine read_file(this,fname,fexist)
     use m_io_files_utils, only: open_file_read,close_file

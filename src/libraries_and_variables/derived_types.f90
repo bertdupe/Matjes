@@ -59,32 +59,4 @@ type simulation_parameters
     type(vec_var) :: H_ext=vec_var((/0.0d0,0.0d0,0.0d0/),'external B-field'),E_ext=vec_var((/0.0d0,0.0d0,0.0d0/),'external E-field')
 end type simulation_parameters
 
-!!!!!!!!!!
-!! operator type
-!!!!!!!!!!
-!type operator_real
-!    type(Op_real), allocatable, dimension(:,:) :: value
-!    integer :: nline,ncolumn
-!    integer, allocatable :: line(:,:)
-!end type operator_real
-!
-!type operator_real_order_N
-!    type(Op_real_order_N), allocatable, dimension(:,:) :: value
-!    integer :: nline,ncolumn
-!    integer, allocatable :: line(:,:)
-!end type operator_real_order_N
-!! old Hamiltonian type
-!
-!type point_shell_Operator
-!     type(Op_real), allocatable, dimension(:) :: shell
-!end type point_shell_Operator
-!
-!!!!!!!!!!
-!! order parameter type
-!!!!!!!!!!
-!type order_parameter
-!    character(len=30) :: name
-!    integer :: start,end
-!end type
-
 end module m_derived_types
