@@ -62,10 +62,10 @@ do i=1,N
       CALL RANDOM_NUMBER(Choice)
 #endif
       vector(i)=Choice
-      norm=norm+Choice**2
+!      norm=norm+Choice**2
 enddo
 
-norm=sqrt(norm)
+norm=norm2(vector)
 get_random_Mag=vector/norm*length
 
 end function get_random_Mag

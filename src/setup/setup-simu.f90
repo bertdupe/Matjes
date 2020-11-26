@@ -28,6 +28,9 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     use m_summer_exp, only : get_coeff_TStra
     use m_input_H_types
     use m_set_Hamiltonians,only: set_Hamiltonians
+    use m_rw_extpar, only: extpar_input, rw_extpar
+    use m_orders_initialize, only: orders_initialize 
+    use m_rw_motif
     
     use m_rw_H
     use m_H_public
@@ -53,6 +56,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     real (kind=8), allocatable :: pos(:,:,:,:,:)
     integer :: tot_N_Nneigh,io
     real(kind=8) :: time
+    type(extpar_input)  :: extpar_io
     ! dummy variable
     integer :: dim_lat(3),n_mag,n_DMI,N_Nneigh
     !checking various files
@@ -103,6 +107,8 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     time=0.0d0
     
     call ext_param_rw(ext_param)
+    Call rw_extpar(extpar_io)
+
     
     call user_info(6,time,'reading the Hamiltonian in the input file',.false.)
     !call get_excitations('input')
@@ -121,7 +127,10 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     call user_info(6,time,'allocating the spin, table of neighbors and the index...',.false.)
     time=0.0d0
     
+    !old and obsolete
     call create_lattice(my_lattice,my_motif,ext_param,nb_orbitals)
+    !new replacement
+    Call my_lattice%init_order(my_motif,extpar_io)
     
     dim_lat=my_lattice%dim_lat
     n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
@@ -166,7 +175,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
 
     ! prepare the lattice
     call user_info(6,time,'initializing the spin structure',.false.)
-    call InitSpin(my_lattice,my_motif,ext_param)
+    Call orders_initialize(my_lattice,extpar_io)
     call user_info(6,time,'done',.false.)
 
     ! get position

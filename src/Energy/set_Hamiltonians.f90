@@ -18,6 +18,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     use m_coupling_ME_J,only: get_coupling_ME_J
     use m_coupling_ME_D,only: get_coupling_ME_D
     use m_harmonic_phonon,only: get_Forces_F
+    use m_exchange_TJ,only: get_exchange_TJ
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -37,6 +38,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     use_ham(5)=H_io%ME_J%is_set
     use_ham(6)=H_io%ME_D%is_set
     use_ham(7)=H_io%F%is_set
+    use_ham(8)=H_io%TJ%is_set
 
     if(use_ham(2).and.all(norm2(DM_vector,2)<1.0d-8))then
         write(*,*) "WARNING, ALL DMI-vectors are vanishing"
@@ -81,6 +83,9 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     !Harmonic phonon (F)
     if(use_ham(7))then
         Call get_Forces_F(Ham_res(i_H),H_io%F,tableNN,indexNN,lat)
+    !TJ coupling
+    if(use_ham(8))then
+        Call get_exchange_TJ(Ham_res(i_H),H_io%TJ,tableNN,indexNN,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
 

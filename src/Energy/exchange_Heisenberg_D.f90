@@ -6,7 +6,6 @@ public read_D_input, get_exchange_D
 contains
 subroutine read_D_input(io_param,fname,io)
     use m_io_utils
-    use m_input_H_types, only: io_H_aniso
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
     type(io_H_D),intent(out)        :: io

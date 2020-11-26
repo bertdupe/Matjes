@@ -5,9 +5,12 @@ src/IO-input/input_types.f90
 src/IO-input/input_H_types.f90
 src/IO-input/rw_dyna.f90
 src/IO-input/rw_efield.f90
+src/IO-input/rw_extpar.f90
+src/IO-input/rw_GNEB.f90
 src/IO-input/rw_H.f90
 src/IO-input/rw_lattice.f90
 src/IO-input/rw_MC.f90
+src/IO-input/rw_minimize.f90
 src/IO-input/rw_motif.f90
 src/IO-input/rw_TB.f90
 src/IO-input/rw_zdir.f90
