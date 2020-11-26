@@ -3,7 +3,9 @@ use m_H_public
 implicit none
 private
 public :: set_Hamiltonians,combine_Hamiltonians
+
 contains
+
 subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_vector,lat)
     use m_derived_types
     use m_input_H_types 
