@@ -163,7 +163,6 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     ! CalculateAverages makes the averages from the sums
            Call CalculateAverages(my_lattice,Q_neigh,qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
                     &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),E_total,Magnetization)
-    
     !**************************
     !!!!!!!!!!!!!!!!!!!!!!!!!!!
        end do ! over n_MC
