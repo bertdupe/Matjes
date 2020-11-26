@@ -7,7 +7,6 @@ integer,parameter :: number_different_order_parameters=5    !m,E,B,T,u
 character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T","U"]
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
                                 &   'magnetic   ',&
-                                &   'displace   ',&
                                 &   'Efield     ',&
                                 &   'Bfield     ',&
                                 &   'temperature',&
