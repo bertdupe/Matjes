@@ -54,5 +54,6 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     enddo
     nullify(pos_3,state_3)
     deallocate(pos)
-end subroutine 
+end subroutine
+
 end module m_init_spiral

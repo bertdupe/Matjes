@@ -15,6 +15,7 @@ use m_get_random
 use m_user_info
 use m_H_public
 use m_spindynamics
+use m_molecular_dynamics
 use m_montecarlo
 use m_entropic
 use m_GNEB, only: GNEB
@@ -164,7 +165,7 @@ endif
 if (my_simu%name == 'molecular_dynamics')then
 
      write(6,'(a)') 'entering into the molecular dynamics routines'
-     call molecular_dynamics(all_lattices,io_simu)
+     call molecular_dynamics(all_lattices,io_simu,Ham_comb)
 
 endif
 
