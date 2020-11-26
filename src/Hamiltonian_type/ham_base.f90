@@ -1,7 +1,6 @@
 module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H
 use m_derived_types, only : lattice
-use m_derived_types, only: operator_real_order_N
 implicit none
 
 type,abstract :: t_H
@@ -13,7 +12,6 @@ type,abstract :: t_H
 contains
 
     !Hamiltonian initialization routines
-    procedure(int_init_H),deferred           :: init !based on old operator_real_order_N input
     procedure(int_init_H_1),deferred         :: init_1 !based on Hamiltonian in coo format input (arrays), only rank_2 
     procedure(int_init_H_mult_2),deferred    :: init_mult_2 !for rank >2, but only at 2 sites at once
 
@@ -80,14 +78,6 @@ interface
     subroutine int_destroy(this)
         import t_H
         class(t_H),intent(inout)  :: this
-    end subroutine
-
-    subroutine int_init_H(this,energy_in,lat)
-        import t_H,lattice, operator_real_order_N
-        !need to get rid of dim_mode input
-        class(t_H),intent(inout)  :: this
-        type(operator_real_order_N)     :: energy_in
-        type(lattice),intent(in)        :: lat
     end subroutine
 
     subroutine int_eval_all(this,E, lat)

@@ -1,4 +1,5 @@
 module m_operator_pointer_utils
+#if 0
 
 interface associate_pointer
    module procedure A_vecpoint1D_vecdimn,A_Opreal_shellHam1D,A_Opreal_real2D,associate_line_target,asso_pointer_to_2Dmatrix
@@ -830,5 +831,5 @@ enddo
 if (N.ne.N_order_found) stop 'ERROR in find_position_order in module m_operator_pointer_utils'
 
 end function
-
+#endif
 end module m_operator_pointer_utils

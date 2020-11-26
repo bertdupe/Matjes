@@ -1,4 +1,5 @@
 module m_lattice
+#if 0
 use m_basic_types, only : var_name
 use m_derived_types, only : order_parameter
 
@@ -160,5 +161,6 @@ else
 endif
 
 end subroutine order_mode
+#endif
 
 end module m_lattice

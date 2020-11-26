@@ -25,7 +25,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     use m_dipolar_field
     use m_null
     use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
-    use m_summer_exp, only : get_coeff_TStra
+!    use m_summer_exp, only : get_coeff_TStra
     use m_input_H_types
     use m_set_Hamiltonians,only: set_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
@@ -127,16 +127,11 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     call user_info(6,time,'allocating the spin, table of neighbors and the index...',.false.)
     time=0.0d0
     
-    !old and obsolete
-    call create_lattice(my_lattice,my_motif,ext_param,nb_orbitals)
     !new replacement
     Call my_lattice%init_order(my_motif,extpar_io)
     
     dim_lat=my_lattice%dim_lat
     n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
-    
-    ! check if you put the Strasbourg temperature
-    call get_coeff_TStra(my_lattice,my_motif)
     
     ! get the table of neighbors and the numbers of atom per shell
     N_Nneigh=H_io%get_shell_number()
@@ -187,11 +182,11 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     call dump_config(io,pos)
     call close_file('positions.dat',io)
     
-    ! prepare the external electromagnetic fields
-    Call user_info(6,time,'get the external magnetic field matrix',.false.)
-    Call get_EM_external_fields(ext_param%H_ext%value,ext_param%E_ext%value,my_motif)
-    Call initialize_external_fields(my_lattice)
-    Call user_info(6,time,'done',.false.)
+    !! prepare the external electromagnetic fields
+    !Call user_info(6,time,'get the external magnetic field matrix',.false.)
+    !Call get_EM_external_fields(ext_param%H_ext%value,ext_param%E_ext%value,my_motif)
+    !Call initialize_external_fields(my_lattice)
+    !Call user_info(6,time,'done',.false.)
     
     ! setup the different parameters for the interaction DM, 4-spin... 
     ! hard part: setup DM interaction

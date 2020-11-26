@@ -1,4 +1,6 @@
 module m_external_fields
+!NOT UPDATED TO PATRICK ORDER-PARAMETERS/HAMILTONIAN
+#if 0
 use m_derived_types, only : t_cell,vec_dim_n,lattice,vec_point
 use m_operator_pointer_utils
 
@@ -106,5 +108,5 @@ do i=1,size_point
 enddo
 
 end subroutine initialize_external_fields
-
+#endif
 end module m_external_fields

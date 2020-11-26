@@ -2,9 +2,8 @@ module m_spindynamics
 implicit none
 contains
 subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
-    use m_derived_types, only : t_cell,io_parameter,simulation_parameters,point_shell_Operator
+    use m_derived_types, only : t_cell,io_parameter,simulation_parameters
     use m_derived_types, only : lattice,number_different_order_parameters
-    use m_modes_variables, only : point_shell_mode
     use m_measure_temp
     use m_topo_commons
     use m_update_time

@@ -1,4 +1,5 @@
 module m_total_Heisenberg_Ham
+#if 0
 use m_summer_exp
 use m_Hamiltonian_variables, only : coeff_ham_inter_spec
 
@@ -39,5 +40,5 @@ enddo
 write(6,'(a)') ''
 
 end subroutine get_total_Heisenberg_Ham
-
+#endif
 end module m_total_Heisenberg_Ham

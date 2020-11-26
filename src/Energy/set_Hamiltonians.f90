@@ -83,6 +83,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     !Harmonic phonon (F)
     if(use_ham(7))then
         Call get_Forces_F(Ham_res(i_H),H_io%F,tableNN,indexNN,lat)
+    endif
     !TJ coupling
     if(use_ham(8))then
         Call get_exchange_TJ(Ham_res(i_H),H_io%TJ,tableNN,indexNN,lat)

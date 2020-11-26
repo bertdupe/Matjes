@@ -1,3 +1,5 @@
+!NOT UPDATED TO PATRICK ORDER-PARAMETERS/HAMILTONIAN
+#if 0
 subroutine parallel_tempering(my_lattice,motif,io_simu,ext_param)
     use m_topocharge_all
     use m_set_temp
@@ -544,3 +546,4 @@ do j_optset=1,N_temp
     call close_file('EM.dat',io_EM)
 
       end subroutine parallel_tempering
+#endif

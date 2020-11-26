@@ -1,5 +1,5 @@
 module m_topo_commons
-use m_derived_types, only : operator_real,t_cell,lattice
+use m_derived_types, only : t_cell,lattice
 use m_basic_types, only : vec_point
 Implicit none
 

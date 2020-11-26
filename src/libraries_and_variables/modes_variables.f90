@@ -1,3 +1,4 @@
+#if 0
 module m_modes_variables
 use m_basic_types
 
@@ -23,3 +24,4 @@ type point_shell_mode
 end type point_shell_mode
 
 end module m_modes_variables
+#endif

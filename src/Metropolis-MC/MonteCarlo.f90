@@ -8,8 +8,7 @@ contains
 subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     use m_constants, only : k_b,pi
     use m_vector, only : norm
-    use m_derived_types, only : lattice,t_cell,io_parameter,simulation_parameters,point_shell_Operator
-    use m_modes_variables, only : point_shell_mode
+    use m_derived_types, only : lattice,t_cell,io_parameter,simulation_parameters
     use m_basic_types, only : vec_point
     use m_rw_MC
     use m_topo_commons, only : neighbor_Q,get_charge

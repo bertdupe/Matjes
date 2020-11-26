@@ -5,7 +5,6 @@ contains
 subroutine forces(tag,field,N_dim,r)
 !use m_eval_Beff
 use m_basic_types, only : vec_point
-use m_modes_variables, only : point_shell_mode
 use m_derivative, only : calculate_derivative
 use m_io_files_utils
 use m_convert

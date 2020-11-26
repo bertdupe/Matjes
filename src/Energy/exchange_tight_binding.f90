@@ -1,8 +1,8 @@
 module m_exchange_TB
+#if 0
     use m_symmetry_operators
     use m_Hamiltonian_variables, only : coeff_ham_inter_spec
     use m_rw_TB
-    use m_lattice, only : my_order_parameters
 
     type(coeff_ham_inter_spec), target, public, protected :: exc_ham_TB
 
@@ -88,4 +88,5 @@ module m_exchange_TB
             write(6,'(a)') ''
 
         end subroutine get_exc_ham_TB
+#endif
 end module m_exchange_TB 

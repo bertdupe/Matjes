@@ -33,7 +33,6 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     use m_vector, only : norm_cross,norm, calculate_damping
     use m_dyna_utils, only : copy_lattice
     use m_eval_Beff
-    use m_lattice, only : my_order_parameters
     use m_operator_pointer_utils
     use m_Beff_H, only: get_B
     
@@ -148,7 +147,6 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     use m_createspinfile
     use m_vector, only : cross,norm
     use m_eval_Beff
-    use m_lattice, only : my_order_parameters
     use m_operator_pointer_utils
     use m_Beff_H, only: get_B
     type(io_parameter), intent(in)  :: io_simu
