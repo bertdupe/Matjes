@@ -9,7 +9,7 @@ fi
 echo "using compile option COMPOP: $compop"
 
 githash=`git log --pretty=format:'%H' -n 1`
-gitversion=` echo "__VERSIONGIT__=\"'$githash'\" "`
+gitversion=` echo "CPP_VERSIONGIT=\"'$githash'\" "`
 if [ -d $build_dir ]; then
     rm -r $build_dir
 fi
