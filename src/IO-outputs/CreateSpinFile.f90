@@ -10,8 +10,6 @@ implicit none
   interface CreateSpinFile
        module procedure CreateSpinFile_lattice_usernamed
        module procedure CreateSpinFile_I_simple_5d
-       module procedure CreateSpinFile_I_lattice_sint
-       module procedure CreateSpinFile_I_lattice_sreal
        module procedure CreateSpinFile_R_simple_5d
        module procedure CreateSpinFile_simple_4d
        module procedure CreateSpinFile_end
@@ -299,45 +297,6 @@ Close(15)
 END subroutine CreateSpinFile_I_simple_5d
 ! ===============================================================
 
-! ===============================================================
-subroutine CreateSpinFile_I_lattice_sint(signature,spin)
-Implicit none
-integer, intent(in) :: signature
-type(vec_point), intent(in) :: spin(:)
-! internal variables
-Integer :: io
-!   name of files
-character(len=50) :: fname
-
-fname=convert('Spinse_',signature,'.dat')
-io=open_file_write(fname)
-
-call dump_spinse(io,spin)
-
-call close_file(fname,io)
-
-END subroutine CreateSpinFile_I_lattice_sint
-! ===============================================================
-
-! ===============================================================
-subroutine CreateSpinFile_I_lattice_sreal(signature,spin)
-Implicit none
-real(kind=8), intent(in) :: signature
-type(vec_point), intent(in) :: spin(:)
-! internal variables
-Integer :: io
-!   name of files
-character(len=50) :: fname
-
-fname=convert('Spinse_',signature,'.dat')
-io=open_file_write(fname)
-
-call dump_spinse(io,spin)
-
-call close_file(fname,io)
-
-END subroutine CreateSpinFile_I_lattice_sreal
-! ===============================================================
 
 ! ===============================================================
       subroutine CreateSpinFile_R_simple_5d(signature,spin,shape_spin)

@@ -262,12 +262,12 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
             if (io_simu%io_tracker) call plot_tracking(j/gra_freq,lat_1,Hams)
 
             if(gra_log) then
-                call CreateSpinFile(tag,mag_lattice%M%all_l_modes)
+                call CreateSpinFile(tag,mag_lattice%M)
                 Call write_config(tag,mag_lattice) 
                 write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',tag
                 write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
             endif
-            if(gra_topo) Call get_charge_map(tag)
+            if(gra_topo) Call get_charge_map(tag,mag_lattice,Q_neigh)
         
             if (io_simu%io_Force) &!call forces(tag,lat_1%ordpar%all_l_modes,mag_lattice%dim_mode,mag_lattice%areal)
                 & ERROR STOP "FORCES HAVE TO BE REIMPLEMENTED"

@@ -13,7 +13,6 @@ end interface get_cols
 interface dump_spinse
  module procedure dump_config_spinse
  module procedure dump_config_spinse_spin
- module procedure dump_config_spinse_vec_point
 end interface dump_spinse
 
 interface dump_config
@@ -21,7 +20,6 @@ interface dump_config
  module procedure dump_config_matrix_2D_real
  module procedure dump_config_matrix_5D_real
  module procedure dump_config_FFT
- module procedure dump_config_vec_point
  module procedure dump_config_order
 end interface dump_config
 
@@ -120,35 +118,6 @@ do i=1,shape_spin(2)
 enddo
 
 end subroutine dump_config_spinse_spin
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write the local spinse files
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse_vec_point(io,spin)
-implicit none
-integer, intent(in) :: io
-type(vec_point), intent(in) :: spin(:)
-! internale variables
-! internal variables
-!     calculating the angles
-real(kind=8) :: theta, phi
-!     Is the row even (1) or not (0)
-Integer :: i,shape_spin
-!     colors
-real(kind=8) :: Rc,Gc,Bc
-!   name of files
-
-shape_spin=size(spin)
-
-do i=1,shape_spin
-
-   call get_colors(Rc,Gc,Bc,theta,phi,spin(i)%w(:))
-
-   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(i),',',Rc,',',Bc,',',Gc,')'
-
-enddo
-
-end subroutine dump_config_spinse_vec_point
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local spinse files
@@ -285,38 +254,6 @@ write(io,rw_format) order%all_modes
 
 end subroutine
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write an array of pointer configurations
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_vec_point(io,modes)
-use m_derived_types, only : vec_point
-implicit none
-integer, intent(in) :: io
-type(vec_point), intent(in) :: modes(:)
-! internale variables
-Integer :: i,N,N_data,j_lat
-character(len=20) :: rw_format
-
-N=size(modes)
-N_data=size(modes(1)%w)
-
-write(rw_format,'( "(", I4, "f14.8)" )') N_data
-
-do i=1,N
-
-    Write(io,rw_format) (modes(i)%w(j_lat), j_lat=1,N_data)
-
-enddo
-
-end subroutine dump_config_vec_point
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! return the maximal index of parameters of the same type
-! in: io tag
-! in: variable name (for example J_ D_ or whatever)
-! in: name of the file
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 function max_ind_variable(io,var_name,fname) result(max_ind)
     implicit none

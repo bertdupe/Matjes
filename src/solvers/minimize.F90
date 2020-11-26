@@ -25,7 +25,6 @@ contains
 !
 subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     use m_derived_types, only : io_parameter,lattice
-    use m_basic_types, only : vec_point
     use m_constants, only : pi
     use m_write_spin
     use m_createspinfile
@@ -138,7 +137,6 @@ end subroutine
 
 subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     use m_derived_types, only : io_parameter,lattice
-    use m_basic_types, only : vec_point
     use m_constants, only : pi
     use m_write_spin
     use m_createspinfile

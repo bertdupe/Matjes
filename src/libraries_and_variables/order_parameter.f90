@@ -1,5 +1,4 @@
 module m_order_parameter
-use m_basic_types, only: vec_point
 implicit none
 private
 public order_par
@@ -8,18 +7,15 @@ public order_par
 ! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
 
 type order_par
-!variable that contains all order parameters as vec_point and the
-!corresponding target
-!data_vecpoint and data_real REQUIRE UTMOST CARE, DON'T CHANGE THEM EXTERNALLY AND THINK WHAT YOU TO
-!UNDER NO CIRCUMSTANCES REMOVE PRIVATE FROM data_real OR data_vecpoint
+!variable that contains and order parameter field saved in data_real with modes/all_modes/modes_v pointing to that with different shapes
+
+!data_real REQUIRE UTMOST CARE, DON'T CHANGE THEM EXTERNALLY AND THINK WHAT YOU TO
+!UNDER NO CIRCUMSTANCES REMOVE PRIVATE FROM data_real
 !THAT COULD LEAD TO A GIGANTIC MESS WITH MEMORY LEAK
 
-    type(vec_point),pointer,private,contiguous         :: data_vecpoint(:)=>null()
-    real(8),pointer,private,contiguous                 :: data_real(:)=>null()
-
-    type(vec_point),pointer,contiguous      :: all_l_modes(:) => null()
-    type(vec_point),pointer,contiguous      :: l_modes(:,:,:,:) => null() !main vec_type get allocated
-    real(8),pointer,contiguous              :: modes(:,:,:,:,:) => null() !main pointer that get allocated
+    real(8),pointer,private,contiguous      :: data_real(:)=>null() !main pointer that get allocated
+    !pointers onto data_real, which can be adressed from outside
+    real(8),pointer,contiguous              :: modes(:,:,:,:,:) => null()
     real(8),pointer,contiguous              :: all_modes(:) => null()
     real(8),pointer,contiguous              :: modes_v(:,:) => null()
 
@@ -40,7 +36,6 @@ subroutine truncate(this,eps_in)
     real(8),intent(in),optional         :: eps_in
     real(8)     ::  eps
     real(8),parameter       ::  frac=1.0d-50
-    integer     :: i
 
     if(present(eps_in))then
         eps=eps_in
@@ -97,11 +92,10 @@ subroutine init_order_par(self,dim_lat,nmag,dim_mode,vec_val,val)
     class(order_par),intent(inout)  :: self
     integer,intent(in)              :: dim_lat(3)
     integer,intent(in)              :: nmag
-!    class(lattice),intent(in)    :: lat
     integer,intent(in)              :: dim_mode
     real(8),intent(in),optional     :: vec_val(dim_mode),val    !possibities to initialize order parameters
-    integer                         :: N
-    integer                         :: l,k,j,i          
+    !internal
+    integer                         :: N,i
    
     if(nmag>1) ERROR STOP "THIS STILL USES OLD SETIP WITH NMAG AS LAST PARAMETER"
     !initialize real array data if necessary and associate pointers
@@ -125,28 +119,6 @@ subroutine init_order_par(self,dim_lat,nmag,dim_mode,vec_val,val)
     endif
 
     if(present(val)) self%all_modes=val
-
-    !initialize vec_pointer data if necessary and associate pointers
-    N=product(dim_lat)*nmag
-    if(.not.associated(self%data_vecpoint))then
-        !allocate(self%data_vecpoint(dim_lat(1),dim_lat(2),dim_lat(3),nmag))
-        allocate(self%data_vecpoint(N))
-    else
-        if(size(self%data_vecpoint)/=N)then
-            STOP "lattice shape does not match initializing already allocated order_par%data_vecpoint"
-        endif
-    endif
-    self%l_modes(1:dim_lat(1),1:dim_lat(2),1:dim_lat(3),1:nmag)=>self%data_vecpoint
-    self%all_l_modes(1:N)=>self%data_vecpoint
-    do l=1,nmag
-       do k=1,dim_lat(3)
-          do j=1,dim_lat(2)
-             do i=1,dim_lat(1)
-                self%l_modes(i,j,k,l)%w=>self%modes(:,i,j,k,l)
-             enddo
-          enddo
-       enddo
-    enddo
 end subroutine
 
 subroutine final_order_par(self)
@@ -157,11 +129,8 @@ end subroutine
 
 subroutine delete_order_par(self)
     class(order_par),intent(inout) :: self
-    
-    nullify(self%all_l_modes,self%l_modes)
-    if(associated(self%data_vecpoint)) deallocate(self%data_vecpoint)
 
-    nullify(self%all_modes,self%modes)
+    nullify(self%all_modes,self%modes,self%modes_v)
     if(associated(self%data_real)) deallocate(self%data_real)
 end subroutine
 

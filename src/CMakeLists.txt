@@ -35,7 +35,7 @@ src/solvers/solver_commun.f90
 src/solvers/solver.f90
 src/solvers/solver_order.f90
 src/solvers/update_time.f90
-src/torques/torques.f90
+#src/torques/torques.f90
 src/utilities/coordinatesv4.f90
 src/utilities/error.f90
 src/utilities/fit.f90

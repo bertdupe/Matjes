@@ -2,7 +2,6 @@ module m_tracker
 use m_topoplot
 use m_topo_commons
 use m_derived_types, only : lattice
-use m_basic_types, only : vec_point
 use m_io_files_utils
 use m_get_position
 
@@ -23,6 +22,9 @@ type(pattern), allocatable :: all_patterns(:)
 
 ! tracking frequency
 integer :: track_freq=1
+
+!neighbors for topological charge calculation
+integer,allocatable ::  Q_neigh(:,:)
 
 private
 public :: init_tracking, plot_tracking
@@ -56,11 +58,12 @@ field=0.0d0
 pos=0.0d0
 
 call get_position(pos,'positions.dat ')
+Call neighbor_Q(my_lattice,Q_neigh)
 
 
-call get_topoplot(field)
+call get_topoplot(field,my_lattice,Q_neigh)
 
-Q=get_charge()
+Q=get_charge(my_lattice,Q_neigh)
 
 N_pat=abs( NINT((Q(1)+Q(2))/pi/4.0d0) )
 

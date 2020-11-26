@@ -12,7 +12,6 @@ subroutine parallel_tempering(my_lattice,motif,io_simu,ext_param)
     use m_createspinfile
     use m_derived_types, only : t_cell,io_parameter,simulation_parameters
     use m_derived_types, only : lattice
-    use m_basic_types, only : vec_point
     use m_lattice, only : my_order_parameters
     use m_topo_commons
     use m_convert

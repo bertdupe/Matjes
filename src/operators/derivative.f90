@@ -1,4 +1,6 @@
 module m_derivative
+!HAS TO BE UPDATED TO NEW VERSION WITH CONTIGUOUS ORDER PARAMETERS
+#if 0
 use m_basic_types, only : vec_point
 use m_derived_types, only : lattice
 
@@ -238,5 +240,5 @@ else
 endif
 
 end function
-
+#endif
 end module m_derivative

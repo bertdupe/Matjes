@@ -1,7 +1,6 @@
 module m_gneb_utils
 use m_vector, only : calc_ang,norm,normalize,project
 use m_path, only: the_path
-use m_basic_types, only : vec_point, vec
 use m_derived_types, only : io_parameter,lattice
 use m_gneb_parameters, only : do_norm_rx,en_zero
 use m_rotation, only : rotation_axis,rotate

@@ -37,18 +37,18 @@ type symop
  character(len=10) :: name
 end type symop
 
-! type vector and vector pointers
-type vec
-     real(kind=8) :: w(3)
-end type vec
+!! type vector and vector pointers
+!type vec
+!     real(kind=8) :: w(3)
+!end type vec
 
 type vec_dim_N
      real(kind=8), allocatable :: w(:)
 end type vec_dim_N
 
-type vec_point
-     real(kind=8), pointer :: w(:)
-end type vec_point
+!type vec_point
+!     real(kind=8), pointer :: w(:)
+!end type vec_point
 
 ! simple pointer types
 type int_pointer

@@ -10,7 +10,6 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     use m_topocharge_all
     use m_store_relaxation
     use m_derived_types, only : lattice
-    use m_basic_types, only : vec_point
     use m_H_public
     use m_topo_commons
     use m_io_utils

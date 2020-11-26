@@ -8,6 +8,7 @@ use m_shape_excitations
 use m_get_position
 use m_convert
 use m_type_lattice
+implicit none
 
 ! variable that contains the the excitations form (sweep of EM field...)
 type excitations
@@ -155,7 +156,6 @@ end subroutine
 
 
 subroutine update_EMT_of_r(i,lat)
-    use m_basic_types, only : vec_point
     implicit none
     integer, intent(in) :: i
     type(lattice), intent(inout) :: lat

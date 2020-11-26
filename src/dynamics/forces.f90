@@ -1,5 +1,6 @@
 module m_forces
-
+!HAS TO BE UPDATED TO NEW VERSION WITH CONTIGUOUS ORDER PARAMETERS
+#if 0
 contains
 
 subroutine forces(tag,field,N_dim,r)
@@ -66,5 +67,6 @@ enddo
 call close_file(fname,io_file)
 
 end subroutine forces
+#endif
 
 end module m_forces
