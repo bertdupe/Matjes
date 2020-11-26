@@ -179,7 +179,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     
     
        write(6,'(5(a,f18.9,2x))') 'M= ',norm(M_av(:,n_kt)), &
-         & 'E= ',E_av(n_kT),'Q+= ',qeulerp_av(n_kT),'Q-= ',qeulerm_av(n_kT),'Q= ',qeulerp_av(n_kT)+qeulerm_av(n_kT)
+         & 'E= ',E_av(n_kT),'Q+= ',qeulerp_av(n_kT),'Q-= ',-qeulerm_av(n_kT),'Q= ',qeulerp_av(n_kT)-qeulerm_av(n_kT)
     
     
        if (Gra_log) then
@@ -208,8 +208,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     ! write the data into a file
     do i=1,io_MC%n_Tsteps
        Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), &
-         &             M_sum_av(:,i)/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
-         &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
+         &             M_sum_av(:,i)/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), -qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
+         &             qeulerp_av(i), chi_Q(2,i), -qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
     enddo
     close(7) 
 
