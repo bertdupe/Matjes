@@ -57,6 +57,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     real(kind=8),allocatable :: E_err_av(:),M_err_av(:,:)
     ! sums
     real(kind=8),allocatable :: M_sq_sum_av(:,:),E_sum_av(:),E_sq_sum_av(:),Q_sq_sum_av(:),Qp_sq_sum_av(:),Qm_sq_sum_av(:)
+    real(kind=8),allocatable ::  Re_MpMm_sum_av(:), Im_MpMm_sum_av(:)
     ! energy and so on
     real(kind=8),allocatable :: E_av(:),qeulerp_av(:),qeulerm_av(:),kt_all(:),M_av(:,:)
     real(kind=8),allocatable :: M_sum_av(:,:),vortex_av(:,:),chi_l(:,:)
@@ -84,6 +85,9 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     allocate(C_av(size_table),chi_Q(4,size_table))
     ! everything for the topological charge
     allocate(Q_sq_sum_av(size_table),Qp_sq_sum_av(size_table),Qm_sq_sum_av(size_table))
+	! for <M+M->
+    allocate(Re_MpMm_sum_av(size_table),Im_MpMm_sum_av(size_table))
+
     !     magnetisation
     allocate(M_sum_av(3,size_table),M_sq_sum_av(3,size_table),chi_l(3,size_table),chi_M(3,size_table),M_av(3,size_table))
     allocate(vortex_av(3,size_table),qeulerp_av(size_table),qeulerm_av(size_table))
@@ -130,6 +134,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     Q_sq_sum_av=0.0d0
     Qp_sq_sum_av=0.0d0
     Qm_sq_sum_av=0.0d0
+	Re_MpMm_sum_av=0.0d0
+	Im_MpMm_sum_av=0.0d0
     chi_l=0.0d0
     chi_M=0.0d0
     M_av=0.0d0
@@ -146,7 +152,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     
     
     write(6,'(/a)') 'Initialization done'
-    write(6,'((a,3x,f14.5,a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', (qeulerp+qeulerm)/pi*0.25d0
+    write(6,'((a,3x,f14.5,a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', (qeulerp-qeulerm)/pi*0.25d0
     write(6,'(a/)') '---------------------'
     
     Do n_kT=1,io_MC%n_Tsteps
@@ -162,7 +168,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     
     ! CalculateAverages makes the averages from the sums
            Call CalculateAverages(my_lattice,Q_neigh,qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
-                    &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),E_total,Magnetization)
+                    &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),Re_MpMm_sum_av,Im_MpMm_sum_av,E_total,Magnetization)
     !**************************
     !!!!!!!!!!!!!!!!!!!!!!!!!!!
        end do ! over n_MC
