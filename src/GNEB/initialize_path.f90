@@ -25,7 +25,6 @@ subroutine path_initialization(images,io_simu,io_gneb,Ham)
     class(t_H),intent(in)           :: Ham(:)
     ! internal variable
     integer :: nim
-    character(:),allocatable        ::  momfile_i,momfile_f
     
     nim=size(images)
 
