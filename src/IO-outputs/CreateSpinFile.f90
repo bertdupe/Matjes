@@ -10,8 +10,6 @@ implicit none
   interface CreateSpinFile
        module procedure CreateSpinFile_lattice_usernamed
        module procedure CreateSpinFile_I_simple_5d
-       module procedure CreateSpinFile_I_lattice_sint
-       module procedure CreateSpinFile_I_lattice_sreal
        module procedure CreateSpinFile_R_simple_5d
        module procedure CreateSpinFile_simple_4d
        module procedure CreateSpinFile_end
@@ -112,14 +110,15 @@ integer :: N(4),Natom_motif,io
 real(kind=8) :: r(3,3)
 
 
-N=shape(my_lattice%ordpar%l_modes)
-Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
+N(2:4)=my_lattice%dim_lat
+Natom_motif=my_lattice%cell%num_mag()
+N(1)=3*Natom_motif
 r=my_lattice%areal
 
 allocate(position(3,N(1),N(2),N(3),N(4)))
 position=0.0d0
 
-call get_position(position,N,r,my_motif)
+call get_position(position,N,r,my_motif)    !should probably be updated
 
 io=open_file_write(trim(adjustl(fname)))
 
@@ -144,8 +143,9 @@ integer :: N(4),Natom_motif,io
 ! calculating the angles
 real(kind=8) :: r(3,3)
 
-N=shape(my_lattice%ordpar%l_modes)
-Natom_motif=count(my_motif%atomic(:)%moment.gt.0.0d0)
+N(2:4)=my_lattice%dim_lat
+Natom_motif=my_lattice%cell%num_mag()
+N(1)=3*Natom_motif
 r=my_lattice%areal
 
 allocate(position(3,N(1),N(2),N(3),N(4)))
@@ -297,45 +297,6 @@ Close(15)
 END subroutine CreateSpinFile_I_simple_5d
 ! ===============================================================
 
-! ===============================================================
-subroutine CreateSpinFile_I_lattice_sint(signature,spin)
-Implicit none
-integer, intent(in) :: signature
-type(vec_point), intent(in) :: spin(:)
-! internal variables
-Integer :: io
-!   name of files
-character(len=50) :: fname
-
-fname=convert('Spinse_',signature,'.dat')
-io=open_file_write(fname)
-
-call dump_spinse(io,spin)
-
-call close_file(fname,io)
-
-END subroutine CreateSpinFile_I_lattice_sint
-! ===============================================================
-
-! ===============================================================
-subroutine CreateSpinFile_I_lattice_sreal(signature,spin)
-Implicit none
-real(kind=8), intent(in) :: signature
-type(vec_point), intent(in) :: spin(:)
-! internal variables
-Integer :: io
-!   name of files
-character(len=50) :: fname
-
-fname=convert('Spinse_',signature,'.dat')
-io=open_file_write(fname)
-
-call dump_spinse(io,spin)
-
-call close_file(fname,io)
-
-END subroutine CreateSpinFile_I_lattice_sreal
-! ===============================================================
 
 ! ===============================================================
       subroutine CreateSpinFile_R_simple_5d(signature,spin,shape_spin)

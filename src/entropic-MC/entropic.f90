@@ -1,4 +1,6 @@
 module m_entropic
+!NOT UPDATED TO PATRICK ORDER-PARAMETERS/HAMILTONIAN
+#if 0
 implicit none
 contains
 !
@@ -314,4 +316,5 @@ nullify(all_mode)
 write(6,'(a)') "done with entropic"
 
 end subroutine entropic
+#endif
 end module

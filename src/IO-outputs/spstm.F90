@@ -229,7 +229,7 @@
        do i_y=1,dim_lat(2)
         do i_z=1,dim_lat(3)
         i=i_x+(i_y-1)*dim_lat(1)+(i_z-1)*dim_lat(1)*dim_lat(2)
-        daten(i,:)=my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(1:3)
+        daten(i,:)=my_lattice%M%modes(:,i_x,i_y,i_z,i_m)
         enddo
        enddo
       enddo

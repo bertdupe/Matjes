@@ -1,7 +1,6 @@
 module m_gneb_utils
 use m_vector, only : calc_ang,norm,normalize,project
 use m_path, only: the_path
-use m_basic_types, only : vec_point, vec
 use m_derived_types, only : io_parameter,lattice
 use m_gneb_parameters, only : do_norm_rx,en_zero
 use m_rotation, only : rotation_axis,rotate
@@ -10,7 +9,6 @@ use m_tangent, only: tang
 use m_input_types,only: GNEB_input
 use m_type_lattice,only: lattice
 use m_H_public, only: t_H,energy_all
-use m_Beff_H,only: get_B
 implicit none
 private
 public :: find_path,find_SP,find_SP_conf
@@ -18,6 +16,8 @@ public :: find_path,find_SP,find_SP_conf
 contains
 
 subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_out)
+    use m_precision, only: truncate
+    use m_Beff_H,only: get_B
     type(io_parameter), intent(in)  :: io_simu
     real(8),intent(in)              :: ftol
     integer, intent(in)             :: nim
@@ -31,7 +31,6 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
     integer,intent(out),optional    :: ci_out
     ! internal
     integer     :: N_mag
-    integer     :: iomp
     integer(8)  :: itr
     real(8), allocatable, dimension(:,:,:) :: vel,ax
     real(8), allocatable, dimension(:,:) :: tau_i,tau,ang
@@ -47,7 +46,6 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
     real(8),pointer,contiguous     :: force1_mode(:,:),force2_mode(:,:)
     real(8),pointer,contiguous     :: force_all_3(:,:,:)
     real(8),pointer,contiguous     :: M3(:,:)
-    real(8)             :: tmp_mag(3)
     real(8),allocatable,target :: magarr_tmp(:,:)
     integer             :: ci
     real(8), allocatable, dimension(:,:) :: vel_tmp_arr
@@ -184,8 +182,9 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
             call rotate(force1_3,ax(:,:,im),ang(:,im),vel_tmp_arr)
             vel(:,:,im)=vel(:,:,im)+0.5d0*(vel_tmp_arr+force2_3)/io_gneb%mass*io_gneb%dt
         enddo
+
         force_all_3(1:dim_mode_mag,1:N_cell,1:nim)=>force2
-        fv= sum( vel * force_all_3 )/real(nim,8)
+        fv= sum(vel * force_all_3 )/real(nim,8)
         fd= sum(force2**2)/real(nim,8)
           
         if (fv<0d0) then
@@ -193,6 +192,10 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
         else
           vel=force_all_3*fv/fd
         end if
+
+        !truncate to prevent underflows
+        Call truncate(vel)
+        Call truncate(force2)
 
         force1=force2
         fchk=maxval(abs(force1))
@@ -378,5 +381,5 @@ subroutine find_SP_conf_one(ni,nf,l1,l2,lsp,ax,nsp)
        nsp=nsp/norm_local
     end if
 end subroutine find_SP_conf_one
-   
+
 end module m_gneb_utils

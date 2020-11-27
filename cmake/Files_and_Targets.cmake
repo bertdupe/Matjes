@@ -25,4 +25,6 @@ if(DEFINED add_inc)
     message(${add_inc})
     target_include_directories(Matjes PUBLIC ${add_inc})
 endif()
-
+if(DEFINED add_cflags)
+    message(${add_cflags})
+endif()

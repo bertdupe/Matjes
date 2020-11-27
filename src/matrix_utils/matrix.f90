@@ -7,7 +7,7 @@ module m_matrix
 !
 
 interface reduce
-  module procedure :: reduce_real,reduce_op,reduce_Nreal
+  module procedure :: reduce_real,reduce_Nreal
 end interface reduce
 
 
@@ -95,37 +95,6 @@ do while (test.ne.0)
 enddo
 
 mode_out=matrix_int(:,1)
-
-end subroutine
-
-!
-! take a table of operater matrices of rank P and size (n,n**P) and a matrix of size (n) and return
-! a matric a vector of size n. Used typically for the Hamiltonian of rank N > 2
-!
-! energy%value(i,iomp),energy%value(i,iomp)%num,S_int,spin(iomp)%w,spin(j)%w
-subroutine reduce_op(matrix_in,n_order,mode_out,mode_1,mode_2,dim_ham)
-use m_basic_types, only : Op_real_order_N
-implicit none
-integer, intent(in) :: dim_ham,n_order
-real(kind=8), intent(in) :: mode_1(:),mode_2(:)
-type(Op_real_order_N), intent(in) :: matrix_in
-real(kind=8), intent(inout) :: mode_out(:)
-! internal functions
-integer :: i
-real(kind=8) :: big_mode(dim_ham,n_order)
-real(kind=8) :: mode_int(dim_ham)
-
-mode_out=0.0d0
-big_mode(:,1)=mode_2
-
-call reduce_real(matrix_in%order_op(1)%Op_loc,mode_out,big_mode(:,1),dim_ham)
-
-big_mode(:,1)=mode_1
-do i=2,n_order
-   big_mode(:,2)=mode_2
-   call reduce_Nreal(matrix_in%order_op(2)%Op_loc,mode_int,big_mode,dim_ham)
-   mode_out=mode_out+mode_int
-enddo
 
 end subroutine
 

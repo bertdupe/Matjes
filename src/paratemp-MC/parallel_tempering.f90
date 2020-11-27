@@ -1,3 +1,5 @@
+!NOT UPDATED TO PATRICK ORDER-PARAMETERS/HAMILTONIAN
+#if 0
 subroutine parallel_tempering(my_lattice,motif,io_simu,ext_param)
     use m_topocharge_all
     use m_set_temp
@@ -10,7 +12,6 @@ subroutine parallel_tempering(my_lattice,motif,io_simu,ext_param)
     use m_createspinfile
     use m_derived_types, only : t_cell,io_parameter,simulation_parameters
     use m_derived_types, only : lattice
-    use m_basic_types, only : vec_point
     use m_lattice, only : my_order_parameters
     use m_topo_commons
     use m_convert
@@ -544,3 +545,4 @@ do j_optset=1,N_temp
     call close_file('EM.dat',io_EM)
 
       end subroutine parallel_tempering
+#endif

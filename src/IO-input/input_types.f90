@@ -3,6 +3,18 @@ use m_constants, only : pi
 implicit none
 private :: pi
 public
+
+type extpar_input
+    real(8) ::  H(3)=0.0d0
+    real(8) ::  E(3)=0.0d0
+    real(8) ::  T(2)=0.0d0
+    logical :: enable_H=.false.
+    logical :: enable_E=.false.
+    logical :: enable_T=.false.
+    logical :: enable_M=.false.
+    logical :: enable_u=.false.
+end type
+
 type MC_input
     !parameters what is run how often
     integer     :: n_Tsteps=1

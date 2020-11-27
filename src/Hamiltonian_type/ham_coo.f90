@@ -11,7 +11,6 @@ type,extends(t_H) :: t_H_coo
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: init
     procedure :: init_1
     procedure :: init_mult_2
 
@@ -97,7 +96,7 @@ end subroutine
 
 subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
-    use m_derived_types, only: operator_real_order_N,lattice
+    use m_derived_types, only: lattice
     class(t_H_coo),intent(inout)    :: this
 
     type(lattice),intent(in)        :: lat
@@ -160,7 +159,7 @@ end subroutine
 subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
     !(example: ME-coupling M_i*E_i*M_j
-    use m_derived_types, only: operator_real_order_N,lattice
+    use m_derived_types, only: lattice
     class(t_H_coo),intent(inout)    :: this
 
     type(lattice),intent(in)        :: lat
@@ -219,72 +218,6 @@ subroutine check_H(this)
     if(any(this%colind<1)) STOP "H_coo colind entry smaller than 1"
 
 end subroutine
-    
-
-
-
-subroutine init(this,energy_in,lat)
-    use m_derived_types, only: operator_real_order_N,lattice
-    class(t_H_coo),intent(inout)    :: this
-    type(operator_real_order_N)     :: energy_in
-    type(lattice),intent(in)        :: lat
-
-    integer             :: nnz
-    integer             :: i,j,l,ii
-    integer             :: i1,i2
-    integer             :: N_neigh
-    integer             :: N_persite,N_site
-
-    real(8),allocatable :: val(:)
-    integer,allocatable :: rowind(:),colind(:)
-
-
-    N_neigh=size(energy_in%line,1)
-    N_site=size(energy_in%line,2)
-    
-    !estimate size
-    N_persite=0
-    do i=1,N_neigh
-        N_persite=N_persite+count(energy_in%value(i,1)%order_op(1)%Op_loc /= 0.0d0)
-    enddo
-    nnz=N_persite*N_site
-
-    !fill temporary coordinate format spare matrix
-    allocate(val(nnz),source=0.0d0)
-    allocate(colind(nnz),source=0)
-    allocate(rowind(nnz),source=0)
-    ii=0
-    do i=1,N_site
-        do l=1,N_neigh
-            j=energy_in%line(l,i)
-            do i2=1,lat%dim_mode
-                do i1=1,lat%dim_mode
-                    if(energy_in%value(l,i)%order_op(1)%Op_loc(i1,i2)/= 0.0d0)then
-                        ii=ii+1
-                        !CHECK COLIND ROWIND
-                        colind(ii)=(j-1)*lat%dim_mode+i1
-                        rowind(ii)=(i-1)*lat%dim_mode+i2
-                        val(ii)=energy_in%value(l,i)%order_op(1)%Op_loc(i1,i2)
-                    endif
-                enddo
-            enddo
-        enddo
-    enddo
-
-    !fill type
-    this%nnz=ii
-    this%dimH=N_site*lat%dim_mode
-    allocate(this%colind,source=colind(1:this%nnz))
-    deallocate(colind)
-    allocate(this%rowind,source=rowind(1:this%nnz))
-    deallocate(rowind)
-    allocate(this%val,source=val(1:this%nnz))
-    deallocate(val)
-    ERROR STOP "NEEDS op_l op_R do be set somewhere"
-!    Call this%init_base(lat)
-    Call check_H(this)
-
-end subroutine 
 
 subroutine eval_single(this,E,i_m,lat)
     use m_derived_types, only: lattice

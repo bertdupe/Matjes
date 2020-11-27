@@ -12,16 +12,12 @@ interface get_Op_in_Op
    module procedure get_Op_3D_in_Op_3D_Xshell,get_Op_2D_in_Op_2D
 end interface
 
-interface convoluate_Op_SOC_vector
-   module procedure convoluate_Op_2D_SOC_vector_1D
-end interface
-
 interface convoluate_Op_sym
    module procedure convoluate_Op_sym_file,convoluate_Op_sym_bond
 end interface
 
 private
-public :: get_diagonal_Op,get_symmetric_Op,get_Op_in_Op,convoluate_Op_SOC_vector,get_borders,convoluate_Op_sym
+public :: get_diagonal_Op,get_symmetric_Op,get_Op_in_Op,convoluate_Op_sym
 
 contains
 
@@ -186,35 +182,6 @@ do i=1,shape_Op_big(3)
 enddo
 
 end subroutine
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-! convolutate the Hamiltonian with the D vector for the DMI rules
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine convoluate_Op_2D_SOC_vector_1D(D,Op_DMI,H)
-use m_derived_types, only : site_Ham
-implicit none
-real(kind=8), intent(in) :: D(:),Op_DMI(:,:)
-real(kind=8), intent(inout) :: H(:,:)
-! internal variable
-
-H(1,2)=Op_DMI(1,2)*D(3)
-H(1,3)=Op_DMI(1,3)*D(2)
-H(2,3)=Op_DMI(2,3)*D(1)
-
-H(2,1)=Op_DMI(2,1)*D(3)
-H(3,1)=Op_DMI(3,1)*D(2)
-H(3,2)=Op_DMI(3,2)*D(1)
-
-H(1,1)=Op_DMI(1,1)
-H(2,2)=Op_DMI(2,2)
-H(3,3)=Op_DMI(3,3)
-
-end subroutine convoluate_Op_2D_SOC_vector_1D
-
-
 
 
 
@@ -401,85 +368,5 @@ write(6,'(2a)') 'error in the subroutine  ',string
 stop
 
 end subroutine
-
-
-
-
-
-
-
-! dumy functions
-subroutine get_borders(name_int,x_start,x_end,name_ext,y_start,y_end,my_order_parameters)
-use m_derived_types, only : order_parameter
-implicit none
-character(len=*), intent(in) :: name_int,name_ext
-type(order_parameter), intent(in) :: my_order_parameters(:)
-integer, intent(out) :: x_start,x_end,y_start,y_end
-! internal
-integer :: n_mode_int,n_mode_ext
-integer, allocatable :: positions_int(:,:), positions_ext(:,:)
-
-n_mode_int=find_n_mode(name_int,my_order_parameters)
-allocate(positions_int(2,n_mode_int))
-positions_int=0
-call find_position(name_int,my_order_parameters,positions_int)
-
-x_start=minval(positions_int)
-x_end=maxval(positions_int)
-
-n_mode_ext=find_n_mode(name_ext,my_order_parameters)
-allocate(positions_ext(2,n_mode_ext))
-positions_ext=0
-call find_position(name_ext,my_order_parameters,positions_ext)
-! check the data
-
-y_start=minval(positions_ext)
-y_end=maxval(positions_ext)
-
-end subroutine
-
-
-! find the position of the order parameters in the lattice
-subroutine find_position(name,my_order_parameters,position)
-use m_derived_types, only : order_parameter
-implicit none
-character(len=*), intent(in) :: name
-type(order_parameter), intent(in) :: my_order_parameters(:)
-integer, intent(inout) :: position(:,:)
-! internal
-integer :: n_mode,i,n_mode_int
-
-n_mode=size(position,2)
-n_mode_int=0
-
-do i=1,size(my_order_parameters)
-   if (name.eq.trim(my_order_parameters(i)%name)) then
-      n_mode_int=n_mode_int+1
-      position(1,n_mode_int)=my_order_parameters(i)%start
-      position(2,n_mode_int)=my_order_parameters(i)%end
-   endif
-enddo
-
-if (n_mode_int.ne.n_mode) stop 'ERROR in find_position - more mode read than found'
-
-end subroutine
-
-! find the occurence of name in an array of order parameters
-function find_n_mode(name,my_order_parameters)
-use m_derived_types, only : order_parameter
-implicit none
-character(len=*), intent(in) :: name
-type(order_parameter), intent(in) :: my_order_parameters(:)
-integer :: find_n_mode
-! internal
-integer :: i
-
-find_n_mode=0
-! find the number of occurence of name in the array of my_order_parameters
-do i=1,size(my_order_parameters)
-   if (name.eq.trim(my_order_parameters(i)%name)) find_n_mode=find_n_mode+1
-enddo
-
-end function
 
 end module m_symmetry_operators

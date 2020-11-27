@@ -1,6 +1,5 @@
 set(main_f90 ${main_f90}
 src/setup/arrange_neihg.f90
-src/setup/create_lattice.f90
 src/setup/get-position.f90
 src/setup/indexation.f90
 src/setup/mapping.f90
