@@ -3,15 +3,12 @@ implicit none
 private
 public order_par
 
-! unit cells
-! the unit cell can be magnetic, ferroelectric or nothing and can also have transport
-
 type order_par
 !variable that contains and order parameter field saved in data_real with modes/all_modes/modes_v pointing to that with different shapes
 
-!data_real REQUIRE UTMOST CARE, DON'T CHANGE THEM EXTERNALLY AND THINK WHAT YOU TO
+!data_real REQUIRE UTMOST CARE, DON'T CHANGE THEM EXTERNALLY AND THINK CAREFULLY ABOUT WHAT YOU DO
 !UNDER NO CIRCUMSTANCES REMOVE PRIVATE FROM data_real
-!THAT COULD LEAD TO A GIGANTIC MESS WITH MEMORY LEAK
+!THAT COULD LEAD TO A GIGANTIC MESS WITH MEMORY LEAKS
 
     real(8),pointer,private,contiguous      :: data_real(:)=>null() !main pointer that get allocated
     !pointers onto data_real, which can be adressed from outside
@@ -27,9 +24,41 @@ contains
     procedure :: delete => delete_order_par
     procedure :: read_file
     procedure :: truncate
+    procedure :: bcast
     final :: final_order_par
 end type
 contains
+
+subroutine bcast(this,comm)
+use mpi_basic                
+    class(order_par),intent(inout)  ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N
+    integer     :: mode_shape(5)
+    integer     :: dim_lat(3)
+    integer     :: nmag
+    integer     :: dim_mode
+
+    Call MPI_Bcast(this%dim_mode, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(comm%ismas)then
+        N=size(this%data_real)
+        mode_shape=shape(this%modes)
+    endif
+    Call MPI_Bcast(mode_shape, 5, MPI_INTEGER, comm%mas, comm%com,ierr)
+    dim_mode=mode_shape(1)
+    dim_lat=mode_shape(2:4)
+    nmag=mode_shape(5) !obsolete and should always be 1
+    if(.not.comm%ismas)then
+        Call this%init(dim_lat,nmag,dim_mode)
+    endif
+    Call MPI_Bcast(this%modes, size(this%modes), MPI_REAL8, comm%mas, comm%com,ierr)
+#else
+    continue
+#endif
+end subroutine
 
 subroutine truncate(this,eps_in)
     class(order_par),intent(inout)      :: this

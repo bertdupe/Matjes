@@ -1,6 +1,7 @@
 /.ptp-sync/
 /build_cmake/
 /config.cmake
+/Matjes
 # Prerequisites
 *.d
 

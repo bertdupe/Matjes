@@ -1,5 +1,8 @@
 #include <iostream>
 #include <Eigen/Sparse>
+#ifdef CPP_MPI
+#include <mpi.h>
+#endif
 
 using namespace Eigen;
 
@@ -24,6 +27,35 @@ void eigen_H_init(
 
     *Ham =new SpMat{Hdim[0],Hdim[1]};
   	(*Ham)->setFromTriplets(tripletList.begin(), tripletList.end());
+}
+
+void eigen_H_bcast(
+    int id,
+    int mas,
+    bool ismas,
+    SpMat **Ham,
+    MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    long shape[3], rows, cols, nnz;
+    if(ismas){
+        (**Ham).makeCompressed();
+        rows=(**Ham).rows();
+        cols=(**Ham).cols();
+        nnz=(**Ham).nonZeros();
+        shape[0]=rows, shape[1]=cols, shape[2]=nnz;
+    }
+    MPI_Bcast(shape, 3, MPI_LONG,mas, comm);
+    rows=shape[0], cols=shape[1], nnz=shape[2];
+    if(not ismas){
+        *Ham =new SpMat{rows,cols};
+        (*Ham)->reserve(nnz);
+    }
+    int ierr;
+    ierr=MPI_Bcast((**Ham).valuePtr(),nnz ,MPI_DOUBLE,mas, comm);
+    ierr=MPI_Bcast((**Ham).innerIndexPtr(),nnz ,MPI_INT,mas, comm);
+    ierr=MPI_Bcast((**Ham).outerIndexPtr(),cols ,MPI_INT,mas, comm);
+    (**Ham).outerIndexPtr()[cols] = nnz;
 }
 
 void eigen_H_add(

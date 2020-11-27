@@ -1,22 +1,33 @@
-      SUBROUTINE init_rand_seed()
-#ifdef CPP_MPI
-      use m_mpi_prop, only : irank
-#endif
-      Implicit none
-      INTEGER :: i, n, clock
-      INTEGER, DIMENSION(:), ALLOCATABLE :: seed
-      
-      CALL RANDOM_SEED(size = n)
-      ALLOCATE(seed(n))
+module m_random_init
+    Implicit none
+    private
+    public :: random_init
 
-      CALL SYSTEM_CLOCK(COUNT=clock)
+contains
 
-#ifdef CPP_MPI
-      seed=clock+37*(irank+1)*(/ (i - 1, i = 1, n) /)
+subroutine random_init()
+    use mpi_basic, only: mpi_world
+    use m_get_random, only: init_mtprng
+
+#ifdef CPP_MRG
+    call init_mtprng(mpi_world%id+1)
 #else
-      seed=clock+37*(/ (i - 1, i = 1, n) /)
+    Call init_rand_seed(mpi_world%id+1)
 #endif
-      CALL RANDOM_SEED(PUT = seed)
+end subroutine
 
-      DEALLOCATE(seed)
-      END SUBROUTINE init_rand_seed
+subroutine init_rand_seed(id)
+    !initialize internal random number generatal
+    integer,intent(in)  :: id
+    INTEGER :: i, n, clock
+    INTEGER, DIMENSION(:), ALLOCATABLE :: seed
+    
+    CALL RANDOM_SEED(size = n)
+    allocate(seed(n))
+    CALL SYSTEM_CLOCK(COUNT=clock)
+    seed=clock+37*(id)*[ (i-1, i = 1, n) ]
+    CALL RANDOM_SEED(PUT = seed)
+    deallocate(seed)
+end subroutine init_rand_seed
+
+end module

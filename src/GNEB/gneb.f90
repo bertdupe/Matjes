@@ -5,7 +5,7 @@ use m_rw_GNEB,only: rw_gneb,GNEB_input
 use m_io_gneb,only: write_path,write_en
 use m_write_spin, only: WriteSpinAndCorrFile
 use m_createspinfile, only: CreateSpinFile
-use m_derived_types, only: lattice,io_parameter,simulation_parameters
+use m_derived_types, only: lattice,io_parameter
 use m_initialize_path, only: path_initialization
 use m_spline, only: hermite_fit,spline_hermite_val
 implicit none
@@ -13,10 +13,9 @@ private
 public GNEB
 
 contains
-subroutine GNEB(my_lattice,io_simu,ext_param,Ham)
+subroutine GNEB(my_lattice,io_simu,Ham)
     type(lattice), intent(in)       :: my_lattice
     type(io_parameter), intent(in)  :: io_simu
-    type(simulation_parameters), intent(in) :: ext_param
     class(t_H),intent(in)      :: Ham(:)
     !internal variable
     type(GNEB_input)            :: io_gneb

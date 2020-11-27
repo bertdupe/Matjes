@@ -26,6 +26,7 @@ type lattice
      integer        :: nmag  !this has to be set somewhere consistently
      integer, allocatable :: world(:)
      logical :: periodic(3) !lattice periodic in direction
+     logical,private :: order_set(number_different_order_parameters)=.false. !logical variable which saves which orderparameters has been set
 
      real(8),allocatable :: sc_vec_period(:,:)   !real space vectors used to minimize distance using supercell periodicity
 
@@ -44,6 +45,8 @@ contains
     !basic function
     procedure :: copy => copy_lattice
     procedure :: copy_val_to => copy_val_lattice
+    !mpi functions
+    procedure :: bcast
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point
     procedure :: set_order_comb
@@ -186,13 +189,14 @@ subroutine init_order(this,cell,extpar_io)
     if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) dim_modes(3)=3
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) dim_modes(4)=1
     if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
+    this%order_set=dim_modes>0
 
     !new orderparameter format
-    if(dim_modes(1)>0) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1))
-    if(dim_modes(2)>0) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2))
-    if(dim_modes(3)>0) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
-    if(dim_modes(4)>0) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
-    if(dim_modes(5)>0) Call this%u%init(this%dim_lat,this%nmag,dim_modes(5))
+    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1))
+    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2))
+    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
+    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
+    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%nmag,dim_modes(5))
 end subroutine
 
 subroutine read_order(this,suffix_in,fexist_out)
@@ -211,11 +215,11 @@ subroutine read_order(this,suffix_in,fexist_out)
         suffix=suffix_default
     endif
     fexist=.false.
-    if(this%M%dim_mode>0) Call this%M%read_file(trim(order_parameter_name(1))//suffix,fexist(1))
-    if(this%E%dim_mode>0) Call this%E%read_file(trim(order_parameter_name(2))//suffix,fexist(2))
-    if(this%B%dim_mode>0) Call this%B%read_file(trim(order_parameter_name(3))//suffix,fexist(3))
-    if(this%T%dim_mode>0) Call this%T%read_file(trim(order_parameter_name(4))//suffix,fexist(4))
-    if(this%u%dim_mode>0) Call this%u%read_file(trim(order_parameter_name(5))//suffix,fexist(5))
+    if(this%order_set(1)) Call this%M%read_file(trim(order_parameter_name(1))//suffix,fexist(1))
+    if(this%order_set(2)) Call this%E%read_file(trim(order_parameter_name(2))//suffix,fexist(2))
+    if(this%order_set(3)) Call this%B%read_file(trim(order_parameter_name(3))//suffix,fexist(3))
+    if(this%order_set(4)) Call this%T%read_file(trim(order_parameter_name(4))//suffix,fexist(4))
+    if(this%order_set(5)) Call this%u%read_file(trim(order_parameter_name(5))//suffix,fexist(5))
     if(present(fexist_out)) fexist_out=fexist
 end subroutine
 
@@ -291,12 +295,7 @@ subroutine lattice_used_order(this,used)
     class(lattice),intent(in)   :: this
     logical,intent(out)         :: used(number_different_order_parameters)
 
-    used=.False.
-    if(this%M%dim_mode>0) used(1)=.True.
-    if(this%E%dim_mode>0) used(2)=.True.
-    if(this%B%dim_mode>0) used(3)=.True.
-    if(this%T%dim_mode>0) used(4)=.True.
-    if(this%u%dim_mode>0) used(5)=.True.
+    used=this%order_set
 end subroutine
 
 function index_m_1(this,indm)result(ind1)
@@ -812,38 +811,38 @@ subroutine get_position_cell(pos,dim_lat,lat)
     enddo
 end subroutine 
 
-subroutine copy_lattice(self,copy)
-    class(lattice),intent(in)    :: self
+subroutine copy_lattice(this,copy)
+    class(lattice),intent(in)    :: this
     class(lattice),intent(out)   :: copy
     
-    copy%areal=self%areal
-    copy%astar=self%astar
-    copy%a_sc=self%a_sc
-    copy%a_sc_inv=self%a_sc_inv
-    copy%dim_lat=self%dim_lat
-    copy%ncell=self%ncell
-    copy%n_system=self%n_system
-    copy%dim_mode=self%dim_mode
-    copy%nmag=self%nmag
-    copy%periodic=self%periodic
-    if(allocated(self%world)) allocate(copy%world,source=self%world)
-    if(allocated(self%sc_vec_period)) allocate(copy%sc_vec_period,source=self%sc_vec_period)
+    copy%areal=this%areal
+    copy%astar=this%astar
+    copy%a_sc=this%a_sc
+    copy%a_sc_inv=this%a_sc_inv
+    copy%dim_lat=this%dim_lat
+    copy%ncell=this%ncell
+    copy%n_system=this%n_system
+    copy%dim_mode=this%dim_mode
+    copy%nmag=this%nmag
+    copy%periodic=this%periodic
+    if(allocated(this%world)) allocate(copy%world,source=this%world)
+    if(allocated(this%sc_vec_period)) allocate(copy%sc_vec_period,source=this%sc_vec_period)
 
-    if(self%M%dim_mode>0) Call self%M%copy(copy%M,self%dim_lat,self%nmag)
-    if(self%E%dim_mode>0) Call self%E%copy(copy%E,self%dim_lat,self%nmag)
-    if(self%B%dim_mode>0) Call self%B%copy(copy%B,self%dim_lat,self%nmag)
-    if(self%T%dim_mode>0) Call self%T%copy(copy%T,self%dim_lat,self%nmag)
-    if(self%u%dim_mode>0) Call self%u%copy(copy%u,self%dim_lat,self%nmag)
+    if(this%order_set(1)) Call this%M%copy(copy%M,this%dim_lat,this%nmag)
+    if(this%order_set(2)) Call this%E%copy(copy%E,this%dim_lat,this%nmag)
+    if(this%order_set(3)) Call this%B%copy(copy%B,this%dim_lat,this%nmag)
+    if(this%order_set(4)) Call this%T%copy(copy%T,this%dim_lat,this%nmag)
+    if(this%order_set(5)) Call this%u%copy(copy%u,this%dim_lat,this%nmag)
 end subroutine
 
-subroutine copy_val_lattice(self,copy)
-    class(lattice),intent(inout)    :: self,copy
+subroutine copy_val_lattice(this,copy)
+    class(lattice),intent(inout)    :: this,copy
    
-    if(self%m%dim_mode>0) Call self%M%copy_val(copy%M)
-    if(self%e%dim_mode>0) Call self%E%copy_val(copy%E)
-    if(self%b%dim_mode>0) Call self%B%copy_val(copy%B)
-    if(self%t%dim_mode>0) Call self%T%copy_val(copy%T)
-    if(self%u%dim_mode>0) Call self%u%copy_val(copy%u)
+    if(this%order_set(1)) Call this%M%copy_val(copy%M)
+    if(this%order_set(2)) Call this%E%copy_val(copy%E)
+    if(this%order_set(3)) Call this%B%copy_val(copy%B)
+    if(this%order_set(4)) Call this%T%copy_val(copy%T)
+    if(this%order_set(5)) Call this%u%copy_val(copy%u)
 end subroutine
 
 function op_name_to_int(name_in)result(int_out)
@@ -886,4 +885,46 @@ function vec_first_sc(this,vec_in)result(vec_out)
     ind=floor(matmul(this%a_sc_inv,vec_in))
     vec_out=vec_in-matmul(real(ind,8),this%a_sc)
 end function
+
+subroutine bcast(this,comm)
+use mpi_basic                
+    class(lattice),intent(inout)    ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N
+
+    Call MPI_Bcast(this%areal   , 9, MPI_REAL8, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%astar   , 9, MPI_REAL8, comm%mas, comm%com,ierr)
+    CALL this%cell%bcast(comm)
+    Call MPI_Bcast(this%dim_lat , 3, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%Ncell   , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%a_sc    , 9, MPI_REAL8, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%a_sc_inv, 9, MPI_REAL8, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%dim_mode, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%n_system, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%nmag    , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%periodic, 3, MPI_LOGICAL, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%order_set, size(this%order_set), MPI_LOGICAL, comm%mas, comm%com,ierr)
+
+    if(comm%ismas) N=size(this%world)
+    Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas) allocate(this%world(N))
+    Call MPI_Bcast(this%world, N, MPI_INTEGER, comm%mas, comm%com,ierr)
+
+    if(comm%ismas) N=size(this%world)
+    Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas) allocate(this%sc_vec_period(3,N/3))
+    Call MPI_Bcast(this%sc_vec_period, N, MPI_REAL8, comm%mas, comm%com,ierr)
+
+    if(this%order_set(1)) Call this%M%bcast(comm)
+    if(this%order_set(2)) Call this%E%bcast(comm)
+    if(this%order_set(3)) Call this%B%bcast(comm)
+    if(this%order_set(4)) Call this%T%bcast(comm)
+    if(this%order_set(5)) Call this%u%bcast(comm)
+#else
+    continue
+#endif
+end subroutine
 end module

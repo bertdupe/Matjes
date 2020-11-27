@@ -1,6 +1,6 @@
 module m_basic_types
 
-
+private :: atom_bcast
 !!!!!!!!!!!!!!!!!!!!!!!!!
 !
 !  Basic type to store strings with different length
@@ -23,6 +23,8 @@ type atom
      real(8), dimension(3) :: position
      real(8) :: moment=0.0d0
      real(8) :: charge=0.0d0
+     contains
+     procedure :: bcast => atom_bcast
 end type atom
 
 !!!!!!!!!!!!!!!!!!!!!!!!!
@@ -63,6 +65,8 @@ end type
 type bool_var
      logical :: value
      character(len=30) :: name
+     contains
+     procedure :: bcast => bool_var_bcast
 end type bool_var
 
 type vec_var
@@ -79,5 +83,39 @@ type int_var
      integer :: value
      character(len=30) :: name
 end type int_var
+contains 
+
+subroutine atom_bcast(this,comm)
+    use mpi_basic                
+    class(atom),intent(inout)    ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    Call MPI_Bcast(this%name, 30, MPI_CHARACTER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%position, 3, MPI_REAL8, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%moment, 1, MPI_REAL8, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%charge, 1, MPI_REAL8, comm%mas, comm%com,ierr)
+    !could be done more elegantly with custom MPI_type
+#else
+    continue
+#endif
+end subroutine
+
+
+subroutine bool_var_bcast(this,comm)
+    use mpi_basic                
+    class(bool_var),intent(inout)   ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    Call MPI_Bcast(this%name, 30, MPI_CHARACTER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%value, 1, MPI_LOGICAL, comm%mas, comm%com,ierr)
+    !could be done more elegantly with custom MPI_type
+#else
+    continue
+#endif
+end subroutine
 
 end module m_basic_types

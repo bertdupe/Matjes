@@ -16,6 +16,7 @@ contains
     procedure :: init_mult_2   
 
     procedure :: add_child 
+    procedure :: bcast_child 
     procedure :: destroy_child    
     procedure :: copy_child 
 
@@ -172,6 +173,18 @@ subroutine add_child(this,H_in)
     class default
         STOP "Cannot add t_H_eigen type with Hamiltonian that is not a class of t_H_eigen"
     end select
+end subroutine 
+
+subroutine bcast_child(this,comm)
+    use mpi_basic                
+    class(t_H_eigen),intent(inout)  ::  this
+    type(mpi_type),intent(in)       ::  comm
+    integer ::  ierr
+#ifdef CPP_MPI
+    Call eigen_H_bcast(comm%id,comm%mas,comm%ismas,this%H,comm%com) 
+#else
+    continue
+#endif
 end subroutine 
 
 subroutine destroy_child(this)

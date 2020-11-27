@@ -14,12 +14,14 @@ contains
     procedure :: init_1
     procedure :: init_mult_2
 
+    procedure :: bcast_child
     procedure :: destroy_child
     procedure :: copy_child
     procedure :: add_child
 
     procedure :: optimize
     procedure :: mult_l,mult_r
+
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -52,6 +54,15 @@ subroutine optimize(this)
 
     STOP "IMPLEMENT optimize FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
+
+subroutine bcast_child(this,comm)
+    use mpi_basic                
+    class(t_H_coo),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    STOP "IMPLEMENT bcast_child FOR t_H_coo in m_H_coo if really necessary"
+end subroutine 
+
 
 subroutine destroy_child(this)
     class(t_H_coo),intent(inout)    :: this

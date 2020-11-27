@@ -96,8 +96,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     kt_all=0.0d0
     Gra_log=io_simu%io_Xstruct
     i_print_W=io_simu%io_warning
-    kTini=ext_param%ktini%value
-    kTfin=ext_param%ktfin%value
+    kTini=ext_param%ktini
+    kTfin=ext_param%ktfin
     N_cell=my_lattice%Ncell
     spstmL=io_simu%io_spstmL
     filen_kt_acc=5

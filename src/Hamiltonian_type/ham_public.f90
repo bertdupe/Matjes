@@ -53,6 +53,24 @@ contains
 #endif
     end subroutine
 
+    subroutine Bcast_Harr(ham,comm)
+        use mpi_basic                
+        class(t_H),intent(inout),allocatable    ::  ham(:)
+        type(mpi_type),intent(in)               ::  comm
+#ifdef CPP_MPI
+        integer     ::  i,N
+
+        if(comm%ismas) N=size(ham)
+        Call MPI_Bcast(N,1, MPI_INTEGER, comm%mas, comm%com,i)
+        if(.not.comm%ismas) Call get_Htype_N(ham,N)
+        do i=1,size(ham)
+            Call Ham(i)%bcast(mpi_world)
+        enddo
+#else
+        continue
+#endif
+    end subroutine
+
     function energy_all(ham,lat)result(E)
         !get all energies from an energy array
         class(t_H),intent(in)       ::  ham(:)

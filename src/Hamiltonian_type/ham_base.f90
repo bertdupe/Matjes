@@ -29,6 +29,7 @@ contains
     procedure                               :: mult_r_single,mult_l_single !multipy out with left/right side
 
     !really non_overridable
+    procedure,NON_OVERRIDABLE               :: bcast
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
     procedure,NON_OVERRIDABLE               :: add
@@ -37,6 +38,7 @@ contains
     procedure(int_add_H),deferred           :: add_child
     procedure(int_destroy),deferred         :: destroy_child
     procedure(int_copy),deferred            :: copy_child
+    procedure(int_bcast),deferred           :: bcast_child
 
     !misc.
     procedure,NON_OVERRIDABLE  :: is_set
@@ -128,6 +130,13 @@ interface
         import t_h
         class(t_H),intent(in)         :: this
         class(t_H),intent(inout)      :: Hout
+    end subroutine
+
+    subroutine int_bcast(this,comm)
+        use mpi_basic                
+        import t_h
+        class(t_H),intent(inout)        ::  this
+        type(mpi_type),intent(in)       ::  comm
     end subroutine
 
 end interface
@@ -275,6 +284,37 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!                    BASE ROUTINES                                !!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+    subroutine bcast(this,comm)
+        use mpi_basic                
+        class(t_H),intent(inout)        ::  this
+        type(mpi_type),intent(in)       ::  comm
+#ifdef CPP_MPI
+        integer     :: ierr
+        integer     :: N(2)
+    
+        Call MPI_Bcast(this%dimH    ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_mode,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%set     ,   1, MPI_LOGICAL  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%desc    , 100, MPI_CHARACTER, comm%mas, comm%com,ierr)
+
+        if(comm%ismas)then
+            N(1)=size(this%op_l)
+            N(2)=size(this%op_r)
+        endif
+        Call MPI_Bcast(N, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
+        if(.not.comm%ismas)then
+            allocate(this%op_l(N(1)),this%op_r(N(2)))
+        endif
+        Call MPI_Bcast(this%op_l,N(1), MPI_INTEGER, comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%op_r,N(2), MPI_INTEGER, comm%mas, comm%com,ierr)
+        Call this%bcast_child(comm)
+#else
+        continue
+#endif
+    end subroutine
+
     subroutine copy(this,Hout)
         !copy this to Hout
         class(t_H),intent(in)         :: this

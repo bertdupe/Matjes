@@ -7,7 +7,7 @@ contains
 ! Entropic sampling Monte Carlo
 !
 !
-subroutine entropic(my_lattice,my_motif,io_simu,ext_param,Hams)
+subroutine entropic(my_lattice,my_motif,io_simu,Hams)
 use mtprng
 use m_choose_spin
 use m_constants, only : pi,k_B
@@ -22,7 +22,6 @@ use m_H_public, only: t_H,energy_single,energy_all
 type(lattice), intent(inout) :: my_lattice
 type(t_cell), intent(in) :: my_motif
 type(io_parameter), intent(in) :: io_simu
-type(simulation_parameters), intent(in) :: ext_param
 class(t_H),intent(in)       ::  Hams(:)
 !------------------------------------------
 ! internal variable

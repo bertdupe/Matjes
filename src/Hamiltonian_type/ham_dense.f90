@@ -14,6 +14,7 @@ contains
     procedure :: init_mult_2   
 
     procedure :: add_child 
+    procedure :: bcast_child 
     procedure :: destroy_child    
     procedure :: copy_child 
 
@@ -164,6 +165,27 @@ subroutine copy_child(this,Hout)
         STOP "Cannot copy t_h_dense type with Hamiltonian that is not a class of t_h_dense"
     end select
 end subroutine
+
+subroutine bcast_child(this,comm)
+    use mpi_basic                
+    class(t_H_dense),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N(2)
+    
+    if(comm%ismas)then
+        N=shape(this%H)
+    endif
+    Call MPI_Bcast(N, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas)then
+        allocate(this%H(N(1),N(2)))
+    endif
+    Call MPI_Bcast(this%H,size(this%H), MPI_REAL8, comm%mas, comm%com,ierr)
+#else
+    continue
+#endif
+end subroutine 
 
 subroutine add_child(this,H_in)
     class(t_h_dense),intent(inout)    :: this

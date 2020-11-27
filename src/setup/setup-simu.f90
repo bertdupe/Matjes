@@ -21,11 +21,11 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     use m_rw_motif
     use m_rw_H
     use m_H_public
-#ifdef CPP_MPI
-    use m_make_box
-    use m_split_work
-    use m_mpi_prop, only : isize,irank,irank_working,N,start
-#endif
+!#ifdef CPP_MPI
+!    use m_make_box
+!    use m_split_work
+!    use m_mpi_prop, only : isize,irank,irank_working,N,start
+!#endif
     
     ! this subroutine is used only to setup the simulation box
     ! it reads first the parameters of the simulation i.e. inp file
@@ -84,11 +84,11 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     call ext_param_rw(ext_param)
     Call rw_extpar(extpar_io)
 
-#ifdef CPP_MPI
-    if (irank.eq.0) write(6,'(a)') 'checking for the presence of electric field'
-#else
+!#ifdef CPP_MPI
+!    if (irank.eq.0) write(6,'(a)') 'checking for the presence of electric field'
+!#else
     write(6,'(a,/)') 'checking for the presence of electric field'
-#endif
+!#endif
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!
     !!! create the lattice depending on the simulation that one chooses
@@ -177,11 +177,11 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     
     deallocate(tabledist,tableNN,indexNN)
     
-#ifdef CPP_MPI
-    if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'
-#else
+!#ifdef CPP_MPI
+!    if (irank.eq.0) write(6,'(/,a/)') 'the setup of the simulation is over'
+!#else
     write(6,'(/,a,/)') 'the setup of the simulation is over'
-#endif
+!#endif
     if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
     !!!!!!!!!!!!!! end of the setup
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

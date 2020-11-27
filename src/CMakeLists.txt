@@ -19,7 +19,7 @@ include(src/IO-utils/CMakeLists.txt)
 include(src/libraries_and_variables/CMakeLists.txt) 
 include(src/matrix_utils/CMakeLists.txt) 
 include(src/operators/CMakeLists.txt)
-#include(src/parallelization/CMakeLists.txt)  #requires fftw, and is not updated
+include(src/parallelization/CMakeLists.txt)
 include(src/paratemp-MC/CMakeLists.txt) 
 include(src/PIMC/CMakeLists.txt) 
 include(src/random-numbers/CMakeLists.txt) 

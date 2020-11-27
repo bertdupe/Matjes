@@ -11,8 +11,28 @@ type t_cell
      procedure :: num_mag => get_num_mag
      procedure :: get_magmom
      procedure :: get_mag_magmom
+     procedure :: bcast
 end type
 contains
+
+subroutine bcast(this,comm)
+use mpi_basic                
+    class(t_cell),intent(inout)    ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N,i
+    if(comm%ismas) N=size(this%atomic)
+    Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas) allocate(this%atomic(N))
+    do i=1,N
+        Call this%atomic(i)%bcast(comm)
+    enddo   
+#else
+    continue
+#endif
+end subroutine
 
 subroutine get_magmom(this,magmom)
     !returns the magnetic moments of all atoms included in cell

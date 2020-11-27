@@ -8,12 +8,12 @@
       subroutine qorien_2D(spins,shape_spin,my_lattice)
       use m_vector, only : sorien
       use m_derived_types
-#ifdef CPP_MPI
-      use m_parameters, only : i_ghost,Periodic_log,n_ghost
-      use m_mpi
-      use m_make_box, only : Xstart,Xstop,Ystart,Ystop
-      use m_mpi_prop, only : MPI_COMM_BOX
-#endif
+!#ifdef CPP_MPI
+!      use m_parameters, only : i_ghost,Periodic_log,n_ghost
+!      use m_mpi
+!      use m_make_box, only : Xstart,Xstop,Ystart,Ystop
+!      use m_mpi_prop, only : MPI_COMM_BOX
+!#endif
       implicit none
       real(kind=8), intent(in) :: spins(:,:,:)
       integer, intent(in) :: shape_spin(:)
@@ -25,14 +25,14 @@
 ! coordinate of the spin
       integer :: X,Y,Z
       logical :: Periodic_log(3)
-#ifndef CPP_MPI
+!#ifndef CPP_MPI
       integer :: Xstart,Xstop,Ystart,Ystop
 
       Xstart=1
       Xstop=shape_spin(2)
       Ystart=1
       Ystop=shape_spin(3)
-#endif
+!#endif
 
       map_int=0.0d0
       X=shape_spin(1)-3
@@ -74,15 +74,15 @@
 !$OMP end parallel do
 #endif
 
-#ifdef CPP_MPI
-      if (i_ghost) then
-       map_qorien=allreduce(map_int,shape_spin(2:3),3,MPI_COMM_BOX)
-       else
+!#ifdef CPP_MPI
+!      if (i_ghost) then
+!       map_qorien=allreduce(map_int,shape_spin(2:3),3,MPI_COMM_BOX)
+!       else
+!       map_qorien=map_int
+!      endif
+!#else
        map_qorien=map_int
-      endif
-#else
-       map_qorien=map_int
-#endif
+!#endif
 
       end subroutine qorien_2D
 
@@ -90,12 +90,12 @@
       subroutine qorien_2D_SL(spins,shape_spin,my_lattice)
       use m_vector, only : sorien
       use m_derived_types
-#ifdef CPP_MPI
-      use m_parameters, only : i_ghost,Periodic_log,n_ghost
-      use m_mpi
-      use m_make_box, only : Xstart,Xstop,Ystart,Ystop
-      use m_mpi_prop, only : MPI_COMM_BOX
-#endif
+!#ifdef CPP_MPI
+!      use m_parameters, only : i_ghost,Periodic_log,n_ghost
+!      use m_mpi
+!      use m_make_box, only : Xstart,Xstop,Ystart,Ystop
+!      use m_mpi_prop, only : MPI_COMM_BOX
+!#endif
       implicit none
       real(kind=8), intent(in) :: spins(:,:,:,:)
       integer, intent(in) :: shape_spin(:)
@@ -106,7 +106,7 @@
       real(kind=8) :: map_qorien(3,shape_spin(2),shape_spin(3))
 ! coordinate of the spin
       integer :: X,Y,Z
-#ifndef CPP_MPI
+!#ifndef CPP_MPI
       integer :: Xstart,Xstop,Ystart,Ystop
       logical :: Periodic_log(3)
 
@@ -115,7 +115,7 @@
       Xstop=shape_spin(2)
       Ystart=1
       Ystop=shape_spin(3)
-#endif
+!#endif
 
       map_int=0.0d0
       X=shape_spin(1)-3
@@ -194,13 +194,13 @@
 !$OMP end parallel do
 #endif
 
-#ifdef CPP_MPI
-      if (i_ghost) then
-       map_qorien=allreduce(map_int,shape_spin(2:3),3,MPI_COMM_BOX)
-       else
-       map_qorien=map_int
-      endif
-#endif
+!#ifdef CPP_MPI
+!      if (i_ghost) then
+!       map_qorien=allreduce(map_int,shape_spin(2:3),3,MPI_COMM_BOX)
+!       else
+!       map_qorien=map_int
+!      endif
+!#endif
 
       map_qorien=map_int
 

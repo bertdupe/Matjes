@@ -11,6 +11,15 @@ module m_eigen_H_interface
            real( kind = c_double ),intent(in)      :: val(*)
            type(C_PTR),intent(inout)               :: H
         end subroutine
+
+        subroutine eigen_H_bcast(id,mas,ismas,mat,comm) bind( c, name="eigen_H_bcast" )
+           use, intrinsic :: iso_c_binding
+           integer( kind = c_int ),value            :: id    !MPI-rank of the processor
+           integer( kind = c_int ),value            :: mas   !MPI-rank of the master
+           logical( kind = c_bool ),value           :: ismas !is master to bcast from
+           type(C_PTR),intent(inout)                :: mat   !matrix to broadcast
+           integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator  the processor
+        end subroutine
         
         subroutine eigen_H_mult_mat_vec(mat,vec_in,vec_out) bind( c, name="eigen_H_mult_mat_vec" )
            use, intrinsic :: iso_c_binding

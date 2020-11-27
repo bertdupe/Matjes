@@ -87,7 +87,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     !!!! Select the propagators and the integrators
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    call select_propagator(ext_param%ktini%value,N_loop)
+    call select_propagator(ext_param%ktini,N_loop)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! Create copies of lattice with order-parameter for intermediary states
@@ -123,14 +123,14 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     io_stochafield=io_simu%io_Tfield
     gra_freq=io_simu%io_frequency
     gra_topo=io_simu%io_topo
-    ktini=ext_param%ktini%value
-    ktfin=ext_param%ktfin%value
+    ktini=ext_param%ktini
+    ktfin=ext_param%ktfin
     kt=ktini
     Eold=100.0d0
     real_time=0.0d0
     Einitial=0.0d0
-    h_int=ext_param%H_ext%value
-    E_int=ext_param%E_ext%value
+    h_int=ext_param%H_ext
+    E_int=ext_param%E_ext
     said_it_once=.False.
     security=0.0d0
     

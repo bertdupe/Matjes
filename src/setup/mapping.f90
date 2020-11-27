@@ -81,9 +81,9 @@ end subroutine mapping
 subroutine mapping_1D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
-#ifdef CPP_MPI
-use m_make_box, only : Xstart
-#endif
+!#ifdef CPP_MPI
+!use m_make_box, only : Xstart
+!#endif
 implicit none
 ! variable that come in
 integer, intent(in) :: nei
@@ -137,9 +137,9 @@ end subroutine mapping_1D
 subroutine mapping_2D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
-#ifdef CPP_MPI
-use m_make_box, only : Xstart,Ystart
-#endif
+!#ifdef CPP_MPI
+!use m_make_box, only : Xstart,Ystart
+!#endif
 #ifdef CPP_OPENMP
 use omp_lib
 #endif
@@ -160,10 +160,10 @@ integer :: i,j,l,i_Nei,avant,dim_lat(3)
 integer :: v_x,v_y,ok
 real (kind=8) :: vec(3),dist,r(3,3)
 logical :: found
-#ifndef CPP_MPI
+!#ifndef CPP_MPI
 integer, parameter ::  Xstart=1
 integer, parameter ::  Ystart=1
-#endif
+!#endif
 #ifdef CPP_OPENMP
 integer :: ithread,nthreads
 
@@ -220,9 +220,9 @@ end subroutine mapping_2D
 subroutine mapping_2D_SL(d,nei,Nei_il,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
-#ifdef CPP_MPI
-use m_make_box, only : Xstart,Ystart
-#endif
+!#ifdef CPP_MPI
+!use m_make_box, only : Xstart,Ystart
+!#endif
 implicit none
 integer, intent(in) :: nei,Nei_il
 type(lattice), intent(in) :: my_lattice
@@ -329,9 +329,9 @@ end subroutine mapping_2D_SL
 subroutine mapping_2D_motif(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
-#ifdef CPP_MPI
-use m_make_box, only : Xstart,Ystart
-#endif
+!#ifdef CPP_MPI
+!use m_make_box, only : Xstart,Ystart
+!#endif
 implicit none
 integer, intent(in) :: nei
 type(lattice), intent(in) :: my_lattice
@@ -400,9 +400,9 @@ end subroutine mapping_2D_motif
 subroutine mapping_3D(d,nei,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : lattice
-#ifdef CPP_MPI
-use m_make_box, only : Xstart,Ystart,Zstart
-#endif
+!#ifdef CPP_MPI
+!use m_make_box, only : Xstart,Ystart,Zstart
+!#endif
 implicit none
 ! variable that come in
 integer, intent(in) :: nei
@@ -484,9 +484,9 @@ end subroutine mapping_3D
 subroutine mapping_3D_motif_SL(d,nei,Nei_il,Nei_z,indexNN,tableNN,my_lattice)
 use m_vector , only : norm
 use m_derived_types, only : t_cell,lattice
-#ifdef CPP_MPI
-use m_make_box, only : Xstart,Ystart,Zstart
-#endif
+!#ifdef CPP_MPI
+!use m_make_box, only : Xstart,Ystart,Zstart
+!#endif
 implicit none
 ! variable that come in
 integer, intent(in) :: nei,Nei_il,Nei_z
@@ -503,11 +503,11 @@ integer :: v_x,v_y,v_z,ok
 integer :: i,j,k,l,i_Nei,avant,i_p,i_phase,dim_lat(3)
 real (kind=8) :: vec(3),dist,r(3,3)
 logical :: found
-#ifndef CPP_MPI
+!#ifndef CPP_MPI
 integer, parameter ::  Xstart=1
 integer, parameter ::  Ystart=1
 integer, parameter ::  Zstart=1
-#endif
+!#endif
 
 avant=0
 Xstop=size(tableNN,3)
