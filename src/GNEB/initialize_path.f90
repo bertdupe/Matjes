@@ -6,7 +6,6 @@ use m_derived_types, only : io_parameter
 use m_rotation, only : rotation_axis
 use m_convert
 use m_path
-use m_operator_pointer_utils
 use m_write_spin
 use m_createspinfile
 use m_energyfield

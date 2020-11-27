@@ -13,7 +13,6 @@ end interface get_cols
 interface dump_spinse
  module procedure dump_config_spinse
  module procedure dump_config_spinse_spin
- module procedure dump_config_spinse_vec_point
 end interface dump_spinse
 
 interface dump_config
@@ -21,7 +20,6 @@ interface dump_config
  module procedure dump_config_matrix_2D_real
  module procedure dump_config_matrix_5D_real
  module procedure dump_config_FFT
- module procedure dump_config_vec_point
  module procedure dump_config_order
 end interface dump_config
 
@@ -124,65 +122,34 @@ end subroutine dump_config_spinse_spin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local spinse files
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse_vec_point(io,spin)
-implicit none
-integer, intent(in) :: io
-type(vec_point), intent(in) :: spin(:)
-! internale variables
-! internal variables
-!     calculating the angles
-real(kind=8) :: theta, phi
-!     Is the row even (1) or not (0)
-Integer :: i,shape_spin
-!     colors
-real(kind=8) :: Rc,Gc,Bc
-!   name of files
-
-shape_spin=size(spin)
-
-do i=1,shape_spin
-
-   call get_colors(Rc,Gc,Bc,theta,phi,spin(i)%w(:))
-
-   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(i),',',Rc,',',Bc,',',Gc,')'
-
-enddo
-
-end subroutine dump_config_spinse_vec_point
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write the local spinse files
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse(io,my_lattice,position)
-use m_derived_types
-use m_derived_types, only: lattice
-use m_constants, only : pi
-implicit none
-integer, intent(in) :: io
-type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: position(:,:,:,:,:)
-! internale variables
-Integer :: i_x,i_y,i_z,i_m,N(4)
-real(kind=8) :: Rc,Gc,Bc,theta,phi
-
-N=shape(my_lattice%ordpar%l_modes)
-
-do i_m=1,N(4)
-   Do i_z=1,N(3)
-      Do i_y=1,N(2)
-         Do i_x=1,N(1)
+subroutine dump_config_spinse(io,lat,position)
+!    use m_derived_types
+    use m_derived_types, only: lattice
+    use m_constants, only : pi
+    implicit none
+    integer, intent(in) :: io
+    type(lattice), intent(in) :: lat
+    real(kind=8), intent(in) :: position(:,:,:,:,:)
+    ! internale variables
+    Integer :: i_x,i_y,i_z,i_m,N(4)
+    real(kind=8) :: Rc,Gc,Bc,theta,phi
 
 
-        call get_colors(Rc,Gc,Bc,theta,phi,my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(:))
-
-         write(io,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
-
+    do i_m=1,lat%M%dim_mode/3
+       Do i_z=1,lat%dim_lat(3)
+          Do i_y=1,lat%dim_lat(2)
+             Do i_x=1,lat%dim_lat(1)
+    
+            call get_colors(Rc,Gc,Bc,theta,phi,lat%M%modes((i_m-1)*3+1:i_m*3,i_x,i_y,i_z,1))
+    
+             write(io,'(8(a,f16.8),a)') 'Spin(', &
+         & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
+         & Rc,',',Bc,',',Gc,')'
+    
+             enddo
          enddo
-     enddo
-   enddo
-enddo
+       enddo
+    enddo
 
 end subroutine dump_config_spinse
 
@@ -238,27 +205,30 @@ enddo
 
 end subroutine dump_config_matrix_5D_real
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write the local modes configurations
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_modes(io,my_lattice)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! routine that reads and write the local modes configurations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine dump_config_modes(io,lat)
+!this probably is supposed to write out all modes, but right now I updated it to
+!just write out the M mode since I am not sure if this is still used
 use m_derived_types, only : lattice
 implicit none
 integer, intent(in) :: io
-type(lattice), intent(in) :: my_lattice
+type(lattice), intent(in) :: lat
 ! internale variables
 Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
 character(len=100) :: rw_format
 
-N=shape(my_lattice%ordpar%l_modes)
 
-write(rw_format,'( "(", I4, "f14.8,2x)" )') my_lattice%dim_mode
+N(1:3)=lat%dim_lat
+
+write(rw_format,'( "(", I4, "f14.8,2x)" )') lat%M%dim_mode
 
 do i_z=1,N(3)
   do i_y=1,N(2)
     do i_x=1,N(1)
 
-    Write(io,rw_format) ((my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(j_lat), j_lat=1,my_lattice%dim_mode),i_m=1,N(4))
+    Write(io,rw_format) ((lat%M%modes(i_m,i_x,i_y,i_z,1), j_lat=1,lat%M%dim_mode),i_m=1,N(4))
 
     enddo
   enddo
@@ -284,38 +254,6 @@ write(io,rw_format) order%all_modes
 
 end subroutine
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write an array of pointer configurations
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_vec_point(io,modes)
-use m_derived_types, only : vec_point
-implicit none
-integer, intent(in) :: io
-type(vec_point), intent(in) :: modes(:)
-! internale variables
-Integer :: i,N,N_data,j_lat
-character(len=20) :: rw_format
-
-N=size(modes)
-N_data=size(modes(1)%w)
-
-write(rw_format,'( "(", I4, "f14.8)" )') N_data
-
-do i=1,N
-
-    Write(io,rw_format) (modes(i)%w(j_lat), j_lat=1,N_data)
-
-enddo
-
-end subroutine dump_config_vec_point
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! return the maximal index of parameters of the same type
-! in: io tag
-! in: variable name (for example J_ D_ or whatever)
-! in: name of the file
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 function max_ind_variable(io,var_name,fname) result(max_ind)
     implicit none
@@ -478,6 +416,7 @@ integer, intent(in) :: io,natom
 character(len=*), intent(in) :: var_name,fname
 ! internal variable
 integer :: fin,nread,i,check,length_string,n_read_at
+integer :: stat
 character(len=100) :: str
 logical :: success_read
 
@@ -502,9 +441,23 @@ do
       ! find if the variable that was given in input is found in the parameters
       do i=1,natom
          n_read_at=n_read_at+1
-         read(io,*) atomic(i)%name,atomic(i)%position,atomic(i)%moment
+         read(io,'(a)',iostat=fin) str
+         read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position,atomic(i)%moment,atomic(i)%charge
+         if(stat==0)then
+            write(*,*) "Read magnetic moment and charge from atom",i
+         else
+            read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position,atomic(i)%moment
+            if(stat==0)then
+                write(*,*) "Read magnetic moment from atom",i
+            else
+                read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position
+                if(stat/=0)then
+                    write(*,*) "ERROR READING ATOM NUMBER",i
+                endif
+                write(*,*) "Read only position for atom",i
+            endif
+         endif
       enddo
-
    endif
 
 enddo

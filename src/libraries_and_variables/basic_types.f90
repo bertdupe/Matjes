@@ -1,26 +1,5 @@
 module m_basic_types
 
-! Hamiltonian variables
-type site_Ham
-     real(kind=8), dimension(:,:), allocatable :: H
-end type site_Ham
-
-!!!!
-!Operator of the simulations
-!!!!
-
-type Op_real
-     real(kind=8), pointer :: Op_loc(:,:)
-end type Op_real
-
-type Op_real_order_N
-     type(Op_real), allocatable :: order_op(:)
-     integer :: num
-end type Op_real_order_N
-
-type Op_Im
-     complex(kind=8), pointer :: Op_loc(:,:)
-end type Op_Im
 
 !!!!!!!!!!!!!!!!!!!!!!!!!
 !
@@ -41,8 +20,9 @@ end type var_name
 
 type atom
      character(len=30) :: name
-     real(kind=8) :: moment
-     real(kind=8), dimension(3) :: position
+     real(8), dimension(3) :: position
+     real(8) :: moment=0.0d0
+     real(8) :: charge=0.0d0
 end type atom
 
 !!!!!!!!!!!!!!!!!!!!!!!!!
@@ -57,18 +37,18 @@ type symop
  character(len=10) :: name
 end type symop
 
-! type vector and vector pointers
-type vec
-     real(kind=8) :: w(3)
-end type vec
+!! type vector and vector pointers
+!type vec
+!     real(kind=8) :: w(3)
+!end type vec
 
 type vec_dim_N
      real(kind=8), allocatable :: w(:)
 end type vec_dim_N
 
-type vec_point
-     real(kind=8), pointer :: w(:)
-end type vec_point
+!type vec_point
+!     real(kind=8), pointer :: w(:)
+!end type vec_point
 
 ! simple pointer types
 type int_pointer

@@ -1,6 +1,5 @@
 module m_MCstep
 use m_derived_types, only : lattice
-use m_basic_types, only : vec_point
 use m_sampling
 use m_choose_spin
 use m_relaxtyp
@@ -31,9 +30,6 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,H
     type(mtprng_state) :: state
     !     Energy difference Delta E and -DE/kT, Dmag and Dq
     real(kind=8) :: DE,E_new,E_old,Dmag(3)
-    real(kind=8) :: tmp
-    !     memory value for Theta
-    real(kind=8) :: choice
     !     flipped Spin
     real(kind=8) :: S_new(3),S_old(3)
     integer :: iomp

@@ -1,5 +1,4 @@
 module m_tangent
-use m_basic_types, only : vec
 use m_vector, only : norm, project
 use m_projection
 use m_derived_types, only : lattice

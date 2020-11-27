@@ -1,11 +1,12 @@
 module m_path
-use m_type_lattice,only: lattice
 !
 ! files that contains the routine to calculate the path for the GNEB
 !
 !
 !
+use m_type_lattice,only: lattice
 use m_vector, only : norm
+implicit none
 
 private
 public :: the_path,geodesic_path
@@ -15,7 +16,6 @@ contains
 !> Calculate poly-geodesic length of the path
 subroutine the_path(images,pathlen)
     use m_vector, only : calc_ang
-    use m_basic_types, only : vec_point
     implicit none
     type(lattice), intent(in)   :: images(:)
     real(8), intent(out)        :: pathlen(size(images))
@@ -136,8 +136,6 @@ end subroutine geodesic_path_one
 
 subroutine geodesic_path(amp_rnd,images)
     use m_get_random
-    use m_basic_types, only : vec
-    use m_operator_pointer_utils
     implicit none
     real(8), intent(in)             :: amp_rnd
     type(lattice), intent(inout)    :: images(:)

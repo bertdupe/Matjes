@@ -1,4 +1,5 @@
 message("gitversion :${GITVERSION}")
+add_compile_definitions(${GITVERSION})
 
 if(${COMPOP} STREQUAL "release")
 	message("using release compile options")

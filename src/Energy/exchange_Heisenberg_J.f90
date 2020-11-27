@@ -6,7 +6,6 @@ public read_J_input, get_exchange_J
 contains
 subroutine read_J_input(io_param,fname,io)
     use m_io_utils
-    use m_input_H_types, only: io_H_aniso
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
     type(io_H_J),intent(out)        :: io

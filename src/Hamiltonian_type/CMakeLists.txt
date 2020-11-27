@@ -5,7 +5,6 @@ src/Hamiltonian_type/ham_coo.f90
 src/Hamiltonian_type/ham_dense.f90
 src/Hamiltonian_type/ham_dense_blas.f90
 src/Hamiltonian_type/ham_eigen.f90
-src/Hamiltonian_type/ham_manual.f90
 src/Hamiltonian_type/ham_sparse_mkl.f90
 )
 

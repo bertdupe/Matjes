@@ -6,7 +6,6 @@ use m_io_utils
 use m_io_files_utils
 use m_init_variables
 use m_derived_types
-use m_lattice
 use m_setup_simu
 use m_write_spin
 use m_createspinfile
@@ -77,7 +76,7 @@ call close_file('input',io_param)
 call setup_simu(io_simu,all_lattices,motif,ext_param,Ham_res,Ham_comb)
 
 ! number of cell in the simulation
-N_cell=size(all_lattices%ordpar%l_modes)
+N_cell=product(all_lattices%dim_lat)
 n_system=all_lattices%n_system
 
 write(6,'(I6,a)') N_cell, ' unit cells'
@@ -158,18 +157,17 @@ if (my_simu%name == 'minimize_infdamp')then
     call minimize_infdamp(all_lattices,io_simu,io_min,Ham_comb)
 endif
 !---------------------------------
-!  Part which does the GNEB
+!  Part which does the molecular dynamics
 !---------------------------------
 
-!        if (my_simu%i_pimc) then
-!            write(6,'(a)') 'entering into the path integral monte carlo routine'
-!
-!            call pimc(state,i_biq,i_dm,i_four,i_dip,EA,h_ext, &
-!                    & spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,N_cell)
+if (my_simu%name == 'molecular_dynamics')then
 
-!        endif
+     write(6,'(a)') 'entering into the molecular dynamics routines'
+     call molecular_dynamics(all_lattices,io_simu)
+
+endif
+
 !---------------------------------
-!  Part which does the PIMC
 !---------------------------------
 
 Call write_config('end',all_lattices)
