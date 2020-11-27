@@ -35,6 +35,8 @@ M_err_av=0.0d0
 Total_MC_Steps=dble(n_average)
 chi_Q=0.0d0
 
+
+
 do i=1,size_table
      C(i)=(E_sq_sum_av(i)/Total_MC_Steps-(E_sum_av(i)/(Total_MC_Steps))**2)/kT(i)**2/N_cell
      chi_M(:,i)=(M_sq_sum_av(:,i)/Total_MC_Steps-(M_sum_av(:,i)/Total_MC_Steps)**2)/kT(i)/N_cell
@@ -44,7 +46,7 @@ do i=1,size_table
      M_av(:,i)=M_sum_av(:,i)/Total_MC_Steps/N_cell
      qeulerp_av(i)=qeulerp_av(i)/Total_MC_Steps/pi/4.0d0
      qeulerm_av(i)=qeulerm_av(i)/Total_MC_Steps/pi/4.0d0
-     chi_Q(1,i)= (Q_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-(qeulerp_av(i)+qeulerm_av(i))**2)/kT(i)
+     chi_Q(1,i)= (Q_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-(qeulerp_av(i)+qeulerm_av(i))**2)/kT(i) ! /!\ the sign of this changed compared to the serial subroutine?
      chi_Q(2,i)=(Qp_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-qeulerp_av(i)**2)/kT(i)
      chi_Q(3,i)=(Qm_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-qeulerm_av(i)**2)/kT(i)
      chi_Q(4,i)=((-Qm_sq_sum_av(i)/Total_MC_Steps/16.0d0/pi**2-qeulerm_av(i)**2)* &
@@ -77,7 +79,7 @@ subroutine Calculate_thermo_serial(Cor_log,n_average, &
     M_err_av=0.0d0
     Total_MC_Steps=dble(n_average)
     chi_Q=0.0d0
-    
+
     !      If compiled serial!
     C=(E_sq_sum_av/Total_MC_Steps-(E_sum_av/(Total_MC_Steps))**2)/kT**2/N_cell
     chi_M=(M_sq_sum_av(:)/Total_MC_Steps-(M_sum_av(:)/Total_MC_Steps)**2)/kT/N_cell
@@ -87,11 +89,14 @@ subroutine Calculate_thermo_serial(Cor_log,n_average, &
     M_av=M_sum_av(:)/Total_MC_Steps/N_cell
     qeulerp_av=qeulerp_av/Total_MC_Steps/pi/4.0d0
     qeulerm_av=qeulerm_av/Total_MC_Steps/pi/4.0d0
-    chi_Q(1)=((qeulerp_av+qeulerm_av)**2-Q_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
-    chi_Q(2)=(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
-    chi_Q(3)=(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT
-    chi_Q(4)=((-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerm_av**2)* &
-         &   (Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerp_av**2))/kT
+
+    chi_Q(1)=-((qeulerp_av-qeulerm_av)**2 - Q_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT/(qeulerp_av-qeulerm_av)
+    chi_Q(2)=-(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT/qeulerp_av
+    chi_Q(3)=-(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT/qeulerm_av
+   ! write(*,*) "new version, chi_q = ", chi_Q(1), "chi_q- = ", chi_Q(3), "chi_q+ = ",chi_Q(2) 
+
+    chi_Q(4)=((Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerm_av**2)* &
+         &   (Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerp_av**2))/kT/(qeulerm_av*qeulerp_av)
     vortex_av(:)=vortex_av(:)/Total_MC_Steps/3.0d0/sqrt(3.0d0)
     if (Cor_log) chi_l(:)=total_MC_steps
 
@@ -116,14 +121,15 @@ subroutine update_ave(lat,Q_neigh,sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum
     
     E_sum=E_sum+E
     E_sq_sum=E_sq_sum+E**2
+
     ! calculate the topocharge
     dumy=get_charge(lat,Q_neigh)
     qeulerp=dumy(1)
-    qeulerm=dumy(2)
+    qeulerm=-dumy(2)
     
     sum_qp=sum_qp+qeulerp
     sum_qm=sum_qm+qeulerm
-    Q_sq_sum=Q_sq_sum+(qeulerp+qeulerm)**2
+    Q_sq_sum=Q_sq_sum+(qeulerp-qeulerm)**2
     Qp_sq_sum=Qp_sq_sum+qeulerp**2
     Qm_sq_sum=Qm_sq_sum+qeulerm**2
     M_sum=M_sum+Magnetization
@@ -149,7 +155,7 @@ subroutine initialize_ave(lat,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
     Magnetization=sum(M3,2) !sum over magnetization of all magnetic atoms without magnetic moment, probably not what is really wanted
     dumy=get_charge(lat,Q_neigh)
     qeulerp=dumy(1)
-    qeulerm=dumy(2)
+    qeulerm=-dumy(2)
     vortex=dumy(3:5)
     nullify(M3)
 END subroutine initialize_ave
