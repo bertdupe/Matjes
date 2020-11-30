@@ -5,7 +5,8 @@ contains
 ! Routine that does the Monte Carlo (and not the parallel tempering)
 !
 !subroutine MonteCarlo(my_lattices,mag_motif,io_simu,gra_topo,ext_param)
-subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
+subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
+    use mpi_util 
     use m_constants, only : k_b,pi
     use m_vector, only : norm
     use m_derived_types, only : lattice,t_cell,io_parameter,simulation_parameters
@@ -31,10 +32,11 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
 
     use m_input_types,only: MC_input
 
-    type(lattice), intent(inout) :: my_lattice
-    type(io_parameter), intent(in) :: io_simu
+    type(lattice), intent(inout)            :: my_lattice
+    type(io_parameter), intent(in)          :: io_simu
     type(simulation_parameters), intent(in) :: ext_param
-    class(t_H), intent(in) :: Hams(:)
+    class(t_H), intent(in)                  :: Hams(:)
+    class(mpi_type),intent(in)              :: com
     
     !!!!!!!!!!!!!!!!!!!!!!!
     ! internal variables
@@ -63,9 +65,10 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     logical :: Gra_log,i_print_W,spstmL
     integer,allocatable ::  Q_neigh(:,:)
     integer ::  filen_kt_acc(2)
+    integer :: ierr
+    integer :: iT_global(2),iT_local(2)
     
     ! initialize the variables
-!    call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,)
     call rw_MC(io_MC)
     cone=io_MC%cone
     size_table=io_MC%n_Tsteps
@@ -145,7 +148,10 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     write(6,'((a,3x,f14.5,a,3x,f9.5))') ' Total energy ', E_total, 'eV    Topological charge ', (qeulerp+qeulerm)/pi*0.25d0
     write(6,'(a/)') '---------------------'
     
-    Do n_kT=1,io_MC%n_Tsteps
+    Call mpi_barrier(com%com,ierr)
+    iT_global=[1,io_MC%n_Tsteps]
+    Call distrib_int_index(com,iT_global,iT_local)  
+    Do n_kT=iT_local(1),iT_local(2)
       kt=kt_all(n_kT)
       call Relaxation(my_lattice,io_MC,N_cell,E_total,E_decompose,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,hams,Q_neigh)
     !Monte Carlo steps, calculate the values
@@ -196,19 +202,23 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! write EM.dat output
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    OPEN(7,FILE='EM.dat',action='write',status='unknown', &
-      & position='append',form='formatted')
-      Write(7,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
-      & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
-      & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
-      & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
-    ! write the data into a file
-    do i=1,io_MC%n_Tsteps
-       Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), &
-         &             M_sum_av(:,i)/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
-         &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
-    enddo
-    close(7) 
+
+    if(com%ismas)then
+        WRITE(*,*) "I HAVE TO BCAST THESE VARIABLES"
+        OPEN(7,FILE='EM.dat',action='write',status='unknown', &
+          & position='append',form='formatted')
+          Write(7,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
+          & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
+          & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
+          & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
+        ! write the data into a file
+        do i=1,io_MC%n_Tsteps
+           Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), &
+             &             M_sum_av(:,i)/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
+             &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
+        enddo
+        close(7) 
+    endif
 
 end subroutine montecarlo
 end module

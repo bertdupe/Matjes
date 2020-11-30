@@ -109,8 +109,7 @@ Implicit None
         Call io_simu%bcast(mpi_world)
         Call ext_param%bcast(mpi_world)
         Call bcast_Harr(Ham_comb,mpi_world)
-        STOP "actually use the parallelization in MonteCarlo"
-        call MonteCarlo(all_lattices,io_simu,ext_param,Ham_comb)
+        call MonteCarlo(all_lattices,io_simu,ext_param,Ham_comb,mpi_world)
     endif
 
 
