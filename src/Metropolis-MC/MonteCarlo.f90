@@ -165,7 +165,6 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     ! CalculateAverages makes the averages from the sums
            Call CalculateAverages(my_lattice,Q_neigh,qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
                     &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),E_total,Magnetization)
-    
     !**************************
     !!!!!!!!!!!!!!!!!!!!!!!!!!!
        end do ! over n_MC
@@ -182,7 +181,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     
     
        write(6,'(5(a,f18.9,2x))') 'M= ',norm(M_av(:,n_kt)), &
-         & 'E= ',E_av(n_kT),'Q+= ',qeulerp_av(n_kT),'Q-= ',qeulerm_av(n_kT),'Q= ',qeulerp_av(n_kT)+qeulerm_av(n_kT)
+         & 'E= ',E_av(n_kT),'Q+= ',qeulerp_av(n_kT),'Q-= ',-qeulerm_av(n_kT),'Q= ',qeulerp_av(n_kT)-qeulerm_av(n_kT)
     
     
        if (Gra_log) then
@@ -202,7 +201,6 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! write EM.dat output
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
     if(com%ismas)then
         WRITE(*,*) "I HAVE TO BCAST THESE VARIABLES"
         OPEN(7,FILE='EM.dat',action='write',status='unknown', &
@@ -214,8 +212,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
         ! write the data into a file
         do i=1,io_MC%n_Tsteps
            Write(7,'(27(E20.10E3,2x),E20.10E3)') kT_all(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), &
-             &             M_sum_av(:,i)/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
-             &             qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
+             &             M_sum_av(:,i)/N_cell/(io_MC%Total_MC_Steps+io_MC%restart_MC_steps), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), -qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
+             &             qeulerp_av(i), chi_Q(2,i), -qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
         enddo
         close(7) 
     endif
