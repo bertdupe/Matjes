@@ -45,6 +45,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     real(kind=8) :: kT,kTini,kTfin
     ! variables that being followed during the simulation
     real(kind=8) :: qeulerp,qeulerm,vortex(3),magnetization(3),E_total,dumy(5)
+    real(8),pointer :: M3(:,:)
     ! contribution of the different energy parts
     real(kind=8) :: E_decompose(8)
     ! thermodynamical quantities
@@ -64,6 +65,9 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     logical :: Gra_log,i_print_W,spstmL
     integer,allocatable ::  Q_neigh(:,:)
     integer ::  filen_kt_acc(2)
+	!flat table of nearest neighbours
+	integer, allocatable :: flat_nei(:,:)
+    integer, allocatable :: indexNN(:)
     
     ! initialize the variables
 !    call rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,)
@@ -112,7 +116,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     
     Call neighbor_Q(my_lattice,Q_neigh)
     E_total=energy_all(Hams,my_lattice)
-    call CalculateAverages(my_lattice,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
+    call CalculateAverages(my_lattice,Q_neigh,qeulerp,qeulerm,vortex,M3,Magnetization)
     
     ! Measured data
     E_av=0.0d0
@@ -142,6 +146,9 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     tries=0.0d0
     nb=0.0d0
     
+    ! allocate and fill flat table of first neighbours
+	call get_neighbours(my_lattice,flat_nei,indexNN)
+
     ! initialize the temperatures
     call ini_temp(kt_all,kTfin,kTini,size_table,i_print_W)
     filen_kt_acc(1)=max(int(log10(maxval(kt_all))),1)
@@ -164,7 +171,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams)
     
     ! CalculateAverages makes the averages from the sums
            Call CalculateAverages(my_lattice,Q_neigh,qeulerp_av(n_kT),qeulerm_av(n_kT),Q_sq_sum_av(n_kT),Qp_sq_sum_av(n_kT),Qm_sq_sum_av(n_kT),vortex_av(:,n_kT),vortex &
-                    &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),Re_MpMm_sum_av,Im_MpMm_sum_av,E_total,Magnetization)
+                    &  ,E_sum_av(n_kT),E_sq_sum_av(n_kT),M_sum_av(:,n_kT),M_sq_sum_av(:,n_kT),Re_MpMm_sum_av,Im_MpMm_sum_av,E_total,M3,Magnetization,flat_nei,indexNN)
     !**************************
     !!!!!!!!!!!!!!!!!!!!!!!!!!!
        end do ! over n_MC

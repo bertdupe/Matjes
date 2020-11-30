@@ -90,11 +90,11 @@ subroutine Calculate_thermo_serial(Cor_log,n_average, &
     qeulerp_av=qeulerp_av/Total_MC_Steps/pi/4.0d0
     qeulerm_av=qeulerm_av/Total_MC_Steps/pi/4.0d0
 
-    chi_Q(1)=-((qeulerp_av-qeulerm_av)**2 - Q_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT/(qeulerp_av-qeulerm_av)
-    chi_Q(2)=-(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT/qeulerp_av
-    chi_Q(3)=-(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT/qeulerm_av
+    chi_Q(1)=-((qeulerp_av-qeulerm_av)**2 - Q_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT!/(qeulerp_av-qeulerm_av) do  in post processing
+    chi_Q(2)=-(qeulerp_av**2-Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT!/qeulerp_av
+    chi_Q(3)=-(qeulerm_av**2-Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2)/kT!/qeulerm_av
     chi_Q(4)=((Qm_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerm_av**2)* &
-         &   (Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerp_av**2))/kT/(qeulerm_av*qeulerp_av)
+         &   (Qp_sq_sum/Total_MC_Steps/16.0d0/pi**2-qeulerp_av**2))/kT!/(qeulerm_av*qeulerp_av)
 
     vortex_av(:)=vortex_av(:)/Total_MC_Steps/3.0d0/sqrt(3.0d0)
     if (Cor_log) chi_l(:)=total_MC_steps
@@ -103,15 +103,16 @@ END subroutine Calculate_thermo_serial
 
 ! ===============================================================
 subroutine update_ave(lat,Q_neigh,sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum_vortex,vortex, &
-     & E_sum,E_sq_sum,M_sum,M_sq_sum,Re_MpMm_sum,Im_MpMm_sum,E,Magnetization)
+     & E_sum,E_sq_sum,M_sum,M_sq_sum,Re_MpMm_sum,Im_MpMm_sum,E,M3,Magnetization,flat_nei,indexNN)
     use m_topo_commons
     use m_derived_types,only: lattice
     use m_vector, only : cross
-	use m_get_table_nn,only :get_table_nn
     Implicit none
     type(lattice),intent(in)  :: lat
     integer,intent(in)        :: Q_neigh(:,:)
     real(kind=8), intent(in) :: E,Magnetization(:),vortex(:)
+    real(8),pointer,intent(in) :: M3(:,:)
+    integer,intent(in)        :: flat_nei(:,:),indexNN(:)
     real(kind=8), intent(inout) ::sum_qm,sum_qp,sum_vortex(:),Q_sq_sum,Qp_sq_sum,Qm_sq_sum
     real(kind=8), intent(inout) :: E_sum,E_sq_sum,M_sum(:),M_sq_sum(:)
     real(kind=8), intent(inout) ::  Re_MpMm_sum(:), Im_MpMm_sum(:)
@@ -119,9 +120,9 @@ subroutine update_ave(lat,Q_neigh,sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum
     real(kind=8) :: dumy(5),qeulerp,qeulerm, temp(3)
     real(kind=8) :: Mi(3), Mj(3), Re_MpMm, Im_MpMm
     integer      :: N_neighbours,N_cell
-    integer, allocatable    :: indexNN(:),tableNN(:,:,:,:,:,:)
-    integer      :: i_cell,i_nei
-    real(8),pointer :: M3(:,:)
+    integer      :: i_cell, i_sh,i_nei,j_flat
+
+	N_cell=lat%Ncell
 
     !     estimating the values M_av, E_av, S and C
     !     and do so for any sublattice
@@ -147,28 +148,20 @@ subroutine update_ave(lat,Q_neigh,sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum
     ! ------- for <M+M-> ------- !
     Re_MpMm=0.0d0
     Im_MpMm=0.0d0
-   
-    M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
 
-    !get neighbours
-    N_neighbours = 1
-    Call get_table_nn(lat,N_neighbours,indexNN,tableNN)
-    N_cell = lat%Ncell
-    
-	!write(*,*)"size of indexNN= ", size(indexNN), "shape of tableNN = ", shape(tableNN) 
-	!write(*,*)"content of indexNN = ", indexNN
-	!write(*,*)"content of tableNN = "
-    !write(*,*) tableNN(:,:,:,:,:,:)
-	!stop
+	do i_cell=1,N_cell  !loop on sites
+		Mi=M3(:,i_cell) !site i
+		do i_sh=1,N_neighbours !loop on shell of neighbours
+			do i_nei=1,indexNN(i_sh) !loop on neighbours
+				if(flat_nei(i_cell,i_nei).eq.-1) cycle !skip non-connected neighbours
+				j_flat=flat_nei(i_cell,i_nei)
 
-	do i_cell=1,N_cell 
-		Mi=M3(:,i_cell)
-		do i_nei=1,N_neighbours
-			nei=tableNN(1,2,3,4,5,6)
-			Mj=M3(:,i_nei)
-			Re_MpMm = Re_MpMm + dot_product(Mi,Mj) - Mi(3)*Mj(3) !real part M+M-, sum over all pairs
-			temp = cross(Mi,Mj)
-			Im_MpMm= Im_MpMm + temp(3) !imaginary part of M+M-, sum over all pairs
+				!write(*,*) "site", i_cell, "neighbour", j_flat
+				Mj=M3(:,j_flat) !site j
+				Re_MpMm = Re_MpMm + dot_product(Mi,Mj) - Mi(3)*Mj(3) !real part M+M-, sum over all pairs
+				temp = cross(Mi,Mj)
+				Im_MpMm= Im_MpMm + temp(3) !imaginary part of M+M-, sum over all pairs
+			enddo
 		enddo
 	enddo
 
@@ -178,7 +171,7 @@ subroutine update_ave(lat,Q_neigh,sum_qp,sum_qm,Q_sq_sum,Qp_sq_sum,Qm_sq_sum,sum
 END subroutine update_ave
 
 ! ===============================================================
-subroutine initialize_ave(lat,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
+subroutine initialize_ave(lat,Q_neigh,qeulerp,qeulerm,vortex,M3,Magnetization)
 !THIS RETURNS NO AVERAGES... IS THIS REALLY WHAT IS INTENDED TO BE CALCULATED?
     use m_topo_commons
     use m_derived_types,only: lattice
@@ -186,9 +179,10 @@ subroutine initialize_ave(lat,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
     type(lattice),intent(in)  :: lat
     integer,intent(in)        :: Q_neigh(:,:)
     real(kind=8), intent(out) :: vortex(3),qeulerp,qeulerm,Magnetization(3)
+    real(8),pointer,intent(inout) :: M3(:,:)
     ! dumy
     real(kind=8) :: dumy(5)
-    real(8),pointer :: M3(:,:)
+    integer      :: i_sh,i_nei
 
     M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
     Magnetization=sum(M3,2) !sum over magnetization of all magnetic atoms without magnetic moment, probably not what is really wanted
@@ -197,39 +191,52 @@ subroutine initialize_ave(lat,Q_neigh,qeulerp,qeulerm,vortex,Magnetization)
     qeulerm=-dumy(2)
     vortex=dumy(3:5)
 
-    nullify(M3)
 END subroutine initialize_ave
 
-end module m_average_MC
+
 ! ===============================================================
 
 !put this in different file later
-subroutine get_neighbours(lat,flat_nei)
+subroutine get_neighbours(lat,flat_nei, indexNN)
     use m_derived_types,only: lattice
 	use m_get_table_nn,only :get_table_nn
     Implicit none
     type(lattice),intent(in)  :: lat
-    integer,intent(inout)        :: flat_nei(:,:)
+    integer,allocatable,intent(inout)        :: flat_nei(:,:), indexNN(:)
     ! internal variables
     integer      :: N_neighbours,N_cell
-    integer, allocatable    :: indexNN(:),tableNN(:,:,:,:,:,:)
+    integer, allocatable :: tableNN(:,:,:,:,:,:)
+    integer      :: i_sh, i_x, i_y, i_z, i_nei, temp(3), i_flat, j_flat
+	
+	N_cell=lat%Ncell
 
- 
-    N_neighbours = 1 !first neighbours
+    N_neighbours = 1 !choose how many shells of neighbours: 1 = first neighbours
     Call get_table_nn(lat,N_neighbours,indexNN,tableNN)
+	!write(*,*) "N_cell= " ,N_cell, "sum(indexNN)= ", sum(indexNN)
+    allocate(flat_nei(N_cell,N_cell*sum(indexNN))) !flat nei is N x N*number of neighbours per site
+	!write(*,*) "in get_nei l223 shape(flat_nei)=", shape(flat_nei)	
 
 	!convert to a table with linear indices (Ncell, indexNN)
-	do i_z=1,shape_tableNN(5)
-    	do i_y=1,shape_tableNN(4)
-     	   do i_x=1,shape_tableNN(3)
-				!if(tableNN(5,i_vois,i_x,i_y,i_z,1)/=1) cycle
-                        !N_line=N_line+1
-				tableNN(1:3,,i_x,i_y,i_z,1)/=1
-                i_flat=[i_x,i_y,i_z]
-                        !connect(1,N_line)=lat%index_m_1(ilat_1)
-                        ilat_2=tableNN(1:3,i_vois+offset,i_x,i_y,i_z,1)
-                        !connect(2,N_line)=lat%index_m_1(ilat_2)
-	ii1=lat%index_m_1(ilat_1)
+	do i_sh=1,N_neighbours !loop on shell of neighbours
+		do i_x=1,lat%dim_lat(1) !loop on lattice sites
+			do i_y=1,lat%dim_lat(2)
+				do i_z=1,lat%dim_lat(3) 
+					temp=[i_x,i_y,i_z]
+				 	i_flat=lat%index_m_1(temp)	!get i_flat
+				    do i_nei=1,indexNN(i_sh) !loop on neighbours
+						temp=tableNN(1:3,i_nei,i_x,i_y,i_z,1)!get x,y,z indices of neighbour
+				        j_flat=lat%index_m_1(temp) !get j_flat
+						if(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) j_flat=-1 !if neighbours are not connected set to -1
+						!write(*,*) i_sh, i_x, i_y, i_z, temp(1:3), i_flat, i_nei, j_flat
+						!write(*,*) "shape(flat_nei)=", shape(flat_nei)
+						flat_nei(i_flat,i_nei)=j_flat
+					enddo
+				enddo
+			enddo
+		enddo
+	enddo
+		
 
+END subroutine get_neighbours
+end module m_average_MC
 
-end subroutine get_neighbours
