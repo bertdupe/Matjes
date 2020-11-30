@@ -29,6 +29,7 @@ void eigen_H_init(
   	(*Ham)->setFromTriplets(tripletList.begin(), tripletList.end());
 }
 
+#ifdef CPP_MPI
 void eigen_H_bcast(
     int id,
     int mas,
@@ -57,6 +58,7 @@ void eigen_H_bcast(
     ierr=MPI_Bcast((**Ham).outerIndexPtr(),cols ,MPI_INT,mas, comm);
     (**Ham).outerIndexPtr()[cols] = nnz;
 }
+#endif
 
 void eigen_H_add(
     SpMat **Ham_sum,

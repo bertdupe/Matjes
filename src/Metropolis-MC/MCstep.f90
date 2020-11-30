@@ -1,11 +1,11 @@
 module m_MCstep
 use m_derived_types, only : lattice
-use m_sampling
+use m_mc_track_val, only: track_val
+use m_sampling, only: sphereft,equirep
 use m_choose_spin
 use m_relaxtyp
 use m_createspinfile
 use m_H_public
-implicit none
 
 private
 public :: MCstep
@@ -13,7 +13,7 @@ contains
 !
 ! ===============================================================
 !
-SUBROUTINE MCstep(lat,io_MC,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
+SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     use m_constants, only : k_b,pi
     use m_input_types,only: MC_input
     use mtprng
@@ -23,11 +23,10 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,H
     type(MC_input),intent(in)       :: io_MC 
     real(kind=8), intent(in)        :: kt
     integer, intent(in)             :: N_spin
-    real(kind=8), intent(inout)     :: E_total,Magnetization(3),E(8),acc,rate,cone,nb
+    type(track_val),intent(inout)   :: state_prop
     class(t_H), intent(in)          :: Hams(:)
     
     ! internal variable
-    type(mtprng_state) :: state
     !     Energy difference Delta E and -DE/kT, Dmag and Dq
     real(kind=8) :: DE,E_new,E_old,Dmag(3)
     !     flipped Spin
@@ -49,11 +48,11 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,H
     elseif(io_MC%overrelax)then
         S_new=overrelax(iomp,lat,Hams)
     elseif(io_MC%equi)then
-        Call cone_update(cone,rate)
-        S_new=equirep(lat%M%modes_v(:,iomp),cone)
+        Call cone_update(state_prop%cone,state_prop%rate)
+        S_new=equirep(lat%M%modes_v(:,iomp),state_prop%cone)
     elseif(io_MC%sphere)then
-        Call cone_update(cone,rate)
-        S_new=sphereft(lat%M%modes_v(:,iomp),cone)
+        Call cone_update(state_prop%cone,state_prop%rate)
+        S_new=sphereft(lat%M%modes_v(:,iomp),state_prop%cone)
     else
         STOP "Invalid MC sampling method"
     endif
@@ -73,23 +72,24 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,H
     !! variation of the energy for this step
     DE=E_new-E_old
     
-    nb=nb+1.0d0
+    state_prop%nb=state_prop%nb+1.0d0
     if ( accept(kt,DE) ) then
         Dmag=-lat%M%modes_v(:,iomp)+S_new
     ! update the spin
         lat%M%modes_v(:,iomp)=S_new
     ! update the quantities
-        E_total=E_total+DE
-        Magnetization=Magnetization+Dmag
-        acc=acc+1.0d0
+        state_prop%E_total=state_prop%E_total+DE
+        state_prop%Magnetization=state_prop%Magnetization+Dmag
+        state_prop%acc=state_prop%acc+1.0d0
     endif
    
-    rate=acc/nb
+    state_prop%rate=state_prop%acc/state_prop%nb
 
 END SUBROUTINE MCstep
 ! ===============================================================
 
 function accept(kt,DE)
+    use m_get_random, only: get_rand_classic
     real(8),intent(in)  :: kt,DE
 
     real(8) :: choice, tmp
@@ -109,11 +109,7 @@ function accept(kt,DE)
     tmp=-DE/kT
     !prevent exp(tmp) underflow
     if(tmp<-200.0d0) return
-#ifdef CPP_MRG
-    choice=mtprng_rand_real1(state)
-#else
-    CALL RANDOM_NUMBER(Choice)
-#endif
+    choice=get_rand_classic()
     if (Choice.lt.exp(tmp)) Then
         accept=.True.
     endif

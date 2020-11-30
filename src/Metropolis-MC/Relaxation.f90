@@ -1,9 +1,10 @@
 module m_relaxation
+use m_mc_track_val, only: track_val
 implicit none
 contains
 !
 ! ===============================================================
-SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,Hams,Q_neigh)
+SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,qeulerp,qeulerm,kt,Hams,Q_neigh)
     use mtprng
     use m_Corre
     use m_constants, only : k_b
@@ -19,9 +20,9 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     use m_input_types,only: MC_input
     ! input
     type(lattice),intent(inout)     :: lat
-    real(kind=8), intent(inout)     :: qeulerp,qeulerm,cone,acc,rate,E_total,magnetization(3),E(8)
-    real(kind=8), intent(inout)     :: nb
+    real(kind=8), intent(inout)     :: qeulerp,qeulerm
     real(kind=8), intent(in)        :: kT
+    type(track_val),intent(inout)   :: state_prop
     type(MC_input),intent(in)       :: io_MC 
     integer, intent(in)             :: N_cell
     class(t_H), intent(in)          :: Hams(:)
@@ -33,6 +34,7 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     ! dummy
     integer :: i,j,n_w_step
     character(len=50) :: fname
+    real(8) :: E_del(8) !old format to print energy decomposition , remove or replace..
     
     write(6,'(/,a,/)') "starting relaxation"
     
@@ -48,10 +50,10 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     !         the step to an unordered structure
                 !Relaxation of the System
         Do i_MC=1,io_MC%T_relax*N_cell
-            Call MCStep(lat,io_MC,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
+            Call MCStep(lat,io_MC,N_cell,state_prop,kt,Hams)
         enddo
         !In case T_relax set to zero at least one MCstep is done
-        Call MCStep(lat,io_MC,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
+        Call MCStep(lat,io_MC,N_cell,state_prop,kt,Hams)
     
     ! calculate the topocharge
         dumy=get_charge(lat,Q_neigh)
@@ -61,7 +63,7 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     ! Write the Equilibrium files
         if (io_MC%print_relax) then
             if (mod(i_relaxation,n_w_step).eq.0) call store_relaxation(Relax,i_relaxation,dble(i_relaxation), &
-                  &  sum(E)/dble(N_cell),E,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)
+                  &  state_prop%E_total/dble(N_cell),E_del,dble(N_cell),kt,state_prop%Magnetization,state_prop%rate,state_prop%cone,qeulerp,qeulerm)
         endif
     
     enddo   ! enddo over the relaxation loop

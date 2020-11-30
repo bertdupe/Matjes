@@ -1,4 +1,9 @@
 module m_sampling
+use m_get_random, only: get_rand_classic
+implicit none
+private
+public sphereft,equirep
+
 
 contains
 function sphereft(old_S,coco)
@@ -9,24 +14,14 @@ real(kind=8), intent(in) :: coco
 real(kind=8) , dimension(3), intent(in) :: old_s
 real(kind=8) , dimension(3) :: sphereft
 ! internal variable
-type(mtprng_state) :: state
 real(kind=8) :: costheta, sintheta, Choice, phi, new_s(3),ss
 real(kind=8) :: costhetaini, sinthetaini, cosphiini, sinphiini
 
-#ifdef CPP_MRG
-choice=mtprng_rand_real1(state)
+choice=get_rand_classic()
 costheta=Choice+dcos(coco)*(1-Choice)
 sintheta=dsqrt(1-costheta**2)
-choice=mtprng_rand_real1(state)
+choice=get_rand_classic()
 phi=2*dacos(-1.0d0)*Choice
-#else
-
-CALL RANDOM_NUMBER(Choice)
-costheta=Choice+dcos(coco)*(1-Choice)
-sintheta=dsqrt(1-costheta**2)
-CALL RANDOM_NUMBER(Choice)
-phi=2*dacos(-1.0d0)*Choice
-#endif
 
 ! Sx,Sy,Sz new spin in the referential Sini||z
 !        S_store(1)=sintheta*cos(phi)
@@ -83,19 +78,11 @@ integer :: i_store
 new_s=0.0d0
 Skal_store=0.0d0
 !C       Generate random Spin
-#ifdef CPP_MRG
 Do i_store=1,3
-   choice=mtprng_rand_real1(state)
+   choice=get_rand_classic()
    new_s(i_store)=2.0d0*(Choice-0.5d0)
    Skal_store=Skal_store+new_s(i_store)**2
 End do
-#else
-Do i_store=1,3
-   CALL RANDOM_NUMBER(Choice)
-   new_s(i_store)=2.0d0*(Choice-0.5d0)
-   Skal_store=Skal_store+new_s(i_store)**2
-End do
-#endif
 
 Do i_store=1,3
    new_s(i_store)=new_s(i_store)/(dsqrt(Skal_store))
