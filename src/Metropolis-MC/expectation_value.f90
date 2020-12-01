@@ -37,6 +37,8 @@ type exp_val
 
     real(8) :: Re_MpMm_sum=0.0d0
     real(8) :: Im_MpMm_sum=0.0d0
+    real(8) :: Re_MpMm_av=0.0d0
+    real(8) :: Im_MpMm_av=0.0d0
 end type
 
 contains 
@@ -121,16 +123,17 @@ subroutine measure_print_thermo(this,com)
 
     if(com%ismas)then
         OPEN(newunit=io_unit,FILE='EM.dat',action='write',form='formatted')
-          Write(io_unit,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
+          Write(io_unit,'(29(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
           & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
           & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
-          & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
+          & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm','28: Re(M+M-)','29: Im(M+M-)'
         ! write the data into a file
         do i=1,size(this)
-            Write(io_unit,'(27(E20.10E3,2x),E20.10E3)') this(i)%kT/k_B ,this(i)%E_av, this(i)%E_err_av, this(i)%C_av,&
+            Write(io_unit,'(29(E20.10E3,2x),E20.10E3)') this(i)%kT/k_B ,this(i)%E_av, this(i)%E_err_av, this(i)%C_av,&
              &             norm2(this(i)%M_av),this(i)%M_av, this(i)%M_err_av,&
              &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1), &
-             &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4)
+             &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4), &
+			 &			   this(i)%Re_MpMm_av, this(i)%Im_MpMm_av
         enddo
         close(io_unit) 
     endif
@@ -198,6 +201,11 @@ subroutine measure_eval(this,Cor_log, N_cell_in)
               &    (this%Qp_sq_sum_av*av_Nadd/16.0d0/pi**2-this%qeulerp_av**2))*av_kT!/(this%qeulerm_av*this%qeulerp_av)
 
     this%vortex_av=this%vortex_av*av_Nadd/3.0d0/sqrt(3.0d0)
+
+	this%Re_MpMm_av=this%Re_MpMm_sum*av_Nadd*av_site
+	this%Im_MpMm_av=this%Im_MpMm_sum*av_Nadd*av_site
+	write(*,*) 'in measure_add, Re_MpMm_av=',this%Re_MpMm_av,' Im_MpMm_av= ',this%Im_MpMm_av,' Re_MpMm_sum = ', this%Re_MpMm_sum,' Im_MpMm_sum = ', this%Im_MpMm_sum
+
     if (Cor_log) this%chi_l=this%N_add !what is this supposed to do?
     Call print_av(this)
 END subroutine

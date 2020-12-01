@@ -27,6 +27,7 @@ subroutine init_fluct_parameter(fluct_val,lat,l_use_in)
 end subroutine
 
 
+! ------- for <M+M->
 subroutine eval_fluct(Re_MpMm_sum,Im_MpMm_sum,lat,fluct_val)
     use m_vector, only : cross
     real(8),intent(inout)               :: Re_MpMm_sum,Im_MpMm_sum
@@ -40,8 +41,7 @@ subroutine eval_fluct(Re_MpMm_sum,Im_MpMm_sum,lat,fluct_val)
     integer         :: i_cell, i_sh,i_nei,j_flat 
 
     if(.not.fluct_val%l_use) return
-
-    ! ------- for <M+M-> ------- !
+	N_neighbours=rank(fluct_val%indexNN) !number of shells of neighbours to be used
     N_cell=lat%Ncell
     M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
     Re_MpMm=0.0d0
@@ -58,11 +58,14 @@ subroutine eval_fluct(Re_MpMm_sum,Im_MpMm_sum,lat,fluct_val)
                 Re_MpMm = Re_MpMm + dot_product(Mi,Mj) - Mi(3)*Mj(3) !real part M+M-, sum over all pairs
                 temp = cross(Mi,Mj)
                 Im_MpMm= Im_MpMm + temp(3) !imaginary part of M+M-, sum over all pairs
+				!write(*,*)'Mi=',Mi(1:3), ' Mj= ',Mj(1:3), 'Mi*Mj=',dot_product(Mi,Mj) ,' Mi*Mj-MizMjz = ',dot_product(Mi,Mj) - Mi(3)*Mj(3),' (MixMj)_z = ', temp(3)
+				!write(*,*) 'Im_MpMm = ', Im_MpMm
             enddo
         enddo
     enddo
     Re_MpMm_sum=Re_MpMm_sum+Re_MpMm
     Im_MpMm_sum=Im_MpMm_sum+Im_MpMm
+	!write(*,*) 'in eval_fluct, Re_MpMm_sum= ',Re_MpMm_sum,' Im_MpMm_sum= ',Im_MpMm_sum
 
 end subroutine
 
