@@ -33,6 +33,7 @@ subroutine rw_MC(inp_MC)
     call get_parameter(io_input,'input','print_relax',inp_MC%print_relax)
     call get_parameter(io_input,'input','Cor_log',inp_MC%Cor_log)
     call get_parameter(io_input,'input','restart',inp_MC%i_restart)
+    call get_parameter(io_input,'input','do_louise',inp_MC%do_louise)
 
     call get_parameter(io_input,'input','ising',inp_MC%ising)
     call get_parameter(io_input,'input','underrelaxation',inp_MC%underrelax)

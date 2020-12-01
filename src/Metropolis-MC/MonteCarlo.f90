@@ -21,6 +21,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
     use m_average_MC, only: get_neighbours
+    use m_louise, only: louise_parameters,init_louise_parameter
 
     type(lattice), intent(inout)            :: my_lattice
     type(io_parameter), intent(in)          :: io_simu
@@ -32,7 +33,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     ! internal variables
     !!!!!!!!!!!!!!!!!!!!!!!
     ! slope of the MC
-    integer                     :: i_relax,i_kT,i_MC,N_cell,size_table,i_measure
+    integer                     :: i_relax,i_kT,i_MC,N_cell,size_table
     ! variable for the temperature
     real(8)                     :: kT,kTini,kTfin
     ! variables that being followed during the simulation
@@ -46,13 +47,12 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     integer,allocatable         :: Q_neigh(:,:)
     integer                     :: filen_kt_acc(2)
     integer                     :: ierr
-    integer                     :: iT_global(2),iT_local(2)
+    integer                     :: iT_global(2),iT_local(2),N_T
     integer,parameter           :: io_status=output_unit
     !mpi parameters
     integer                     :: cnt(com%Np)
     integer                     :: displ(com%Np)
-	integer, allocatable :: flat_nei(:,:)
-    integer, allocatable :: indexNN(:)
+    type(louise_parameters)     :: louise_val
     
     ! initialize the variables
     call rw_MC(io_MC)
@@ -65,7 +65,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     filen_kt_acc=5
     
     ! allocate and fill flat table of first neighbours
-	call get_neighbours(my_lattice,flat_nei,indexNN)
+    Call init_louise_parameter(louise_val,my_lattice,io_MC%do_louise)
 
     ! initialize the temperatures
     call ini_temp(kt_all,kTfin,kTini,size_table,io_simu%io_warning)
@@ -84,26 +84,23 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     
     iT_global=[1,io_MC%n_Tsteps]
     Call distrib_int_index(com,iT_global,iT_local,displ,cnt)
-    Call measure_init(measure,it_local,iT_global,com) 
-    i_measure=0
-    Do i_kT=iT_local(1),iT_local(2)
-        i_measure=i_measure+1
-        kt=kt_all(i_kT)
-        measure(i_measure)%kt=kt
-        call Relaxation(my_lattice,io_MC,N_cell,state_prop,qeulerp,qeulerm,kt,hams,Q_neigh)
+    N_T=it_local(2)-it_local(1)+1
+    Call measure_init(measure,it_local,iT_global,com,kt_all) 
+    Do i_kT=1,N_T
+        call Relaxation(my_lattice,io_MC,N_cell,state_prop,qeulerp,qeulerm,measure(i_kt)%kt,hams,Q_neigh)
         !Monte Carlo steps, calculate the values
         do i_MC=1+io_MC%restart_MC_steps,io_MC%Total_MC_Steps+io_MC%restart_MC_steps
             !Monte Carlo steps for independency
             Do i_relax=1,io_MC%T_auto*N_cell
-                Call MCstep(my_lattice,io_MC,N_cell,state_prop,kt,Hams)
+                Call MCstep(my_lattice,io_MC,N_cell,state_prop,measure(i_kt)%kt,Hams)
             End do
-            Call MCstep(my_lattice,io_MC,N_cell,state_prop,kt,Hams) ! at least one step
-            Call measure_add(measure(i_measure),my_lattice,state_prop,Q_neigh,flat_nei,indexNN) 
+            Call MCstep(my_lattice,io_MC,N_cell,state_prop,measure(i_kt)%kt,Hams) ! at least one step
+            Call measure_add(measure(i_kt),my_lattice,state_prop,Q_neigh,louise_val) 
         end do ! over i_MC
    
-        Call measure_eval(measure(i_measure),io_MC%Cor_log,N_cell)
-        if(io_simu%io_Xstruct) Call write_config('MC',kt,my_lattice,filen_kt_acc)
-        Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', io_MC%n_Tsteps,' steps. T=', kT/k_B,' Kelvin'
+        Call measure_eval(measure(i_kt),io_MC%Cor_log,N_cell)
+        if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt,my_lattice,filen_kt_acc)
+        Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', N_T,' steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
     end do !over i_kT
 
     Call measure_gather(measure,com,displ,cnt)

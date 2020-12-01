@@ -12,6 +12,7 @@ use m_createspinfile
 use m_minimize
 use m_user_info
 use m_H_public
+use m_parallel_tempering
 use m_spindynamics
 use m_montecarlo
 use m_entropic
@@ -89,21 +90,33 @@ Implicit None
     !     Start main procedures:
     !     *****************************************************************
     Call my_simu%bcast(mpi_world)
+ 
+
+    !---------------------------------
+    !  Part which does the parallel tempering
+    !    Loop for Spin dynamics
+    !---------------------------------
     
-    !!!!!!!! part of the parallel tempering
-    
-    !if (my_simu%name == 'parallel-tempering') then
-    !            call parallel_tempering(i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,cor_log,gra_log, &
-    !            &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,EA,n_system, &
-    !            &    n_sizerelax,T_auto,i_optTset,N_cell,print_relax,N_temp,T_relax_temp,kTfin,kTini,h_ext,cone,n_Tsteps, &
-    !            &    i_ghost,n_ghost,nRepProc,mag_lattice)
-    
-    !            call cpu_time(computation_time)
-    !            write(*,*) 'computation time:',computation_time,'seconds'
+    if (my_simu%name == 'parallel-tempering')then
+        Call all_lattices%bcast(mpi_world)
+        Call io_simu%bcast(mpi_world)
+        Call ext_param%bcast(mpi_world)
+        Call bcast_Harr(Ham_comb,mpi_world)
+        Call parallel_tempering(all_lattices,io_simu,ext_param,Ham_comb,mpi_world)
+    endif
+               ! call parallel_tempering(i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,cor_log,gra_log, &
+               ! &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,EA,n_system, &
+               ! &    n_sizerelax,T_auto,i_optTset,N_cell,print_relax,N_temp,T_relax_temp,kTfin,kTini,h_ext,cone,n_Tsteps, &
+               ! &    i_ghost,n_ghost,nRepProc,mag_lattice)
+
+
     
     !---------------------------------
     !  Part which does a normal MC with the metropolis algorithm
     !---------------------------------
+
+
+
     if (my_simu%name == 'metropolis')then
         Call all_lattices%bcast(mpi_world)
         Call io_simu%bcast(mpi_world)
@@ -114,6 +127,10 @@ Implicit None
 
 
     if(mpi_world%ismas)then
+
+        
+
+
         !---------------------------------
         !  Part which does the Spin dynamics
         !    Loop for Spin dynamics

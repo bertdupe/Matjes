@@ -1,6 +1,7 @@
 module m_mc_exp_val
 use m_constants, only : pi
 use m_mc_track_val, only: track_val
+use m_louise,only: louise_parameters, eval_louise
 implicit none
 private
 public :: exp_val, measure_print_thermo, measure_gather,measure_add,measure_eval,print_av,measure_init
@@ -40,18 +41,26 @@ end type
 
 contains 
 
-subroutine measure_init(measure,it_local,iT_global,com)
+subroutine measure_init(measure,it_local,iT_global,com,kt_all)
     use mpi_basic, only: mpi_type
     type(exp_val),allocatable       :: measure(:)
     integer,intent(in)              :: it_local(2)
     integer,intent(in)              :: it_global(2)
+    real(8),intent(in)              :: kt_all(it_global(2)-it_global(1)+1)
     class(mpi_type),intent(in)      :: com
+    integer         ::  i,j
     Call set_MPI_type()
     if(com%ismas)then
         allocate(measure(it_global(2)))
     else
         allocate(measure(it_local(2)-it_local(1)+1))
     endif
+
+    j=0
+    Do i=iT_local(1),iT_local(2)
+        j=j+1
+        measure(j)%kt=kt_all(i)
+    enddo
 end subroutine
 
 subroutine set_MPI_type()
@@ -89,7 +98,7 @@ subroutine set_MPI_type()
 end subroutine
 
 subroutine measure_gather(this,com,displ,cnt)
-    use mpi_basic, only: mpi_type,mpi_gatherv
+    use mpi_basic
     type(exp_val),intent(in)        :: this(:)
     class(mpi_type),intent(in)      :: com
     integer,intent(in)              :: displ(com%Np)
@@ -127,24 +136,17 @@ subroutine measure_print_thermo(this,com)
     endif
 end subroutine
 
-subroutine measure_add(this,lat,state_prop,Q_neigh,flat_nei,indexNN)
+subroutine measure_add(this,lat,state_prop,Q_neigh,louise_val)
     use m_topo_commons
     use m_derived_types,only: lattice
-    use m_vector, only : cross
-    class(exp_val),intent(inout)    :: this
-    type(lattice),intent(in)        :: lat
-    type(track_val),intent(in)      :: state_prop
-    integer,intent(in)              :: Q_neigh(:,:)
-    integer,intent(in)              :: flat_nei(:,:),indexNN(:)
+    class(exp_val),intent(inout)            :: this
+    type(lattice),intent(in)                :: lat
+    type(track_val),intent(in)              :: state_prop
+    integer,intent(in)                      :: Q_neigh(:,:)
+    type(louise_parameters),intent(in)      :: louise_val
 
     !put that into state_prop as well?
     real(8)     :: dumy(5),qeulerp,qeulerm
-    
-    real(8),pointer :: M3(:,:)
-    real(8)         :: temp(3)
-    real(8)         :: Mi(3), Mj(3), Re_MpMm, Im_MpMm
-    integer         :: N_neighbours,N_cell
-    integer         :: i_cell, i_sh,i_nei,j_flat 
 
 
     this%N_add=this%N_add+1
@@ -166,28 +168,7 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,flat_nei,indexNN)
     this%Qm_sq_sum_av=this%Qm_sq_sum_av+qeulerm**2
     this%vortex_av=this%vortex_av+dumy(3:5)
 
-    ! ------- for <M+M-> ------- !
-	N_cell=lat%Ncell
-    M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
-    Re_MpMm=0.0d0
-    Im_MpMm=0.0d0
-	do i_cell=1,N_cell  !loop on sites
-		Mi=M3(:,i_cell) !site i
-		do i_sh=1,N_neighbours !loop on shell of neighbours
-			do i_nei=1,indexNN(i_sh) !loop on neighbours
-				if(flat_nei(i_cell,i_nei).eq.-1) cycle !skip non-connected neighbours
-				j_flat=flat_nei(i_cell,i_nei)
-
-				!write(*,*) "site", i_cell, "neighbour", j_flat
-				Mj=M3(:,j_flat) !site j
-				Re_MpMm = Re_MpMm + dot_product(Mi,Mj) - Mi(3)*Mj(3) !real part M+M-, sum over all pairs
-				temp = cross(Mi,Mj)
-				Im_MpMm= Im_MpMm + temp(3) !imaginary part of M+M-, sum over all pairs
-			enddo
-		enddo
-	enddo
-    this%Re_MpMm_sum=this%Re_MpMm_sum+Re_MpMm
-    this%Im_MpMm_sum=this%Im_MpMm_sum+Im_MpMm
+    if(louise_val%l_use) Call eval_louise(this%Re_MpMm_sum,this%Im_MpMm_sum,lat,louise_val)
 end subroutine
 
 
