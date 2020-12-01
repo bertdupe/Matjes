@@ -1,38 +1,39 @@
-module m_Beff_H
+module m_eff_field
 use m_derived_types
 use m_H_public, only : t_H
 implicit none
 private
-public get_B,get_B_single
+public get_eff_field,get_eff_field_single
 
 
 contains
 
-subroutine get_B(Ham,lat,B)
+subroutine get_eff_field(Ham,lat,B,Ham_type)
 !calculates the effective internal magnetic field acting on the magnetization for the dynamics
     class(t_h),intent(in)        ::  Ham(:) !list of Hamiltonians to consider
     class(lattice),intent(in)    ::  lat    !lattice containing current order-parameters 
     real(8),intent(inout)        ::  B(:)
+    integer,intent(in)           ::  Ham_type   !integer that decides which Hamiltonian should be derived
 
     real(8)      :: tmp(size(B))
     integer      :: Nl,Nr !number of order parameters at left/right side of Hamiltonian 
-    integer      :: Nl_m,Nr_m !number magnetic order parameter occurances at left/right side of Hamiltonian 
+    integer      :: Nl_order,Nr_order !numbern of order parameters occurances at left/right side of Hamiltonian
     integer      :: i
 
     B=0.0d0
     do i=1,size(Ham)
         Nl=size(Ham(i)%op_l); Nr=size(Ham(i)%op_r)
-        Nl_m=count(Ham(i)%op_l==1); Nr_m=count(Ham(i)%op_r==1)
+        Nl_order=count(Ham(i)%op_l==Ham_type); Nr_order=count(Ham(i)%op_r==Ham_type)
         if(Nl==1.and.Nr==1)then
         !normal rank 2 Hamiltonian
             tmp=0.0d0
-            if(Nl_m==1.and.Nr_m==1)then
+            if(Nl_order==Ham_type.and.Nr_order==Ham_type)then
                 Call Ham(i)%mult_r(lat,tmp)
                 B=B-2.0d0*tmp
-            elseif(Nl_m==1)then
+            elseif(Nl_order==Ham_type)then
                 Call Ham(i)%mult_r(lat,tmp)
                 B=B-tmp
-            elseif(Nr_m==1)then
+            elseif(Nr_order==Ham_type)then
                 Call Ham(i)%mult_l(lat,tmp)
                 B=B-tmp
             endif
@@ -40,11 +41,11 @@ subroutine get_B(Ham,lat,B)
         !Hamiltonian with rank higher than 2
             tmp=0.0d0
             !consider left side
-            if(Nl_m==1)then
+            if(Nl_order==Ham_type)then
                 if(Nl==1)then
                     Call Ham(i)%mult_r(lat,tmp)
                     B=B-tmp
-                elseif(Nl_m==1)then
+                elseif(Nl_order==Ham_type)then
                     Call Ham(i)%mult_r_red(lat,tmp,1) !1 for reduce everything but M
                     B=B-tmp
                 else
@@ -54,11 +55,11 @@ subroutine get_B(Ham,lat,B)
                 STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on a side"
             endif
             !consider right side
-            if(Nr_m==1)then
+            if(Nr_order==Ham_type)then
                 if(Nr==1)then
                     Call Ham(i)%mult_l(lat,tmp)
                     B=B-tmp
-                elseif(Nr_m==1)then
+                elseif(Nr_order==Ham_type)then
                     Call Ham(i)%mult_l_red(lat,tmp,1) !1 for reduce everything but M
                     B=B-tmp
                 else
@@ -72,32 +73,32 @@ subroutine get_B(Ham,lat,B)
 
 end subroutine
 
-subroutine get_B_single(Ham,i_site,lat,B)
+subroutine get_eff_field_single(Ham,i_site,lat,B,Ham_type)
 !calculates the effective internal magnetic field acting on the magnetization for the dynamics
     class(t_h),intent(in)        :: Ham(:) !list of Hamiltonians to consider
-    integer,intent(in)           :: i_site
+    integer,intent(in)           :: i_site,Ham_type
     class(lattice),intent(in)    :: lat    !lattice containing current order-parameters 
     real(8),intent(inout)        :: B(:)
 
     real(8)      :: tmp(size(B))
     integer      :: Nl,Nr !number of order parameters at left/right side of Hamiltonian 
-    integer      :: Nl_m,Nr_m !number magnetic order parameter occurances at left/right side of Hamiltonian 
+    integer      :: Nl_order,Nr_order !number of order parameters occurances at left/right side of Hamiltonian
     integer      :: i
 
     B=0.0d0
     do i=1,size(Ham)
         Nl=size(Ham(i)%op_l); Nr=size(Ham(i)%op_r)
-        Nl_m=count(Ham(i)%op_l==1); Nr_m=count(Ham(i)%op_r==1)
+        Nl_order=count(Ham(i)%op_l==Ham_type); Nr_order=count(Ham(i)%op_r==Ham_type)
         if(Nl==1.and.Nr==1)then
         !normal rank 2 Hamiltonian
             tmp=0.0d0
-            if(Nl_m==1.and.Nr_m==1)then
+            if(Nl_order==Ham_type.and.Nr_order==Ham_type)then
                 Call Ham(i)%mult_r_single(i_site,lat,tmp)
                 B=B-2.0d0*tmp
-            elseif(Nl_m==1)then
+            elseif(Nl_order==Ham_type)then
                 Call Ham(i)%mult_r_single(i_site,lat,tmp)
                 B=B-tmp
-            elseif(Nr_m==1)then
+            elseif(Nr_order==Ham_type)then
                 Call Ham(i)%mult_l_single(i_site,lat,tmp)
                 B=B-tmp
             endif
@@ -105,11 +106,11 @@ subroutine get_B_single(Ham,i_site,lat,B)
         !Hamiltonian with rank higher than 2
             tmp=0.0d0
             !consider left side
-            if(Nl_m==1)then
+            if(Nl_order==Ham_type)then
                 if(Nl==1)then
                     Call Ham(i)%mult_r_single(i_site,lat,tmp)
                     B=B-tmp
-                elseif(Nl_m==1)then
+                elseif(Nl_order==Ham_type)then
                     Call Ham(i)%mult_r_red_single(i_site,lat,tmp,1) !1 for reduce everything but M
                     B=B-tmp
                 else
@@ -119,11 +120,11 @@ subroutine get_B_single(Ham,i_site,lat,B)
                 STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on a side"
             endif
             !consider right side
-            if(Nr_m==1)then
+            if(Nr_order==Ham_type)then
                 if(Nr==1)then
                     Call Ham(i)%mult_l_single(i_site,lat,tmp)
                     B=B-tmp
-                elseif(Nr_m==1)then
+                elseif(Nr_order==Ham_type)then
                     Call Ham(i)%mult_l_red_single(i_site,lat,tmp,1) !1 for reduce everything but M
                     B=B-tmp
                 else

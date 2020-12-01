@@ -172,7 +172,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     if (io_simu%io_tracker) call init_tracking(mag_lattice)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! beginning of the
+    ! beginning of the simulation
     do j=1,duration
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
        !   call init_temp_measure(check,check1,check2,check3)
