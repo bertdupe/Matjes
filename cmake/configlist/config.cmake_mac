@@ -2,6 +2,7 @@ message("reading config.cmake")
 
 set(MPI_Fortran_COMPILER gfortran)
 set(custom_MPICCOMP_FORTRAN "gfortran")
+set(CMAKE_CXX_COMPILER "gcc-10")
 
 #manual adds to fortran compiler
 set(compadd "")							#add to release and debug
@@ -11,9 +12,9 @@ set(com_deb_add "")						#add to debug
 
 if(DEFINED ENV{MKLROOT})
   set(MKLROOT $ENV{MKLROOT})
-  #set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
-  set(add_lib ${add_lib} "-L/usr/lib/ -lstdc++ -lc++ -lblas -llapack" "-L${MKLROOT}/lib/ -lmkl_core -lmkl_sequential -lmkl_intel_lp64")
+  set(add_lib ${add_lib} "-L/usr/lib/ -lblas -llapack" "-L${MKLROOT}/lib/ -lmkl_core -lmkl_sequential -lmkl_intel_lp64")
   set(add_inc ${add_inc} "${MKLROOT}/include"  "/usr/local/include/")
+  #  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-L/usr/lib/ -lstdc++ -lc++") 
 else()
   message( FATAL_ERROR "Did not find ${MKLROOT} environment variable" )
 endif()
