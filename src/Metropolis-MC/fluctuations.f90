@@ -1,37 +1,37 @@
-module m_louise
+module m_fluct
 use m_derived_types,only: lattice
 implicit none
 private
-public louise_parameters,init_louise_parameter,eval_louise
+public fluct_parameters,init_fluct_parameter,eval_fluct
 
-type louise_parameters
+type fluct_parameters
     logical                 :: l_use=.False. 
     integer, allocatable    :: flat_nei(:,:)
     integer, allocatable    :: indexNN(:)
 end type
 contains
 
-subroutine init_louise_parameter(louise_val,lat,l_use_in)
-    type(louise_parameters)     :: louise_val
+subroutine init_fluct_parameter(fluct_val,lat,l_use_in)
+    type(fluct_parameters)     :: fluct_val
     type(lattice),intent(in)    :: lat
     logical,intent(in)          :: l_use_in
 
-    louise_val%l_use=l_use_in
-    if(louise_val%l_use)then
-        Call get_neighbours(lat,louise_val%flat_nei,louise_val%indexNN)
+    fluct_val%l_use=l_use_in
+    if(fluct_val%l_use)then
+        Call get_neighbours(lat,fluct_val%flat_nei,fluct_val%indexNN)
     else
         !allocate to get more meaningfull error messages in case of mistakes
-        allocate(louise_val%flat_nei(1,1),louise_val%indexNN(1),source=654123)
+        allocate(fluct_val%flat_nei(1,1),fluct_val%indexNN(1),source=654123)
     endif
 
 end subroutine
 
 
-subroutine eval_louise(Re_MpMm_sum,Im_MpMm_sum,lat,louise_val)
+subroutine eval_fluct(Re_MpMm_sum,Im_MpMm_sum,lat,fluct_val)
     use m_vector, only : cross
     real(8),intent(inout)               :: Re_MpMm_sum,Im_MpMm_sum
     type(lattice),intent(in)            :: lat
-    type(louise_parameters),intent(in)  :: louise_val
+    type(fluct_parameters),intent(in)  :: fluct_val
 
     real(8),pointer :: M3(:,:)
     real(8)         :: temp(3)
@@ -39,7 +39,7 @@ subroutine eval_louise(Re_MpMm_sum,Im_MpMm_sum,lat,louise_val)
     integer         :: N_neighbours,N_cell
     integer         :: i_cell, i_sh,i_nei,j_flat 
 
-    if(.not.louise_val%l_use) return
+    if(.not.fluct_val%l_use) return
 
     ! ------- for <M+M-> ------- !
     N_cell=lat%Ncell
@@ -49,9 +49,9 @@ subroutine eval_louise(Re_MpMm_sum,Im_MpMm_sum,lat,louise_val)
     do i_cell=1,N_cell  !loop on sites
         Mi=M3(:,i_cell) !site i
         do i_sh=1,N_neighbours !loop on shell of neighbours
-            do i_nei=1,louise_val%indexNN(i_sh) !loop on neighbours
-                if(louise_val%flat_nei(i_cell,i_nei).eq.-1) cycle !skip non-connected neighbours
-                j_flat=louise_val%flat_nei(i_cell,i_nei)
+            do i_nei=1,fluct_val%indexNN(i_sh) !loop on neighbours
+                if(fluct_val%flat_nei(i_cell,i_nei).eq.-1) cycle !skip non-connected neighbours
+                j_flat=fluct_val%flat_nei(i_cell,i_nei)
 
                 !write(*,*) "site", i_cell, "neighbour", j_flat
                 Mj=M3(:,j_flat) !site j

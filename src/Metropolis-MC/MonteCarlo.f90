@@ -21,7 +21,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
     use m_average_MC, only: get_neighbours
-    use m_louise, only: louise_parameters,init_louise_parameter
+    use m_fluct, only: fluct_parameters,init_fluct_parameter
 
     type(lattice), intent(inout)            :: my_lattice
     type(io_parameter), intent(in)          :: io_simu
@@ -52,7 +52,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     !mpi parameters
     integer                     :: cnt(com%Np)
     integer                     :: displ(com%Np)
-    type(louise_parameters)     :: louise_val
+    type(fluct_parameters)     :: fluct_val
     
     ! initialize the variables
     call rw_MC(io_MC)
@@ -65,7 +65,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     filen_kt_acc=5
     
     ! allocate and fill flat table of first neighbours
-    Call init_louise_parameter(louise_val,my_lattice,io_MC%do_louise)
+    Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct)
 
     ! initialize the temperatures
     call ini_temp(kt_all,kTfin,kTini,size_table,io_simu%io_warning)
@@ -95,7 +95,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
                 Call MCstep(my_lattice,io_MC,N_cell,state_prop,measure(i_kt)%kt,Hams)
             End do
             Call MCstep(my_lattice,io_MC,N_cell,state_prop,measure(i_kt)%kt,Hams) ! at least one step
-            Call measure_add(measure(i_kt),my_lattice,state_prop,Q_neigh,louise_val) 
+            Call measure_add(measure(i_kt),my_lattice,state_prop,Q_neigh,fluct_val) 
         end do ! over i_MC
    
         Call measure_eval(measure(i_kt),io_MC%Cor_log,N_cell)

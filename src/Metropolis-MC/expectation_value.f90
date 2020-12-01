@@ -1,7 +1,7 @@
 module m_mc_exp_val
 use m_constants, only : pi
 use m_mc_track_val, only: track_val
-use m_louise,only: louise_parameters, eval_louise
+use m_fluct,only: fluct_parameters, eval_fluct
 implicit none
 private
 public :: exp_val, measure_print_thermo, measure_gather,measure_add,measure_eval,print_av,measure_init
@@ -136,14 +136,14 @@ subroutine measure_print_thermo(this,com)
     endif
 end subroutine
 
-subroutine measure_add(this,lat,state_prop,Q_neigh,louise_val)
+subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     use m_topo_commons
     use m_derived_types,only: lattice
     class(exp_val),intent(inout)            :: this
     type(lattice),intent(in)                :: lat
     type(track_val),intent(in)              :: state_prop
     integer,intent(in)                      :: Q_neigh(:,:)
-    type(louise_parameters),intent(in)      :: louise_val
+    type(fluct_parameters),intent(in)      :: fluct_val
 
     !put that into state_prop as well?
     real(8)     :: dumy(5),qeulerp,qeulerm
@@ -168,7 +168,7 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,louise_val)
     this%Qm_sq_sum_av=this%Qm_sq_sum_av+qeulerm**2
     this%vortex_av=this%vortex_av+dumy(3:5)
 
-    if(louise_val%l_use) Call eval_louise(this%Re_MpMm_sum,this%Im_MpMm_sum,lat,louise_val)
+    if(fluct_val%l_use) Call eval_fluct(this%Re_MpMm_sum,this%Im_MpMm_sum,lat,fluct_val)
 end subroutine
 
 
