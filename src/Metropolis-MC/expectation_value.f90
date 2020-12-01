@@ -4,7 +4,7 @@ use m_mc_track_val, only: track_val
 implicit none
 private
 public :: exp_val, measure_print_thermo, measure_gather,measure_add,measure_eval,print_av,measure_init
-integer,parameter       ::	N_entry=20
+integer,parameter       ::	N_entry=22
 integer,protected	    ::	MPI_exp_val ! mpi variable for direct mpi exp_val operations
 type exp_val
     !! contribution of the different energy parts
@@ -33,6 +33,9 @@ type exp_val
     real(8) :: M_sum_av(3)=0.0d0
     real(8) :: vortex_av(3)=0.0d0
     real(8) :: chi_l(3)=0.0d0
+
+    real(8) :: Re_MpMm_sum=0.0d0
+    real(8) :: Im_MpMm_sum=0.0d0
 end type
 
 contains 
@@ -61,7 +64,7 @@ subroutine set_MPI_type()
 	integer(kind=MPI_ADDRESS_KIND)				::	extend
 	integer										::	ierr,i
 
-	blocks=[1,1,1,3,4,1,3,3,1,1,1,1,1,1,1,1,3,3,3,3]
+	blocks=[1,1,1,3,4,1,3,3,1,1,1,1,1,1,1,1,3,3,3,3,1,1]
 	types=MPI_DOUBLE_PRECISION
 	types(1)=MPI_INT
 	CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION,lb,extend_real,ierr)
@@ -124,16 +127,25 @@ subroutine measure_print_thermo(this,com)
     endif
 end subroutine
 
-subroutine measure_add(this,lat,state_prop,Q_neigh)
+subroutine measure_add(this,lat,state_prop,Q_neigh,flat_nei,indexNN)
     use m_topo_commons
     use m_derived_types,only: lattice
+    use m_vector, only : cross
     class(exp_val),intent(inout)    :: this
     type(lattice),intent(in)        :: lat
     type(track_val),intent(in)      :: state_prop
     integer,intent(in)              :: Q_neigh(:,:)
+    integer,intent(in)              :: flat_nei(:,:),indexNN(:)
 
     !put that into state_prop as well?
     real(8)     :: dumy(5),qeulerp,qeulerm
+    
+    real(8),pointer :: M3(:,:)
+    real(8)         :: temp(3)
+    real(8)         :: Mi(3), Mj(3), Re_MpMm, Im_MpMm
+    integer         :: N_neighbours,N_cell
+    integer         :: i_cell, i_sh,i_nei,j_flat 
+
 
     this%N_add=this%N_add+1
 
@@ -153,6 +165,29 @@ subroutine measure_add(this,lat,state_prop,Q_neigh)
     this%Qp_sq_sum_av=this%Qp_sq_sum_av+qeulerp**2
     this%Qm_sq_sum_av=this%Qm_sq_sum_av+qeulerm**2
     this%vortex_av=this%vortex_av+dumy(3:5)
+
+    ! ------- for <M+M-> ------- !
+	N_cell=lat%Ncell
+    M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
+    Re_MpMm=0.0d0
+    Im_MpMm=0.0d0
+	do i_cell=1,N_cell  !loop on sites
+		Mi=M3(:,i_cell) !site i
+		do i_sh=1,N_neighbours !loop on shell of neighbours
+			do i_nei=1,indexNN(i_sh) !loop on neighbours
+				if(flat_nei(i_cell,i_nei).eq.-1) cycle !skip non-connected neighbours
+				j_flat=flat_nei(i_cell,i_nei)
+
+				!write(*,*) "site", i_cell, "neighbour", j_flat
+				Mj=M3(:,j_flat) !site j
+				Re_MpMm = Re_MpMm + dot_product(Mi,Mj) - Mi(3)*Mj(3) !real part M+M-, sum over all pairs
+				temp = cross(Mi,Mj)
+				Im_MpMm= Im_MpMm + temp(3) !imaginary part of M+M-, sum over all pairs
+			enddo
+		enddo
+	enddo
+    this%Re_MpMm_sum=this%Re_MpMm_sum+Re_MpMm
+    this%Im_MpMm_sum=this%Im_MpMm_sum+Im_MpMm
 end subroutine
 
 
@@ -175,11 +210,11 @@ subroutine measure_eval(this,Cor_log, N_cell_in)
     this%qeulerp_av=this%qeulerp_av*av_Nadd/pi/4.0d0
     this%qeulerm_av=this%qeulerm_av*av_Nadd/pi/4.0d0
 
-    this%chi_Q(1)=-((this%qeulerp_av-this%qeulerm_av)**2 - this%Q_sq_sum_av*av_Nadd/16.0d0/pi**2)*av_kT/(this%qeulerp_av-this%qeulerm_av)
-    this%chi_Q(2)=-(this%qeulerp_av**2-this%Qp_sq_sum_av*av_Nadd/16.0d0/pi**2)*av_kT/this%qeulerp_av
-    this%chi_Q(3)=-(this%qeulerm_av**2-this%Qm_sq_sum_av*av_Nadd/16.0d0/pi**2)*av_kT/this%qeulerm_av
+    this%chi_Q(1)=-((this%qeulerp_av-this%qeulerm_av)**2 - this%Q_sq_sum_av*av_Nadd/16.0d0/pi**2)*av_kT!/(this%qeulerp_av-this%qeulerm_av)! do in the postprocessing 
+    this%chi_Q(2)=-(this%qeulerp_av**2-this%Qp_sq_sum_av*av_Nadd/16.0d0/pi**2)*av_kT!/this%qeulerp_av
+    this%chi_Q(3)=-(this%qeulerm_av**2-this%Qm_sq_sum_av*av_Nadd/16.0d0/pi**2)*av_kT!/this%qeulerm_av
     this%chi_Q(4)=((this%Qm_sq_sum_av*av_Nadd/16.0d0/pi**2-this%qeulerm_av**2)* &
-              &    (this%Qp_sq_sum_av*av_Nadd/16.0d0/pi**2-this%qeulerp_av**2))*av_kT/(this%qeulerm_av*this%qeulerp_av)
+              &    (this%Qp_sq_sum_av*av_Nadd/16.0d0/pi**2-this%qeulerp_av**2))*av_kT!/(this%qeulerm_av*this%qeulerp_av)
 
     this%vortex_av=this%vortex_av*av_Nadd/3.0d0/sqrt(3.0d0)
     if (Cor_log) this%chi_l=this%N_add !what is this supposed to do?

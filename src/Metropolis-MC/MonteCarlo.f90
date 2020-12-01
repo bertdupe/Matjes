@@ -20,6 +20,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     use m_input_types,only: MC_input
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
+    use m_average_MC, only: get_neighbours
 
     type(lattice), intent(inout)            :: my_lattice
     type(io_parameter), intent(in)          :: io_simu
@@ -37,6 +38,7 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     ! variables that being followed during the simulation
     real(8)                     :: qeulerp,qeulerm,dumy(5)
     type(track_val)             :: state_prop
+    real(8),pointer :: M3(:,:)
     ! contribution of the different energy parts
     type(exp_val),allocatable   :: measure(:)
     real(8),allocatable         :: kt_all(:)
@@ -49,6 +51,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     !mpi parameters
     integer                     :: cnt(com%Np)
     integer                     :: displ(com%Np)
+	integer, allocatable :: flat_nei(:,:)
+    integer, allocatable :: indexNN(:)
     
     ! initialize the variables
     call rw_MC(io_MC)
@@ -60,6 +64,9 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     N_cell=my_lattice%Ncell
     filen_kt_acc=5
     
+    ! allocate and fill flat table of first neighbours
+	call get_neighbours(my_lattice,flat_nei,indexNN)
+
     ! initialize the temperatures
     call ini_temp(kt_all,kTfin,kTini,size_table,io_simu%io_warning)
     filen_kt_acc(1)=max(int(log10(maxval(kt_all))),1)
@@ -84,14 +91,14 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
         kt=kt_all(i_kT)
         measure(i_measure)%kt=kt
         call Relaxation(my_lattice,io_MC,N_cell,state_prop,qeulerp,qeulerm,kt,hams,Q_neigh)
-    !Monte Carlo steps, calculate the values
+        !Monte Carlo steps, calculate the values
         do i_MC=1+io_MC%restart_MC_steps,io_MC%Total_MC_Steps+io_MC%restart_MC_steps
             !Monte Carlo steps for independency
             Do i_relax=1,io_MC%T_auto*N_cell
                 Call MCstep(my_lattice,io_MC,N_cell,state_prop,kt,Hams)
             End do
             Call MCstep(my_lattice,io_MC,N_cell,state_prop,kt,Hams) ! at least one step
-            Call measure_add(measure(i_measure),my_lattice,state_prop,Q_neigh) 
+            Call measure_add(measure(i_measure),my_lattice,state_prop,Q_neigh,flat_nei,indexNN) 
         end do ! over i_MC
    
         Call measure_eval(measure(i_measure),io_MC%Cor_log,N_cell)
