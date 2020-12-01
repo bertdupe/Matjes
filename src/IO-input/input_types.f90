@@ -28,7 +28,7 @@ type MC_input
     logical     :: i_restart=.false.
     logical     :: print_relax=.false.
     logical     :: Cor_log=.false.
-    logical     :: do_louise=.True.
+    logical     :: do_fluct=.True.
 
     real(8)     :: cone=pi
 
