@@ -20,6 +20,7 @@ private
 public write_config
 contains
 subroutine write_config_char(fname,lat)
+    !TODO: UPDATE
     character(len=*),intent(in) ::  fname
     type(lattice),intent(in)    ::  lat
 

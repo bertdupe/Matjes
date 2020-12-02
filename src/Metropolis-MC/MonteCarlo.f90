@@ -99,11 +99,11 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
         end do ! over i_MC
    
         Call measure_eval(measure(i_kt),io_MC%Cor_log,N_cell)
-        if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt,my_lattice,filen_kt_acc)
+        if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,my_lattice,filen_kt_acc)
         Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', N_T,' steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
     end do !over i_kT
 
-    Call measure_gather(measure,com,displ,cnt)
+    Call gatherv(measure,com,displ,cnt)
     if (io_simu%io_spstmL) call spstm  ! The program of Tobias is used only at last iteration
     Call measure_print_thermo(measure,com) ! write EM.dat output
 end subroutine montecarlo

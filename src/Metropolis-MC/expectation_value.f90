@@ -4,10 +4,12 @@ use m_mc_track_val, only: track_val
 use m_fluct,only: fluct_parameters, eval_fluct
 implicit none
 private
-public :: exp_val, measure_print_thermo, measure_gather,measure_add,measure_eval,print_av,measure_init
-integer,parameter       ::	N_entry=22
-integer,protected	    ::	MPI_exp_val ! mpi variable for direct mpi exp_val operations
-type exp_val
+public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av,measure_init               
+public :: measure_scatter,measure_gather,measure_set_mpi_type                          
+public :: measure_print_thermo_init
+integer,parameter       ::	N_entry=22                                                                   
+integer,protected	    ::	MPI_exp_val ! mpi variable for direct mpi exp_val operations                 
+type exp_val                                                                                             
     !! contribution of the different energy parts
     !real(8) :: E_decompose(8) !not really used here
     integer :: N_add=0 !counts how often values have been added
@@ -49,7 +51,7 @@ subroutine measure_init(measure,it_local,iT_global,com,kt_all)
     real(8),intent(in)              :: kt_all(it_global(2)-it_global(1)+1)
     class(mpi_type),intent(in)      :: com
     integer         ::  i,j
-    Call set_MPI_type()
+    Call measure_set_MPI_type()
     if(com%ismas)then
         allocate(measure(it_global(2)))
     else
@@ -63,7 +65,7 @@ subroutine measure_init(measure,it_local,iT_global,com,kt_all)
     enddo
 end subroutine
 
-subroutine set_MPI_type()
+subroutine measure_set_MPI_type()
 #ifdef CPP_MPI    
     use mpi_basic
 	integer										::	blocks(N_entry)
@@ -99,7 +101,7 @@ end subroutine
 
 subroutine measure_gather(this,com,displ,cnt)
     use mpi_basic
-    type(exp_val),intent(in)        :: this(:)
+    type(exp_val),intent(inout)     :: this(:)
     class(mpi_type),intent(in)      :: com
     integer,intent(in)              :: displ(com%Np)
     integer,intent(in)              :: cnt(com%Np)
@@ -112,19 +114,47 @@ subroutine measure_gather(this,com,displ,cnt)
 #endif
 end subroutine
 
-subroutine measure_print_thermo(this,com)
+subroutine measure_scatter(this,com,displ,cnt)
+    use mpi_basic
+    type(exp_val),intent(inout)     :: this(:)
+    class(mpi_type),intent(in)      :: com
+    integer,intent(in)              :: displ(com%Np)
+    integer,intent(in)              :: cnt(com%Np)
+#ifdef CPP_MPI    
+    integer                         :: ierr
+
+    Call MPI_Scatterv(this(1),cnt,displ,MPI_exp_val,this(1),cnt(com%id+1),MPI_exp_val,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine measure_print_thermo_init(io_unit)
+    use m_io_files_utils, only: open_file_write
+    integer,intent(inout)     ::  io_unit
+
+    io_unit=open_file_write("EM.dat")
+    Write(io_unit,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
+                                 & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
+                                 & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
+                                 & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
+end subroutine
+
+
+subroutine measure_print_thermo(this,com,io_unit_in)
     use m_constants, only : k_b
     use mpi_basic, only: mpi_type
     class(exp_val),intent(inout)    :: this(:)
     class(mpi_type),intent(in)      :: com
+    integer,optional                :: io_unit_in
     integer     ::  io_unit,i
 
     if(com%ismas)then
-        OPEN(newunit=io_unit,FILE='EM.dat',action='write',form='formatted')
-          Write(io_unit,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
-          & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
-          & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
-          & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
+        if(present(io_unit_in))then
+            io_unit=io_unit_in
+        else
+            Call measure_print_thermo_init(io_unit)
+        endif
         ! write the data into a file
         do i=1,size(this)
             Write(io_unit,'(27(E20.10E3,2x),E20.10E3)') this(i)%kT/k_B ,this(i)%E_av, this(i)%E_err_av, this(i)%C_av,&
@@ -132,7 +162,7 @@ subroutine measure_print_thermo(this,com)
              &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1), &
              &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4)
         enddo
-        close(io_unit) 
+        if(.not.present(io_unit_in)) close(io_unit) 
     endif
 end subroutine
 

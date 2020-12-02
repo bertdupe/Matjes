@@ -1,22 +1,22 @@
 module m_parallel_tempering
+use m_paratemp
 implicit none
-!NOT UPDATED TO PATRICK ORDER-PARAMETERS/HAMILTONIAN
 contains
 subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     use mpi_util 
+    use mpi_basic
     use m_H_public
     use m_topocharge_all
     use m_set_temp
     use m_average_MC
     use m_constants, only : k_b
     use m_vector, only : norm
-    use m_paratemp
     use m_store_relaxation
     use m_check_restart
     use m_createspinfile
     use m_derived_types, only : t_cell,io_parameter,simulation_parameters
     use m_derived_types, only : lattice
-    use m_topo_commons
+    use m_topo_commons, only : neighbor_Q,get_charge
     use m_convert
     use m_io_files_utils
     use m_rw_MC
@@ -24,6 +24,9 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
     use m_input_types,only: MC_input
+    use m_fluct, only: fluct_parameters,init_fluct_parameter
+    use m_write_config
+    use m_io_files_utils, only: close_file
 
     type(lattice), intent(inout) :: my_lattice
     type(io_parameter), intent(in) :: io_simu
@@ -31,493 +34,174 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     class(t_H), intent(in)                  :: Hams(:)
     class(mpi_type),intent(in)              :: com
     ! internal variable
-    ! parallel tempering label. can take 3 values
-    ! 0: no label; +1: up; -1: down
     type(MC_input)             :: io_MC
-    real(8), allocatable :: label_world(:),nup(:),ndown(:),success_PT(:)
-    ! convergence parameters
-    real(8) :: rate,cone,Nsuccess,tries
-    ! all the temperatures
-    real(8),allocatable :: kT_all(:),kT_updated(:)  ! contains the temperatures T/k_b: kt_all contains the temperatures from the smalles to the largest
-    integer,allocatable :: image_temp(:)  ! contains the POSITION of temperatures
     ! slope of temperature sets
     integer :: j_optset
     ! slope of the MC
-    integer :: i_MC,i_relax,i_pos
-    real(8) :: pos
-    ! size of all the tables
-    integer :: size_table, size_M_replica
+    integer :: i_MC,i_relax
+    !size parameters 
+    integer :: N_adjT  !number of temperature adjust cycles (outermost loop)
+    integer :: NT_global ! number of global temperatures 
+    integer :: NT_local  ! number of local temperatures 
+    integer :: size_collect !required local size for parameters that are collected through mpi
+
     ! internal variable
-    ! variables that being followed during the simulation
-    real(8) :: qeulerp,qeulerm,vortex(3),magnetization(3),E_total,acc
     ! keep the information of the energies of each replicas before each swap
     real(8), allocatable :: E_temp(:)
-    ! contribution of the different energy parts
-    real(8) :: E_decompose(8)
-    ! slope for the matrices
-    integer :: iomp
     ! considered temperature
     real(8) :: kT,kTfin,kTini
     ! autocorrelation for the parallel tempering and number of relaxation steps
-    integer :: autocor_steps,relaxation_steps,total_relax_steps,freq_rw,i_rw
-    ! slope for the number of images and the temperature
-    integer :: i_image,i_temp
-    ! restart of the parallel tempering
-    logical :: i_reread_paratemp,i_rewrite_paratemp
-    ! restart of the measured data
-    logical :: i_reread_data,i_rewrite_data
-    ! restart of of the replicas
-    logical :: i_reread_replicas,i_rewrite_replicas
-    ! thermodynamical quantities
-    real(8),allocatable :: C_av(:),chi_M(:,:),chi_Q(:,:)
-    ! errors on the different quantities
-    real(8),allocatable :: E_err_av(:),M_err_av(:,:)
-    ! sums
-    real(8),allocatable :: M_sq_sum_av(:,:),E_sum_av(:),E_sq_sum_av(:),Q_sq_sum_av(:),Qp_sq_sum_av(:),Qm_sq_sum_av(:)
-    ! energy and so on
-    real(8),allocatable :: E_av(:),qeulerp_av(:),qeulerm_av(:),M_av(:,:)
-    real(8),allocatable :: M_sum_av(:,:),vortex_av(:,:),chi_l(:,:)
-    ! table that stores the replicas
-    real(8), target, allocatable :: replicas(:,:,:)
-    ! relaxation informations
-    real(8), allocatable :: relax(:,:,:)
+    integer :: autocor_steps,relaxation_steps,total_relax_steps
+    ! slope for the number of images and temperatures
+    integer :: i_temp
     ! dummy slopes
-    integer :: i,istart,istop,io_EM,io_Trange,N_cell,n_sizerelax,N_temp
+    integer :: i,io_EM,N_cell,n_sizerelax
     logical :: i_optTset
-    real(8) :: dumy(5),nb
 
     !mpi parameters
-    integer                     :: iT_global(2),iT_local(2),N_T
+    integer                     :: iT_global(2),iT_local(2)
     integer                     :: cnt(com%Np)
     integer                     :: displ(com%Np)
 
-    type(track_val)             :: state_prop
+    type(track_val),allocatable :: state_prop(:)
     type(exp_val),allocatable   :: measure(:)
     
     type(lattice),allocatable,dimension(:)     :: lattices
+    type(fluct_parameters)  :: fluct_val
+    integer,allocatable     :: Q_neigh(:,:)
+    type(paratemp_track)    :: para_track
     
-    
-    ! initialized the size of the tables
-    call rw_MC(io_MC)
-    cone=io_MC%cone
-    size_table=io_MC%n_Tsteps
-    n_sizerelax=io_MC%n_sizerelax
+    !input parameters that most probably need some external input, which was not supplied in the version this modification is based on
+    N_adjT=1 
+    i_optTset=.False.
 
+    !set some input parameters
+    call rw_MC(io_MC)
+    NT_global=io_MC%n_Tsteps
+    n_sizerelax=io_MC%n_sizerelax
+    autocor_steps=io_MC%T_auto
     N_cell=my_lattice%Ncell
     kTini=ext_param%ktini
     kTfin=ext_param%ktfin
-
-    ! initialize temperatures
-    allocate(kt_all(size_table),source=0.0d0)
-    call ini_temp(kt_all,kTfin,kTini,size_table,io_simu%io_warning)
-    iT_global=[1,io_MC%n_Tsteps]
-    Call distrib_int_index(com,iT_global,iT_local,displ,cnt)
-    if (com%ismas) then
-        write(6,'(/,a,I6,a,/)') "setup from parallel tempering"
-        write(6,'(a,I6,a,/)') "you are calculating",size_table," temperatures"
-    endif
-    N_T=it_local(2)-it_local(1)+1
-    allocate(lattices(N_T))
-    do i_image=1,N_T
-        Call my_lattice%copy(lattices(i_image))
-    enddo
-    Call measure_init(measure,it_local,iT_global,com,kt_all) 
-#if 0
-
-    ! allocate the temperatures
-    allocate(kT_all(size_table),kT_updated(size_table))
-    allocate(image_temp(size_table))
-    ! allocate the matrix for up and down images
-    allocate(nup(size_table),ndown(size_table),label_world(size_table),success_PT(size_table))
-    allocate(E_av(size_table))
-    !     Errors for energy and magnetization
-    allocate(E_err_av(size_table),M_err_av(3,size_table))
-    !     Energysum and Magnetizationsum and their squaresum
-    !     specific heat and suszeptibility
-    allocate(C_av(size_table),chi_Q(4,size_table),Q_sq_sum_av(size_table),Qp_sq_sum_av(size_table),Qm_sq_sum_av(size_table))
-    !     magnetisation
-    allocate(M_sum_av(3,size_table),M_sq_sum_av(3,size_table),chi_l(3,size_table),chi_M(3,size_table),M_av(3,size_table))
-    allocate(vortex_av(3,size_table),qeulerp_av(size_table),qeulerm_av(size_table))
-    allocate(E_sum_av(size_table),E_sq_sum_av(size_table),E_temp(size_table))
-    
-    allocate(relax(18,n_sizerelax,size_M_replica))
-    
-    ! open the data file where the thermodynamical quantities should be written
-#ifdef CPP_MPI
-    if (irank_working.eq.0) then
-#endif
-    io_EM=open_file_write('EM.dat')
-    Write(io_EM,'(29(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
-            & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
-            & '16:vy','17:vz','18:qeuler','19:ChiQ','20:Q+','21:ChiQ+','22:Q-','23:ChiQ-','24:Im','25:Qm','26:l_x','27:l_y','28:l_z','29:ChiQpQm'
-#ifdef CPP_MPI
-    endif
-#endif
-    
-    ! open the data where the parallel tempering quantities will be written
-#ifdef CPP_MPI
-    if (irank_working.eq.0) then
-#endif
-    io_Trange=open_file_write('T-range.dat')
-    
-    if (.not.i_optTset) then
-       write(io_Trange,'(a)') '#  1:T  2:fup(T)  3:A(T)'
-    else
-       write(io_Trange,'(a)') '#  1:Told   2:Tnew   3:fup(T)    4:D(T)    5:dfup(T)    6:A(T)    7:eta(T)'
-    endif
-    
-#ifdef CPP_MPI
-    endif
-#endif
-    
-    ! Measured data
-    E_av=0.0d0
-    C_av=0.0d0
-    M_av=0.0d0
-    chi_Q=0.0d0
-    E_err_av=0.0d0
-    E_sum_av=0.0d0
-    M_err_av=0.0d0
-    M_sum_av=0.0d0
-    vortex_av=0.0d0
-    qeulerp_av=0.0d0
-    qeulerm_av=0.0d0
-    M_sq_sum_av=0.0d0
-    E_sq_sum_av=0.0d0
-    Q_sq_sum_av=0.0d0
-    Qp_sq_sum_av=0.0d0
-    Qm_sq_sum_av=0.0d0
-    chi_l=0.0d0
-    chi_M=0.0d0
-    
-    ! temperature
-    kT_all=0.0d0
-    kT=0.0d0
-    image_temp=(/(i,i=1,size_table)/) ! at the beginning, the first image has the first temperature, the second image, the second ...
-    
-    ! initialization of the variables
-    ! convergence of the MC
-    rate=0.0d0
-    Nsuccess=0.0d0
-    tries=0.0d0
-    
-    ! control of the parallel tempering
-    label_world=0.0d0
-    nup=0.0d0
-    ndown=0.0d0
-    success_PT=0.0d0
-    
-    ! local variables
-    qeulerp=0.0d0
-    qeulerm=0.0d0
-    vortex=0.0d0
-    magnetization=0.0d0
-    E_total=0.0d0
-    E_decompose=0.0d0
-    autocor_steps=io_MC%T_auto
-    kT=0.0d0
-    E_temp=0.0d0
-    
     ! relaxation variables
-    relax=0.0d0
     relaxation_steps=n_sizerelax
-    total_relax_steps=relaxation_steps*(2**N_temp-1)
-    freq_rw=total_relax_steps/n_sizerelax
-    
-    istart=0
-    istop=0
-#ifdef CPP_MPI
-    ! transfer data in the case of MPI
-    istart=1+irank_working*nRepProc
-    istop=(irank_working+1)*nRepProc
-    image_temp(nRepProc+1:)=0
-#endif
-    
-    ! restart of the parallel tempering
-    i_reread_paratemp=.False.
-    i_rewrite_paratemp=.False.
-    i_reread_data=.False.
-    i_rewrite_data=.False.
-    i_reread_replicas=.False.
-    i_rewrite_replicas=.False.
-    
-#ifdef CPP_MPI
-    if (irank_working.eq.0) then
-#endif
-       write(6,'(/,a)') 'parallel tempering selected'
-       write(6,'(a,I10,a,I10,/)') 'the number of relaxation steps will go from', relaxation_steps, ' to ', relaxation_steps*2**(N_temp-1)
-#ifdef CPP_MPI
+    total_relax_steps=relaxation_steps*(2**N_adjT-1)  !N_adjTS UNITIALIZED ALSO IN OLD VERSION???
+    if(com%ismas)then
+        write(6,'(/,a,I6,a,/)') "setup for parallel tempering"
+        write(6,'(a,I6,a,/)') "you are calculating",NT_global," temperatures"
+        write(6,'(/,a)') 'parallel tempering selected'
+        write(6,'(a,I10,a,I10,/)') 'the number of relaxation steps will go from', relaxation_steps, ' to ', total_relax_steps
     endif
-#endif
-!   put to front    
-!    ! initialize temperatures
-!#if CPP_MPI
-!    call ini_temp(kt_all,kTfin,kTini,size_table,irank_working,nRepProc,io_simu%io_warning)
-!#else
-!    call ini_temp(kt_all,kTfin,kTini,size_table,io_simu%io_warning)
-!#endif
+
+    !THIS SHOULD ONLY BE CALCULATED ON ONE MPI THREAD, OTHERWISE THE OUTPUT IS MADNESS
+    !get some additional data arrays necessary on all threads for the calculation
+    Call neighbor_Q(my_lattice,Q_neigh)
+    Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct)
+
+    !find out how to distribute the threads
+    IT_global=[1,io_MC%n_Tsteps]
+    Call distrib_int_index(com,iT_global,iT_local,displ,cnt)
+    Call measure_set_mpi_type()
+
+    !initialize all values that will only exist locally on each MPI-thread
+    NT_local=cnt(com%id+1)
+    allocate(lattices(NT_local))
+    allocate(state_prop(NT_local))
+    do i_temp=1,NT_local
+        Call my_lattice%copy(lattices(i_temp))
+    enddo
+
+    !initialize all values that exist on all threads, but need to be gathered at on master occationally
+    size_collect=NT_local
+    if(com%isMas) size_collect=NT_global
+    allocate(E_temp(size_collect),source=0.0d0)
+    allocate(measure(size_collect))
+
+    !initialize necessary things on the master thread (temperatures,io-stuff)
+    if(com%ismas)then
+        Call alloc_paratemp_track(para_track,NT_global)
+        call ini_temp(para_track%kt_all,kTfin,kTini,NT_global,io_simu%io_warning)
+        do i=1,NT_global
+            measure(i)%kt=para_track%kt_all(i)
+        enddo
+        ! open the data file where the thermodynamical quantities should be written
+        Call measure_print_thermo_init(io_EM)
+    endif
+
+    !Scatter the measure-tasks to all treads
+    Call scatterv(measure,com,displ,cnt)
+
+    !initialize all local values
+    do i_temp=1,NT_local
+        Call state_prop(i_temp)%init(lattices(i_temp),Hams,io_MC%cone)
+    enddo
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!   START THE ACTUAL CALCULATION LOOP
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    ! in case of restart of the temperature set
-    call check_restart_read('temperature.in',kt_all,size_table)
+    do j_optset=1,N_adjT
+        !  T_relax is T_relax_temp, this is because
+        !  one might want to thermalize the first iteration more as compared with the j_optset>2
+        if (j_optset.gt.1) autocor_steps=io_MC%T_relax
     
-    kT_updated=kt_all
+        ! Relaxation of the System
+        do i_relax=1,relaxation_steps
+            !do loop over local temperatures
+            do i_temp=1,NT_local
+                kt=measure(i_temp)%kt
+
+                Do i_MC=1,autocor_steps*N_cell
+                    Call MCstep(lattices(i_temp),io_MC,N_cell,state_prop(i_temp),kt,Hams)
+                enddo
+                Call MCstep(lattices(i_temp),io_MC,N_cell,state_prop(i_temp),kt,Hams)! In case autocor_steps set to zero at least one MCstep is done
+
+                Call measure_add(measure(i_temp),lattices(i_temp),state_prop(i_temp),Q_neigh,fluct_val) !add up relevant observable
+                E_temp(i_temp)=state_prop(i_temp)%E_total !save the total energy of each replicas
+            enddo
+
+            ! reorder the temperature and the replicas
+            ! The replicas are actually attached to the processors so they stay remote and can not be rearranged
+            ! this part makes sure that the temperature are on the processors of the replicas and that Image_temp points to the right temperature
+            ! and then scatter the data on the good remote processors
+            Call reorder_temperature(E_temp,measure,com,displ,cnt,i_relax,para_track)
+        enddo
     
-#ifdef CPP_MPI
-    
-    ! kt_all on rank 0 must contain all the temperatures in the good order
-         !call mpi_gather(kt_all,nRepProc,MPI_REAL8,kt_all(1:nRepProc),nRepProc,MPI_REAL8,0,MPI_COMM,ierr)
-    kt_all=gather(kt_all(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-#endif
-    
-    ! in case reinitialization of the fraction or writting out the fraction
-    call check_restart_read('fraction.in',i_reread_paratemp)
-    call check_restart_read('fraction.out',i_rewrite_paratemp)
-    ! in case the measured data should be restarted from file
-    call check_restart_read('measured_data.in',i_reread_data)
-    call check_restart_read('measured_data.out',i_rewrite_data)
-    ! in case the replicas should be restarted from file
-    call check_restart_read('replicas.in',i_reread_replicas)
-    call check_restart_read('replicas.out',i_rewrite_replicas)
-    
-    
-    ! read the replicas from file in case it is necessary
-#ifdef CPP_MPI
-#else
-    if (i_reread_replicas) call check_restart_read('replicas.in',replicas)
-#endif
-    
-    do j_optset=1,N_temp
-    
-    ! reset the variables to 0 when the temperature set is changed
-    ! Measured data
-       E_av=0.0d0
-       C_av=0.0d0
-       chi_Q=0.0d0
-       E_err_av=0.0d0
-       E_sum_av=0.0d0
-       M_err_av=0.0d0
-       M_sum_av=0.0d0
-       vortex_av=0.0d0
-       qeulerp_av=0.0d0
-       qeulerm_av=0.0d0
-       M_sq_sum_av=0.0d0
-       E_sq_sum_av=0.0d0
-       Q_sq_sum_av=0.0d0
-       chi_l=0.0d0
-       chi_M=0.0d0
-       nup=0.0d0
-       ndown=0.0d0
-       Nsuccess=0.0d0
-       label_world=0.0d0
-    
-       if (i_reread_paratemp) then
-          call check_restart_read('fraction.in',nup,ndown,success_PT,label_world,image_temp,size_table)
-          i_reread_paratemp=.False.
-       endif
-    
-       if (i_reread_data) then
-          call check_restart_read('measured_data.in',E_sum_av,E_sq_sum_av,E_err_av, &
-          &   M_sum_av,M_sq_sum_av,M_err_av, qeulerp_av,qeulerm_av,Q_sq_sum_av,vortex_av, &
-          &   size_table)
-          i_reread_paratemp=.False.
-       endif
-    
-    !         T_relax is T_relax_temp, this is because
-    !         one might want to thermalize the first iteration more as compared with the j_optset>2
-    
-       if (j_optset.gt.1) autocor_steps=io_MC%T_relax
-    
-    ! Relaxation of the System - SWAPPING!!
-       do i_relax=1,relaxation_steps
-    ! do loop over the temperatures
-          do i_temp=1,size_M_replica
-    
-    ! find the replica which has this temperature
-             i_image=image_temp(i_temp)
-    ! load the actual temperature into kT
-             kt=kt_updated(i_temp)
-    ! initializing the variables above
-    
-    !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !PB TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !TODO REQUIRES MAGNETIC TEXTURE ONLY
-             !E_total=total_energy(N_cell,lattices(i_image))
-    !         Call CalculateAverages(mode_magnetic(:,i_image),qeulerp,qeulerm,vortex,magnetization)
-    !
-    !            Do i_MC=1,autocor_steps*N_cell
-    !                Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
-    !            enddo
-    !
-    !
-    ! In case T_relax set to zero at least one MCstep is done
-    !            Call MCStep(mode_magnetic(:,i_image),N_cell,E_total,E_decompose,Magnetization,kt,acc,rate,nb,cone,ising,equi,overrel,sphere,underrel)
-                ERROR STOP "THIS HAS TO BE IMPLEMENTED"
-    
-    ! calculate the topocharge
-                dumy=get_charge()
-    
-    ! CalculateAverages makes the averages from the sums
-                !Call CalculateAverages(qeulerp_av(i_temp),qeulerm_av(i_temp),Q_sq_sum_av(i_temp),Qp_sq_sum_av(i_temp),Qm_sq_sum_av(i_temp),vortex_av(:,i_temp),vortex &
-                !    &  ,E_sum_av(i_temp),E_sq_sum_av(i_temp),M_sum_av(:,i_temp),M_sq_sum_av(:,i_temp),E_total,Magnetization)
-                ERROR STOP "UPDATE CALCULATE AVERAGES"
-    
-    !           save the data for thermalization
-    
-                if (io_MC%print_relax) then
-    
-                   i_pos=i_relax+n_sizerelax*(2**(j_optset-1)-1)
-    
-                   pos=dble(i_pos)
-                   i_rw=mod(i_pos,freq_rw)
-    
-    !               if (i_rw.eq.0) call store_relaxation(Relax,i_temp,n_sizerelax,i_pos/freq_rw,pos, &
-    !       &  sum(E_decompose)/dble(N_cell),E_decompose,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)
-    
-                endif
-    
-    ! save the total energy of each replicas
-             E_temp(i_temp)=E_total
-    
-             enddo     ! enddo of the images
-    
-    
-    !         if (i_ghost) then
-#ifdef CPP_MPI
-    !             call paratemp(E_total,kT,state,label &
-    !           & ,nup,ndown,i_thousand,Nsuccess,n_thousand, &
-    !           & vortex_mpi,qeulerp_mpi,qeulerm_mpi,kt_mpi,qeulerp,qeulerm,E_mpi,E_sq_mpi,M_sq_mpi, &
-    !           & Magnetization,M,vortex,j_optset,N_temp,n_ghost)
-    !         else
-    ! give the knowledge of all the temperature and all the energies to all the processors
-                call paratemp_gather(istart,istop,irank_working,nRepProc, &
-              &   size_table,MPI_COMM,kt_updated,E_temp,image_temp, &
-              &   qeulerp_av,qeulerm_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av, &
-              &   vortex_av,E_sum_av,E_sq_sum_av,M_sum_av,M_sq_sum_av, &
-              &   label_world)
-#endif
-    !         endif
-    
-#ifdef CPP_MPI
-             if (irank_working.eq.0) then
-#endif
-             call paratemp(label_world,nup,ndown,i_relax,success_PT,kt_updated,image_temp,E_temp,size_table,kt_all)
-#ifdef CPP_MPI
-             endif
-    
-    ! reorder the temperature and the replicas
-    ! The replicas are actually attached to the processors so they stay remote and can not be rearranged
-    ! this part makes sure that the temperature are on the processors of the replicas and that Image_temp points to the right temperature
-    ! and then scatter the data on the good remote processors
-             call paratemp_scatter(isize,irank_working,nRepProc,kt_updated,image_temp,MPI_COMM, &
-              &   qeulerp_av,qeulerm_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av, &
-              &   vortex_av,E_sum_av,E_sq_sum_av,M_sum_av,M_sq_sum_av, &
-              &   label_world)
-    
-#endif
-             E_temp=0.0d0
-          enddo  !  end of the relaxation steps (swap-steps)
-    
-    
-        if (io_simu%io_Xstruct) then
-         !write the Spinsefiles
-            do i_temp=1,size_M_replica
-    ! load the actual temperature into kT
-               call CreateSpinFile('Spinse_',kt_updated(i_temp)/k_b,replicas(:,:,i_image))
+        if (io_simu%io_Xstruct) then !write out config
+            do i_temp=1,NT_local
+                Call write_config('paratemp_',measure(i_temp)%kt/k_b,lattices(i_temp))!,filen_kt_acc)
             enddo
         endif
     
-    
-    !        write the Equilibrium-Files in case of paratemp
-    
-#ifdef CPP_MPI
-          if (io_MC%print_relax) call write_relaxation(Relax,kT_updated,irank_working,n_sizerelax,size_M_replica,size_table,io_MC%Cor_log)
-#else
-          if (io_MC%print_relax) call write_relaxation(Relax,kT_all,n_sizerelax,size_table,io_MC%Cor_log)
-#endif
-    
-    ! at the end of the relaxation and the image loops, calculate the thermodynamical quantitites
-#ifdef CPP_MPI
-           call paratemp_gather(istart,istop,irank_working,nRepProc, &
-              &   size_table,MPI_COMM,kt_updated,E_temp,image_temp, &
-              &   qeulerp_av,qeulerm_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av, &
-              &   vortex_av,E_sum_av,E_sq_sum_av,M_sum_av,M_sq_sum_av, &
-              &   label_world)
-    
-           if (irank_working.eq.0) then
-#endif
-           call Calculate_thermo(io_MC%Cor_log,relaxation_steps,dble(N_cell),kT_updated,E_sq_sum_av,E_sum_av,M_sq_sum_av, &
-        &    C_av,chi_M,E_av,E_err_av,M_err_av,qeulerp_av,qeulerm_av,vortex_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av,chi_Q,chi_l, &
-        &    M_sum_av,M_av,size_table)
-    
-    ! write the thermodynamical quantities in EM.dat
-    
-            do i=1,size_table
-                Write(io_EM,'(24(E20.10E3,2x),3(E20.10E3))') kT_updated(i)/k_B ,E_av(i), E_err_av(i), C_av(i), norm(M_sum_av(:,i))/N_cell/relaxation_steps, &
-       &     M_av(:,i), M_err_av(:,i), chi_M(:,i), vortex_av(:,i), qeulerm_av(i)+qeulerp_av(i), chi_Q(1,i), &
-       &     qeulerp_av(i), chi_Q(2,i), qeulerm_av(i), chi_Q(3,i), chi_l(:,i), chi_Q(4,i)
+        !at the end of the relaxation and the image loops, calculate the thermodynamical quantitites
+        if(com%ismas)then
+            do i=1,NT_global
+                Call measure_eval(measure(i),io_MC%Cor_log,N_cell)
             enddo
-             Write(io_EM,'(/)')
-    
-    ! calculate the current, diffusivity... for the paratemp
-          call calculate_diffusion(kT_all,kt_updated,nup,ndown,success_PT,relaxation_steps,size_table,i_optTset)
-#ifdef CPP_MPI
-          endif
-#endif
-          if ((i_optTset).and.(j_optset.ne.N_temp)) then
-    
-    ! update the temperature set
-          kT_all=kt_updated
-    
-          write(6,'(/,a,I5,a,I5)') '#-------- parallel tempering step', j_optset ,' of ', N_temp
-          write(6,'(a,I10,a,I10,/)') '#-------- number of relaxation steps goes from', relaxation_steps ,' --- to --- ', relaxation_steps*2
-    
-          relaxation_steps=relaxation_steps*2
-    
-#ifdef CPP_MPI
-          if (irank_working.eq.0) write(6,'(/,a,/)') 'reset of the current and the labels'
-#else
-          write(6,'(/,a,/)') 'reset of the current and the labels'
-#endif
-    
-          endif
-    
-    ! the data for paratemp in case a restart is needed
-        if (i_rewrite_paratemp) call check_restart_write('fraction.out',nup,ndown,success_PT,label_world,image_temp,size_table)
-        if (i_rewrite_data) call check_restart_write('measured_data.out',E_sum_av,E_sq_sum_av,E_err_av, &
-          &   M_sum_av,M_sq_sum_av,M_err_av, qeulerp_av,qeulerm_av,Q_sq_sum_av,vortex_av, &
-          &   size_table)
-    ! write the replicas from file in case it is necessary
-         if (i_rewrite_replicas) call check_restart_write('replicas.out',replicas)
-    
-        enddo !over j_MC->N_tempcd
-    
-    
-    !    get ready to start the next calculation with the new temperature set
-    !    exists = .False.
-    !    inquire (file='restart',exist=exists) !attention: Be carefull with reading old Spinstructures at a restart!
-#ifdef CPP_MPI
-        if (irank_working.eq.0) call check_restart_write('temperature.out',kt_updated,size_table)
-#else
-           call check_restart_write('temperature.out',kt_updated,size_table)
-#endif
-    
-#ifdef CPP_MPI
-            if (irank_working.eq.0) write(6,'(a)') 'parallel tempering is done'
-#else
-            write(6,'(a)') 'parallel tempering is done'
-#endif
-    
-    !close all the file
-        call close_file('T-range.dat',io_Trange)
+            Call measure_print_thermo(measure,com,io_EM)
+            write(io_EM,'(/)')
+            !THIS ORIGINALLY CALLED IRRESPECTIVE OF i_optTset, PUT IT BACK IN IF YOU KNOW WHAT THIS DOES
+            !I ONLY MADE A WRAPPER USING PARA_TRACK, EVERYTHING ELSE IS UNCHANGED IN THERE
+            if(i_optTset) call calculate_diffusion(para_track,relaxation_steps,i_optTset)! calculate the current, diffusivity... for the paratemp
+        endif
+
+        if ((i_optTset).and.(j_optset.ne.N_adjT)) then ! update the temperature set
+            if(com%ismas)then
+                para_track%kT_all=para_track%kt_updated
+                do i_temp=1,NT_global
+                    measure(para_track%image_temp(i_temp))%kt=para_track%kt_all(i_temp)
+                enddo
+                write(6,'(/,a,I5,a,I5)') '#-------- parallel tempering step', j_optset ,' of ', N_adjT
+                write(6,'(a,I10,a,I10,/)') '#-------- number of relaxation steps goes from', relaxation_steps ,' --- to --- ', relaxation_steps*2
+            endif
+            relaxation_steps=relaxation_steps*2
+            Call scatterv(measure,com,displ,cnt)    !update remote temperatures
+        endif
+    enddo !over j_MC->N_adjT
+    if (com%ismas)then
+        write(6,'(a)') 'parallel tempering is done'
         call close_file('EM.dat',io_EM)
-#else
-    ERROR STOP "FINISH IMPLEMENT PARALLEL TEMPERING"
-#endif
-
-
-      end subroutine parallel_tempering
+    endif
+end subroutine parallel_tempering
 end module

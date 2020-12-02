@@ -95,23 +95,20 @@ function accept(kt,DE)
     real(8) :: choice, tmp
     logical :: accept
     
-    accept=.False.
-    !accept energy gain
-    if(dE<0.0d0)then
-        accept=.true.
-        return
-    endif
+#ifdef CPP_DEBUG
     ! security in case kt is 0
     if(kt<1.0d-10)then
-       return
+        ERROR STOP "kt is too small"
     endif
-    
-    tmp=-DE/kT
-    !prevent exp(tmp) underflow
-    if(tmp<-200.0d0) return
-    choice=get_rand_classic()
-    if (Choice.lt.exp(tmp)) Then
-        accept=.True.
+#endif
+
+    accept=dE<0.0d0     !accept all energy gains
+    if(.not.accept)then
+        !check with temperature if energy loss is accepted
+        tmp=-DE/kT
+        tmp=max(tmp,-200.0d0) !prevent exp(tmp) underflow
+        choice=get_rand_classic()
+        accept=Choice.lt.exp(tmp)
     endif
 end function
 
