@@ -509,7 +509,6 @@ subroutine set_order_comb_single(this,order,i_site,vec)
     !probably quite slow implementation, but should at least work for any reasonable size of order
     !I SHOULD CHECK HOW SLOW THIS IS
     !vec should already be allocated to the size of the final vector ->product(dim_modes)
-    use m_user_info
     class(lattice),intent(in)         ::  this
     integer,intent(in)                ::  order(:),i_site
     real(8),intent(inout)             ::  vec(:)

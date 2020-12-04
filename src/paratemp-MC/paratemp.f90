@@ -1,4 +1,5 @@
 module m_paratemp
+use mpi_distrib_v
 !--------------------------------------------
 ! parallel tempering as described in Katzgraber et al PRE and cond-mat 30 mars 2006 arXiv:cond-mat/0602085v3
 
@@ -7,13 +8,14 @@ module m_paratemp
 type paratemp_track
     !variable to keep track of what is where on the different parallel tempering steps
     ! parallel tempering label. can take 3 values
-    ! 0: no label; +1: up; -1: down
-    real(8), allocatable :: label(:)
-    real(8), allocatable :: nup(:),ndown(:)
-    real(8), allocatable :: Nsuccess(:)   !keeps track how often a given temperature has moved up 
-    !all the temperatures
+    
+    !in space of images
+    integer,allocatable :: label(:)    ! notifies if this image has last been at lowest(1) or highest(-1) temperature, or has never reached the extrema(0) (0: no label; +1: up; -1: down)
+    !in space of temperatures
     real(8),allocatable :: kT_all(:)        ! contains all temperatures T/k_b ordered from smallest to largest 
-    real(8),allocatable :: kT_updated(:)    
+    real(8),allocatable :: kT_updated(:)    ! used to save updated temperature set 
+    integer,allocatable :: nup(:),ndown(:)  ! number of times the temperature has had the up or down label
+    integer,allocatable :: Nsuccess(:)      ! keeps track how often a given temperature has moved up (only used for output)
     integer,allocatable :: image_temp(:)    ! gives position of ordered temperature in full image array ( image_temp(1)=2 -> lattice with 1st temperature is at lattice site 2)
 end type
 
@@ -35,56 +37,54 @@ subroutine alloc_paratemp_track(this,size_table)
     integer                                 :: i
 
     allocate(this%image_temp(size_table))
-    allocate(this%nup(size_table),this%ndown(size_table),this%label(size_table),this%Nsuccess(size_table),source=0.0d0) 
-    !allocate(this%kt_all(size_table),source=0.0d0)
+    allocate(this%nup(size_table),this%ndown(size_table),this%label(size_table),this%Nsuccess(size_table),source=0) 
     allocate(this%kt_all(size_table),this%kT_updated(size_table),source=0.0d0)
-
     ! temperature
      ! at the beginning, the first image has the first temperature, the second image, the second ...
     this%image_temp=[(i,i=1,size_table)]
 end subroutine
 
-
-subroutine reorder_temperature(E_temp,measure,com,displ,cnt,nstart,track)
+subroutine reorder_temperature(energy,measure,com,displ,cnt,nstart,track)
+    !subroutine which swaps neighboring temperatures as necessary for the parallel tempering
     use mpi_util 
     use mpi_basic
     use m_mc_exp_val
     use m_constants, only : k_B
     use m_sort
-    real(8),intent(inout)                   :: E_temp(:)
-    type(exp_val),intent(inout)             :: measure(:)
-    class(mpi_type),intent(in)              :: com
-    integer,intent(in)                      :: cnt(com%Np)
-    integer,intent(in)                      :: displ(com%Np)
-    integer,intent(in)                      :: nstart
-    type(paratemp_track),intent(inout)      :: track
+    real(8),intent(inout)                   :: energy(:)    !energy of each image in space of images
+    type(exp_val),intent(inout)             :: measure(:)   !Temperature & thermodyn. vals (swap order to swap images)
+    class(mpi_type),intent(in)              :: com          !mpi-communicator which contains one entry for each temperature
+    integer,intent(in)                      :: cnt(com%Np)  !mpi-parameter count for gather/scatter
+    integer,intent(in)                      :: displ(com%Np)!mpi-parameter displacement for gather/scatter
+    integer,intent(in)                      :: nstart       !outer loop index to alternate between comparing (1<>2,3<>4,..) with (2<>3,4<>5,...)
+    type(paratemp_track),intent(inout)      :: track        !various parameters to keep track of parallel tempering evolution
 !internals
     integer :: NT   !number of temperatures
     real(8) :: kt_loc(2)        !energies of the compared pairs of lattices
     real(8) :: E_loc(2)         !temperatures of the compared pairs of lattices
-    integer :: i_loc(2)         !position in the measure array of the compared pair of lattices
+    integer :: i_loc(2)         !position in lattices-array of compared pair
     integer         :: i,i_start,i_temp
     type(exp_val)   :: tmp_measure
 
     !gather all necessary parameters (energies, temperatures(in measure), and expectation values (measure)
-    Call gatherv( E_temp,com,displ,cnt) 
+    Call gatherv(energy ,com,displ,cnt) 
     Call gatherv(measure,com,displ,cnt)
 
     !Swap temperatures if necessary
     if(com%ismas)then
         NT=size(measure)
-        !I don't understand this, somehow keep track of diffusion
+        !increment nup, ndown for diffusion 
         do i=1,NT
-            if (track%label(track%image_temp(i)).gt. 0.5d0) track%nup(i)  =track%nup(i)+1.0d0
-            if (track%label(track%image_temp(i)).lt.-0.5d0) track%ndown(i)=track%ndown(i)+1.0d0
+            if (track%label(track%image_temp(i))== 1) track%nup(i)  =track%nup(i)  +1
+            if (track%label(track%image_temp(i))==-1) track%ndown(i)=track%ndown(i)+1
         enddo
         
         i_start=mod(nstart,2)+1! in case there are an odd number of replicas, change the start from 1 to 2
         do i_temp=i_start,NT-1,2
             !check if lattices with temperature i_temp and i_temp+1 should be exchanges
             kt_loc=track%kt_all(i_temp:i_temp+1)
-            i_loc=track%image_temp(i_temp:i_temp+1)
-            E_loc=E_temp(i_loc)
+            i_loc =track%image_temp(i_temp:i_temp+1)
+            E_loc =energy(i_loc)
             if (accept(kt_loc,E_loc)) then
                 !Swap the measurements and temperatures
                 tmp_measure=measure(i_loc(2))
@@ -93,15 +93,12 @@ subroutine reorder_temperature(E_temp,measure,com,displ,cnt,nstart,track)
                 track%image_temp(i_temp)=i_loc(2)
                 track%image_temp(i_temp+1)=i_loc(1)
 
-                !keep track for diffusion
-                track%Nsuccess(i_temp)=track%Nsuccess(i_temp)+1.0d0
-                !!don't understand this: measures how often an image arrives at the temperature edges?
-                if ((abs(kt_loc(1)-track%kt_all(1)) /k_B).lt.1.0d-8) track%label(i_loc(1))=1.0d0
-                if ((abs(kt_loc(2)-track%kt_all(1)) /k_B).lt.1.0d-8) track%label(i_loc(2))=1.0d0
-                if ((abs(kt_loc(1)-track%kt_all(NT))/k_B).lt.1.0d-8) track%label(i_loc(1))=-1.0d0
-                if ((abs(kt_loc(2)-track%kt_all(NT))/k_B).lt.1.0d-8) track%label(i_loc(2))=-1.0d0
+                track%Nsuccess(i_temp)=track%Nsuccess(i_temp)+1
             endif
         enddo
+        !update label
+        track%label(track%image_temp( 1))= 1
+        track%label(track%image_temp(Nt))=-1
     endif
     !distribute the rearanged expectation values again
     Call scatterv(measure,com,displ,cnt)
@@ -115,10 +112,10 @@ function accept(kt,E)
     real(8)     :: delta
     real(8)     :: choice
 
-    delta=(1/kt(2)-1/kt(1))*(E(2)-E(1))
-    delta=max(delta,-200.0d0) !prevent underflow in exp
+    delta=(1.0d0/kt(2)-1.0d0/kt(1))*(E(2)-E(1))
     accept=delta>0.0d0
     if(.not.accept)then
+        delta=max(delta,-200.0d0) !prevent underflow in exp
         choice=get_rand_classic()
         accept=exp(delta).gt.Choice
     endif
@@ -126,6 +123,7 @@ end function
 
 
 subroutine calculate_diffusion_paratemp_track(v,relaxation_steps,i_optTset)
+    !this simply unwraps the input of the paratemp_track parameter to the old subroutine I did not touch
     type(paratemp_track),intent(inout)      :: v
     integer, intent(in) :: relaxation_steps
     logical, intent(in) :: i_optTset
@@ -138,7 +136,8 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
        use m_constants, only : k_B
        implicit none
        integer, intent(in) :: n_thousand,isize
-       real(kind=8), intent(in) :: nup(:),ndown(:),Nsuccess(:),kT_all(:)
+       real(kind=8), intent(in) :: kT_all(:)
+       integer, intent(in) :: Nsuccess(:),nup(:),ndown(:)
        logical, intent(in) :: i_optTset
        real(kind=8), intent(inout) :: kT_updated(:)
 !      internals
@@ -174,8 +173,8 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
 
 !calculation of the fraction of images going up
        do i=1,isize
-           if (nup(i)+ndown(i).ge.1.0d0) then
-               frac(i)=nup(i)/(nup(i)+ndown(i))
+           if (nup(i)+ndown(i)==0) then
+               frac(i)=real(nup(i),8)/real(nup(i)+ndown(i),8)
            else
                write(6,'(a)') 'some up+down fractions are 0'
                write(6,'(a)') 'try to reduce the temperature range to favor overlapping between replicas'
@@ -219,7 +218,7 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
 ! if the temperature is not optimized, write the fraction and go out
        if (.not.i_optTset) then
            do i=1,isize-1
-               write(21,'(3(E20.12E3,2x))') kT_all(i)/k_B,frac(i),(Nsuccess(i)/n_thousand)
+               write(21,'(3(E20.12E3,2x))') kT_all(i)/k_B,frac(i),(real(Nsuccess(i),8)/n_thousand)
            enddo
            write(21,'(2(E20.12E3,2x))') kT_all(isize)/k_B,frac(isize)
            write(21,'(a)') ''
@@ -350,7 +349,7 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
        endif
 
        do i=1,isize-1
-            write(21,'(7(E20.12E3,2x))') kt_updated(i)/k_B,kT_all(i)/k_B,frac(i),diffusivity(i),Dfrac(i),Nsuccess(i)/dble(n_thousand),etaTprim(i)
+            write(21,'(7(E20.12E3,2x))') kt_updated(i)/k_B,kT_all(i)/k_B,frac(i),diffusivity(i),Dfrac(i),real(Nsuccess(i),8)/dble(n_thousand),etaTprim(i)
        enddo
 
        write(21,'(3(E20.12E3,2x),a,/)') kt_updated(isize)/k_B,kT_all(isize)/k_B,frac(isize),'   #  ""  ""  ""  "" '

@@ -3,7 +3,7 @@ use m_paratemp
 implicit none
 contains
 subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
-    use mpi_util 
+    use mpi_distrib_v
     use mpi_basic
     use m_H_public
     use m_topocharge_all
@@ -19,11 +19,10 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     use m_topo_commons, only : neighbor_Q,get_charge
     use m_convert
     use m_io_files_utils
-    use m_rw_MC
+    use m_MC_io
     use m_MCstep
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
-    use m_input_types,only: MC_input
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_write_config
     use m_io_files_utils, only: close_file
@@ -151,6 +150,8 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
             !do loop over local temperatures
             do i_temp=1,NT_local
                 kt=measure(i_temp)%kt
+
+                !does it make more sense to do big relaxation step at the very beginning?
 
                 Do i_MC=1,autocor_steps*N_cell
                     Call MCstep(lattices(i_temp),io_MC,N_cell,state_prop(i_temp),kt,Hams)

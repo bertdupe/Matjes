@@ -15,7 +15,7 @@ contains
 !
 SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     use m_constants, only : k_b,pi
-    use m_input_types,only: MC_input
+    use m_MC_io,only: MC_input
     use mtprng
     Implicit none
     ! input

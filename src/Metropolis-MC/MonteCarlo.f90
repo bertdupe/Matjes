@@ -5,29 +5,30 @@ contains
 ! Routine that does the Monte Carlo (and not the parallel tempering)
 !
 !subroutine MonteCarlo(my_lattices,mag_motif,io_simu,gra_topo,ext_param)
-subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
+subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com_all)
     use, intrinsic :: iso_fortran_env, only : output_unit
-    use mpi_util 
+    use mpi_distrib_v
+    use mpi_util
     use m_constants, only : k_b,pi
     use m_derived_types, only : lattice,t_cell,io_parameter,simulation_parameters
-    use m_rw_MC
+!    use m_rw_MC
     use m_topo_commons, only : neighbor_Q,get_charge
     use m_MCstep
     use m_H_public
     use m_relaxation
     use m_write_config
     use m_set_temp
-    use m_input_types,only: MC_input
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
     use m_average_MC, only: get_neighbours
     use m_fluct, only: fluct_parameters,init_fluct_parameter
+    use m_MC_io
 
     type(lattice), intent(inout)            :: my_lattice
     type(io_parameter), intent(in)          :: io_simu
     type(simulation_parameters), intent(in) :: ext_param
     class(t_H), intent(in)                  :: Hams(:)
-    class(mpi_type),intent(in)              :: com
+    type(mpi_type),intent(in)               :: com_all
     
     !!!!!!!!!!!!!!!!!!!!!!!
     ! internal variables
@@ -50,19 +51,27 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     integer                     :: iT_global(2),iT_local(2),N_T
     integer,parameter           :: io_status=output_unit
     !mpi parameters
-    integer                     :: cnt(com%Np)
-    integer                     :: displ(com%Np)
-    type(fluct_parameters)     :: fluct_val
+    integer                     :: cnt(com_all%Np)
+    integer                     :: displ(com_all%Np)
+    type(fluct_parameters)      :: fluct_val
+    type(mpi_type)              :: com_allner
+    type(mpi_distv)             :: com_outer
     
     ! initialize the variables
     call rw_MC(io_MC)
     size_table=io_MC%n_Tsteps
-    write(io_status,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
+    if(com_all%ismas) write(io_status,'(/,a,I6,a,/)') "you are calculating",size_table," temperatures"
+
+
+
     allocate(kt_all(size_table),source=0.0d0)
     kTini=ext_param%ktini
     kTfin=ext_param%ktfin
     N_cell=my_lattice%Ncell
     filen_kt_acc=5
+
+!    Call set_distrib_com(com,size_table,com_temp)
+!    Call get_two_level_comm(com,size_table,com_outer,com_allner)
     
     ! allocate and fill flat table of first neighbours
     Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct)
@@ -71,7 +80,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     call ini_temp(kt_all,kTfin,kTini,size_table,io_simu%io_warning)
     filen_kt_acc(1)=max(int(log10(maxval(kt_all))),1)
     
-    Call neighbor_Q(my_lattice,Q_neigh)
+    if(com_all%ismas) Call neighbor_Q(my_lattice,Q_neigh)
+    Call bcast_alloc(Q_neigh,com_all)
     
     !intialize tracking variables (total energy, magnetization sum)
     Call state_prop%init(my_lattice,Hams,io_MC%cone)
@@ -83,9 +93,9 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
     write(io_status,'(a/)') '---------------------'
     
     iT_global=[1,io_MC%n_Tsteps]
-    Call distrib_int_index(com,iT_global,iT_local,displ,cnt)
+    Call distrib_int_index(com_all,iT_global,iT_local,displ,cnt)
     N_T=it_local(2)-it_local(1)+1
-    Call measure_init(measure,it_local,iT_global,com,kt_all) 
+    Call measure_init(measure,it_local,iT_global,com_all,kt_all) 
     Do i_kT=1,N_T
         call Relaxation(my_lattice,io_MC,N_cell,state_prop,qeulerp,qeulerm,measure(i_kt)%kt,hams,Q_neigh)
         !Monte Carlo steps, calculate the values
@@ -103,8 +113,8 @@ subroutine montecarlo(my_lattice,io_simu,ext_param,Hams,com)
         Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', N_T,' steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
     end do !over i_kT
 
-    Call gatherv(measure,com,displ,cnt)
+    Call gatherv(measure,com_all,displ,cnt)
     if (io_simu%io_spstmL) call spstm  ! The program of Tobias is used only at last iteration
-    Call measure_print_thermo(measure,com) ! write EM.dat output
+    Call measure_print_thermo(measure,com_all) ! write EM.dat output
 end subroutine montecarlo
 end module

@@ -17,7 +17,7 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,qeulerp,qeulerm,kt,Hams,Q_neig
     use m_io_files_utils
     use m_convert
     use m_MCstep
-    use m_input_types,only: MC_input
+    use m_MC_io,only: MC_input
     ! input
     type(lattice),intent(inout)     :: lat
     real(kind=8), intent(inout)     :: qeulerp,qeulerm

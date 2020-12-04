@@ -5,7 +5,7 @@ use m_fluct,only: fluct_parameters, eval_fluct
 implicit none
 private
 public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av,measure_init               
-public :: measure_scatter,measure_gather,measure_set_mpi_type                          
+public :: measure_scatterv,measure_gatherv,measure_set_mpi_type                          
 public :: measure_print_thermo_init
 integer,parameter       ::	N_entry=22                                                                   
 integer,protected	    ::	MPI_exp_val ! mpi variable for direct mpi exp_val operations                 
@@ -99,7 +99,7 @@ subroutine measure_set_MPI_type()
 #endif
 end subroutine
 
-subroutine measure_gather(this,com,displ,cnt)
+subroutine measure_gatherv(this,com,displ,cnt)
     use mpi_basic
     type(exp_val),intent(inout)     :: this(:)
     class(mpi_type),intent(in)      :: com
@@ -114,7 +114,7 @@ subroutine measure_gather(this,com,displ,cnt)
 #endif
 end subroutine
 
-subroutine measure_scatter(this,com,displ,cnt)
+subroutine measure_scatterv(this,com,displ,cnt)
     use mpi_basic
     type(exp_val),intent(inout)     :: this(:)
     class(mpi_type),intent(in)      :: com

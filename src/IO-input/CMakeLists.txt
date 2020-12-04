@@ -8,7 +8,7 @@ src/IO-input/rw_extfield.f90
 src/IO-input/rw_GNEB.f90
 src/IO-input/rw_H.f90
 src/IO-input/rw_lattice.f90
-src/IO-input/rw_MC.f90
+src/IO-input/MC_io.f90
 src/IO-input/rw_minimize.f90
 src/IO-input/rw_motif.f90
 src/IO-input/rw_TB.f90

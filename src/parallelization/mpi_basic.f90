@@ -15,6 +15,12 @@ contains
     procedure   :: set
 end type
 
+type,extends(mpi_type)  :: mpi_type_distv
+    !mpi type which contains how the values should be gatherv or scatterv'ed
+    integer,allocatable :: displ(:)
+    integer,allocatable :: cnt(:)
+end type
+
 type(mpi_type)  ::  mpi_world
 
 contains
