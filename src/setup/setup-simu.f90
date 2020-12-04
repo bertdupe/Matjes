@@ -18,7 +18,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     use m_set_Hamiltonians,only: set_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
     use m_orders_initialize, only: orders_initialize 
-    use m_rw_motif
+    use m_rw_cell
     use m_rw_H
     use m_H_public
 !#ifdef CPP_MPI
@@ -66,7 +66,8 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     
     ! read the important inputs
     call user_info(6,time,'reading the motif in the input file',.False.)
-    call rw_motif(my_motif,my_lattice)
+    Call read_cell(my_motif,my_lattice)
+!    call rw_motif(my_motif,my_lattice)
 
     !read the Hamiltonian parameters
     Call rw_H(H_io)

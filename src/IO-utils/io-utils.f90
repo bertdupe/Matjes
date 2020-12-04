@@ -1,6 +1,8 @@
 module m_io_utils
 use m_convert
 use m_derived_types
+use, intrinsic :: iso_fortran_env, only : output_unit
+implicit none
 
 interface get_lines
  module procedure get_NB_lines
@@ -46,6 +48,8 @@ interface get_parameter
  module procedure get_character
  module procedure get_my_simu
  module procedure get_atomic
+ module procedure get_atomtype
+ module procedure get_cell
 end interface get_parameter
 
 interface number_nonzero_coeff
@@ -403,12 +407,147 @@ write(6,'(/)')
 
 end subroutine get_coeff
 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Get cell based on atomtype
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine get_cell(io,fname,attype,cell)
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)             :: io
+    character(len=*), intent(in)    :: fname
+    type(atomtype), intent(in)      :: attype(:)
+    type(t_cell),intent(out)        :: cell
+    ! internal variable
+    integer     ::  N_atoms
+    character(len=*),parameter  ::  var_name='atoms'
+    character(len=30)       ::  atname
+    integer     :: id
+    integer :: nread,i,j,check,length_string,n_read_at
+    integer :: stat
+    character(len=100) :: str
+    logical :: used(size(attype))
+    
+    nread=0
+    n_read_at=0
+    length_string=len_trim(var_name)
+    rewind(io)
+    do
+        read (io,'(a)',iostat=stat) str
+        if (stat /= 0) exit
+        str= trim(adjustl(str))
+        if (len_trim(str)==0) cycle
+        if (str(1:1) == '#' ) cycle
+
+        !We start to read the input
+        if ( str(1:length_string) == var_name(1:length_string)) then
+            read(str(length_string+1:),*,iostat=stat) N_atoms
+            if(stat/=0) STOP "atoms keyword found in input, but the number of atoms is not specified there"
+            write(output_unit,'(/A,I6,A)') "found atomcell keyword, start reading the ",N_atoms," atoms"
+            allocate(cell%atomic(N_atoms))
+            nread=nread+1
+            do i=1,N_atoms
+                read(io,'(a)',iostat=stat) str
+                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+                read(str,*,iostat=stat) atname,cell%atomic(i)%position
+                if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+                read(atname,*,iostat=stat) id
+                if(stat/=0)then
+                    id=0
+                    do j=1,size(attype)
+                        if(trim(attype(j)%name)==trim(atname))then
+                            id=j
+                            exit
+                        endif
+                    enddo
+                    if(id==0) STOP "Did not find name of atom in atom types"
+                endif
+                if(id<1.or.id>size(attype)) STOP "ATOM TYPE ID IS NONSENSICAL"
+                cell%atomic(i)%type_id=id
+                Call cell%atomic(i)%set_attype(attype(id))
+                write(output_unit,*) "successfully read atom number:",i," of ",N_atoms
+            enddo
+        endif
+    enddo
+
+    if(.not.allocated(cell%atomic)) STOP "FAILED TO READ ATOMS, add atoms input"
+    !check all types are used
+    used=.false.
+    do i=1,size(cell%atomic)
+        used(cell%atomic(i)%type_id)=.true.
+    enddo
+    do j=1,size(used)
+        if(.not.used(j)) write(output_unit,'(3A)') 'ATOM TYPE "',trim(attype(j)%name), '" is not used'
+    enddo
+    if(.not.all(used)) STOP "SOME ATOM TYPES ARE NOT USED, CHECK CELL SETUP"
+
+    check=check_read(nread,var_name,fname)
+end subroutine 
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Get the different atomic types used in the unit-cell
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine get_atomtype(io,fname,attype)
+    !always uses the same variable name, hence kept as parameter
+    use m_basic_types, only : atom
+
+    implicit none
+    type(atomtype), intent(inout),allocatable :: attype(:)
+    integer, intent(in) :: io
+    character(len=*), intent(in) :: fname
+    ! internal variable
+    integer     ::  N_attype,j
+    character(len=*),parameter  ::  var_name='atomtypes'
+    integer :: nread,i,check,length_string,n_read_at
+    integer :: stat
+    character(len=100) :: str
+    
+    nread=0
+    n_read_at=0
+    length_string=len_trim(var_name)
+    rewind(io)
+    do
+        read (io,'(a)',iostat=stat) str
+        if (stat /= 0) exit
+        str= trim(adjustl(str))
+        if (len_trim(str)==0) cycle
+        if (str(1:1) == '#' ) cycle
+
+        !We start to read the input
+        if ( str(1:length_string) == var_name(1:length_string)) then
+            nread=nread+1
+            read(str(length_string+1:),*,iostat=stat) N_attype
+            if(stat/=0) STOP "atomtypes keyword found in input, but the number of atom types is not specified there"
+            if(allocated(attype)) STOP "PROGRAMMING MISTAKE? attype should not be allocated at start of get_atomic"
+            allocate(attype(N_attype))
+            do i=1,N_attype
+                read(io,'(a)',iostat=stat) str
+                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+                read(str,*,iostat=stat) attype(i)%name,attype(i)%moment,attype(i)%charge,attype(i)%mass,attype(i)%use_ph
+                if (stat /= 0) STOP "FAILED TO READ PARAMETERS IN ATOMTYPE, ARE ALL RELEVANT PARAMETERS SPECIFIED AND ARE ALL ATOM TYPES SET?"
+                do j=1,i-1
+                    if(trim(attype(i)%name)==trim(attype(j)%name)) STOP "Found atom types with same name, this should not happen"
+                enddo
+                write(output_unit,*) "successfully read atom type number:",i," of ",N_attype
+                write(output_unit,*) attype(i)
+            enddo
+        endif
+    enddo
+    
+    check=check_read(nread,var_name,fname)
+
+end subroutine 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get the atomic configuration in the motif
 ! inout:  type(atom), dimension(:) ALL VARIABLES ARE INITIALIZED TO 0.0 !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine get_atomic(io,fname,var_name,natom,atomic)
+!old and obsolete way to read the atomic input in
 use m_basic_types, only : atom
 implicit none
 type(atom), intent(inout) :: atomic(:)
@@ -441,6 +580,7 @@ do
       ! find if the variable that was given in input is found in the parameters
       do i=1,natom
          n_read_at=n_read_at+1
+         atomic(i)%type_id=n_read_at    !with old input all atoms are of different type
          read(io,'(a)',iostat=fin) str
          read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position,atomic(i)%moment,atomic(i)%charge
          if(stat==0)then

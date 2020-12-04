@@ -120,7 +120,7 @@ diml2 = real(Dim_lat(2),8)
 Nx=dim_lat(1)
 Ny=dim_lat(2)
 Nz=dim_lat(3)
-nmag=count(my_motif%atomic(:)%moment.gt.0.0d0)
+nmag=my_lattice%nmag
 
 allocate(position(3,Nx,Ny,Nz,nmag))
 position=0.0d0

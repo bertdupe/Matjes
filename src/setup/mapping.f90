@@ -41,7 +41,7 @@ if (size(my_lattice%world).eq.1) then
     call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,1,1,1),my_lattice)
 
 elseif (size(my_lattice%world).eq.2) then
-    if ((phase.eq.1).and.(count(my_motif%atomic(:)%moment.gt.0.0d0).eq.1)) then
+    if ((phase.eq.1).and.my_lattice%nmag==1) then
         call mapping_geometry(tabledist(:,1),N_Nneigh,indexNN(:,1),tableNN(:,:,:,:,1,1),my_lattice)
 
     elseif (phase.eq.1) then

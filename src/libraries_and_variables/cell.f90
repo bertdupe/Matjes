@@ -5,13 +5,14 @@ private
 public :: t_cell
 
 type t_cell
-     type(atom), allocatable :: atomic(:)
-     contains
-     procedure :: ind_mag => get_ind_mag
-     procedure :: num_mag => get_num_mag
-     procedure :: get_magmom
-     procedure :: get_mag_magmom
-     procedure :: bcast
+    integer ::  n_attype
+    type(atom), allocatable :: atomic(:)
+    contains
+    procedure :: ind_mag => get_ind_mag
+    procedure :: num_mag => get_num_mag
+    procedure :: get_magmom
+    procedure :: get_mag_magmom
+    procedure :: bcast
 end type
 contains
 

@@ -23,10 +23,15 @@ type lattice
      real(8)        :: a_sc_inv(3,3) !inverse of real space lattice vectors of supercell (can be used to get back into supercell)
      integer        :: dim_mode !probably obsolete
      integer        :: n_system !no clue what this does
-     integer        :: nmag  !this has to be set somewhere consistently
      integer, allocatable :: world(:)
      logical :: periodic(3) !lattice periodic in direction
      logical,private :: order_set(number_different_order_parameters)=.false. !logical variable which saves which orderparameters has been set
+
+     !convenience parameters 
+     integer        :: nmag=0 !number of magnetic atoms in the unit-cell (can also be obtained from cell)
+!     integer        :: nph=0  !number of atoms with phonons in the unit-cell (can also be obtained from cell) IMPLEMENT
+!     integer        :: nat=0  !overall number of atoms in the unit-cell (can also be obtained from cell) IMPLEMENT
+!     integer        :: nattype=0  !overall number of different atom types (can also be obtained from cell) IMPLEMENT
 
      real(8),allocatable :: sc_vec_period(:,:)   !real space vectors used to minimize distance using supercell periodicity
 

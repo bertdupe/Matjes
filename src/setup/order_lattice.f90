@@ -4,9 +4,9 @@
       implicit none
       type(lattice), intent(in) :: my_lattice
       type(t_cell), intent(in) :: motif
-      real(kind=8), intent(inout) :: spins(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0))
+      real(kind=8), intent(inout) :: spins(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),my_lattice%nmag)
 ! local variables
-      real(kind=8) :: save_spin(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),count(motif%atomic(:)%moment.gt.0.0d0))
+      real(kind=8) :: save_spin(7,my_lattice%dim_lat(1),my_lattice%dim_lat(2),my_lattice%dim_lat(3),my_lattice%nmag)
       integer :: i_x,i_y,i_z,n_x,n_y,n_z,dim_lat(3)
       real(kind=8) :: r_old(3,3),pos(3),min_dist(3),origin(3),denominator,r_u,r_v,r(3,3)
 
