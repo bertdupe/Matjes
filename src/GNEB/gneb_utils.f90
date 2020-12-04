@@ -10,7 +10,7 @@ use m_tangent, only: tang
 use m_input_types,only: GNEB_input
 use m_type_lattice,only: lattice
 use m_H_public, only: t_H,energy_all
-use m_Beff_H,only: get_B
+use m_eff_field,only: get_eff_field
 implicit none
 private
 public :: find_path,find_SP,find_SP_conf
@@ -78,7 +78,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
         M3(1:3,1:N_mag*N_cell)=>images(im)%M%modes
 
         energy(im)=energy_all(Hams,images(im))
-        Call get_B(Hams,images(im),force1(:,im))
+        Call get_eff_field(Hams,images(im),force1(:,im),1)
         !Call normalize(force1_3) !temporary taken out, think about normalizations
         Call project(force1_3,M3)
     enddo
@@ -154,7 +154,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_
             M3(1:3,1:N_mag*N_cell)=>images(im)%M%modes
 
             energy(im)=energy_all(Hams,images(im)) !total energy at each image
-            Call get_B(Hams,images(im),force2(:,im)) !get effective field (eV)
+            Call get_eff_field(Hams,images(im),force2(:,im),1) !get effective field (eV)
             !Call normalize(force2_3) !temporary taken out, think about normalizations
             Call project(force2_3,M3)
         enddo

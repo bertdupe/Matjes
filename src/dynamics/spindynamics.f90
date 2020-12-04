@@ -28,7 +28,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     use omp_lib
     use m_precision
     use m_H_public
-    use m_Beff_H
+    use m_eff_field, only :get_eff_field
     use m_write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     
@@ -203,11 +203,11 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
        
         !update mag
           !get effective field on magnetic lattice
-          Call get_B(Hams,lat_1,Beff)
+          Call get_eff_field(Hams,lat_1,Beff,1)
           !do integration
           ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
           Call get_propagator_field(Beff_v,damping,lat_1%M%modes_v,Dmag(:,:,i_loop))
-          Call get_Dmag_int(Dmag,i_loop,N_loop,Dmag_int)
+          Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
           lat_2%M%modes_v=get_integrator_field(mag_lattice%M%modes_v,Dmag_int,dt)
         !copy mag 
           Call lat_2%M%copy_val(lat_1%M)

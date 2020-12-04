@@ -51,7 +51,7 @@ type(t_cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
 integer :: dim_mode_arr(number_different_order_parameters)
 ! internal parameters
-integer :: nmag,N_mode
+integer :: nmag,N_mode,npol
 real(kind=8) :: Field(3)
 
 dim_mode_arr=0
@@ -94,6 +94,8 @@ if ((ext_param%ktini%value.gt.1.0d-8).or.(ext_param%ktfin%value.gt.1.0d-8)) then
    write(6,'(a,2x,I5)') 'Hamiltonian has the dimension',sum(dim_mode_arr)**2
 endif
 
+npol=count(motif%atomic(:)%charge.gt.0.0d0)
+dim_mode_arr(5)=npol*3
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!
@@ -106,13 +108,17 @@ integer, intent(in) :: nb_orbitals
 type(t_cell), intent(in) :: motif
 type(simulation_parameters), intent(in) :: ext_param
 ! internal parameters
-integer :: N_mode,nmag
+integer :: N_mode,nmag,npol
 real(kind=8) :: Field(3)
 
 N_mode=0
 ! counts one mode per magnetic atom in the unit cell
 nmag=count(motif%atomic(:)%moment.gt.0.0d0)
 N_mode=N_mode+nmag
+
+! counts one mode per magnetic atom in the unit cell
+npol=count(abs(motif%atomic(:)%charge).gt.0.0d0)
+N_mode=N_mode+npol
 ! electric field
 Field=ext_param%E_ext%value
 if (sqrt(Field(1)**2+Field(2)**2+Field(3)**2).gt.1.0d-8) then

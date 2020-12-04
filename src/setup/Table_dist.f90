@@ -13,14 +13,14 @@ contains
 
 
 
-subroutine get_table_of_distance(r,N_Nneigh,world,my_motif,n_mag,d)
+subroutine get_table_of_distance(r,N_Nneigh,world,my_motif,d)
 use m_user_info
 use m_derived_types, only : t_cell
 use m_convert
 implicit none
 real(kind=8), intent(in) :: r(:,:)
 type(t_cell), intent(in) :: my_motif
-integer, intent(in) :: N_Nneigh,world(:),n_mag
+integer, intent(in) :: N_Nneigh,world(:)
 real(kind=8), intent(inout) :: d(:,:)
 ! internal variable
 integer :: Nei_z,Nei_il,phase,i,shape_table(2),j
@@ -64,23 +64,20 @@ integer, intent(in) :: k,N(:)
 real (kind=8), intent(in) :: r(3,3)
 type(t_cell), intent(in) :: motif
 !dummy variable
-integer :: j,m,pos_min,nmag
+integer :: j,m,pos_min,n_neihbor
 real (kind=8) :: u,v,w,minimum,test_vec(3)
 ! allocation of the output data
 real(kind=8), intent(inout) :: tabledist(:)
 ! dummy results
-real(kind=8) :: res((k+1)**size(N)*count(motif%atomic(:)%moment.gt.0.0d0))
+real(kind=8) :: res((k+1)**size(N))
 !        real(kind=8):: res(36)
-
-
-nmag=count(motif%atomic(:)%moment.gt.0.0d0)
 
 res=0.0d0
 test_vec=0.0d0
 j=0
 #ifdef CPP_DEBUG
     write(6,*) size(N), "dimension of the system"
-    write(6,*) nmag, "magnetic atoms in the motif"
+    write(6,*) k, "magnetic atoms in the motif"
 #endif
 
 ! 1D case

@@ -35,7 +35,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     use m_eval_Beff
     use m_lattice, only : my_order_parameters
     use m_operator_pointer_utils
-    use m_Beff_H, only: get_B
+    use m_eff_field, only: get_eff_field
     
     implicit none
     type(io_parameter), intent(in)  :: io_simu
@@ -71,7 +71,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     allocate(velocity(dim_mode,N_cell),predicator(dim_mode,N_cell),force(dim_mode,N_cell),source=0.0d0)
     allocate(V_eff(dim_mode),F_temp(dim_mode),source=0.0d0)
     
-    Call get_B(Hams,lat,Feff)
+    Call get_eff_field(Hams,lat,Feff,1)
 	do iomp=1,lat%Ncell
 		force(:,iomp)=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
         call minimization(lat%M%modes_v(:,iomp),force(:,iomp),predicator(:,iomp),io_min%dt**2,io_min%mass*2.0d0)
@@ -88,7 +88,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
         force_norm=0.0d0
         vmax=0.0d0
         
-        Call get_B(Hams,lat,Feff)
+        Call get_eff_field(Hams,lat,Feff,1)
         do iomp=1,N_cell
             F_temp=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
             call minimization(velocity(:,iomp),(force(:,iomp)+F_temp)/2.0d0,V_eff,io_min%dt,io_min%mass)
@@ -150,7 +150,8 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     use m_eval_Beff
     use m_lattice, only : my_order_parameters
     use m_operator_pointer_utils
-    use m_Beff_H, only: get_B
+    use m_eff_field,only: get_eff_field
+
     type(io_parameter), intent(in)  :: io_simu
     type(min_input), intent(in)     :: io_min
     type(lattice),intent(inout)     :: lat
@@ -196,7 +197,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     do iter=1,io_min%N_minimization
         max_torque=0.0d0
 
-        Call get_B(Hams,lat,F_eff)
+        Call get_eff_field(Hams,lat,F_eff,1)
         F_norm=norm2(F_eff3,1)
         if(any(F_norm.lt.1.0d-8)) stop 'problem in the infinite damping minimization routine' !avoid divide by 0
         torque=cross(lat%M%all_modes,F_eff,1,N_dim*N_cell)

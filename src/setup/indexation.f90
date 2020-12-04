@@ -37,11 +37,11 @@ type(t_cell), intent(in) :: motif
 ! variable that goes out
 integer, intent(inout) :: indexNN(:)
 !dummy variable
-integer :: i,j,size_mag
+integer :: i,j,n_motif
 real (kind=8) :: u,v,w,val
 
 indexNN=0
-size_mag=count(motif%atomic(:)%moment.gt.0.0d0)
+n_motif=size(motif%atomic)
 
 if (size(world).eq.1) then
 !----------------------------------------
@@ -49,8 +49,7 @@ if (size(world).eq.1) then
     do i=1,k
        u=-dble(i)
          do while (int(dabs(u)).le.i)
-           do j=1,size_mag
-             if (motif%atomic(j)%moment.lt.1.0d-8) cycle
+           do j=1,n_motif
              val=norm(r(1,:)*(u+motif%atomic(j)%position(1))+r(2,:)*motif%atomic(j)%position(2)+ &
          & r(3,:)*motif%atomic(j)%position(3))
              if (abs(rad(i)-val).lt.1.0d-8) indexNN(i)=indexNN(i)+1
@@ -66,8 +65,7 @@ elseif (size(world).eq.2) then
          do while (int(dabs(u)).le.i)
            v=-dble(i)
              do while (int(dabs(v)).le.i)
-               do j=1,size_mag
-                 if (motif%atomic(j)%moment.lt.1.0d-8) cycle
+               do j=1,n_motif
                  val=norm(r(1,:)*(u+motif%atomic(j)%position(1))+r(2,:)*(v+motif%atomic(j)%position(2))+ &
           & r(3,:)*motif%atomic(j)%position(3))
                  if (dabs(rad(i)-val).lt.1.0d-8) indexNN(i)=indexNN(i)+1
@@ -87,8 +85,7 @@ else
              do while (int(dabs(v)).le.i)
                w=-dble(i)
                  do while (int(dabs(w)).le.i)
-                   do j=1,size_mag
-                      if (motif%atomic(j)%moment.lt.1.0d-8) cycle
+                   do j=1,n_motif
                       val=norm(r(1,:)*(u+motif%atomic(j)%position(1))+r(2,:)*(v+motif%atomic(j)%position(2))+ &
           & r(3,:)*(w+motif%atomic(j)%position(3)))
                       if (dabs(rad(i)-val).lt.1.0d-8) indexNN(i)=indexNN(i)+1

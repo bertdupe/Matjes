@@ -41,7 +41,7 @@ implicit none
 type(lattice), intent(in) :: my_lattice
 type(t_cell), intent(in) :: my_motif
 ! internal
-integer :: io_input,n_mag,i
+integer :: io_input,i
 real(kind=8), allocatable, dimension(:,:) :: tabledist
 character(len=50) :: form
 real(kind=8) :: alpha
@@ -65,9 +65,8 @@ allocate(tabledist(n_coeff,1),T_coeff_shell(n_coeff+1))
 tabledist=0.0d0
 T_coeff_shell=0.0d0
 T_coeff_shell(1)=0.0d0
-n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
 
-call get_table_of_distance(my_lattice%areal,n_coeff,my_lattice%world,my_motif,n_mag,tabledist)
+call get_table_of_distance(my_lattice%areal,n_coeff,my_lattice%world,my_motif,tabledist)
 do i=1,n_coeff
   alpha=X_coeff*tabledist(i,1)
   T_coeff_shell(i+1)=T_coeff*(BESSJ(0,alpha)*BESSK(1,alpha)-BESSJ(1,alpha)*BESSK(0,alpha))

@@ -2,6 +2,7 @@
 !subroutine that carries out molecular dynamics
 
 module m_molecular_dynamics
+
 implicit none
 contains
 
@@ -13,7 +14,12 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    use m_solver_order
    use m_H_public
    use m_solver_commun
-   use m_eval_Beff
+   use m_eff_field, only: get_eff_field
+   use m_createspinfile
+   use m_update_time
+   use m_write_config
+   use m_precision
+   use m_forces
 
    !!!!!!!!!!!!!!!!!!!!!!!
    ! arguments
@@ -38,10 +44,10 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    real(8),pointer,contiguous              :: Feff_v(:,:)
 
    ! dummys
-   integer :: N_cell,duration,N_loop,Efreq,gra_freq,j
-   real(8) :: timestep_int,damping,h_int(3),E_int(3)
+   integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,i_loop,tag
+   real(8) :: timestep_int,damping,h_int(3),E_int(3),dt
    real(8) :: real_time,Eold,security,Einitial
-   real(8) :: kt,ktini,ktfin
+   real(8) :: kt,ktini,ktfin,Pdy(3)
    logical :: said_it_once,gra_log,io_stochafield,gra_topo
 
    ! prepare the matrices for integration
@@ -125,11 +131,11 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
 
         !update phonon
           !get effective field on magnetic lattice
-          Call get_B(Hams,lat_1,Feff)
+          Call get_eff_field(Hams,lat_1,Feff,5)
           !do integration
           ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
           Call get_propagator_field(Feff_v,damping,lat_1%u%modes_v,Du(:,:,i_loop))
-          Call get_Du_int(Du,i_loop,N_loop,Du_int)
+          Call get_Dmode_int(Du,i_loop,N_loop,Du_int)
           lat_2%u%modes_v=get_integrator_field(my_lattice%u%modes_v,Du_int,dt)
         !copy mag
           Call lat_2%u%copy_val(lat_1%u)
@@ -156,7 +162,6 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if(mod(j-1,gra_freq)==0)then
             tag=j/gra_freq
-            if (io_simu%io_Beff) call print_Beff(tag,Beff_v)
 
             if(gra_log) then
                 call CreateSpinFile(tag,my_lattice%u%all_l_modes)

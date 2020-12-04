@@ -27,7 +27,6 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
 !    real(8),allocatable ::  position(:)
     real(8),pointer :: pos_3(:,:),state_3(:,:)
     integer         :: i
-    integer         :: nmag
    
     qvec=0.0d0
     Rq=[0.0d0,0.0d0,1.0d0]

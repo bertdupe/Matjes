@@ -58,7 +58,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     real(kind=8) :: time
     type(extpar_input)  :: extpar_io
     ! dummy variable
-    integer :: dim_lat(3),n_mag,n_DMI,N_Nneigh
+    integer :: dim_lat(3),n_motif,n_DMI,N_Nneigh
     !checking various files
     logical :: i_usestruct
     ! check the allocation of memory
@@ -133,7 +133,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     Call my_lattice%init_order(my_motif,extpar_io)
     
     dim_lat=my_lattice%dim_lat
-    n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
+    n_motif=size(my_motif%atomic)
     
     ! check if you put the Strasbourg temperature
     call get_coeff_TStra(my_lattice,my_motif)
@@ -149,12 +149,12 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
         allocate(indexNN(N_Nneigh,1),stat=alloc_check)
         if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
         indexNN=0
-        call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,n_mag,tabledist)
+        call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,tabledist)
         call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_motif,indexNN)
-    
+
         ! allocate table of neighbors and masque
         tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
-        allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),stat=alloc_check)
+        allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_motif),stat=alloc_check)
         if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
         tableNN=0
     
@@ -179,7 +179,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     call user_info(6,time,'done',.false.)
 
     ! get position
-    allocate(pos(3,dim_lat(1),dim_lat(2),dim_lat(3),n_mag),source=0.0d0,stat=alloc_check)
+    allocate(pos(3,dim_lat(1),dim_lat(2),dim_lat(3),n_motif),source=0.0d0,stat=alloc_check)
     if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate position for the mapping procedure'
     call get_position(pos,dim_lat,my_lattice%areal,my_motif)
     ! write the positions into a file
@@ -198,6 +198,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     ! I send an example neighbor table to setup the DM
     call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
     n_DMI=count(H_io%D%val/=0.0d0)
+
     if (n_DMI.ne.0) then
         write(6,'(I4,a)') n_DMI,' DMI found'
         write(*,*) 'number of first nearest neighbor', sum(indexNN(1:n_DMI,1))
