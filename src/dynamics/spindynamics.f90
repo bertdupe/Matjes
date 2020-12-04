@@ -13,14 +13,15 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     use m_excitations, only: update_ext_EM_fields, update_EMT_of_r,set_excitations
     use m_solver_commun, only: get_integrator_field, get_propagator_field,select_propagator
     use m_topo_sd, only: get_charge_map
-    use m_solver_order,only: get_dt_mode,get_Dmag_int
+    use m_solver_order,only: get_dt_mode
     use m_tracker, only: init_tracking,plot_tracking
     use m_print_Beff, only: print_Beff
     use m_precision, only: truncate
     use m_H_public, only: t_H, energy_all
-    use m_Beff_H, only: get_B
+    use m_eff_field, only :get_eff_field
     use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
+    use m_solver_order,only : get_Dmode_int
 !    use m_forces
 !    use m_plot_FFT
 !$omp     use omp_lib
@@ -164,7 +165,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     if (io_simu%io_tracker) call init_tracking(mag_lattice)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! beginning of the
+    ! beginning of the simulation
     do j=1,duration
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
        !   call init_temp_measure(check,check1,check2,check3)
@@ -195,11 +196,11 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
        
         !update mag
           !get effective field on magnetic lattice
-          Call get_B(Hams,lat_1,Beff)
+          Call get_eff_field(Hams,lat_1,Beff,1)
           !do integration
           ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
           Call get_propagator_field(Beff_v,damping,lat_1%M%modes_v,Dmag(:,:,i_loop))
-          Call get_Dmag_int(Dmag,i_loop,N_loop,Dmag_int)
+          Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
           lat_2%M%modes_v=get_integrator_field(mag_lattice%M%modes_v,Dmag_int,dt)
         !copy mag 
           Call lat_2%M%copy_val(lat_1%M)

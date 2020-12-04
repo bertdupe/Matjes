@@ -8,12 +8,10 @@ subroutine rw_motif(my_motif,my_lattice)
     type(lattice), intent(inout) :: my_lattice
     type(t_cell), intent(out) :: my_motif
     ! internal
-    integer :: io_input,i,n_mag,i_at
+    integer :: io_input,n_mag
     ! check the allocation of memory
     integer :: alloc_check
     integer :: natom,dimension(3)
-    character(100)  ::  line
-    integer         ::  stat
     
     dimension=my_lattice%dim_lat
 
@@ -24,7 +22,7 @@ subroutine rw_motif(my_motif,my_lattice)
     if (alloc_check.ne.0) write(6,'(a)') 'can not allocate motif'
     call get_parameter(io_input,'input','motif',natom,my_motif%atomic)
     call close_file('input',io_input)
-    
+
     n_mag=count(my_motif%atomic(:)%moment.gt.0.0d0)
     ! size of the world
     if ((dimension(3).eq.1).and.(dimension(2).eq.1)) then

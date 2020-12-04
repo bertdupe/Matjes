@@ -1,6 +1,6 @@
 module m_relaxtyp
     use m_derived_types, only : lattice
-    use m_Beff_H, only : get_B_single
+    use m_eff_field, only : get_eff_field_single
     use m_H_public
     implicit none
     
@@ -23,7 +23,7 @@ module m_relaxtyp
         real(kind=8) :: norm_local,dumy(3)
     
         if(lat%M%dim_mode>3) ERROR STOP "THIS WILL FAIL FOR MORE THAN 1 MAGNETIC MOMENT IN UNITCELL"
-        Call get_B_single(Hams,iomp,lat,S_int)
+        Call get_eff_field_single(Hams,iomp,lat,S_int,1)
         norm_local=norm2(S_int)
         
         if (norm_local.gt.1.0d-8) then

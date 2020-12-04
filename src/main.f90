@@ -14,6 +14,7 @@ use m_user_info
 use m_H_public
 use m_parallel_tempering
 use m_spindynamics
+use m_molecular_dynamics
 use m_montecarlo
 use m_entropic
 use m_GNEB, only: GNEB
@@ -179,10 +180,8 @@ Implicit None
         !---------------------------------
         
         if (my_simu%name == 'molecular_dynamics')then
-        
-             write(6,'(a)') 'entering into the molecular dynamics routines'
-             call molecular_dynamics(all_lattices,io_simu)
-        
+            write(6,'(a)') 'entering into the molecular dynamics routines'
+            call molecular_dynamics(all_lattices,io_simu,ext_param,Ham_comb)
         endif
         
         !---------------------------------

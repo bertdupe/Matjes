@@ -748,7 +748,7 @@ do i_shell=1,size(indexNN,1)
 enddo
 
 write(6,'(a)') '-------------------------------------'
-write(6,'(a)') '(N/2+1,N/2+1,N/2+1,N/2+1)'
+write(6,'(a)') '(N,N,N,N)'
 do i_shell=1,size(indexNN,1)
   write(6,'(a,I4)') 'Shell  ', i_shell
   do i_nei=1,indexNN(i_shell,1)

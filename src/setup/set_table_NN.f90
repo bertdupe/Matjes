@@ -28,7 +28,7 @@ contains
         allocate(indexNN(N_Nneigh,1),stat=alloc_check)
         if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
         indexNN=0
-        call get_table_of_distance(lat%areal,N_Nneigh,lat%world,lat%cell,lat%nmag,tabledist)
+        call get_table_of_distance(lat%areal,N_Nneigh,lat%world,lat%cell,tabledist)
         call get_num_neighbors(N_Nneigh,tabledist,lat%areal,lat%world,lat%cell,indexNN)
         
         ! allocate table of neighbors and masque
