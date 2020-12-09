@@ -29,10 +29,6 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
 
     integer :: i_H,N_ham
     logical :: use_Ham(8)
-    !old data arrays that should be deleted after DMI is updated
-    real(8),allocatable :: DM_vector(:,:,:)
-    integer,allocatable :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
-    integer,allocatable :: indexNN(:)
 
 
     use_ham(1)=H_io%J%is_set
@@ -55,7 +51,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     endif
     !exchange_D (only DMI)
     if(use_ham(2))then
-        Call get_exchange_D(Ham_res(i_H),H_io%D,tableNN,indexNN,lat,DM_vector)
+        Call get_exchange_D(Ham_res(i_H),H_io%D,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !anisotropy

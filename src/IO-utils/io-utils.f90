@@ -52,6 +52,7 @@ interface get_parameter
  module procedure get_atomtype
  module procedure get_cell
  module procedure get_H_pair
+ module procedure get_H_triple
 end interface get_parameter
 
 interface number_nonzero_coeff
@@ -428,6 +429,103 @@ end subroutine get_coeff
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Get cell based on atomtype
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+subroutine get_H_triple(io,fname,var_name,Htriples,success)
+    use m_input_H_types, only: Hr_triple,reduce_Hr_triple,Hr_triple_single
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)                         :: io
+    character(len=*), intent(in)                :: fname,var_name
+    type(Hr_triple), intent(out), allocatable   :: Htriples(:)
+    logical,intent(out)                         :: success
+    ! internal variable
+    type(Hr_triple_single),allocatable   :: Htriple_tmp(:)
+    integer :: attype(3),dist
+    real(8) :: val
+
+    integer :: Ntriple,Nnonzero
+    integer :: nread,check,i,ii,j, length_string
+    integer :: stat
+    character(len=100) :: str
+    
+    nread=0
+    length_string=len_trim(var_name)
+    success=.false.
+    rewind(io)
+    do
+        read (io,'(a)',iostat=stat) str
+        if (stat /= 0) exit
+        str= trim(adjustl(str))
+        if (len_trim(str)==0) cycle
+        if (str(1:1) == '#' ) cycle
+
+        !We start to read the input
+        if ( str(1:length_string) == var_name(1:length_string)) then
+            Ntriple=0; Nnonzero=0
+            nread=nread+1
+            do 
+                read(io,'(a)',iostat=stat) str
+                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+                read(str,*,iostat=stat) attype,dist,val
+                if (stat /= 0) exit
+                Ntriple=Ntriple+1
+                if(val/=0.0d0) Nnonzero=Nnonzero+1
+            enddo
+            if(Ntriple<1)then
+                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,'Skipping this Hamiltonian'
+                exit
+            endif
+            if(Nnonzero<1)then
+                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,'Skipping this Hamiltonian'
+                exit
+            endif
+            write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+            success=.true.
+            allocate(Htriple_tmp(Nnonzero))
+            do i=1,Ntriple+1
+                backspace(io)
+            enddo
+            ii=1
+            do i=1,Ntriple
+                read(io,*,iostat=stat) attype,dist,val
+                if(val==0.0d0) cycle
+                if(attype(2)<attype(1))then
+                    j        =attype(2)
+                    attype(2)=attype(1)
+                    attype(1)=j
+                endif
+                Htriple_tmp(ii)%attype=attype
+                Htriple_tmp(ii)%dist=dist
+                Htriple_tmp(ii)%val=val
+                write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+                write(output_unit,'(A,3I6)')    '  atom types:', Htriple_tmp(ii)%attype
+                write(output_unit,'(A,2I6)')    '  distance  :', Htriple_tmp(ii)%dist
+                write(output_unit,'(A,E16.8/)') '  energy    :', Htriple_tmp(ii)%val
+                ii=ii+1
+            enddo 
+        endif
+    enddo
+
+    if(success)then
+        Call reduce_Hr_triple(Htriple_tmp,Htriples) !combines single entries into arrays with same atom types
+        !check if any entry appears more than once
+        do i=1,size(Htriples)
+            do j=2,size(Htriples(i)%dist)
+                if(any(Htriples(i)%dist(j)==Htriples(i)%dist(:j-1)))then
+                    write(output_unit,*) "ERROR, found the same distance twice for for Hamiltonian ",var_name
+                    write(output_unit,*) "       at atom indices  :",Htriples(i)%attype
+                    write(output_unit,*) "       with the distance:",Htriples(i)%dist(j)
+                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
+                endif
+            enddo
+        enddo
+    endif
+
+    check=check_read(nread,var_name,fname)
+end subroutine 
+
+
 
 subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     use m_input_H_types, only: Hr_pair,reduce_Hr_pair,Hr_pair_single

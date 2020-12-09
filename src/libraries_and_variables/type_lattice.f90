@@ -25,7 +25,7 @@ type lattice
      integer        :: dim_mode !probably obsolete
      integer        :: n_system !no clue what this does
      integer, allocatable :: world(:)
-     logical :: periodic(3) !lattice periodic in direction
+     logical        :: periodic(3) !lattice periodic in direction
      logical,private :: order_set(number_different_order_parameters)=.false. !logical variable which saves which orderparameters has been set
 
      !convenience parameters 
@@ -253,8 +253,8 @@ subroutine dist_2vec(this,vec1,vec2,dist)
     real(8)     :: vec1_sc(3),vec2_sc(3)
     integer     :: i
 
-    vec1_sc=vec_first_sc(this,vec1)
-    vec2_sc=vec_first_sc(this,vec2)
+    vec1_sc=pos_first_sc(this,vec1)
+    vec2_sc=pos_first_sc(this,vec2)
     do i=1,size(this%sc_vec_period,2)
         vec(:,i)=vec2_sc-vec1_sc-this%sc_vec_period(:,i)
     enddo
@@ -272,7 +272,7 @@ subroutine min_diffvec(this,diff)
     real(8)     :: norm(size(this%sc_vec_period,2))
     integer     :: i
 
-    diff_sc=vec_first_sc(this,diff)
+    diff_sc=pos_first_sc(this,diff)
     do i=1,size(this%sc_vec_period,2)
         vec(:,i)=diff-this%sc_vec_period(:,i)
     enddo
@@ -900,7 +900,7 @@ function op_int_to_abbrev(int_in)result(abbrev)
     enddo
 end function
 
-function vec_first_sc(this,vec_in)result(vec_out)
+function pos_first_sc(this,vec_in)result(vec_out)
     !returns the vector position back in the first supercell
     class(lattice),intent(in)   :: this
     real(8),intent(in)          :: vec_in(3)

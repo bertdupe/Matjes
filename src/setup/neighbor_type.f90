@@ -2,7 +2,7 @@ module m_neighbor_type
 use m_derived_types
 implicit none
 private
-public :: neighbors
+public :: neighbors, get_neigh_distances
 
 
 type :: neighbors
@@ -78,8 +78,6 @@ subroutine unfold_neighbors(pairs_in,Nshell_in,lat,neigh_out)
     integer                     :: i1,i2,i3
     integer                     :: imax(2,3)
 
-
-
     ii=0
     i_pair_done=0
     do i_shell=1,size(Nshell_in)
@@ -126,7 +124,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     integer,intent(in)          :: neighval(:)  !every entry means that this neighbor is requires (2= second nearest neighbor etc.)
     type(lattice),intent(in)    :: lat          !the all-knowing lattice providing all required information
     real(8),intent(out)         :: dist_out(size(neighval))
-    integer,allocatable     :: pair_ind(:,:) !integer array containing the information how which atoms are corrected by the distance([[ix,iy,iz,ia1,ia2],[:]])
+    integer,allocatable     :: pair_ind(:,:) !integer array containing the information how which atoms are corrected by the distance([[ia1,ia2,ix,iy,iz],[:]])
                                              ! distance corresponds to atpos1(ia1)-atpos2(ia2)+lat1*ix+lat2*iy+lat3*iz
     integer,allocatable     :: N_shell(:)   !number of shells per considered neighbor
 
