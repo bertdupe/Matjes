@@ -35,10 +35,28 @@ type exp_val
     real(8) :: vortex_av(3)=0.0d0
     real(8) :: chi_l(3)=0.0d0
 
-    real(8) :: Re_MpMm_sum=0.0d0
-    real(8) :: Im_MpMm_sum=0.0d0
-    real(8) :: Re_MpMm_av=0.0d0
-    real(8) :: Im_MpMm_av=0.0d0
+	!<Mi+Mj->
+    real(8) :: Re_MipMjm_sum=0.0d0
+    real(8) :: Im_MipMjm_sum=0.0d0
+    real(8) :: Re_MipMjm_av=0.0d0
+    real(8) :: Im_MipMjm_av=0.0d0
+
+	!<Mi+Mi+>
+    real(8) :: Re_MipMip_sum=0.0d0
+    real(8) :: Im_MipMip_sum=0.0d0
+    real(8) :: Re_MipMip_av=0.0d0
+    real(8) :: Im_MipMip_av=0.0d0
+
+	!<Mi+Mi-> (is real)
+    real(8) :: Re_MipMim_sum=0.0d0
+    real(8) :: Re_MipMim_av=0.0d0
+
+	!<Mi+Mj+>
+	real(8) :: Re_MipMjp_sum=0.0d0
+    real(8) :: Im_MipMjp_sum=0.0d0
+    real(8) :: Re_MipMjp_av=0.0d0
+    real(8) :: Im_MipMjp_av=0.0d0
+
 end type
 
 contains 
@@ -121,19 +139,40 @@ subroutine measure_print_thermo(this,com)
     class(mpi_type),intent(in)      :: com
     integer     ::  io_unit,i
 
+	!<Mi+Mi+>
+
+
+    real(8) :: Re_MipMip_av=0.0d0
+    real(8) :: Im_MipMip_av=0.0d0
+
+	!<Mi+Mi-> (is real)
+
+    real(8) :: Re_MipMim_av=0.0d0
+
+	!<Mi+Mj+>
+
+    real(8) :: Re_MipMjp_av=0.0d0
+    real(8) :: Im_MipMjp_av=0.0d0
+	
+
+
+
     if(com%ismas)then
         OPEN(newunit=io_unit,FILE='EM.dat',action='write',form='formatted')
-          Write(io_unit,'(29(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
+          Write(io_unit,'(34(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
           & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
           & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
-          & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm','28: Re(M+M-)','29: Im(M+M-)'
+          & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm', &
+		  & '28: Re(Mi+Mj-)','29: Im(Mi+Mj-)','30: Re(Mi+Mi+)','31: Im(Mi+Mi+)','32: Re(Mi+Mi-)', &
+		  & '33: Re(Mi+Mj+)','34: Im(Mi+Mj+)'
         ! write the data into a file
         do i=1,size(this)
-            Write(io_unit,'(29(E20.10E3,2x),E20.10E3)') this(i)%kT/k_B ,this(i)%E_av, this(i)%E_err_av, this(i)%C_av,&
+            Write(io_unit,'(34(E20.10E3,2x),E20.10E3)') this(i)%kT/k_B ,this(i)%E_av, this(i)%E_err_av, this(i)%C_av,&
              &             norm2(this(i)%M_av),this(i)%M_av, this(i)%M_err_av,&
-             &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1), &
-             &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4), &
-			 &			   this(i)%Re_MpMm_av, this(i)%Im_MpMm_av
+             &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1),&
+             &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4),&
+			 &			   this(i)%Re_MipMjm_av, this(i)%Im_MipMjm_av, this(i)%Re_MipMip_av, this(i)%Im_MipMip_av, this(i)%Re_MipMim_av,&
+			 &  		   this(i)%Re_MipMjp_av, this(i)%Im_MipMjp_av
         enddo
         close(io_unit) 
     endif
@@ -171,7 +210,11 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     this%Qm_sq_sum_av=this%Qm_sq_sum_av+qeulerm**2
     this%vortex_av=this%vortex_av+dumy(3:5)
 
-    if(fluct_val%l_use) Call eval_fluct(this%Re_MpMm_sum,this%Im_MpMm_sum,lat,fluct_val)
+    if(fluct_val%l_use) Call eval_fluct(this%Re_MipMjm_sum,this%Im_MipMjm_sum, &
+									  &	this%Re_MipMip_sum,this%Im_MipMip_sum, &
+									  &	this%Re_MipMim_sum,		 			   &
+									  &	this%Re_MipMjp_sum,this%Im_MipMjp_sum, &																								
+									  & lat,fluct_val)
 end subroutine
 
 
@@ -202,9 +245,16 @@ subroutine measure_eval(this,Cor_log, N_cell_in)
 
     this%vortex_av=this%vortex_av*av_Nadd/3.0d0/sqrt(3.0d0)
 
-	this%Re_MpMm_av=this%Re_MpMm_sum*av_Nadd*av_site
-	this%Im_MpMm_av=this%Im_MpMm_sum*av_Nadd*av_site
-	write(*,*) 'in measure_add, Re_MpMm_av=',this%Re_MpMm_av,' Im_MpMm_av= ',this%Im_MpMm_av,' Re_MpMm_sum = ', this%Re_MpMm_sum,' Im_MpMm_sum = ', this%Im_MpMm_sum
+	this%Re_MipMjm_av=this%Re_MipMjm_sum*av_Nadd*av_site
+	this%Im_MipMjm_av=this%Im_MipMjm_sum*av_Nadd*av_site
+
+	this%Re_MipMip_av=this%Re_MipMip_sum*av_Nadd*av_site
+	this%Im_MipMip_av=this%Im_MipMip_sum*av_Nadd*av_site
+
+	this%Re_MipMim_av=this%Re_MipMim_sum*av_Nadd*av_site
+
+	this%Re_MipMjp_av=this%Re_MipMjp_sum*av_Nadd*av_site
+	this%Im_MipMjp_av=this%Im_MipMjp_sum*av_Nadd*av_site
 
     if (Cor_log) this%chi_l=this%N_add !what is this supposed to do?
     Call print_av(this)

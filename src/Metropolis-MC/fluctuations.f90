@@ -27,16 +27,21 @@ subroutine init_fluct_parameter(fluct_val,lat,l_use_in)
 end subroutine
 
 
-! ------- for <M+M->
-subroutine eval_fluct(Re_MpMm_sum,Im_MpMm_sum,lat,fluct_val)
+
+subroutine eval_fluct(Re_MipMjm_sum,Im_MipMjm_sum, &
+				    & Re_MipMip_sum,Im_MipMip_sum, &
+					& Re_MipMim_sum,			   &
+					& Re_MipMjp_sum,Im_MipMjp_sum, &																								
+					& lat,fluct_val)
+
     use m_vector, only : cross
-    real(8),intent(inout)               :: Re_MpMm_sum,Im_MpMm_sum
-    type(lattice),intent(in)            :: lat
+    real(8),intent(inout)              :: Re_MipMjm_sum,Im_MipMjm_sum, Re_MipMip_sum,Im_MipMip_sum,Re_MipMim_sum,Re_MipMjp_sum,Im_MipMjp_sum
+    type(lattice),intent(in)           :: lat
     type(fluct_parameters),intent(in)  :: fluct_val
 
     real(8),pointer :: M3(:,:)
     real(8)         :: temp(3)
-    real(8)         :: Mi(3), Mj(3), Re_MpMm, Im_MpMm
+    real(8)         :: Mi(3), Mj(3), Re_MipMjm, Im_MipMjm, Re_MipMip, Im_MipMip, Re_MipMim, Re_MipMjp, Im_MipMjp
     integer         :: N_neighbours,N_cell
     integer         :: i_cell, i_sh,i_nei,j_flat 
 
@@ -44,28 +49,51 @@ subroutine eval_fluct(Re_MpMm_sum,Im_MpMm_sum,lat,fluct_val)
 	N_neighbours=rank(fluct_val%indexNN) !number of shells of neighbours to be used
     N_cell=lat%Ncell
     M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
-    Re_MpMm=0.0d0
-    Im_MpMm=0.0d0
+
+    Re_MipMjm=0.0d0
+    Im_MipMjm=0.0d0
+	Re_MipMip=0.0d0
+	Im_MipMip=0.0d0
+	Re_MipMim=0.0d0	
+	Re_MipMjp=0.0d0
+	Im_MipMjp=0.0d0
+
     do i_cell=1,N_cell  !loop on sites
         Mi=M3(:,i_cell) !site i
+
+		Re_MipMip=Re_MipMip + Mi(1)**2-Mi(2)**2
+		Im_MipMip_sum=Im_MipMip+ 2*Mi(1)*Mi(2)
+
+		Re_MipMim=Re_MipMim + Mi(1)**2+Mi(2)**2
+
         do i_sh=1,N_neighbours !loop on shell of neighbours
             do i_nei=1,fluct_val%indexNN(i_sh) !loop on neighbours
+
                 if(fluct_val%flat_nei(i_cell,i_nei).eq.-1) cycle !skip non-connected neighbours
                 j_flat=fluct_val%flat_nei(i_cell,i_nei)
-
-                !write(*,*) "site", i_cell, "neighbour", j_flat
                 Mj=M3(:,j_flat) !site j
-                Re_MpMm = Re_MpMm + dot_product(Mi,Mj) - Mi(3)*Mj(3) !real part M+M-, sum over all pairs
+
+                Re_MipMjm = Re_MipMjm + dot_product(Mi,Mj) - Mi(3)*Mj(3) 
                 temp = cross(Mi,Mj)
-                Im_MpMm= Im_MpMm + temp(3) !imaginary part of M+M-, sum over all pairs
-				!write(*,*)'Mi=',Mi(1:3), ' Mj= ',Mj(1:3), 'Mi*Mj=',dot_product(Mi,Mj) ,' Mi*Mj-MizMjz = ',dot_product(Mi,Mj) - Mi(3)*Mj(3),' (MixMj)_z = ', temp(3)
-				!write(*,*) 'Im_MpMm = ', Im_MpMm
+                Im_MipMjm= Im_MipMjm + temp(3) 
+
+				Re_MipMjp=Re_MipMjp + Mi(1)*Mj(1) -  Mi(2)*Mj(2)
+				Im_MipMjp=Im_MipMjp + Mi(1)*Mj(2) +  Mi(2)*Mj(1)
+
             enddo
         enddo
+
     enddo
-    Re_MpMm_sum=Re_MpMm_sum+Re_MpMm
-    Im_MpMm_sum=Im_MpMm_sum+Im_MpMm
-	!write(*,*) 'in eval_fluct, Re_MpMm_sum= ',Re_MpMm_sum,' Im_MpMm_sum= ',Im_MpMm_sum
+    Re_MipMjm_sum=Re_MipMjm_sum+Re_MipMjm
+    Im_MipMjm_sum=Im_MipMjm_sum+Im_MipMjm
+
+	Re_MipMip_sum=Re_MipMip_sum+Re_MipMip
+	Im_MipMip_sum=Im_MipMip_sum+Im_MipMip
+
+	Re_MipMim_sum=Re_MipMim_sum+Re_MipMim
+
+	Re_MipMjp_sum=Re_MipMjp_sum+Re_MipMjp
+	Im_MipMjp_sum=Im_MipMjp_sum+Im_MipMjp
 
 end subroutine
 
@@ -83,9 +111,8 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
 
     N_neighbours = 1 !choose how many shells of neighbours: 1 = first neighbours
     Call get_table_nn(lat,N_neighbours,indexNN,tableNN)
-    !write(*,*) "N_cell= " ,N_cell, "sum(indexNN)= ", sum(indexNN)
     allocate(flat_nei(N_cell,N_cell*sum(indexNN))) !flat nei is N x N*number of neighbours per site
-    !write(*,*) "in get_nei l223 shape(flat_nei)=", shape(flat_nei) 
+
 
     !convert to a table with linear indices (Ncell, indexNN)
     do i_sh=1,N_neighbours !loop on shell of neighbours
@@ -98,8 +125,6 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
                         temp=tableNN(1:3,i_nei,i_x,i_y,i_z,1)!get x,y,z indices of neighbour
                         j_flat=lat%index_m_1(temp) !get j_flat
                         if(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) j_flat=-1 !if neighbours are not connected set to -1
-                        !write(*,*) i_sh, i_x, i_y, i_z, temp(1:3), i_flat, i_nei, j_flat
-                        !write(*,*) "shape(flat_nei)=", shape(flat_nei)
                         flat_nei(i_flat,i_nei)=j_flat
                     enddo
                 enddo
