@@ -10,7 +10,9 @@ interface bcast_alloc
 end interface
 
 interface bcast
+    module procedure bcast_int
     module procedure bcast_int1
+    module procedure bcast_real1
 end interface
 
 contains
@@ -48,6 +50,19 @@ subroutine bcast_alloc_int2(arr,com)
 #endif
 end subroutine
 
+
+subroutine bcast_int(val,com)
+    integer,intent(inout)       :: val
+    class(mpi_type),intent(in)  :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+
+    Call MPI_BCAST(val,1,MPI_INTEGER,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
 subroutine bcast_int1(arr,com)
     integer,intent(inout)       :: arr(:)
     class(mpi_type),intent(in)  :: com
@@ -60,6 +75,17 @@ subroutine bcast_int1(arr,com)
 #endif
 end subroutine
 
+subroutine bcast_real1(arr,com)
+    real(8),intent(inout)       :: arr(:)
+    class(mpi_type),intent(in)  :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+
+    Call MPI_BCAST(arr(1),size(arr),MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
 
 
 end module

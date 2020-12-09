@@ -12,9 +12,10 @@ type order_par
 
     real(8),pointer,private,contiguous      :: data_real(:)=>null() !main pointer that get allocated
     !pointers onto data_real, which can be adressed from outside
-    real(8),pointer,contiguous              :: modes(:,:,:,:,:) => null()
-    real(8),pointer,contiguous              :: all_modes(:) => null()
-    real(8),pointer,contiguous              :: modes_v(:,:) => null()
+    real(8),pointer,contiguous              :: modes(:,:,:,:) => null()
+    real(8),pointer,contiguous              :: all_modes(:)   => null()
+    real(8),pointer,contiguous              :: modes_v(:,:)   => null() !(1:dimmode,:) shape
+    real(8),pointer,contiguous              :: modes_3(:,:)   => null() !(1:3,:) shape, only associated if it makes sense (help accessing vector in 3-dimensional space)
 
     integer                                 :: dim_mode=0
 contains 
@@ -37,9 +38,8 @@ use mpi_basic
 #ifdef CPP_MPI
     integer     :: ierr
     integer     :: N
-    integer     :: mode_shape(5)
+    integer     :: mode_shape(4)
     integer     :: dim_lat(3)
-    integer     :: nmag
     integer     :: dim_mode
 
     Call MPI_Bcast(this%dim_mode, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
@@ -47,12 +47,11 @@ use mpi_basic
         N=size(this%data_real)
         mode_shape=shape(this%modes)
     endif
-    Call MPI_Bcast(mode_shape, 5, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(mode_shape, 4, MPI_INTEGER, comm%mas, comm%com,ierr)
     dim_mode=mode_shape(1)
     dim_lat=mode_shape(2:4)
-    nmag=mode_shape(5) !obsolete and should always be 1
     if(.not.comm%ismas)then
-        Call this%init(dim_lat,nmag,dim_mode)
+        Call this%init(dim_lat,dim_mode)
     endif
     Call MPI_Bcast(this%modes, size(this%modes), MPI_REAL8, comm%mas, comm%com,ierr)
 #else
@@ -114,22 +113,20 @@ subroutine read_file(this,fname,fexist)
     call close_file(fname,io)
 end subroutine
 
-subroutine init_order_par(self,dim_lat,nmag,dim_mode,vec_val,val)
+subroutine init_order_par(self,dim_lat,dim_mode,vec_val,val)
     !if the data pointers are not allocated, initialize them with 0
     !if the data pointers are allocated, check that size requirements are identical
     !associate public pointers to internal data storage
     class(order_par),intent(inout)  :: self
     integer,intent(in)              :: dim_lat(3)
-    integer,intent(in)              :: nmag
     integer,intent(in)              :: dim_mode
     real(8),intent(in),optional     :: vec_val(dim_mode),val    !possibities to initialize order parameters
     !internal
     integer                         :: N,i
    
-    if(nmag>1) ERROR STOP "THIS STILL USES OLD SETIP WITH NMAG AS LAST PARAMETER"
     !initialize real array data if necessary and associate pointers
     self%dim_mode=dim_mode
-    N=dim_mode*product(dim_lat)*nmag
+    N=dim_mode*product(dim_lat)
     if(.not.associated(self%data_real))then
         allocate(self%data_real(N),source=0.0d0)
     else
@@ -138,8 +135,9 @@ subroutine init_order_par(self,dim_lat,nmag,dim_mode,vec_val,val)
         endif
     endif
     self%all_modes(1:N)=>self%data_real
-    self%modes(1:dim_mode,1:dim_lat(1),1:dim_lat(2),1:dim_lat(3),1:nmag)=>self%data_real
-    self%modes_v(1:dim_mode,1:product(dim_lat)*nmag)=>self%data_real
+    self%modes(1:dim_mode,1:dim_lat(1),1:dim_lat(2),1:dim_lat(3))=>self%data_real
+    self%modes_v(1:dim_mode,1:product(dim_lat))=>self%data_real
+    if(dim_mode>=3.and.modulo(dim_mode,3)==0) self%modes_3(1:3,1:product(dim_lat)*(dim_mode/3))=>self%data_real
 
     if(present(vec_val))then
         do i=1,size(self%modes_v,2)
@@ -159,22 +157,22 @@ end subroutine
 subroutine delete_order_par(self)
     class(order_par),intent(inout) :: self
 
-    nullify(self%all_modes,self%modes,self%modes_v)
+    nullify(self%all_modes,self%modes,self%modes_v,self%modes_3)
     if(associated(self%data_real)) deallocate(self%data_real)
 end subroutine
 
-subroutine copy_order_par(self,copy,dim_lat,nmag)
+subroutine copy_order_par(self,copy,dim_lat)
     class(order_par),intent(in)    :: self
     class(order_par),intent(inout) :: copy
 !    class(lattice),intent(in)      :: lat  !intent(in) might be a problem since a lattice might get destroyed <- check if finalization occurs
-    integer,intent(in)              :: dim_lat(3),nmag
+    integer,intent(in)              :: dim_lat(3)
    
     Call copy%delete()
     if(.not.associated(self%modes))then
         STOP "failed to copy order_par, since the source modes are not allocated"
     endif
     allocate(copy%data_real,source=self%data_real)
-    Call copy%init(dim_lat,nmag,self%dim_mode)
+    Call copy%init(dim_lat,self%dim_mode)
 
 end subroutine
 

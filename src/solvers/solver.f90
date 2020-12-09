@@ -95,38 +95,24 @@ end function
 
 
 function euler(m,Dmag_int,dt)result(Mout)
+    !do the LLG step from data provided in large contiguous arrays (with shape (3,Nsite*Nmag))
     use m_constants, only : hbar
-    real(8),intent(in),target,contiguous    ::  M(:,:),Dmag_int(:,:)
-    real(8),intent(in)                      ::  dt
-    real(8),target                          ::  Mout(size(M,1),size(M,2))
+    real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:)
+    real(8),intent(in)              ::  dt
+    real(8)                         ::  Mout(size(M,1),size(M,2))
+    !internal
+    real(8) :: m_norm(size(M,2))
+    real(8) :: int_norm(size(M,2))
+    real(8) :: euler_tmp(size(M,1),size(M,2))
+    integer :: i
 
-    real(8),pointer :: m3(:,:),m3_tmp(:,:),m3_out(:,:)
-    real(8)         :: m_norm(size(M)/3),int_norm(size(M)/3)
-
-    real(8),target  :: euler_tmp(size(M,1),size(M,2))
-    logical         :: mask(3,size(M)/3)
-
-    integer         :: Nvec,i
-
-    !ADD DT_mode
-
-    !get 3_vectors for norm stuff
-    Nvec=size(M)/3
-    m3(1:3,1:Nvec)=>M
-    m3_tmp(1:3,1:Nvec)=>euler_tmp
-    m3_out(1:3,1:Nvec)=>Mout
-
-    Mout=M
-    m_norm=norm2(m3,dim=1)
+    !ADD DT_mode if necessary
+    if(size(M,1)/=3.or.size(Dmag_int,1)/=3.or.size(Mout,1)/=3) ERROR STOP "euler INPUT NEEDS TO BE 3-vector"
+    m_norm=norm2(m,dim=1)
     euler_tmp=M+Dmag_int*dt/hbar
-    int_norm=norm2(m3_tmp,dim=1)
-    mask=spread(int_norm>1.0d-8,dim=1,ncopies=3)
-    do i=1,Nvec
-        m3_tmp(:,i)=m3_tmp(:,i)*m_norm(i)/int_norm(i)
-    enddo
-    m3_out=merge(m3_tmp,m3,mask)
-    nullify(m3,m3_tmp,m3_out)
-
+    int_norm=norm2(euler_tmp,dim=1)
+    mout=M
+    forall(i=1:size(int_norm), int_norm(i)>1.0d-8 ) mout(:,i)=euler_tmp(:,i)*m_norm(i)/int_norm(i)
 end function
 
 

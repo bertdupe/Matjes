@@ -9,5 +9,6 @@ src/setup/setup_DM.f90
 src/setup/setup-simu.f90
 src/setup/set_table_NN.f90
 src/setup/sym_utils.f90
+src/setup/neighbor_type.f90
 src/setup/Table_dist.f90
 )

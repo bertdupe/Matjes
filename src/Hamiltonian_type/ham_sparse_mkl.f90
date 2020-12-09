@@ -18,11 +18,14 @@ contains
     !necessary t_H routines
     procedure :: eval_single
     procedure :: init_1    
+    procedure :: init_connect    
+    procedure :: init_mult_connect_2   
     procedure :: init_mult_2   
 
     procedure :: add_child 
     procedure :: destroy_child    
     procedure :: copy_child 
+    procedure :: bcast_child 
 
     procedure :: optimize
     procedure :: mult_r,mult_l
@@ -40,7 +43,6 @@ type(t_H_mkl_csr) function dummy_constructor()
     !might want some initialization for H and descr, but should work without
     !continue 
 end function 
-
 
 subroutine mult_r(this,lat,res)
     !mult
@@ -63,7 +65,6 @@ subroutine mult_r(this,lat,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-
 subroutine mult_l(this,lat,res)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(in)   :: this
@@ -82,53 +83,77 @@ subroutine mult_l(this,lat,res)
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl"
     if(allocated(vec)) deallocate(vec)
-    
 end subroutine 
-
 
 subroutine optimize(this)
     class(t_H_mkl_csr),intent(inout)   :: this
-
     integer     :: stat
 
+    stat=mkl_sparse_order(this%H)
     stat=mkl_sparse_set_dotmv_hint ( this%H , SPARSE_OPERATION_NON_TRANSPOSE , this%descr , 100000 )
     stat=mkl_sparse_optimize(this%H)
-    
 end subroutine
 
 subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(inout)    :: this
-
     type(lattice),intent(in)        :: lat
     integer,intent(in)              :: order(2)
     real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)              :: Hval_ind(:,:)
     integer,intent(in)              :: line(:,:)
-
     !local
     type(t_H_coo)           :: H_coo
 
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_1(line,Hval,Hval_ind,order,lat)
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
+subroutine init_connect(this,connect,Hval,Hval_ind,order,lat)
+    use m_derived_types, only: lattice
+    class(t_H_mkl_csr),intent(inout)    :: this
+    type(lattice),intent(in)        :: lat
+    character(2),intent(in)         :: order
+    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+    integer,intent(in)              :: Hval_ind(:,:)
+    integer,intent(in)              :: connect(:,:)
+    !local
+    type(t_H_coo)           :: H_coo
+
+    Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat)
+    Call set_from_Hcoo(this,H_coo,lat)
+end subroutine 
+
+subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
+    !(example: ME-coupling M_i*E_i*M_j
+    use m_derived_types, only: lattice,op_abbrev_to_int
+    class(t_H_mkl_csr),intent(inout)    :: this
+    type(lattice),intent(in)        :: lat
+    !input Hamiltonian
+    real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
+    integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
+    character(len=*),intent(in)     :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
+    character(len=*),intent(in)     :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
+    integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
+    !local
+    type(t_H_coo)           :: H_coo
+
+    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat)
+    Call set_from_Hcoo(this,H_coo,lat)
+end subroutine
 
 subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(inout)    :: this
-
     type(lattice),intent(in)        :: lat
     integer,intent(in)              :: op_l(:),op_r(:)
     real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)              :: Hval_ind(:,:)
     integer,intent(in)              :: connect(:,:)
-
     !local
     type(t_H_coo)           :: H_coo
 
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
@@ -148,6 +173,47 @@ subroutine copy_child(this,Hout)
         STOP "Cannot copy t_h_mkl_csr type with Hamiltonian that is not a class of t_h_mkl_csr"
     end select
 end subroutine
+
+subroutine bcast_child(this,comm)
+    use mpi_basic
+    use mpi_util,only: bcast
+    use mkl_spblas_util, only: unpack_csr
+    class(t_H_mkl_csr),intent(inout)    ::  this
+    type(mpi_type),intent(in)           ::  comm
+#ifdef CPP_MPI
+    real(C_DOUBLE),pointer      :: acsr(:)
+    integer(C_INT),pointer      :: ia(:),ja(:)
+    integer                     :: nnz
+    integer                     :: ierr
+    type(SPARSE_MATRIX_T)       :: H_tmp
+
+    nullify(acsr,ia,ja)
+    if(comm%ismas)then
+        Call unpack_csr(this%dimH(1),this%H,nnz,ia,ja,acsr) 
+    endif
+    Call MPI_Bcast(nnz, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas)then
+        allocate(acsr(nnz),ja(nnz),ia(this%dimH(1)+1)) 
+    endif
+    Call bcast(ia,comm)
+    Call bcast(ja,comm)
+    Call bcast(acsr,comm)
+    Call bcast(this%descr%type,comm)
+    Call bcast(this%descr%mode,comm)
+    Call bcast(this%descr%diag,comm)
+    if(.not.comm%ismas)then
+        ierr = mkl_sparse_d_create_csr( H_tmp, SPARSE_INDEX_BASE_ONE,this%dimH(1), this%dimH(2), ia(1:size(ia)-1), ia(2:size(ia)),ja ,acsr)
+        if(ierr /= 0) ERROR STOP "FAILED TO CREATE CHILD MKL SPARSE HAMILTONIAN"
+        !copy to savely deallocate data arrays (one could just leave it allocated since the memory isn't really lost, but it feels weird)
+        ierr = mkl_sparse_copy(H_tmp, this%descr, this%H) 
+        Call this%optimize()
+        deallocate(acsr,ja,ia)
+    endif
+    nullify(acsr,ia,ja)
+#else
+    continue
+#endif
+end subroutine 
 
 subroutine add_child(this,H_in)
     class(t_H_mkl_csr),intent(inout)    :: this

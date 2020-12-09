@@ -19,6 +19,7 @@ end interface dump_spinse
 
 interface dump_config
  module procedure dump_config_modes
+ module procedure dump_config_matrix_N_1D_real
  module procedure dump_config_matrix_2D_real
  module procedure dump_config_matrix_5D_real
  module procedure dump_config_FFT
@@ -50,6 +51,7 @@ interface get_parameter
  module procedure get_atomic
  module procedure get_atomtype
  module procedure get_cell
+ module procedure get_H_pair
 end interface get_parameter
 
 interface number_nonzero_coeff
@@ -135,7 +137,7 @@ subroutine dump_config_spinse(io,lat,position)
     type(lattice), intent(in) :: lat
     real(kind=8), intent(in) :: position(:,:,:,:,:)
     ! internale variables
-    Integer :: i_x,i_y,i_z,i_m,N(4)
+    Integer :: i_x,i_y,i_z,i_m
     real(kind=8) :: Rc,Gc,Bc,theta,phi
 
 
@@ -144,7 +146,7 @@ subroutine dump_config_spinse(io,lat,position)
           Do i_y=1,lat%dim_lat(2)
              Do i_x=1,lat%dim_lat(1)
     
-            call get_colors(Rc,Gc,Bc,theta,phi,lat%M%modes((i_m-1)*3+1:i_m*3,i_x,i_y,i_z,1))
+            call get_colors(Rc,Gc,Bc,theta,phi,lat%M%modes((i_m-1)*3+1:i_m*3,i_x,i_y,i_z))
     
              write(io,'(8(a,f16.8),a)') 'Spin(', &
          & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
@@ -180,6 +182,22 @@ do i_x=1,N(2)
 enddo
 
 end subroutine dump_config_matrix_2D_real
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! routine that dumps a 1D matrix of real numbers with N entries per line
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine dump_config_matrix_N_1D_real(io,N,matrix)
+    implicit none
+    integer, intent(in) :: io
+    integer, intent(in) :: N    !
+    real(8), intent(in) :: matrix(:)
+    ! internale variables
+    character(len=30) :: rw_format
+    
+    write(rw_format,'( "(", I4, "f14.8,2x)" )') N
+    write(io,rw_format) matrix
+end subroutine 
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that dumps a 5D matrix of real numbers
@@ -232,7 +250,7 @@ do i_z=1,N(3)
   do i_y=1,N(2)
     do i_x=1,N(1)
 
-    Write(io,rw_format) ((lat%M%modes(i_m,i_x,i_y,i_z,1), j_lat=1,lat%M%dim_mode),i_m=1,N(4))
+    Write(io,rw_format) ((lat%M%modes(i_m,i_x,i_y,i_z), j_lat=1,lat%M%dim_mode),i_m=1,N(4))
 
     enddo
   enddo
@@ -407,6 +425,103 @@ write(6,'(/)')
 
 end subroutine get_coeff
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Get cell based on atomtype
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine get_H_pair(io,fname,var_name,Hpairs,success)
+    use m_input_H_types, only: Hr_pair,reduce_Hr_pair,Hr_pair_single
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)                         :: io
+    character(len=*), intent(in)                :: fname,var_name
+    type(Hr_pair), intent(out), allocatable     :: Hpairs(:)
+    logical,intent(out)                         :: success
+    ! internal variable
+    type(Hr_pair_single),allocatable   :: Hpair_tmp(:)
+    integer :: attype(2),dist
+    real(8) :: val
+
+    integer :: Npair,Nnonzero
+    integer :: nread,check,i,ii,j, length_string
+    integer :: stat
+    character(len=100) :: str
+    
+    nread=0
+    length_string=len_trim(var_name)
+    success=.false.
+    rewind(io)
+    do
+        read (io,'(a)',iostat=stat) str
+        if (stat /= 0) exit
+        str= trim(adjustl(str))
+        if (len_trim(str)==0) cycle
+        if (str(1:1) == '#' ) cycle
+
+        !We start to read the input
+        if ( str(1:length_string) == var_name(1:length_string)) then
+            Npair=0; Nnonzero=0
+            nread=nread+1
+            do 
+                read(io,'(a)',iostat=stat) str
+                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+                read(str,*,iostat=stat) attype,dist,val
+                if (stat /= 0) exit
+                Npair=Npair+1
+                if(val/=0.0d0) Nnonzero=Nnonzero+1
+            enddo
+            if(Npair<1)then
+                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,'Skipping this Hamiltonian'
+                exit
+            endif
+            if(Nnonzero<1)then
+                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,'Skipping this Hamiltonian'
+                exit
+            endif
+            write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+            success=.true.
+            allocate(Hpair_tmp(Nnonzero))
+            do i=1,Npair+1
+                backspace(io)
+            enddo
+            ii=1
+            do i=1,Npair
+                read(io,*,iostat=stat) attype,dist,val
+                if(val==0.0d0) cycle
+                if(attype(2)<attype(1))then
+                    j        =attype(2)
+                    attype(2)=attype(1)
+                    attype(1)=j
+                endif
+                Hpair_tmp(ii)%attype=attype
+                Hpair_tmp(ii)%dist=dist
+                Hpair_tmp(ii)%val=val
+                write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+                write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
+                write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
+                write(output_unit,'(A,E16.8/)') '  energy    :', Hpair_tmp(ii)%val
+                ii=ii+1
+            enddo 
+        endif
+    enddo
+
+    if(success)then
+        Call reduce_Hr_pair(Hpair_tmp,Hpairs) !combines single entries into arrays with same atom types
+        !check if any entry appears more than once
+        do i=1,size(Hpairs)
+            do j=2,size(Hpairs(i)%dist)
+                if(any(Hpairs(i)%dist(j)==Hpairs(i)%dist(:j-1)))then
+                    write(output_unit,*) "ERROR, found the same distance twice for for Hamiltonian ",var_name
+                    write(output_unit,*) "       at atom indices  :",Hpairs(i)%attype
+                    write(output_unit,*) "       with the distance:",Hpairs(i)%dist(j)
+                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
+                endif
+            enddo
+        enddo
+    endif
+
+    check=check_read(nread,var_name,fname)
+end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Get cell based on atomtype
@@ -481,6 +596,7 @@ subroutine get_cell(io,fname,attype,cell)
         if(.not.used(j)) write(output_unit,'(3A)') 'ATOM TYPE "',trim(attype(j)%name), '" is not used'
     enddo
     if(.not.all(used)) STOP "SOME ATOM TYPES ARE NOT USED, CHECK CELL SETUP"
+
 
     check=check_read(nread,var_name,fname)
 end subroutine 

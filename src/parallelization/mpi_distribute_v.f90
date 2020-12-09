@@ -37,7 +37,8 @@ subroutine init(this,ref)
     allocate(this%displ(this%Np),source=0)
 end subroutine
 
-
+#ifdef CPP_MPI
+!NOT FINISHED
 subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     class(mpi_type),intent(in)      :: com_in
     integer                         :: N !number of entries that have to be distributed
@@ -80,6 +81,7 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     STOP
 
 end subroutine
+#endif
 
 
 

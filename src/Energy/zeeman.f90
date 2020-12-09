@@ -42,10 +42,9 @@ subroutine get_zeeman_H(Ham,io,lat)
     !input for setting t_H
     real(8),allocatable     :: val_tmp(:)
     integer,allocatable     :: ind_tmp(:,:)
-    integer,allocatable     :: line(:,:)
+    integer,allocatable     :: connect(:,:)
 
     if(io%is_set)then
-        allocate(line(1,lat%Ncell),source=0) !1, since always onsite
         allocate(Htmp(3,lat%M%dim_mode),source=0.d0) !assume shape of B-field has to be 3
         Call lat%cell%get_mag_magmom(magmom)
         do i=1,size(magmom)
@@ -57,11 +56,12 @@ subroutine get_zeeman_H(Ham,io,lat)
 
         !get local Hamiltonian in coo format
         Call get_coo(Htmp,val_tmp,ind_tmp)
-        !simple on-site term
+
+        allocate(connect(2,lat%Ncell))
         do i=1,lat%Ncell
-            line(1,i)=i
+            connect(:,i)=i
         enddo
-        Call Ham%init_1(line,val_tmp,ind_tmp,[3,1],lat)
+        Call Ham%init_connect(connect,val_tmp,ind_tmp,"BM",lat)
         Ham%desc="Zeeman energy"
     endif
 end subroutine

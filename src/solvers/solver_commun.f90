@@ -15,9 +15,9 @@ abstract interface
 !    end function 
 
     subroutine propagator(B,damping,M,Mout)
-        real(8),intent(in)                          ::  damping
-        real(8),intent(in),target,contiguous        ::  M(:,:),B(:,:)
-        real(8),intent(inout),target,contiguous     ::  Mout(:,:)
+        real(8),intent(in)                  ::  damping
+        real(8),intent(in),contiguous       ::  M(:,:),B(:,:)
+        real(8),intent(inout),contiguous    ::  Mout(:,:)
     end subroutine
 
 !    function integrator_old(Mode_t,D_Mode,BT,dt,size_mode) result(integrator)
@@ -27,9 +27,9 @@ abstract interface
 !    end function 
 
     function integrator(m,Dmag_int,dt)result(Mout)
-        real(8),intent(in),target,contiguous    ::  M(:,:),Dmag_int(:,:)
-        real(8),intent(in)                      ::  dt
-        real(8),target                          ::  Mout(size(M,1),size(M,2))
+        real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:)
+        real(8),intent(in)              ::  dt
+        real(8),target                  ::  Mout(size(M,1),size(M,2))
     end function
 
 

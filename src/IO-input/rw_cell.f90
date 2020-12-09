@@ -10,7 +10,7 @@ subroutine read_cell(cell,lat)
     type(t_cell), intent(out)       :: cell
     ! internal
     type(atomtype),allocatable  ::  attype(:)
-    integer :: io_input,n_mag
+    integer :: io_input,n_mag,i
     ! check the allocation of memory
     integer :: alloc_check
     integer :: natom,dimen(3)
@@ -19,6 +19,9 @@ subroutine read_cell(cell,lat)
     call get_parameter(io_input,'input',attype)
     if(allocated(attype))then
         call get_parameter(io_input,'input',attype,cell)
+        do i=1,size(cell%atomic)
+            cell%atomic(i)%position=matmul(cell%atomic(i)%position,lat%areal)
+        enddo
         call close_file('input',io_input)
         n_mag=count(cell%atomic(:)%moment.gt.0.0d0)
 

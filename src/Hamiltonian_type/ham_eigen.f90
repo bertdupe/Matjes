@@ -13,7 +13,9 @@ contains
     !necessary t_H routines
     procedure :: eval_single
     procedure :: init_1    
+    procedure :: init_connect    
     procedure :: init_mult_2   
+    procedure :: init_mult_connect_2   
 
     procedure :: add_child 
     procedure :: bcast_child 
@@ -117,6 +119,44 @@ subroutine optimize(this)
     continue 
 end subroutine
 
+
+subroutine init_connect(this,connect,Hval,Hval_ind,order,lat)
+    use m_derived_types, only: lattice
+    class(t_H_eigen),intent(inout)  :: this
+
+    type(lattice),intent(in)        :: lat
+    character(2),intent(in)         :: order
+    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+    integer,intent(in)              :: Hval_ind(:,:)
+    integer,intent(in)              :: connect(:,:)
+    !local
+    type(t_H_coo)           :: H_coo
+
+    Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat)
+    Call set_from_Hcoo(this,H_coo,lat)
+end subroutine 
+
+subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
+    !(example: ME-coupling M_i*E_i*M_j
+    use m_derived_types, only: lattice,op_abbrev_to_int
+    class(t_H_eigen),intent(inout)    :: this
+
+    type(lattice),intent(in)        :: lat
+    !input Hamiltonian
+    real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
+    integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
+    character(len=*),intent(in)     :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
+    character(len=*),intent(in)     :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
+    integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
+    !local
+    type(t_H_coo)           :: H_coo
+
+    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat)
+    Call set_from_Hcoo(this,H_coo,lat)
+end subroutine
+
+
 subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     use m_derived_types, only: lattice
     class(t_H_eigen),intent(inout)  :: this
@@ -129,7 +169,6 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     !local
     type(t_H_coo)           :: H_coo
 
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_1(line,Hval,Hval_ind,order,lat)
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
@@ -146,7 +185,6 @@ subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     !local
     type(t_H_coo)           :: H_coo
 
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
@@ -179,7 +217,6 @@ subroutine bcast_child(this,comm)
     use mpi_basic                
     class(t_H_eigen),intent(inout)  ::  this
     type(mpi_type),intent(in)       ::  comm
-    integer ::  ierr
 #ifdef CPP_MPI
     Call eigen_H_bcast(comm%id,comm%mas,comm%ismas,this%H,comm%com) 
 #else
@@ -200,10 +237,9 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     type(t_H_coo),intent(inout)         :: H_coo
     type(lattice),intent(in)            :: lat
     !local
-    integer                 :: nnz,i
+    integer                 :: nnz
     real(8),allocatable     :: val(:)
     integer,allocatable     :: rowind(:),colind(:)
-    type(C_PTR)     ::  H
 
     Call H_coo%pop_par(this%dimH,nnz,val,rowind,colind)
     colind=colind-1;rowind=rowind-1
@@ -222,7 +258,6 @@ subroutine eval_single(this,E,i_m,lat)
     ! internal
     real(8),pointer                 :: modes_l(:),modes_r(:)
     real(8),allocatable,target      :: vec_l(:),vec_r(:)
-    real(8)                         :: tmp(this%dimH(2))
     integer     ::  ind
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)

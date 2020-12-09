@@ -13,7 +13,7 @@ subroutine get_pos(lat,dim_mode,ordname,pos,dim_state)
     integer,intent(out)             :: dim_state
     integer     :: nmag
     
-    nmag=lat%cell%num_mag()
+    nmag=lat%nmag
     if(dim_mode==1.and.nmag==1)then
         !choose position of magnetic atoms for initialization
         Call lat%get_pos_center(pos)
@@ -43,7 +43,7 @@ subroutine get_pos_vec(lat,dim_mode,ordname,pos)
     real(8),allocatable,intent(out) :: pos(:)
     integer     :: nmag
     
-    nmag=lat%cell%num_mag()
+    nmag=lat%nmag
     if(dim_mode==nmag*3)then
         !choose position of magnetic atoms for initialization
         Call lat%get_pos_mag(pos)

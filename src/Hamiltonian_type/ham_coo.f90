@@ -12,7 +12,9 @@ contains
     !necessary t_H routines
     procedure :: eval_single
     procedure :: init_1
+    procedure :: init_connect
     procedure :: init_mult_2
+    procedure :: init_mult_connect_2
 
     procedure :: bcast_child
     procedure :: destroy_child
@@ -105,6 +107,53 @@ subroutine pop_par(this,dimH,nnz,val,rowind,colind)
 end subroutine
 
 
+subroutine init_connect(this,connect,Hval,Hval_ind,order,lat)
+    !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
+    use m_derived_types, only: lattice,op_abbrev_to_int
+    class(t_H_coo),intent(inout)    :: this
+
+    type(lattice),intent(in)        :: lat
+    character(2),intent(in)         :: order
+    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+    integer,intent(in)              :: Hval_ind(:,:)
+    integer,intent(in)              :: connect(:,:)  !(2,Nentries) index in (1:Ncell) basis of both connected sites 
+
+    integer             :: order_int(2)
+    integer             :: dim_mode(2)
+    integer             :: nnz
+    integer             :: i
+    integer             :: N_connect,sizeHin
+
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
+    N_connect=size(connect,2)
+    sizeHin=size(Hval)
+    nnz=sizeHin*N_connect
+
+    !fill temporary coordinate format spare matrix
+    allocate(this%val(nnz),source=0.0d0)
+    allocate(this%colind(nnz),source=0)
+    allocate(this%rowind(nnz),source=0)
+    order_int=op_abbrev_to_int(order)
+    dim_mode(1)=lat%get_order_dim(order_int(1))
+    dim_mode(2)=lat%get_order_dim(order_int(2))
+
+    this%nnz=sizeHin*N_connect
+    this%dimH=lat%Ncell*dim_mode
+    
+!$omp parallel do 
+    do i=1,N_connect
+        this%rowind(1+(i-1)*sizeHin:i*sizeHin)=(connect(1,i)-1)*dim_mode(1)+Hval_ind(1,:)
+        this%colind(1+(i-1)*sizeHin:i*sizeHin)=(connect(2,i)-1)*dim_mode(2)+Hval_ind(2,:)
+        this%val   (1+(i-1)*sizeHin:i*sizeHin)=Hval(:)
+    enddo
+!$omp end parallel do 
+
+    Call this%init_base(lat,[order_int(1)],[order_int(2)])
+    Call check_H(this)
+end subroutine 
+
+
+
 subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
     use m_derived_types, only: lattice
@@ -126,6 +175,7 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     integer,allocatable :: rowind(:),colind(:)
 
 
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     N_neigh=size(line,1)
     N_site=size(line,2)
     
@@ -140,13 +190,13 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
 
     ii=0
     do i=1,N_site
-        !this could give problems where there are different numbers of neighborsper line
+        !this could give problems where there are different numbers of neighbors per line
         do l=1,N_neigh
             j=line(l,i)
             do ival=1,size(Hval) 
                 ii=ii+1
-                colind(ii)=(j-1)*dim_mode(1)+Hval_ind(1,ival)
-                rowind(ii)=(i-1)*dim_mode(2)+Hval_ind(2,ival)
+                rowind(ii)=(i-1)*dim_mode(1)+Hval_ind(1,ival)
+                colind(ii)=(j-1)*dim_mode(2)+Hval_ind(2,ival)
                 val(ii)=Hval(ival)
             enddo
         enddo
@@ -164,6 +214,67 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     Call this%init_base(lat,order(1:1),order(2:2))
     Call check_H(this)
 
+end subroutine 
+
+
+subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
+    !(example: ME-coupling M_i*E_i*M_j
+    use m_derived_types, only: lattice,op_abbrev_to_int
+    class(t_H_coo),intent(inout)    :: this
+
+    type(lattice),intent(in)        :: lat
+    !input Hamiltonian
+    real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
+    integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
+    character(len=*),intent(in)     :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
+    character(len=*),intent(in)     :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
+    integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
+
+    integer,allocatable :: order_l(:),order_r(:)
+    integer             :: dim_mode(2)
+    integer             :: nnz
+    integer             :: i,j
+    integer             :: ival
+    integer             :: N_connect
+
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
+    N_connect=size(connect,2)
+    nnz=size(Hval)*N_connect
+
+    allocate(order_l(len(op_l)),source=0)
+    allocate(order_r(len(op_r)),source=0)
+    order_l=op_abbrev_to_int(op_l)
+    order_r=op_abbrev_to_int(op_r)
+
+    !fill temporary coordinate format spare matrix
+    dim_mode=1
+    do i=1,size(order_l)
+        dim_mode(1)=dim_mode(1)*lat%get_order_dim(order_l(i))
+    enddo
+    do i=1,size(order_r)
+        dim_mode(2)=dim_mode(2)*lat%get_order_dim(order_r(i))
+    enddo
+
+    !set local H
+    allocate(this%val(nnz),source=0.0d0)
+    allocate(this%colind(nnz),source=0)
+    allocate(this%rowind(nnz),source=0)
+    nnz=0
+    do j=1,N_connect
+        do ival=1,size(Hval)
+            nnz=nnz+1
+            this%rowind(nnz)=(connect(1,j)-1)*dim_mode(1)+Hval_ind(1,ival)
+            this%colind(nnz)=(connect(2,j)-1)*dim_mode(2)+Hval_ind(2,ival)
+            this%val(nnz)=Hval(ival)
+        enddo
+    enddo
+
+    !fill additional type parameters
+    this%nnz=nnz
+    this%dimH=lat%Ncell*dim_mode
+    Call this%init_base(lat,order_l,order_r)
+    Call check_H(this)
 end subroutine 
 
 
@@ -186,6 +297,7 @@ subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     integer             :: ival
     integer             :: N_connect
 
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     N_connect=size(connect,2)
     nnz=size(Hval)*N_connect
 

@@ -39,9 +39,10 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    logical :: used(number_different_order_parameters)
 
    ! arrays to take into account the dynamics
-   real(8),allocatable                     :: Du(:,:,:),Du_int(:,:)
-   real(8),allocatable,dimension(:),target :: Feff(:)
-   real(8),pointer,contiguous              :: Feff_v(:,:)
+   real(8),allocatable,target       :: Du(:,:,:),Du_int(:,:)
+   real(8),allocatable,target       :: Feff(:)
+   real(8),pointer,contiguous       :: Feff_v(:,:),Feff_3(:,:)
+   real(8),pointer,contiguous       :: Du_3(:,:,:),Du_int_3(:,:)
 
    ! dummys
    integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,i_loop,tag
@@ -49,11 +50,14 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    real(8) :: real_time,Eold,security,Einitial
    real(8) :: kt,ktini,ktfin,Pdy(3)
    logical :: said_it_once,gra_log,io_stochafield,gra_topo
+   integer :: dim_mode !dim_mode of the iterated order parameter
 
    ! prepare the matrices for integration
    call rw_dyna(timestep_int,damping,Efreq,duration)
    N_cell=product(my_lattice%dim_lat)
    Call my_lattice%used_order(used)
+   dim_mode=my_lattice%u%dim_mode
+   if(modulo(dim_mode,3)/=0) STOP "dynamics will only work if the considered order-parameter can be described as 3-vector"
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !!!! Select the propagators and the integrators
@@ -75,10 +79,13 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    allocate(Feff(my_lattice%M%dim_mode*N_cell),source=0.0d0)
-   Feff_v(1:my_lattice%M%dim_mode,1:N_cell)=>Feff
+   Feff_v(1:my_lattice%u%dim_mode,1:N_cell)=>Feff
+   Feff_3(1:3,1:N_cell*(dim_mode/3))=>Feff
 
-   allocate(Du(my_lattice%M%dim_mode,N_cell,N_loop),source=0.0d0)
-   allocate(Du_int(my_lattice%M%dim_mode,N_cell),source=0.0d0)
+   allocate(Du(my_lattice%u%dim_mode,N_cell,N_loop),source=0.0d0)
+   allocate(Du_int(my_lattice%u%dim_mode,N_cell),source=0.0d0)
+   Du_3(1:3,1:N_cell*(dim_mode/3),1:N_loop)=>Du
+   Du_int_3(1:3,1:N_cell*(dim_mode/3))=>Du_int
 
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -134,9 +141,9 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
           Call get_eff_field(Hams,lat_1,Feff,5)
           !do integration
           ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
-          Call get_propagator_field(Feff_v,damping,lat_1%u%modes_v,Du(:,:,i_loop))
+          Call get_propagator_field(Feff_3,damping,lat_1%u%modes_3,Du_3(:,:,i_loop))
           Call get_Dmode_int(Du,i_loop,N_loop,Du_int)
-          lat_2%u%modes_v=get_integrator_field(my_lattice%u%modes_v,Du_int,dt)
+          lat_2%u%modes_3=get_integrator_field(my_lattice%u%modes_3,Du_int_3,dt)
         !copy mag
           Call lat_2%u%copy_val(lat_1%u)
         enddo
@@ -151,9 +158,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
         if (mod(j-1,Efreq).eq.0) then
-
-            Pdy=sum(my_lattice%u%modes_v,2)/real(N_cell,8) !works only for one u in unit cell
-
+            Pdy=sum(my_lattice%u%modes_3,2)/real(N_cell,8) !sums over all atoms in unit cell ( not sure if this is wanted)
         endif
 
         Eold=Edy

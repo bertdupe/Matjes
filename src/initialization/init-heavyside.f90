@@ -14,7 +14,7 @@ subroutine init_heavyside(lat,dim_mode,state)
     integer         :: nmag
     real(8),pointer :: state_x(:,:,:,:)
    
-    nmag=lat%cell%num_mag()
+    nmag=lat%nmag
     state_x(1:3,1:nmag,1:lat%dim_lat(1),1:lat%dim_lat(2)*lat%dim_lat(3))=>state
 
     state_x=0.0d0

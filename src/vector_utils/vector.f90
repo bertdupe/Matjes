@@ -121,7 +121,7 @@ real(8)             ::  res(size(n1,2))
 real(8),target      :: tmp(3,size(n1,2))
 real(8)             :: nrm(size(n1,2))
 real(8)             :: prod(size(n1,2))
-integer :: N, i
+integer :: N
 
 N=size(n1)
 flat_1(1:N)=>n1

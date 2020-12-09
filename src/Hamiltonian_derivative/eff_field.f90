@@ -27,13 +27,13 @@ subroutine get_eff_field(Ham,lat,B,Ham_type)
         if(Nl==1.and.Nr==1)then
         !normal rank 2 Hamiltonian
             tmp=0.0d0
-            if(Nl_order==Ham_type.and.Nr_order==Ham_type)then
+            if(Nl_order==1.and.Nr_order==1)then
                 Call Ham(i)%mult_r(lat,tmp)
                 B=B-2.0d0*tmp
-            elseif(Nl_order==Ham_type)then
+            elseif(Nl_order==1)then
                 Call Ham(i)%mult_r(lat,tmp)
                 B=B-tmp
-            elseif(Nr_order==Ham_type)then
+            elseif(Nr_order==1)then
                 Call Ham(i)%mult_l(lat,tmp)
                 B=B-tmp
             endif
@@ -41,32 +41,32 @@ subroutine get_eff_field(Ham,lat,B,Ham_type)
         !Hamiltonian with rank higher than 2
             tmp=0.0d0
             !consider left side
-            if(Nl_order==Ham_type)then
+            if(Nl_order==1)then
                 if(Nl==1)then
                     Call Ham(i)%mult_r(lat,tmp)
                     B=B-tmp
-                elseif(Nl_order==Ham_type)then
-                    Call Ham(i)%mult_r_red(lat,tmp,1) !1 for reduce everything but M
+                elseif(Nl_order==1)then
+                    Call Ham(i)%mult_r_red(lat,tmp,Ham_type) !1 for reduce everything but ham_type 
                     B=B-tmp
                 else
-                    STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on other side"
+                    STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on other side"
                 endif
             else
-                STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on a side"
+                STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on a side"
             endif
             !consider right side
-            if(Nr_order==Ham_type)then
+            if(Nr_order==1)then
                 if(Nr==1)then
                     Call Ham(i)%mult_l(lat,tmp)
                     B=B-tmp
-                elseif(Nr_order==Ham_type)then
-                    Call Ham(i)%mult_l_red(lat,tmp,1) !1 for reduce everything but M
+                elseif(Nr_order==1)then
+                    Call Ham(i)%mult_l_red(lat,tmp,Ham_type) !1 for reduce everything but Ham_type 
                     B=B-tmp
                 else
-                    STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on other side"
+                    STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on other side"
                 endif
             else
-                STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on a side"
+                STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on a side"
             endif
         endif
     enddo
@@ -92,13 +92,13 @@ subroutine get_eff_field_single(Ham,i_site,lat,B,Ham_type)
         if(Nl==1.and.Nr==1)then
         !normal rank 2 Hamiltonian
             tmp=0.0d0
-            if(Nl_order==Ham_type.and.Nr_order==Ham_type)then
+            if(Nl_order==1.and.Nr_order==1)then
                 Call Ham(i)%mult_r_single(i_site,lat,tmp)
                 B=B-2.0d0*tmp
-            elseif(Nl_order==Ham_type)then
+            elseif(Nl_order==1)then
                 Call Ham(i)%mult_r_single(i_site,lat,tmp)
                 B=B-tmp
-            elseif(Nr_order==Ham_type)then
+            elseif(Nr_order==1)then
                 Call Ham(i)%mult_l_single(i_site,lat,tmp)
                 B=B-tmp
             endif
@@ -106,32 +106,32 @@ subroutine get_eff_field_single(Ham,i_site,lat,B,Ham_type)
         !Hamiltonian with rank higher than 2
             tmp=0.0d0
             !consider left side
-            if(Nl_order==Ham_type)then
+            if(Nl_order==1)then
                 if(Nl==1)then
                     Call Ham(i)%mult_r_single(i_site,lat,tmp)
                     B=B-tmp
-                elseif(Nl_order==Ham_type)then
-                    Call Ham(i)%mult_r_red_single(i_site,lat,tmp,1) !1 for reduce everything but M
+                elseif(Nl_order==1)then
+                    Call Ham(i)%mult_r_red_single(i_site,lat,tmp,Ham_type) !reduce everything but ham_type 
                     B=B-tmp
                 else
-                    STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on other side"
+                    STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on other side"
                 endif
             else
-                STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on a side"
+                STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on a side"
             endif
             !consider right side
-            if(Nr_order==Ham_type)then
+            if(Nr_order==1)then
                 if(Nr==1)then
                     Call Ham(i)%mult_l_single(i_site,lat,tmp)
                     B=B-tmp
-                elseif(Nr_order==Ham_type)then
-                    Call Ham(i)%mult_l_red_single(i_site,lat,tmp,1) !1 for reduce everything but M
+                elseif(Nr_order==1)then
+                    Call Ham(i)%mult_l_red_single(i_site,lat,tmp,Ham_type) !reduce everything but ham_type 
                     B=B-tmp
                 else
-                    STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on other side"
+                    STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on other side"
                 endif
             else
-                STOP "implement effective magnetic field for Hamiltonian with more than one M occurancy on a side"
+                STOP "implement effective field for Hamiltonian with more than one occurance of Ham_type on a side"
             endif
         endif
     enddo

@@ -8,12 +8,17 @@ implicit none
 ! out
 type(lattice), intent(out) :: my_lattice
 ! dummy variable
-integer :: j,dimension(3),io,i
+integer :: j,dimension(3),io
 integer :: N_site
-logical :: Periodic_log(3)
-real (kind=8) :: a(3),ss,net(3,3),kv0(3,3),volume
+logical :: Periodic_log(3),fexist
+real (kind=8) :: a(3),ss,net(3,3)
 
 write(6,'(a)') 'reading the lattice parameters in the input file'
+inquire(file='input',exist=fexist)
+if(.not. fexist)then
+    write(*,*) "Did not find input file, you should at least supply some lattices"
+    STOP "Supply input file"
+endif
 io=open_file_read('input')
 
 call get_parameter(io,'input','Periodic_log',3,Periodic_log)

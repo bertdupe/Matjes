@@ -30,4 +30,22 @@ subroutine get_coo(M,val,ind)
     enddo
 end subroutine
 
+function ind(dimmodes,i_entry)
+    !function which gets get correct index for the Hamiltonian in the (1:product(dimmodes))-space
+    integer :: dimmodes(:)  !dim_mode for each entry
+    integer :: i_entry(:)   !index in space of each dim_mode
+    integer :: ind
+    !logical
+    integer :: N,i
+
+    N=size(dimmodes)
+    if(size(i_entry)/=N) STOP "ind input variables of differing rank"
+    if(any(i_entry>dimmodes).or.any(i_entry<1)) STOP "index dimmodes,i_entry input inconsistend"
+    ind=1
+    do i=1,N
+        ind=ind+(i_entry(i)-1)*product(dimmodes(:i-1))
+    enddo
+end function
+
+
 end module

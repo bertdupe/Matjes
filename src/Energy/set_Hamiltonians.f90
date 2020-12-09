@@ -6,7 +6,7 @@ public :: set_Hamiltonians,combine_Hamiltonians
 
 contains
 
-subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_vector,lat)
+subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_derived_types
     use m_input_H_types 
     use m_get_position,only :get_position_ND_to_1D 
@@ -25,13 +25,15 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
     type(io_h),intent(in)               :: H_io
-    real(8), intent(in) :: DM_vector(:,:,:)
-    integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
-    integer, intent(in) :: indexNN(:)
     type(lattice), intent(inout) :: lat
 
     integer :: i_H,N_ham
     logical :: use_Ham(8)
+    !old data arrays that should be deleted after DMI is updated
+    real(8),allocatable :: DM_vector(:,:,:)
+    integer,allocatable :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
+    integer,allocatable :: indexNN(:)
+
 
     use_ham(1)=H_io%J%is_set
     use_ham(2)=H_io%D%is_set
@@ -42,19 +44,13 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     use_ham(7)=H_io%F%is_set
     use_ham(8)=H_io%TJ%is_set
 
-    if(use_ham(2).and.all(norm2(DM_vector,2)<1.0d-8))then
-        write(*,*) "WARNING, ALL DMI-vectors are vanishing"
-        write(*,*) "Disableing DMI"
-        use_ham(2)=.false.
-    endif
-
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
 
     i_H=1 
     !exchange_J (without DMI)
     if(use_ham(1))then
-        Call get_exchange_J(Ham_res(i_H),H_io%J,tableNN,indexNN,lat)
+        Call get_exchange_J(Ham_res(i_H),H_io%J,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !exchange_D (only DMI)
@@ -74,21 +70,22 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     endif
     !ME-coupling symmetric (J)
     if(use_ham(5))then
-        Call get_coupling_ME_J(Ham_res(i_H),H_io%ME_J,tableNN,indexNN,lat)
+        Call get_coupling_ME_J(Ham_res(i_H),H_io%ME_J,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !ME-coupling antisymmetric (D)
     if(use_ham(6))then
-        Call get_coupling_ME_D(Ham_res(i_H),H_io%ME_D,tableNN,indexNN,lat)
+        Call get_coupling_ME_D(Ham_res(i_H),H_io%ME_D,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !Harmonic phonon (F)
     if(use_ham(7))then
-        Call get_Forces_F(Ham_res(i_H),H_io%F,tableNN,indexNN,lat)
+        Call get_Forces_F(Ham_res(i_H),H_io%F,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !TJ coupling
     if(use_ham(8))then
-        Call get_exchange_TJ(Ham_res(i_H),H_io%TJ,tableNN,indexNN,lat)
+        Call get_exchange_TJ(Ham_res(i_H),H_io%TJ,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
 

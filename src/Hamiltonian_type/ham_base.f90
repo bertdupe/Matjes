@@ -12,8 +12,10 @@ type,abstract :: t_H
 contains
 
     !Hamiltonian initialization routines
-    procedure(int_init_H_1),deferred         :: init_1 !based on Hamiltonian in coo format input (arrays), only rank_2 
-    procedure(int_init_H_mult_2),deferred    :: init_mult_2 !for rank >2, but only at 2 sites at once
+    procedure(int_init_H_1),deferred                :: init_1 !based on Hamiltonian in coo format input (arrays), only rank_2, line input
+    procedure(int_init_H_connect),deferred          :: init_connect !based on Hamiltonian in coo format input (arrays), only rank_2, connection input
+    procedure(int_init_H_mult_connect_2),deferred   :: init_mult_connect_2 !based on Hamiltonian in coo format input (arrays), for rank >2, but only at 2 sites at once, connection input
+    procedure(int_init_H_mult_2),deferred           :: init_mult_2 !for rank >2, but only at 2 sites at once
 
     procedure(int_destroy),deferred         :: optimize  !calls possible optimization routines rearanging internal Hamiltonian layout
     procedure(int_mult),deferred            :: mult_r,mult_l !multipy out with left/right side
@@ -96,6 +98,29 @@ interface
         integer,intent(in)          ::  i_m
         real(8),intent(out)         ::  E
     end subroutine
+
+    subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+        import t_h,lattice
+        class(t_H),intent(inout)    :: this
+        type(lattice),intent(in)    :: lat
+        character(*),intent(in)     :: op_l
+        character(*),intent(in)     :: op_r
+        real(8),intent(in)          :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+        integer,intent(in)          :: Hval_ind(:,:)
+        integer,intent(in)          :: connect(:,:)
+    end subroutine
+
+
+    subroutine int_init_H_connect(this,connect,Hval,Hval_ind,order,lat)
+        import t_h,lattice
+        class(t_H),intent(inout)    :: this
+        type(lattice),intent(in)    :: lat
+        character(2),intent(in)     :: order
+        real(8),intent(in)          :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+        integer,intent(in)          :: Hval_ind(:,:)
+        integer,intent(in)          :: connect(:,:)
+    end subroutine
+
     subroutine int_init_H_1(this,line,Hval,Hval_ind,order,lat)
         import t_h,lattice
         class(t_H),intent(inout)    :: this
@@ -345,9 +370,9 @@ contains
         if(this%is_set())then
             if(.not.allocated(H_in%op_l).or..not.allocated(H_in%op_r)) &
                 & STOP "cannot add H and its op_l/op_r-arguments are not allocated"
-            if(.not.all(this%op_l==H_in%op_l)) STOP "CANNOT ADD hamiltonians with different op_l"
-            if(.not.all(this%op_r==H_in%op_r)) STOP "CANNOT ADD hamiltonians with different op_r"
-            if(any(this%dimH/=H_in%dimH)) STOP "Trying to add Hamiltonians with different Hamiltonian dimensions"
+            if(.not.all(this%op_l==H_in%op_l)) ERROR STOP "CANNOT ADD hamiltonians with different op_l"
+            if(.not.all(this%op_r==H_in%op_r)) ERROR STOP "CANNOT ADD hamiltonians with different op_r"
+            if(any(this%dimH/=H_in%dimH)) ERROR STOP "Trying to add Hamiltonians with different Hamiltonian dimensions"
             Call this%add_child(H_in)
             this%desc="sum in "//trim(op_int_to_abbrev(this%op_l))//trim(op_int_to_abbrev(this%op_r))//"-space"
         else
@@ -371,6 +396,7 @@ contains
     subroutine init_base(this,lat,op_l,op_r)
         class(t_H),intent(inout)    :: this
         class(lattice),intent(in)   :: lat
+        !might make sense to change op_l, op_r to characters
         integer,intent(in)          :: op_l(:),op_r(:)
         integer     ::  i
 

@@ -6,7 +6,7 @@ module m_write_config
 !use m_io_utils
 use m_io_files_utils, only: open_file_write,close_file
 use m_io_utils, only: dump_config
-use m_type_lattice,only: lattice
+use m_type_lattice,only: lattice,order_parameter_name,order_par
 implicit none
 
 
@@ -20,40 +20,26 @@ private
 public write_config
 contains
 subroutine write_config_char(fname,lat)
-    !TODO: UPDATE
+    !write out all order parameters that are set with the respective name in front
+    !and with the respective dimmode of columns
     character(len=*),intent(in) ::  fname
     type(lattice),intent(in)    ::  lat
 
-    integer     :: io
+    integer     :: io,i
     character(len=100) :: filename
+    real(8),pointer ::  ord(:)
+    logical         ::  used(size(order_parameter_name))
 
-    if(associated(lat%M%all_modes))then
-        write(filename,'(3A)')  'Mfield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%M)
-        call close_file(filename,io)
-    endif
-
-    if(associated(lat%E%all_modes))then
-        write(filename,'(3A)')  'Efield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%E)
-        call close_file(filename,io)
-    endif
-
-    if(associated(lat%B%all_modes))then
-        write(filename,'(3A)')  'Bfield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%B)
-        call close_file(filename,io)
-    endif
-
-    if(associated(lat%T%all_modes))then
-        write(filename,'(3A)')  'Tfield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%T)
-        call close_file(filename,io)
-    endif
+    Call lat%used_order(used)
+    do i=1,size(order_parameter_name)
+        if(used(i))then
+            write(filename,'(4A)')  trim(order_parameter_name(i)),'_',trim(adjustl(fname)),'.dat'
+            io=open_file_write(filename)
+            Call lat%set_order_point(i,ord)
+            call dump_config(io,lat%get_order_dim(i),ord)
+            call close_file(filename,io)
+        endif
+    enddo
 end subroutine
 
 subroutine write_config_int(i,lat)

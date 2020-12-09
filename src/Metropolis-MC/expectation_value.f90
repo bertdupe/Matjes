@@ -7,8 +7,8 @@ private
 public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av,measure_init               
 public :: measure_scatterv,measure_gatherv,measure_set_mpi_type                          
 public :: measure_print_thermo_init
-integer,parameter       ::	N_entry=22                                                                   
-integer,protected	    ::	MPI_exp_val ! mpi variable for direct mpi exp_val operations                 
+integer,parameter       ::  N_entry=22                                                                   
+integer,protected       ::  MPI_exp_val ! mpi variable for direct mpi exp_val operations                 
 type exp_val                                                                                             
     !! contribution of the different energy parts
     !real(8) :: E_decompose(8) !not really used here
@@ -68,19 +68,19 @@ end subroutine
 subroutine measure_set_MPI_type()
 #ifdef CPP_MPI    
     use mpi_basic
-	integer										::	blocks(N_entry)
-	integer(kind=MPI_ADDRESS_KIND)				::	displ(N_entry)
-	integer										::	types(N_entry)
-    integer(kind=MPI_ADDRESS_KIND)				::	LB,extend_real,extend_int
-	integer(kind=MPI_ADDRESS_KIND)				::	extend
-	integer										::	ierr,i
+    integer                                     ::  blocks(N_entry)
+    integer(kind=MPI_ADDRESS_KIND)              ::  displ(N_entry)
+    integer                                     ::  types(N_entry)
+    integer(kind=MPI_ADDRESS_KIND)              ::  LB,extend_real,extend_int
+    integer(kind=MPI_ADDRESS_KIND)              ::  extend
+    integer                                     ::  ierr,i
 
-	blocks=[1,1,1,3,4,1,3,3,1,1,1,1,1,1,1,1,3,3,3,3,1,1]
-	types=MPI_DOUBLE_PRECISION
-	types(1)=MPI_INT
-	CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION,lb,extend_real,ierr)
-	CALL MPI_TYPE_GET_EXTENT(MPI_INT,lb,extend_int,ierr)
-	displ=0
+    blocks=[1,1,1,3,4,1,3,3,1,1,1,1,1,1,1,1,3,3,3,3,1,1]
+    types=MPI_DOUBLE_PRECISION
+    types(1)=MPI_INT
+    CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION,lb,extend_real,ierr)
+    CALL MPI_TYPE_GET_EXTENT(MPI_INT,lb,extend_int,ierr)
+    displ=0
     do i=1,N_entry-1
         if(types(i)==MPI_DOUBLE_PRECISION)then
             extend=extend_real
@@ -92,8 +92,8 @@ subroutine measure_set_MPI_type()
         displ(i+1)=displ(i)+blocks(i)*extend
     enddo
 
-	CALL MPI_TYPE_CREATE_STRUCT(N_entry,blocks,displ,types,MPI_exp_val,ierr)
-	CALL MPI_TYPE_COMMIT(MPI_exp_val,ierr)
+    CALL MPI_TYPE_CREATE_STRUCT(N_entry,blocks,displ,types,MPI_exp_val,ierr)
+    CALL MPI_TYPE_COMMIT(MPI_exp_val,ierr)
 #else
     continue
 #endif

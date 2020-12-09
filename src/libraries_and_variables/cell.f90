@@ -8,13 +8,33 @@ type t_cell
     integer ::  n_attype
     type(atom), allocatable :: atomic(:)
     contains
-    procedure :: ind_mag => get_ind_mag
-    procedure :: num_mag => get_num_mag
+    procedure :: ind_mag_all
+    procedure :: ind_mag
+    procedure :: ind_ph
+    procedure :: ind_attype
     procedure :: get_magmom
     procedure :: get_mag_magmom
     procedure :: bcast
 end type
 contains
+
+subroutine ind_attype(this,id,ind)
+    !subroutine to return the indices of the atoms in the cell which have the same type_id as the id-input
+    class(t_cell),intent(in)            :: this
+    integer,intent(in)                  :: id
+    integer,allocatable,intent(inout)   :: ind(:)
+
+    integer ::  i
+
+    
+    if(id<1.or.id>maxval(this%atomic(:)%type_id))then
+        write(*,*) 'Failed to get atomic indices of atom type',id
+        STOP "MISTAKE SETTING UP HAMILTONIAN OR CELL?"
+    endif
+    if(allocated(ind)) deallocate(ind)
+    ind=pack([(i,i=1,size(this%atomic))],this%atomic(:)%type_id==id)
+end subroutine
+    
 
 subroutine bcast(this,comm)
 use mpi_basic                
@@ -61,7 +81,7 @@ subroutine get_mag_magmom(this,magmom)
 
     integer     ::  i,N
 
-    Call this%ind_mag(ind)
+    Call this%ind_mag_all(ind)
     N=size(ind)
     allocate(magmom(N),source=0.0d0)
     do i=1,N
@@ -70,33 +90,36 @@ subroutine get_mag_magmom(this,magmom)
     deallocate(ind)
 end subroutine
 
-
-subroutine get_ind_mag(this,ind_Nat)
+function ind_ph(this,ind_at)
     class(t_cell),intent(in)    ::  this
-    integer                     ::  Nat
-    integer                     ::  i,j
-    integer,allocatable         ::  ind_Nat(:)
-
-    Nat=this%num_mag()
-    allocate(ind_Nat(Nat),source=0)
-    j=0
-    do i=1,size(this%atomic)
-        if(this%atomic(i)%moment/=0.0d0)then
-            j=j+1
-            ind_Nat(j)=i
-        endif
-    enddo
-end subroutine
-
-function get_num_mag(this)result(nmag)
-    class(t_cell),intent(in)    :: this
-    integer                     :: nmag
-    integer ::  i
-    nmag=0
-    do i=1,size(this%atomic)
-        if(this%atomic(i)%moment/=0.0d0) nmag=nmag+1
-    enddo
-end function
+    integer,intent(in)          ::  ind_at
+    integer                     ::  ind_ph
+    integer     ::  i
     
+    if(ind_at<1.or.ind_at>size(this%atomic)) ERROR STOP "Trying to get phonon index of atom outside of set atom range"
+    if(.not.this%atomic(ind_at)%use_ph) ERROR STOP "Trying to get phonon index of atom with disabled phonons"
+    ind_ph=count(this%atomic(:ind_at)%use_ph)
+end function
+
+
+function ind_mag(this,ind_at)
+    class(t_cell),intent(in)    ::  this
+    integer,intent(in)          ::  ind_at
+    integer                     ::  ind_mag
+    integer     ::  i
+    
+    if(ind_at<1.or.ind_at>size(this%atomic)) ERROR STOP "Trying to get magnetic moment index of atom outside of set atom range"
+    if(this%atomic(ind_at)%moment==0.0d0) ERROR STOP "Trying to get magnetic moment index of non-magnetic atom"
+    ind_mag=count(this%atomic(:ind_at)%moment/=0.0d0)
+
+end function
+
+subroutine ind_mag_all(this,ind_Nat)
+    class(t_cell),intent(in)    ::  this
+    integer,allocatable         ::  ind_Nat(:)
+    integer     ::  i
+
+    ind_Nat=pack([(i,i=1,size(this%atomic))],this%atomic(:)%moment/=0.0d0)
+end subroutine
 
 end module

@@ -48,8 +48,6 @@ Implicit None
 ! the computation time
     real(kind=8) :: computation_time
     type(min_input)    :: io_min
-    integer :: ierr
-    integer :: i
 
     Call init_MPI(mpi_world)
     call welcome()
@@ -91,6 +89,7 @@ Implicit None
     !     Start main procedures:
     !     *****************************************************************
     Call my_simu%bcast(mpi_world)
+
  
 
     !---------------------------------
@@ -117,7 +116,6 @@ Implicit None
     !---------------------------------
 
 
-
     if (my_simu%name == 'metropolis')then
         Call all_lattices%bcast(mpi_world)
         Call io_simu%bcast(mpi_world)
@@ -126,12 +124,7 @@ Implicit None
         call MonteCarlo(all_lattices,io_simu,ext_param,Ham_comb,mpi_world)
     endif
 
-
     if(mpi_world%ismas)then
-
-        
-
-
         !---------------------------------
         !  Part which does the Spin dynamics
         !    Loop for Spin dynamics

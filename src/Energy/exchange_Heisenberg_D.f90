@@ -18,6 +18,7 @@ subroutine read_D_input(io_param,fname,io)
         io%is_set=.false.
         return
     endif
+    ERROR STOP "DMI BROKEN IN CURRENT SETUP OF NEIGHBORS"
     allocate(io%val(max_entry),source=0.0d0)
     call get_coeff(io_param,fname,'DMI_',io%val)
     const_mult=-1.0d0   !-1 for consistency with older version

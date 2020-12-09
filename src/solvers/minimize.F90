@@ -40,17 +40,17 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     ! dummy variable
     real(8),allocatable, dimension(:,:)    :: velocity,predicator,force
     real(8),allocatable, dimension(:)      :: V_eff,F_temp
-    real(8),allocatable,target	           :: Feff(:)
+    real(8),allocatable,target             :: Feff(:)
     real(8),pointer     ::  Feff_vec(:,:)
     ! internal
-    real(8)     :: dumy,force_norm,Energy,vmax,vtest,Eint,test_torque,max_torque
+    real(8)     :: dumy,force_norm,Energy,vmax,vtest,test_torque,max_torque
     ! the computation time
-    integer(8)  :: i_min
-    integer     :: gra_freq,gra_int
-    logical :: gra_log,i_magnetic
+    integer(8)  :: i_min,gra_freq
+    integer     :: gra_int
+    logical :: gra_log
     integer :: iomp,dim_mode,N_cell
 
-    gra_freq=io_simu%io_frequency
+    gra_freq=int(io_simu%io_frequency,8)
     gra_log=io_simu%io_Xstruct
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
@@ -67,10 +67,10 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     allocate(V_eff(dim_mode),F_temp(dim_mode),source=0.0d0)
     
     Call get_eff_field(Hams,lat,Feff,1)
-	do iomp=1,lat%Ncell
-		force(:,iomp)=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
+    do iomp=1,lat%Ncell
+        force(:,iomp)=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
         call minimization(lat%M%modes_v(:,iomp),force(:,iomp),predicator(:,iomp),io_min%dt**2,io_min%mass*2.0d0)
-	enddo
+    enddo
     test_torque=norm_cross(predicator(:,iomp),force(:,iomp),1,3)
 
     lat%M%modes_v=predicator
@@ -121,7 +121,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
         endif
         
         if (gra_log.and.(mod(i_min-1,gra_freq).eq.0)) then
-            gra_int=(i_min-1)/gra_freq
+            gra_int=int((i_min-1)/gra_freq,4)
             call WriteSpinAndCorrFile(gra_int,lat%M%modes_v,'spin_minimization')
             call CreateSpinFile(gra_int,lat%M)
         endif
@@ -148,8 +148,8 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     class(t_H), intent(in)          :: Hams(:)
     ! internal
     real(8)                     :: max_torque,test_torque,Edy
-    integer(8)                  :: iter
-    integer                     :: iomp,gra_freq
+    integer(8)                  :: iter,gra_freq
+    integer                     :: iomp
     logical                     :: gra_log
     integer                     :: gra_int
     integer                     :: N_cell,N_dim,N_mag
@@ -170,7 +170,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     M3(1:3,1:N_mag)=>lat%M%all_modes
     
     gra_log=io_simu%io_Xstruct
-    gra_freq=io_simu%io_frequency
+    gra_freq=int(io_simu%io_frequency,8)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Prepare the calculation of the energy and the effective field
@@ -203,7 +203,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     
         !write config to files
         if ((gra_log).and.(mod(iter,gra_freq).eq.0)) then
-            gra_int=(iter-1)/gra_freq
+            gra_int=int((iter-1)/gra_freq,4)
             call WriteSpinAndCorrFile(gra_int,lat%M%modes_v,'spin_minimization')
             call CreateSpinFile(gra_int,lat%M)
             write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq

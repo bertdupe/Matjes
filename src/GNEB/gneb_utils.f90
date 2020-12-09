@@ -16,9 +16,8 @@ public :: find_path,find_SP,find_SP_conf
 
 contains
 
-subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_simu,io_gneb,Hams,ci_out)
+subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,Hams,ci_out)
     use m_precision, only: truncate
-    type(io_parameter), intent(in)  :: io_simu
     real(8),intent(in)              :: ftol
     integer, intent(in)             :: nim
     type(GNEB_input)                :: io_gneb

@@ -2,6 +2,7 @@ module m_type_lattice
 use m_basic_types
 use m_order_parameter
 use m_cell,only : t_cell
+implicit none
 
 integer,parameter :: number_different_order_parameters=5    !m,E,B,T,u
 character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T","U"]
@@ -29,7 +30,7 @@ type lattice
 
      !convenience parameters 
      integer        :: nmag=0 !number of magnetic atoms in the unit-cell (can also be obtained from cell)
-!     integer        :: nph=0  !number of atoms with phonons in the unit-cell (can also be obtained from cell) IMPLEMENT
+     integer        :: nph=0  !number of atoms with phonons in the unit-cell (can also be obtained from cell) 
 !     integer        :: nat=0  !overall number of atoms in the unit-cell (can also be obtained from cell) IMPLEMENT
 !     integer        :: nattype=0  !overall number of different atom types (can also be obtained from cell) IMPLEMENT
 
@@ -86,7 +87,7 @@ type point_arr
 end type
 
 private
-public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, t_cell, order_par, order_parameter_name
+public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, op_abbrev_to_int,t_cell, order_par, order_parameter_name
 
 contains 
 
@@ -179,7 +180,8 @@ subroutine init_order(this,cell,extpar_io)
     integer                         :: dim_modes(number_different_order_parameters),i
 
     this%cell=cell
-    this%nmag=cell%num_mag()
+    this%nmag=count(cell%atomic(:)%moment/=0.0d0)
+    this%nph=count(cell%atomic(:)%use_ph)
     !obsolete orderparameter format
     if(extpar_io%enable_M.and.this%nmag<1)then
         WRITE(*,'(///A)') 'CONGRATULATIONS, you have specified "enable_M" but set no magnetic atom'
@@ -193,15 +195,16 @@ subroutine init_order(this,cell,extpar_io)
     if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) dim_modes(2)=3
     if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) dim_modes(3)=3
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) dim_modes(4)=1
-    if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
+    dim_modes(5)=this%nph*3
+    !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
     this%order_set=dim_modes>0
 
     !new orderparameter format
-    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%nmag,dim_modes(1))
-    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%nmag,dim_modes(2))
-    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%nmag,dim_modes(3))
-    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%nmag,dim_modes(4))
-    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%nmag,dim_modes(5))
+    if(this%order_set(1)) Call this%M%init(this%dim_lat,dim_modes(1))
+    if(this%order_set(2)) Call this%E%init(this%dim_lat,dim_modes(2))
+    if(this%order_set(3)) Call this%B%init(this%dim_lat,dim_modes(3))
+    if(this%order_set(4)) Call this%T%init(this%dim_lat,dim_modes(4))
+    if(this%order_set(5)) Call this%u%init(this%dim_lat,dim_modes(5))
 end subroutine
 
 subroutine read_order(this,suffix_in,fexist_out)
@@ -291,7 +294,7 @@ function lattice_position_difference(this,ind1,ind2)result(diff)
     norm=norm2(diff)
     if(norm>minval(norm2(this%a_sc,2)*0.5d0))then
     !check reduce length using symmetries 
-        Call min_diffvec(this,diff)
+        Call this%min_diffvec(diff)
     endif
 end function
 
@@ -773,7 +776,7 @@ subroutine lattice_get_position_mag(this,pos_out)
     real(8)     :: pos_at(3) 
     integer     :: i,i1,i2,i3
 
-    Call this%cell%ind_mag(ind_at_mag)
+    Call this%cell%ind_mag_all(ind_at_mag)
     Nat_mag=size(ind_at_mag)
     call get_position_cell(pos_lat,this%dim_lat,this%areal)
     allocate(pos_out(3*Nat_mag*product(this%dim_lat)),source=0.0d0)
@@ -828,15 +831,16 @@ subroutine copy_lattice(this,copy)
     copy%n_system=this%n_system
     copy%dim_mode=this%dim_mode
     copy%nmag=this%nmag
+    copy%nph=this%nph
     copy%periodic=this%periodic
     if(allocated(this%world)) allocate(copy%world,source=this%world)
     if(allocated(this%sc_vec_period)) allocate(copy%sc_vec_period,source=this%sc_vec_period)
 
-    if(this%order_set(1)) Call this%M%copy(copy%M,this%dim_lat,this%nmag)
-    if(this%order_set(2)) Call this%E%copy(copy%E,this%dim_lat,this%nmag)
-    if(this%order_set(3)) Call this%B%copy(copy%B,this%dim_lat,this%nmag)
-    if(this%order_set(4)) Call this%T%copy(copy%T,this%dim_lat,this%nmag)
-    if(this%order_set(5)) Call this%u%copy(copy%u,this%dim_lat,this%nmag)
+    if(this%order_set(1)) Call this%M%copy(copy%M,this%dim_lat)
+    if(this%order_set(2)) Call this%E%copy(copy%E,this%dim_lat)
+    if(this%order_set(3)) Call this%B%copy(copy%B,this%dim_lat)
+    if(this%order_set(4)) Call this%T%copy(copy%T,this%dim_lat)
+    if(this%order_set(5)) Call this%u%copy(copy%u,this%dim_lat)
 end subroutine
 
 subroutine copy_val_lattice(this,copy)
@@ -863,6 +867,23 @@ function op_name_to_int(name_in)result(int_out)
     enddo
     write(*,*) 'inserted name:',name_in
     STOP "Failed to identify name with operator"
+end function
+
+function op_abbrev_to_int(abbrev_in)result(int_out)
+    character(len=*), intent(in)    :: abbrev_in
+    integer                         :: int_out(len(abbrev_in))   !operator integer description
+    integer         ::  i,j
+
+    outer:do i=1,len(abbrev_in)
+        do j=1,size(order_parameter_abbrev)
+            if(abbrev_in(i:i)==order_parameter_abbrev(j))then
+                int_out(i)=j
+                cycle outer
+            endif
+        enddo
+        write(*,*) "failing to get operator integer for ",abbrev_in(i:i)
+        STOP "DID NOT FIND ABBREVIATION"
+    enddo outer
 end function
 
 function op_int_to_abbrev(int_in)result(abbrev)
@@ -909,6 +930,7 @@ use mpi_basic
     Call MPI_Bcast(this%dim_mode, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%n_system, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%nmag    , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%nph     , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%periodic, 3, MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%order_set, size(this%order_set), MPI_LOGICAL, comm%mas, comm%com,ierr)
 
