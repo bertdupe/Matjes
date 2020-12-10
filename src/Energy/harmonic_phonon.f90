@@ -70,6 +70,7 @@ subroutine get_Forces_F(Ham,io,lat)
                     Htmp(offset_ph(1)+2,offset_ph(1)+2)=F
                     Htmp(offset_ph(1)+3,offset_ph(1)+3)=F
                     connect_bnd(2)=neigh%ishell(i_pair)
+                    Htmp=-Htmp !flip sign corresponding to previous implementation
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type

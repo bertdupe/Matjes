@@ -71,12 +71,13 @@ subroutine get_exchange_D(Ham,io,lat)
                         Htmp=0.0d0
 
                         Htmp(offset_mag(1)+1,offset_mag(2)+2)= DMI(3) * Hmag
-                        Htmp(offset_mag(1)+1,offset_mag(2)+3)= DMI(2) * Hmag
+                        Htmp(offset_mag(1)+3,offset_mag(2)+1)= DMI(2) * Hmag
                         Htmp(offset_mag(1)+2,offset_mag(2)+3)= DMI(1) * Hmag
 
                         Htmp(offset_mag(1)+2,offset_mag(2)+1)=-DMI(3) * Hmag
-                        Htmp(offset_mag(1)+3,offset_mag(2)+1)=-DMI(2) * Hmag
+                        Htmp(offset_mag(1)+1,offset_mag(2)+3)=-DMI(2) * Hmag
                         Htmp(offset_mag(1)+3,offset_mag(2)+2)=-DMI(1) * Hmag
+                        Htmp=-Htmp !flip sign corresponding to previous implementation
 
                         Call get_coo(Htmp,val_tmp,ind_tmp)
 
@@ -90,6 +91,7 @@ subroutine get_exchange_D(Ham,io,lat)
                 enddo 
             enddo
         enddo
+
         Ham%desc="antisymmetric magnetic exchange"
         if(.not.Ham%is_set())then
             write(*,'(/A)') "DID NOT FIND A SINGLE DMI CONTRIBUTION, LEAVE THE DMI OUT IF YOU EXPECT THE DMI TO VANISH OR FIND A MISTAKE IN THIS CALCULATION"
@@ -166,6 +168,7 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
         pos_found=lat%cell%atomic(id_nonM(pairs(2,i)))%position
         pos_found=pos_found+matmul(real(pairs(3:5,i),8),lat%areal)
         pos_found=pos_found-pos_center_uc+pos_center  !finally position of considered non-magnetic atom
+
         pos_diff(:,1)=pos_mag(:,1)-pos_found
         pos_diff(:,2)=pos_mag(:,2)-pos_found
         DMI=cross(pos_diff(:,1),pos_diff(:,2))

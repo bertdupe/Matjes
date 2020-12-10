@@ -44,7 +44,7 @@ subroutine get_exchange_TJ(Ham,io,lat)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
 
     if(io%is_set)then
-        if(lat%T%dim_mode==0) STOP "E-field has to be set when using coupling_ME"
+        if(lat%T%dim_mode==0) STOP "T-field has to be set when using TJ-exchange"
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
         if(lat%T%dim_mode/=1) ERROR STOP "THIS HAS TO BE UPDATED IF THE TEMPERATURE IS NO LONGER A SIMPLE SCALAR"
@@ -70,6 +70,7 @@ subroutine get_exchange_TJ(Ham,io,lat)
                     Htmp(offset_mag(1)+1,offset_mag(2)+1)=J     ! Mi_x Mj_x Tj Tj
                     Htmp(offset_mag(1)+2,offset_mag(2)+2)=J     ! Mi_y Mj_y Tj Tj
                     Htmp(offset_mag(1)+3,offset_mag(2)+3)=J     ! Mi_z Mj_z Tj Tj
+                    Htmp=-Htmp !flip sign corresponding to previous implementation
                     connect_bnd(2)=neigh%ishell(i_pair)
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 

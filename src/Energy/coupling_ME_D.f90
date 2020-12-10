@@ -99,6 +99,8 @@ subroutine get_coupling_ME_D(Ham,io,lat)
                     Htmp(offset_mag(1)+2,ind(dim_modes_r,[offset_mag(2)+3,2]))=-Hmag*diff_pos(3)     ! Mj_y Mi_z E_y r_z
                     Htmp(offset_mag(1)+3,ind(dim_modes_r,[offset_mag(2)+1,3]))=-Hmag*diff_pos(1)     ! Mj_z Mi_x E_z r_x
                     Htmp(offset_mag(1)+3,ind(dim_modes_r,[offset_mag(2)+2,3]))=-Hmag*diff_pos(2)     ! Mj_z Mi_y E_z r_y
+
+                    Htmp=-Htmp !flip sign corresponding to previous implementation
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type

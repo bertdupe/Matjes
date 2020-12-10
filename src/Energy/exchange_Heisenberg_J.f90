@@ -69,6 +69,7 @@ subroutine get_exchange_J(Ham,io,lat)
                     Htmp(atind_mag(1)*3-1,atind_mag(2)*3-1)=J
                     Htmp(atind_mag(1)*3  ,atind_mag(2)*3  )=J
                     connect_bnd(2)=neigh%ishell(i_pair)
+                    Htmp=-Htmp !flip sign corresponding to previous implementation
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type
