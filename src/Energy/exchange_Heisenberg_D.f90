@@ -61,22 +61,22 @@ subroutine get_exchange_D(Ham,io,lat)
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1
-                    Call get_DMI(neigh%at_pair(:,i_trip),neigh%pairs(:,connect_bnd(1)),io%trip(i_attrip)%attype(3),lat,Hmag,DMI)
+                    Call get_DMI(neigh%at_pair(:,i_trip),neigh%pairs(:,connect_bnd(1)),io%trip(i_attrip)%attype(3),lat,DMI)
                     connect_bnd(2)=neigh%ishell(i_trip)
-                    if(norm2(DMI)>Hmag*1.0d-8)then !THIS MIGHT GIVE PROBLEMS IF ALL DMI-VANISH AND THE HAMILTONIAN IS NOT SET IN THE END... make some check 
+                    if(norm2(DMI)>1.0d-8)then 
                         !set local Hamiltonian in basis of magnetic orderparameter
                         atind_mag(1)=lat%cell%ind_mag(neigh%at_pair(1,i_trip))
                         atind_mag(2)=lat%cell%ind_mag(neigh%at_pair(2,i_trip))
                         offset_mag=(atind_mag-1)*3
                         Htmp=0.0d0
 
-                        Htmp(offset_mag(1)+1,offset_mag(2)+2)= DMI(3)
-                        Htmp(offset_mag(1)+1,offset_mag(2)+3)= DMI(2)
-                        Htmp(offset_mag(1)+2,offset_mag(2)+3)= DMI(1)
+                        Htmp(offset_mag(1)+1,offset_mag(2)+2)= DMI(3) * Hmag
+                        Htmp(offset_mag(1)+1,offset_mag(2)+3)= DMI(2) * Hmag
+                        Htmp(offset_mag(1)+2,offset_mag(2)+3)= DMI(1) * Hmag
 
-                        Htmp(offset_mag(1)+2,offset_mag(2)+1)=-DMI(3)
-                        Htmp(offset_mag(1)+3,offset_mag(2)+1)=-DMI(2)
-                        Htmp(offset_mag(1)+3,offset_mag(2)+2)=-DMI(1)
+                        Htmp(offset_mag(1)+2,offset_mag(2)+1)=-DMI(3) * Hmag
+                        Htmp(offset_mag(1)+3,offset_mag(2)+1)=-DMI(2) * Hmag
+                        Htmp(offset_mag(1)+3,offset_mag(2)+2)=-DMI(1) * Hmag
 
                         Call get_coo(Htmp,val_tmp,ind_tmp)
 
@@ -100,11 +100,11 @@ subroutine get_exchange_D(Ham,io,lat)
 end subroutine 
 
 
-subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_mag,DMI_sum)
+subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
     !Temporary way to get basic working version with DMI in case of new input with several magnetic/non-magnetic atoms.
     !The idea is that you give 2 magnetic atoms specified by atom_mag and pair_mag and the type of the non-magnetic atom causing the DMI (atom_get_type).
     !Then atoms of the DMI-causing atomtype that are nearest to the center of the magnetic atoms are searched.
-    !Those atoms are assumed to cause DMI with magnitude DMI_mag, which is summed to DMI_sum.
+    !Those atoms are assumed to cause DMI with normalized vectors, which is summed into DMI_sum and normalized again.
 
     !WOULD IT NOT RATHER MAKE SENSE TO CALCULATE THE DM-CAUSING ATOMS RELATIVE TO THE MOST CENTERED UNITCELL TO AVOID PERIODICITY PROBLEMS?
     use m_derived_types, only: lattice
@@ -115,7 +115,6 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_mag,DMI_sum)
     integer,intent(in)          :: pair_mag(2)      !indices of connected magnetic atoms in (1:Ncell)-space
     integer,intent(in)          :: atom_get_type    !atom type of the non-magnetic source atom
     type(lattice),intent(in)    :: lat              !allmighty lattice type with all knowledge over the geometry
-    real(8),intent(in)          :: DMI_mag          !magnitude of the DMI to scale with
     real(8),intent(out)         :: DMI_sum(3)       !sum of all DMI-vectors 
 
     integer     :: ind4_mag(4,2)    !indices of both magnetic atoms is (ix,iy,iz,ia)-space
@@ -173,6 +172,7 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_mag,DMI_sum)
         nrm=norm2(DMI)
         if(nrm>1.0d-8) DMI_sum=DMI_sum+DMI/nrm
     enddo
-    DMI_sum=DMI_sum*DMI_mag
+    nrm=norm2(DMI_sum)
+    if(nrm>1.0d-8) DMI_sum=DMI_sum/nrm
 end subroutine
 end module
