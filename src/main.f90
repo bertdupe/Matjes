@@ -110,7 +110,7 @@ Call write_config('start',all_lattices)
 !---------------------------------
 
 if (my_simu%name == 'metropolis')then
-    call MonteCarlo(all_lattices,io_simu,ext_param,Ham_comb)
+    call MonteCarlo(all_lattices,io_simu,ext_param,Ham_res)
 endif
 
 !---------------------------------

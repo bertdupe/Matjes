@@ -94,7 +94,7 @@ subroutine get_exchange_J(Ham,io,tableNN,indexNN,lat)
                 enddo
             enddo
             !add hamiltonian to output Hamiltonian
-            Call Ham_tmp%init_1(line,val_tmp,ind_tmp,[1,1],lat)
+            Call Ham_tmp%init_1(line,val_tmp,ind_tmp,[1,1],lat,2)
             deallocate(val_tmp,ind_tmp)
             Call Ham%add(Ham_tmp)
             Call Ham_tmp%destroy()

@@ -9,6 +9,7 @@ type,abstract :: t_H
     integer                 :: dim_mode(2)=0     !size of left/right mode after multiplying out order parameters (size per lattice point)
     logical,private         :: set=.false. !has this object been set?
     character(len=100)      :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
+    integer                 :: mult_M_single=0 !factor necessary to calculate energy change correctly when only evaluating single sites
 contains
 
     !Hamiltonian initialization routines
@@ -94,7 +95,7 @@ interface
         integer,intent(in)          ::  i_m
         real(8),intent(out)         ::  E
     end subroutine
-    subroutine int_init_H_1(this,line,Hval,Hval_ind,order,lat)
+    subroutine int_init_H_1(this,line,Hval,Hval_ind,order,lat,mult_M_single)
         import t_h,lattice
         class(t_H),intent(inout)    :: this
         type(lattice),intent(in)    :: lat
@@ -102,9 +103,10 @@ interface
         real(8),intent(in)          :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
         integer,intent(in)          :: Hval_ind(:,:)
         integer,intent(in)          :: line(:,:)
+        integer,intent(in)          :: mult_M_single
     end subroutine
 
-    subroutine int_init_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+    subroutine int_init_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
         !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
         !(example: ME-coupling M_i*E_i*M_j
         import t_H,lattice
@@ -115,6 +117,7 @@ interface
         integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
         integer,intent(in)              :: op_l(:),op_r(:) !which order parameters are used at left/right side of local Hamiltonian-matrix
         integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
+        integer,intent(in)          :: mult_M_single
     end subroutine
 
 
@@ -291,6 +294,7 @@ contains
             Call this%copy_child(Hout)
             Call Hout%set_prepared(.true.)
             Hout%desc=this%desc
+            Hout%mult_M_single=this%mult_M_single
         else
             STOP "cannot copy H since source is not set"
         endif
@@ -310,6 +314,7 @@ contains
             if(any(this%dimH/=H_in%dimH)) STOP "Trying to add Hamiltonians with different Hamiltonian dimensions"
             Call this%add_child(H_in)
             this%desc="sum in "//trim(op_int_to_abbrev(this%op_l))//trim(op_int_to_abbrev(this%op_r))//"-space"
+            if(this%mult_M_single/=H_in%mult_M_single) this%mult_M_single=0 !set single multiply prefactor to 0 in order to notice if this is evaluated incorrectly
         else
             Call H_in%copy(this)
         endif
@@ -326,6 +331,7 @@ contains
         this%dim_mode=0
         Call this%set_prepared(.false.)
         this%desc=""
+        this%mult_M_single=0
     end subroutine
 
     subroutine init_base(this,lat,op_l,op_r)

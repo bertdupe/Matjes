@@ -173,7 +173,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     ! Check the presence of the dipole dipole
     !call get_ham_dipole('input',my_lattice,my_motif) !DIPOLE HAS THE BE REIMPLEMENTED
     
-    Call set_Hamiltonians(Ham_res,Ham_comb,io_simu%io_Energy_detail,H_io,tableNN,indexNN(:,1),DM_vector,my_lattice)
+    Call set_Hamiltonians(Ham_res,Ham_comb,.True.,H_io,tableNN,indexNN(:,1),DM_vector,my_lattice)
     
     deallocate(tabledist,tableNN,indexNN)
     

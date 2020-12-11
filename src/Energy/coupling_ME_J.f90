@@ -103,7 +103,7 @@ subroutine get_coupling_ME_J(Ham,io,tableNN,indexNN,lat)
                 enddo
             enddo
             !add hamiltonian to output Hamiltonian
-            Call Ham_tmp%init_mult_2(connect(:,:N_line),val_tmp,ind_tmp,[1],[1,2],lat)
+            Call Ham_tmp%init_mult_2(connect(:,:N_line),val_tmp,ind_tmp,[1],[1,2],lat,2)
             deallocate(val_tmp,ind_tmp)
             Call Ham%add(Ham_tmp)
             Call Ham_tmp%destroy()

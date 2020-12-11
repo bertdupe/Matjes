@@ -56,7 +56,7 @@ subroutine get_anisotropy_H(Ham,io,lat)
         do i=1,lat%Ncell
             line(1,i)=i
         enddo
-        Call Ham%init_1(line,val_tmp,ind_tmp,[1,1],lat)
+        Call Ham%init_1(line,val_tmp,ind_tmp,[1,1],lat,1)
         Ham%desc="magnetic anisotropy"
     endif
 end subroutine
