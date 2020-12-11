@@ -58,9 +58,11 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     logical :: i_optTset
 
     !mpi parameters
-    integer                     :: iT_global(2),iT_local(2)
-    integer                     :: cnt(com%Np)
-    integer                     :: displ(com%Np)
+    type(mpi_type)              :: com_inner    !communicator for inner parallelization, so far ignored (get_two_level_comm) has to be checked first)
+    type(mpi_distv)             :: com_outer    !communicator for parallelization of Temperatures
+    !integer                     :: iT_global(2),iT_local(2)
+    !integer                     :: cnt(com%Np)
+    !integer                     :: displ(com%Np)
 
     type(track_val),allocatable :: state_prop(:)
     type(exp_val),allocatable   :: measure(:)
@@ -69,6 +71,8 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     type(fluct_parameters)  :: fluct_val
     integer,allocatable     :: Q_neigh(:,:)
     type(paratemp_track)    :: para_track
+
+
     
     !input parameters that most probably need some external input, which was not supplied in the version this modification is based on
     N_adjT=1 
@@ -98,12 +102,12 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct)
 
     !find out how to distribute the threads
-    IT_global=[1,io_MC%n_Tsteps]
-    Call distrib_int_index(com,iT_global,iT_local,displ,cnt)
-    Call measure_set_mpi_type()
+!    IT_global=[1,io_MC%n_Tsteps]
+!    Call distrib_int_index(com,iT_global,iT_local,displ,cnt)
+    Call get_two_level_comm(com,NT_global,com_outer,com_inner) !will not work for inner communicator so far
 
     !initialize all values that will only exist locally on each MPI-thread
-    NT_local=cnt(com%id+1)
+    NT_local=com_outer%cnt(com%id+1)
     allocate(lattices(NT_local))
     allocate(state_prop(NT_local))
     do i_temp=1,NT_local
@@ -128,7 +132,7 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     endif
 
     !Scatter the measure-tasks to all treads
-    Call scatterv(measure,com,displ,cnt)
+    Call scatterv(measure,com_outer)
 
     !initialize all local values
     do i_temp=1,NT_local
@@ -166,7 +170,7 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
             ! The replicas are actually attached to the processors so they stay remote and can not be rearranged
             ! this part makes sure that the temperature are on the processors of the replicas and that Image_temp points to the right temperature
             ! and then scatter the data on the good remote processors
-            Call reorder_temperature(E_temp,measure,com,displ,cnt,i_relax,para_track)
+            Call reorder_temperature(E_temp,measure,com_outer,i_relax,para_track)
         enddo
     
         if (io_simu%io_Xstruct) then !write out config
@@ -197,7 +201,7 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
                 write(6,'(a,I10,a,I10,/)') '#-------- number of relaxation steps goes from', relaxation_steps ,' --- to --- ', relaxation_steps*2
             endif
             relaxation_steps=relaxation_steps*2
-            Call scatterv(measure,com,displ,cnt)    !update remote temperatures
+            Call scatterv(measure,com_outer)    !update remote temperatures
         endif
     enddo !over j_MC->N_adjT
     if (com%ismas)then

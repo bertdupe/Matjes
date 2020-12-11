@@ -15,15 +15,32 @@ contains
     procedure   :: set
 end type
 
-type,extends(mpi_type)  :: mpi_type_distv
-    !mpi type which contains how the values should be gatherv or scatterv'ed
-    integer,allocatable :: displ(:)
-    integer,allocatable :: cnt(:)
+type,extends(mpi_type)  ::   mpi_distv
+    integer,allocatable :: cnt(:)       !how many are at each thread
+    integer,allocatable :: displ(:)     !displacement for each thread
+contains
+    procedure   :: init => init_mpi_distv
 end type
 
+private :: init_mpi_distv
 type(mpi_type)  ::  mpi_world
 
 contains
+
+subroutine init_mpi_distv(this,ref)
+    class(mpi_distv),intent(inout)      :: this
+    class(mpi_type),intent(in)          :: ref
+
+    this%id   = ref%id   
+    this%Np   = ref%Np   
+    this%com  = ref%com  
+    this%mas  = ref%mas  
+    this%ismas= ref%ismas
+
+    allocate(this%cnt(this%Np),source=0)
+    allocate(this%displ(this%Np),source=0)
+end subroutine
+
 
 
 #ifdef CPP_MPI

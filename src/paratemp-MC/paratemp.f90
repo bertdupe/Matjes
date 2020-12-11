@@ -44,7 +44,7 @@ subroutine alloc_paratemp_track(this,size_table)
     this%image_temp=[(i,i=1,size_table)]
 end subroutine
 
-subroutine reorder_temperature(energy,measure,com,displ,cnt,nstart,track)
+subroutine reorder_temperature(energy,measure,com,nstart,track)
     !subroutine which swaps neighboring temperatures as necessary for the parallel tempering
     use mpi_util 
     use mpi_basic
@@ -53,9 +53,7 @@ subroutine reorder_temperature(energy,measure,com,displ,cnt,nstart,track)
     use m_sort
     real(8),intent(inout)                   :: energy(:)    !energy of each image in space of images
     type(exp_val),intent(inout)             :: measure(:)   !Temperature & thermodyn. vals (swap order to swap images)
-    class(mpi_type),intent(in)              :: com          !mpi-communicator which contains one entry for each temperature
-    integer,intent(in)                      :: cnt(com%Np)  !mpi-parameter count for gather/scatter
-    integer,intent(in)                      :: displ(com%Np)!mpi-parameter displacement for gather/scatter
+    class(mpi_distv),intent(in)             :: com          !mpi-communicator which contains one entry for each temperature
     integer,intent(in)                      :: nstart       !outer loop index to alternate between comparing (1<>2,3<>4,..) with (2<>3,4<>5,...)
     type(paratemp_track),intent(inout)      :: track        !various parameters to keep track of parallel tempering evolution
 !internals
@@ -67,8 +65,8 @@ subroutine reorder_temperature(energy,measure,com,displ,cnt,nstart,track)
     type(exp_val)   :: tmp_measure
 
     !gather all necessary parameters (energies, temperatures(in measure), and expectation values (measure)
-    Call gatherv(energy ,com,displ,cnt) 
-    Call gatherv(measure,com,displ,cnt)
+    Call gatherv(energy ,com) 
+    Call gatherv(measure,com)
 
     !Swap temperatures if necessary
     if(com%ismas)then
@@ -101,7 +99,7 @@ subroutine reorder_temperature(energy,measure,com,displ,cnt,nstart,track)
         track%label(track%image_temp(Nt))=-1
     endif
     !distribute the rearanged expectation values again
-    Call scatterv(measure,com,displ,cnt)
+    Call scatterv(measure,com)
 end subroutine
 
 function accept(kt,E)

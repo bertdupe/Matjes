@@ -1,10 +1,12 @@
 module mpi_util
 use mpi_basic
+use m_MC_io, only: bcast_MC 
 implicit none
 
 interface scatter 
     module procedure scatter_int
 end interface
+
 interface bcast_alloc
     module procedure bcast_alloc_int2
 end interface
@@ -13,6 +15,7 @@ interface bcast
     module procedure bcast_int
     module procedure bcast_int1
     module procedure bcast_real1
+    module procedure bcast_MC
 end interface
 
 contains

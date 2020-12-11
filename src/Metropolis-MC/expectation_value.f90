@@ -4,11 +4,13 @@ use m_mc_track_val, only: track_val
 use m_fluct,only: fluct_parameters, eval_fluct
 implicit none
 private
-public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av,measure_init               
-public :: measure_scatterv,measure_gatherv,measure_set_mpi_type                          
+public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av
 public :: measure_print_thermo_init
-integer,parameter       ::  N_entry=22                                                                   
-integer,protected       ::  MPI_exp_val ! mpi variable for direct mpi exp_val operations                 
+!public MPI_routines
+public :: measure_scatterv,measure_gatherv
+integer,parameter       :: N_entry=22                                                                   
+integer,protected       :: MPI_exp_val ! mpi variable for direct mpi exp_val operations                 
+logical,protected       :: MPI_set=.false.
 type exp_val                                                                                             
     !! contribution of the different energy parts
     !real(8) :: E_decompose(8) !not really used here
@@ -42,28 +44,6 @@ type exp_val
 end type
 
 contains 
-
-subroutine measure_init(measure,it_local,iT_global,com,kt_all)
-    use mpi_basic, only: mpi_type
-    type(exp_val),allocatable       :: measure(:)
-    integer,intent(in)              :: it_local(2)
-    integer,intent(in)              :: it_global(2)
-    real(8),intent(in)              :: kt_all(it_global(2)-it_global(1)+1)
-    class(mpi_type),intent(in)      :: com
-    integer         ::  i,j
-    Call measure_set_MPI_type()
-    if(com%ismas)then
-        allocate(measure(it_global(2)))
-    else
-        allocate(measure(it_local(2)-it_local(1)+1))
-    endif
-
-    j=0
-    Do i=iT_local(1),iT_local(2)
-        j=j+1
-        measure(j)%kt=kt_all(i)
-    enddo
-end subroutine
 
 subroutine measure_set_MPI_type()
 #ifdef CPP_MPI    
@@ -99,31 +79,37 @@ subroutine measure_set_MPI_type()
 #endif
 end subroutine
 
-subroutine measure_gatherv(this,com,displ,cnt)
+subroutine measure_gatherv(this,com)
     use mpi_basic
     type(exp_val),intent(inout)     :: this(:)
-    class(mpi_type),intent(in)      :: com
-    integer,intent(in)              :: displ(com%Np)
-    integer,intent(in)              :: cnt(com%Np)
+    class(mpi_distv),intent(in)     :: com
 #ifdef CPP_MPI    
     integer                         :: ierr
 
-    Call MPI_Gatherv(this(1),cnt(com%id+1),MPI_exp_val,this(1),cnt,displ,MPI_exp_val,com%mas,com%com,ierr)
+    if(.not.MPI_set)then
+        Call measure_set_MPI_type()
+        MPI_set=.true.
+    endif
+    Call MPI_Gatherv(this(1),com%cnt(com%id+1),MPI_exp_val,this(1),com%cnt,com%displ,MPI_exp_val,com%mas,com%com,ierr)
 #else
     continue
 #endif
 end subroutine
 
-subroutine measure_scatterv(this,com,displ,cnt)
+subroutine measure_scatterv(this,com)
     use mpi_basic
     type(exp_val),intent(inout)     :: this(:)
-    class(mpi_type),intent(in)      :: com
-    integer,intent(in)              :: displ(com%Np)
-    integer,intent(in)              :: cnt(com%Np)
+    class(mpi_distv),intent(in)     :: com
+!    integer,intent(in)              :: displ(com%Np)
+!    integer,intent(in)              :: cnt(com%Np)
 #ifdef CPP_MPI    
     integer                         :: ierr
 
-    Call MPI_Scatterv(this(1),cnt,displ,MPI_exp_val,this(1),cnt(com%id+1),MPI_exp_val,com%mas,com%com,ierr)
+    if(.not.MPI_set)then
+        Call measure_set_MPI_type()
+        MPI_set=.true.
+    endif
+    Call MPI_Scatterv(this(1),com%cnt,com%displ,MPI_exp_val,this(1),com%cnt(com%id+1),MPI_exp_val,com%mas,com%com,ierr)
 #else
     continue
 #endif

@@ -31,9 +31,11 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     real(kind=8) :: DE,E_new,E_old,Dmag(3)
     !     flipped Spin
     real(kind=8) :: S_new(3),S_old(3)
-    integer :: iomp
+    integer :: i_spin   !chosen spin index (1:N_cell*nmag)
+    integer :: i_site   !unit cell index of chosen spin index
     
-    call choose_spin(iomp,N_spin)
+    call choose_spin(i_spin,N_spin)
+    i_site=(i_spin-1)/lat%nmag+1
 #ifdef CPP_DEBUG
     if(lat%nmag>1) ERROR STOP "A lot of things will not work in this routine with nmag>1"
 #endif
@@ -42,17 +44,17 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     ! first the sphere sampling
     !---------------------------------------
     if(io_MC%ising)then
-        S_new=-lat%M%modes_v(:,iomp)
+        S_new=-lat%M%modes_3(:,i_spin)
     elseif(io_MC%underrelax)then
-        S_new=underrelax(iomp,lat,Hams)
+        S_new=underrelax(i_spin,lat,Hams)
     elseif(io_MC%overrelax)then
-        S_new=overrelax(iomp,lat,Hams)
+        S_new=overrelax(i_spin,lat,Hams)
     elseif(io_MC%equi)then
         Call cone_update(state_prop%cone,state_prop%rate)
-        S_new=equirep(lat%M%modes_v(:,iomp),state_prop%cone)
+        S_new=equirep(lat%M%modes_3(:,i_spin),state_prop%cone)
     elseif(io_MC%sphere)then
         Call cone_update(state_prop%cone,state_prop%rate)
-        S_new=sphereft(lat%M%modes_v(:,iomp),state_prop%cone)
+        S_new=sphereft(lat%M%modes_3(:,i_spin),state_prop%cone)
     else
         STOP "Invalid MC sampling method"
     endif
@@ -62,21 +64,21 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     !       and decider, if the Spin flip will be performed
     !----------------------------------
     !Energy of old configuration
-    E_old=energy_single(Hams,iomp,lat)
-    S_old=lat%M%modes_v(:,iomp)
+    E_old=energy_single(Hams,i_site,lat)
+    S_old=lat%M%modes_3(:,i_spin)
     
     !Energy of the new configuration
-    lat%M%modes_v(:,iomp)=S_new
-    E_new=energy_single(Hams,iomp,lat)
-    lat%M%modes_v(:,iomp)=S_old
+    lat%M%modes_3(:,i_spin)=S_new
+    E_new=energy_single(Hams,i_site,lat)
+    lat%M%modes_3(:,i_spin)=S_old
     !! variation of the energy for this step
     DE=E_new-E_old
     
     state_prop%nb=state_prop%nb+1.0d0
     if ( accept(kt,DE) ) then
-        Dmag=-lat%M%modes_v(:,iomp)+S_new
+        Dmag=-S_old+S_new
     ! update the spin
-        lat%M%modes_v(:,iomp)=S_new
+        lat%M%modes_3(:,i_spin)=S_new
     ! update the quantities
         state_prop%E_total=state_prop%E_total+DE
         state_prop%Magnetization=state_prop%Magnetization+Dmag
@@ -84,7 +86,6 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     endif
    
     state_prop%rate=state_prop%acc/state_prop%nb
-
 END SUBROUTINE MCstep
 ! ===============================================================
 

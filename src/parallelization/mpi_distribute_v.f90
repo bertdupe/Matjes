@@ -12,32 +12,8 @@ interface scatterv
     module procedure measure_scatterv
 end interface scatterv 
 
-type,extends(mpi_type)  ::   mpi_distv
-    integer,allocatable :: cnt(:)       !how many are at each thread
-    integer,allocatable :: displ(:)     !displacement for each thread
-contains
-    procedure   :: init
-end type
-
-private :: init
-
 contains 
 
-subroutine init(this,ref)
-    class(mpi_distv),intent(inout)      :: this
-    class(mpi_type),intent(in)          :: ref
-
-    this%id   = ref%id   
-    this%Np   = ref%Np   
-    this%com  = ref%com  
-    this%mas  = ref%mas  
-    this%ismas= ref%ismas
-
-    allocate(this%cnt(this%Np),source=0)
-    allocate(this%displ(this%Np),source=0)
-end subroutine
-
-#ifdef CPP_MPI
 !NOT FINISHED
 subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     class(mpi_type),intent(in)      :: com_in
@@ -45,6 +21,7 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     type(mpi_distv),intent(out)     :: com_outer
     type(mpi_type),intent(out)      :: com_inner
 
+#ifdef CPP_MPI
     integer     :: div,color,tmp
     integer     :: ierr,i
 
@@ -74,14 +51,14 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
         com_outer%cnt=[(1,i=1,com_outer%Np)]
         com_outer%displ=[(i-1,i=1,com_outer%Np)]
     endif
-    write(*,*) 'count', com_outer%cnt
-    write(*,*) 'displ', com_outer%displ
-    CALL MPI_BARRIER(com_in%com,ierr)
+#else
+    com_inner=com_in
+    Call init(com_outer,com_in)
+    com_outer%cnt=N
+#endif
 
-    STOP
 
 end subroutine
-#endif
 
 
 
@@ -146,16 +123,14 @@ subroutine distrib_int_index(com,ind_in,ind_out,displ,cnt)
     cnt=ind_out_id(2,:)-ind_out_id(1,:)+1
 end subroutine
 
-subroutine gatherv_real(arr,com,displ,cnt)
+subroutine gatherv_real(arr,com)
     use mpi_basic
     real(8),intent(in)             :: arr(:)
-    class(mpi_type),intent(in)     :: com
-    integer,intent(in)             :: displ(com%Np)
-    integer,intent(in)             :: cnt(com%Np)
+    class(mpi_distv),intent(in)    :: com
 #ifdef CPP_MPI    
     integer                        :: ierr
 
-    Call MPI_Gatherv(arr(1),cnt(com%id+1),MPI_DOUBLE_PRECISION,arr(1),cnt,displ,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+    Call MPI_Gatherv(arr(1),com%cnt(com%id+1),MPI_DOUBLE_PRECISION,arr(1),com%cnt,com%displ,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
 #else
     continue
 #endif

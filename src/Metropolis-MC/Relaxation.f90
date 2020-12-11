@@ -4,7 +4,7 @@ implicit none
 contains
 !
 ! ===============================================================
-SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,qeulerp,qeulerm,kt,Hams,Q_neigh)
+SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,kt,Hams,Q_neigh)
     use mtprng
     use m_Corre
     use m_constants, only : k_b
@@ -20,13 +20,14 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,qeulerp,qeulerm,kt,Hams,Q_neig
     use m_MC_io,only: MC_input
     ! input
     type(lattice),intent(inout)     :: lat
-    real(kind=8), intent(inout)     :: qeulerp,qeulerm
     real(kind=8), intent(in)        :: kT
     type(track_val),intent(inout)   :: state_prop
     type(MC_input),intent(in)       :: io_MC 
     integer, intent(in)             :: N_cell
     class(t_H), intent(in)          :: Hams(:)
     integer,intent(in)              :: Q_neigh(:,:) 
+    !internal
+    real(kind=8)                    :: qeulerp,qeulerm
     ! a big table
     real(kind=8) :: Relax(18,io_MC%n_sizerelax),dumy(5)
     ! Slope Index
@@ -55,13 +56,13 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,qeulerp,qeulerm,kt,Hams,Q_neig
         !In case T_relax set to zero at least one MCstep is done
         Call MCStep(lat,io_MC,N_cell,state_prop,kt,Hams)
     
-    ! calculate the topocharge
-        dumy=get_charge(lat,Q_neigh)
-        qeulerp=dumy(1)
-        qeulerm=dumy(2)
     
     ! Write the Equilibrium files
         if (io_MC%print_relax) then
+         ! calculate the topocharge
+             dumy=get_charge(lat,Q_neigh)
+             qeulerp=dumy(1)
+             qeulerm=dumy(2)
             if (mod(i_relaxation,n_w_step).eq.0) call store_relaxation(Relax,i_relaxation,dble(i_relaxation), &
                   &  state_prop%E_total/dble(N_cell),E_del,dble(N_cell),kt,state_prop%Magnetization,state_prop%rate,state_prop%cone,qeulerp,qeulerm)
         endif
