@@ -14,7 +14,6 @@ logical,protected       :: MPI_set=.false.
 type exp_val                                                                                             
     !! contribution of the different energy parts
     !real(8) :: E_decompose(8) !not really used here
-    integer :: N_add=0 !counts how often values have been added
     real(8) :: kt=0.0d0
     ! thermodynamical quantities
     real(8) :: C_av=0.0d0
@@ -55,6 +54,8 @@ type exp_val
     complex(8)  :: MipMjp_sum=cmplx(0.0d0,0.0d0,8)
     complex(8)  :: MipMjp_av=cmplx(0.0d0,0.0d0,8)
 
+    integer :: N_add=0 !counts how often values have been added
+
 end type
 
 contains 
@@ -69,10 +70,10 @@ subroutine measure_set_MPI_type()
     integer(kind=MPI_ADDRESS_KIND)              ::  extend
     integer                                     ::  ierr,i
 
-    blocks=[1,1, 1,3,4, 1,3, 3,1,1,1,1,1, 1,1,1,3,3,3,3, 1,1,1,1,1,1,1,1]
+    blocks=[1, 1,3,4, 1,3, 3,1,1,1,1,1, 1,1,1,3,3,3,3, 1,1,1,1,1,1,1,1, 1]
     types=MPI_DOUBLE_PRECISION
-    types(1)=MPI_INT
-    types(21:)=MPI_DOUBLE_COMPLEX
+    types(20:)=MPI_DOUBLE_COMPLEX
+    types(N_entry)=MPI_INT
     CALL MPI_TYPE_GET_EXTENT(MPI_INT,lb,extend_int,ierr)
     CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION,lb,extend_real,ierr)
     CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_COMPLEX,lb,extend_cmplx,ierr)
