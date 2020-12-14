@@ -39,9 +39,9 @@ type exp_val
     real(8) :: vortex_av(3)=0.0d0
     real(8) :: chi_l(3)=0.0d0
 
-	!<Mi+Mj->
-    complex(8)  :: MipMjm_sum=cmplx(0.0d0,0.0d0,8)
-    complex(8)  :: MipMjm_av=cmplx(0.0d0,0.0d0,8)
+	!<Mj+Mi->
+    complex(8)  :: MjpMim_sum=cmplx(0.0d0,0.0d0,8)
+    complex(8)  :: MjpMim_av=cmplx(0.0d0,0.0d0,8)
 
 	!<Mi+Mi+>
     complex(8)  :: MipMip_sum=cmplx(0.0d0,0.0d0,8)
@@ -143,7 +143,7 @@ subroutine measure_print_thermo_init(io_unit)
           & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
           & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
           & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm', &
-		  & '28: Re(Mi+Mj-)','29: Im(Mi+Mj-)','30: Re(Mi+Mi+)','31: Im(Mi+Mi+)','32: Re(Mi+Mi-)', &
+		  & '28: Re(Mj+Mi-)','29: Im(Mj+Mi-)','30: Re(Mi+Mi+)','31: Im(Mi+Mi+)','32: Re(Mi+Mi-)', &
 		  & '33: Re(Mi+Mj+)','34: Im(Mi+Mj+)'
 end subroutine
 
@@ -168,7 +168,7 @@ subroutine measure_print_thermo(this,com,io_unit_in)
              &             norm2(this(i)%M_av),this(i)%M_av, this(i)%M_err_av,&
              &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1),&
              &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4),&
-			 &			   this(i)%MipMjm_av, this(i)%MipMip_av, real(this(i)%MipMim_av,8), this(i)%MipMjp_av
+			 &			   this(i)%MjpMim_av, this(i)%MipMip_av, real(this(i)%MipMim_av,8), this(i)%MipMjp_av
         enddo
         if(.not.present(io_unit_in)) close(io_unit) 
     endif
@@ -206,11 +206,12 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     this%Qm_sq_sum_av=this%Qm_sq_sum_av+qeulerm**2
     this%vortex_av=this%vortex_av+dumy(3:5)
 
-    if(fluct_val%l_use) Call eval_fluct(this%MipMjm_sum, &
+    if(fluct_val%l_use) Call eval_fluct(this%MjpMim_sum, &
                                        &this%MipMip_sum, &
                                        &this%MipMim_sum, &
                                        &this%MipMjp_sum, &
                                        &lat,fluct_val)
+!	write(*,*) 'in measure_add,   MjpMim_sum = ' , this%MjpMim_sum
 end subroutine
 
 
@@ -241,10 +242,11 @@ subroutine measure_eval(this,Cor_log, N_cell_in)
 
     this%vortex_av=this%vortex_av*av_Nadd/3.0d0/sqrt(3.0d0)
 
-	this%MipMjm_av=this%MipMjm_sum*av_Nadd*av_site
+	this%MjpMim_av=this%MjpMim_sum*av_Nadd*av_site
 	this%MipMip_av=this%MipMip_sum*av_Nadd*av_site
 	this%MipMim_av=this%MipMim_sum*av_Nadd*av_site
 	this%MipMjp_av=this%MipMjp_sum*av_Nadd*av_site
+	!write(*,*) "in measure_eval,   MjpMim_av = " , this%MjpMim_av
 
     if (Cor_log) this%chi_l=this%N_add !what is this supposed to do?
     Call print_av(this)
