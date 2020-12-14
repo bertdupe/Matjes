@@ -8,7 +8,7 @@ public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av
 public :: measure_print_thermo_init
 !public MPI_routines
 public :: measure_scatterv,measure_gatherv
-integer,parameter       :: N_entry=22                                                                   
+integer,parameter       :: N_entry=28
 integer,protected       :: MPI_exp_val ! mpi variable for direct mpi exp_val operations                 
 logical,protected       :: MPI_set=.false.
 type exp_val                                                                                             
@@ -39,8 +39,22 @@ type exp_val
     real(8) :: vortex_av(3)=0.0d0
     real(8) :: chi_l(3)=0.0d0
 
-    real(8) :: Re_MpMm_sum=0.0d0
-    real(8) :: Im_MpMm_sum=0.0d0
+	!<Mi+Mj->
+    complex(8)  :: MipMjm_sum=cmplx(0.0d0,0.0d0,8)
+    complex(8)  :: MipMjm_av=cmplx(0.0d0,0.0d0,8)
+
+	!<Mi+Mi+>
+    complex(8)  :: MipMip_sum=cmplx(0.0d0,0.0d0,8)
+    complex(8)  :: MipMip_av=cmplx(0.0d0,0.0d0,8)
+
+	!<Mi+Mi-> (is real)
+    complex(8)  :: MipMim_sum=cmplx(0.0d0,0.0d0,8)
+    complex(8)  :: MipMim_av=cmplx(0.0d0,0.0d0,8)
+
+	!<Mi+Mj+>
+    complex(8)  :: MipMjp_sum=cmplx(0.0d0,0.0d0,8)
+    complex(8)  :: MipMjp_av=cmplx(0.0d0,0.0d0,8)
+
 end type
 
 contains 
@@ -51,21 +65,25 @@ subroutine measure_set_MPI_type()
     integer                                     ::  blocks(N_entry)
     integer(kind=MPI_ADDRESS_KIND)              ::  displ(N_entry)
     integer                                     ::  types(N_entry)
-    integer(kind=MPI_ADDRESS_KIND)              ::  LB,extend_real,extend_int
+    integer(kind=MPI_ADDRESS_KIND)              ::  LB,extend_real,extend_int,extend_cmplx
     integer(kind=MPI_ADDRESS_KIND)              ::  extend
     integer                                     ::  ierr,i
 
-    blocks=[1,1,1,3,4,1,3,3,1,1,1,1,1,1,1,1,3,3,3,3,1,1]
+    blocks=[1,1, 1,3,4, 1,3, 3,1,1,1,1,1, 1,1,1,3,3,3,3, 1,1,1,1,1,1,1,1]
     types=MPI_DOUBLE_PRECISION
     types(1)=MPI_INT
-    CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION,lb,extend_real,ierr)
+    types(21:)=MPI_DOUBLE_COMPLEX
     CALL MPI_TYPE_GET_EXTENT(MPI_INT,lb,extend_int,ierr)
+    CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION,lb,extend_real,ierr)
+    CALL MPI_TYPE_GET_EXTENT(MPI_DOUBLE_COMPLEX,lb,extend_cmplx,ierr)
     displ=0
     do i=1,N_entry-1
         if(types(i)==MPI_DOUBLE_PRECISION)then
             extend=extend_real
         elseif(types(i)==MPI_INT)then
             extend=extend_int
+        elseif(types(i)==MPI_DOUBLE_COMPLEX)then
+            extend=extend_cmplx
         else
             STOP "UNEXPECTED types"
         endif
@@ -90,6 +108,7 @@ subroutine measure_gatherv(this,com)
         Call measure_set_MPI_type()
         MPI_set=.true.
     endif
+    CALL MPI_BARRIER(com%com,ierr)
     Call MPI_Gatherv(this(1),com%cnt(com%id+1),MPI_exp_val,this(1),com%cnt,com%displ,MPI_exp_val,com%mas,com%com,ierr)
 #else
     continue
@@ -120,10 +139,12 @@ subroutine measure_print_thermo_init(io_unit)
     integer,intent(inout)     ::  io_unit
 
     io_unit=open_file_write("EM.dat")
-    Write(io_unit,'(27(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
-                                 & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
-                                 & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
-                                 & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm'
+    Write(io_unit,'(34(a,15x))') '# 1:T','2:E_av','3:E_err','4:C','5:M','6:Mx','7:My','8:Mz', &
+          & '9:M_err_x','10:M_err_y','11:M_err_z','12:chi_x','13:chi_y','14:chi_z','15:vx', &
+          & '16:vy','17:vz','18:qeuler','19:Chi_q','20:Q+','21:Chi_qp','22:Q-','23:Chi_qm', &
+          & '24:l_x','25:l_y','26:l_z','27:Chi_QpQm', &
+		  & '28: Re(Mi+Mj-)','29: Im(Mi+Mj-)','30: Re(Mi+Mi+)','31: Im(Mi+Mi+)','32: Re(Mi+Mi-)', &
+		  & '33: Re(Mi+Mj+)','34: Im(Mi+Mj+)'
 end subroutine
 
 
@@ -143,10 +164,11 @@ subroutine measure_print_thermo(this,com,io_unit_in)
         endif
         ! write the data into a file
         do i=1,size(this)
-            Write(io_unit,'(27(E20.10E3,2x),E20.10E3)') this(i)%kT/k_B ,this(i)%E_av, this(i)%E_err_av, this(i)%C_av,&
+            Write(io_unit,'(34(E20.10E3,2x),E20.10E3)') this(i)%kT/k_B ,this(i)%E_av, this(i)%E_err_av, this(i)%C_av,&
              &             norm2(this(i)%M_av),this(i)%M_av, this(i)%M_err_av,&
-             &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1), &
-             &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4)
+             &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1),&
+             &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4),&
+			 &			   this(i)%MipMjm_av, this(i)%MipMip_av, real(this(i)%MipMim_av,8), this(i)%MipMjp_av
         enddo
         if(.not.present(io_unit_in)) close(io_unit) 
     endif
@@ -184,7 +206,11 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     this%Qm_sq_sum_av=this%Qm_sq_sum_av+qeulerm**2
     this%vortex_av=this%vortex_av+dumy(3:5)
 
-    if(fluct_val%l_use) Call eval_fluct(this%Re_MpMm_sum,this%Im_MpMm_sum,lat,fluct_val)
+    if(fluct_val%l_use) Call eval_fluct(this%MipMjm_sum, &
+                                       &this%MipMip_sum, &
+                                       &this%MipMim_sum, &
+                                       &this%MipMjp_sum, &
+                                       &lat,fluct_val)
 end subroutine
 
 
@@ -214,6 +240,12 @@ subroutine measure_eval(this,Cor_log, N_cell_in)
               &    (this%Qp_sq_sum_av*av_Nadd/16.0d0/pi**2-this%qeulerp_av**2))*av_kT!/(this%qeulerm_av*this%qeulerp_av)
 
     this%vortex_av=this%vortex_av*av_Nadd/3.0d0/sqrt(3.0d0)
+
+	this%MipMjm_av=this%MipMjm_sum*av_Nadd*av_site
+	this%MipMip_av=this%MipMip_sum*av_Nadd*av_site
+	this%MipMim_av=this%MipMim_sum*av_Nadd*av_site
+	this%MipMjp_av=this%MipMjp_sum*av_Nadd*av_site
+
     if (Cor_log) this%chi_l=this%N_add !what is this supposed to do?
     Call print_av(this)
 END subroutine

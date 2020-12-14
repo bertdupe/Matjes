@@ -37,11 +37,6 @@ subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
 
     Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat,mult_M_single)
     Call this%set_from_Hcoo(H_coo,lat)
-    write(*,*) this%op_l,this%op_r
-    write(*,*) this%dim_mode
-    write(*,*) H_coo%dimH
-    write(*,*) this%dimH
-    write(*,'(100/)')
 end subroutine 
 
 subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)

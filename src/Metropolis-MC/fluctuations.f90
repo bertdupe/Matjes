@@ -27,42 +27,55 @@ subroutine init_fluct_parameter(fluct_val,lat,l_use_in)
 end subroutine
 
 
-subroutine eval_fluct(Re_MpMm_sum,Im_MpMm_sum,lat,fluct_val)
+
+subroutine eval_fluct(MipMjm_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,fluct_val)
+
     use m_vector, only : cross
-    real(8),intent(inout)               :: Re_MpMm_sum,Im_MpMm_sum
-    type(lattice),intent(in)            :: lat
+    complex(8),intent(inout)           :: MipMjm_sum, MipMip_sum, MipMim_sum,MipMjp_sum
+    type(lattice),intent(in)           :: lat
     type(fluct_parameters),intent(in)  :: fluct_val
 
     real(8),pointer :: M3(:,:)
-    real(8)         :: temp(3)
-    real(8)         :: Mi(3), Mj(3), Re_MpMm, Im_MpMm
+    real(8)         :: Mi(3), Mj(3)
+    complex(8)      :: MipMjm, MipMip, MipMim, MipMjp
     integer         :: N_neighbours,N_cell
     integer         :: i_cell, i_sh,i_nei,j_flat 
 
     if(.not.fluct_val%l_use) return
-
-    ! ------- for <M+M-> ------- !
+    N_neighbours=size(fluct_val%indexNN) !number of shells of neighbours to be used
     N_cell=lat%Ncell
     M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
-    Re_MpMm=0.0d0
-    Im_MpMm=0.0d0
+    if(lat%nmag>1) STOP "FLUCTATIONS WILL NOT WORK WITH MORE THAN ONE MAGNETIC MOMENT IN THE UNIT_CELL"
+
+    MipMjm=cmplx(0.0d0,0.0d0,8);    MipMip=cmplx(0.0d0,0.0d0,8)
+    MipMim=cmplx(0.0d0,0.0d0,8);    MipMjp=cmplx(0.0d0,0.0d0,8)
+
     do i_cell=1,N_cell  !loop on sites
         Mi=M3(:,i_cell) !site i
+
+        MipMip=MipMip+cmplx(Mi(1)**2-Mi(2)**2, 2.0d0*Mi(1)*Mi(2),8)
+        MipMim=MipMim+cmplx(Mi(1)**2+Mi(2)**2,     0.0d0        ,8)
+
         do i_sh=1,N_neighbours !loop on shell of neighbours
             do i_nei=1,fluct_val%indexNN(i_sh) !loop on neighbours
+
                 if(fluct_val%flat_nei(i_cell,i_nei).eq.-1) cycle !skip non-connected neighbours
                 j_flat=fluct_val%flat_nei(i_cell,i_nei)
-
-                !write(*,*) "site", i_cell, "neighbour", j_flat
                 Mj=M3(:,j_flat) !site j
-                Re_MpMm = Re_MpMm + dot_product(Mi,Mj) - Mi(3)*Mj(3) !real part M+M-, sum over all pairs
-                temp = cross(Mi,Mj)
-                Im_MpMm= Im_MpMm + temp(3) !imaginary part of M+M-, sum over all pairs
+
+                !Re_MipMjm = Re_MipMjm + dot_product(Mi,Mj) - Mi(3)*Mj(3) 
+                !temp = cross(Mi,Mj)
+                !Im_MipMjm= Im_MipMjm + temp(3) 
+                MipMjm=MipMjm+cmplx(Mi(1)*Mj(1)+Mi(2)*Mj(2),Mi(1)*Mj(2)-Mi(2)*Mj(1),8)
+                MipMjp=MipMjp+cmplx(Mi(1)*Mj(1)-Mi(2)*Mj(2),Mi(1)*Mj(2)+Mi(2)*Mj(1),8)
             enddo
         enddo
+
     enddo
-    Re_MpMm_sum=Re_MpMm_sum+Re_MpMm
-    Im_MpMm_sum=Im_MpMm_sum+Im_MpMm
+    MipMjm_sum=MipMjm_sum+MipMjm
+    MipMip_sum=MipMip_sum+MipMip
+    MipMim_sum=MipMim_sum+MipMim
+    MipMjp_sum=MipMjp_sum+MipMjp
 
 end subroutine
 
@@ -80,9 +93,7 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
 
     N_neighbours = 1 !choose how many shells of neighbours: 1 = first neighbours
     Call get_table_nn(lat,N_neighbours,indexNN,tableNN)
-    !write(*,*) "N_cell= " ,N_cell, "sum(indexNN)= ", sum(indexNN)
-    allocate(flat_nei(N_cell,N_cell*sum(indexNN))) !flat nei is N x N*number of neighbours per site
-    !write(*,*) "in get_nei l223 shape(flat_nei)=", shape(flat_nei) 
+    allocate(flat_nei(N_cell,sum(indexNN))) !flat nei is N x N*number of neighbours per site
 
     !convert to a table with linear indices (Ncell, indexNN)
     do i_sh=1,N_neighbours !loop on shell of neighbours
@@ -95,16 +106,12 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
                         temp=tableNN(1:3,i_nei,i_x,i_y,i_z,1)!get x,y,z indices of neighbour
                         j_flat=lat%index_m_1(temp) !get j_flat
                         if(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) j_flat=-1 !if neighbours are not connected set to -1
-                        !write(*,*) i_sh, i_x, i_y, i_z, temp(1:3), i_flat, i_nei, j_flat
-                        !write(*,*) "shape(flat_nei)=", shape(flat_nei)
                         flat_nei(i_flat,i_nei)=j_flat
                     enddo
                 enddo
             enddo
         enddo
     enddo
-        
-
 END subroutine get_neighbours
 end module 
 
