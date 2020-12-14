@@ -82,7 +82,7 @@ subroutine get_exchange_D(Ham,io,lat)
                         Call get_coo(Htmp,val_tmp,ind_tmp)
 
                         !fill Hamiltonian type
-                        Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"MM",lat)
+                        Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"MM",lat,2)
                         deallocate(val_tmp,ind_tmp)
                         Call Ham%add(Ham_tmp)
                         Call Ham_tmp%destroy()

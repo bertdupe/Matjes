@@ -79,8 +79,6 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     Call bcast(NT_global,com_all)
     Call get_two_level_comm(com_all,NT_global,com_outer,com_inner)
     NT_local=com_outer%cnt(com_outer%id+1)
-    !CALL MPI_BARRIER(com_all%com,ierr)
-    !STOP
 
     !distribute to all threads
     Call bcast(io_MC,com_all)
@@ -106,11 +104,6 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
                 Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,Hams)
             End do
             Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,Hams) ! at least one step
-!            write(*,*) state_pro:tabe M
-            write(*,*) state_prop%E_total
-            write(*,*) energy_all(Hams,lat)
-            write(*,*) 
-            STOp
             Call measure_add(measure(i_kt),lat,state_prop,Q_neigh,fluct_val) 
         end do ! over i_MC
    

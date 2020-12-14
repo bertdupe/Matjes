@@ -61,7 +61,7 @@ subroutine get_zeeman_H(Ham,io,lat)
         do i=1,lat%Ncell
             connect(:,i)=i
         enddo
-        Call Ham%init_connect(connect,val_tmp,ind_tmp,"BM",lat)
+        Call Ham%init_connect(connect,val_tmp,ind_tmp,"BM",lat,1)
         Ham%desc="Zeeman energy"
     endif
 end subroutine

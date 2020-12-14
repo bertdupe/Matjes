@@ -111,6 +111,7 @@ contains
         do i=1,size(ham)
             Call ham(i)%eval_single(tmp_E(i),i_m,lat)
         enddo
+        tmp_E=tmp_E*real(ham(:)%mult_M_single,8)
         E=sum(tmp_E)
     end function
 

@@ -53,7 +53,7 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     endif
 #else
     com_inner=com_in
-    Call init(com_outer,com_in)
+    Call com_outer%init(com_in)
     com_outer%cnt=N
 #endif
 

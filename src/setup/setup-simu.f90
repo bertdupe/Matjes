@@ -40,6 +40,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     type(extpar_input)  :: extpar_io
     ! dummy variable
     integer             :: dim_lat(3),n_motif
+    logical             :: keep_resolved_H
     ! check the allocation of memory
     integer             :: alloc_check
     ! Hamiltonian input parameters
@@ -163,7 +164,8 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
 
     write(6,'(///)') 
     call user_info(6,time,'Start setting Hamiltonian',.false.)
-    Call set_Hamiltonians(Ham_res,Ham_comb,io_simu%io_Energy_detail,H_io,my_lattice)
+    keep_resolved_H=io_simu%io_Energy_detail.or..True.  !need to change where all Hamiltonian data is kept
+    Call set_Hamiltonians(Ham_res,Ham_comb,keep_resolved_H,H_io,my_lattice)
     call user_info(6,time,'finished setting Hamiltonian',.false.)
     
     write(6,'(/,a,/)') 'the setup of the simulation is over'

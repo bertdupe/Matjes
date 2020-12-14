@@ -77,7 +77,7 @@ subroutine get_coupling_ME_J(Ham,io,lat)
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type
-                    Call Ham_tmp%init_mult_connect_2(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"M","ME",lat)
+                    Call Ham_tmp%init_mult_connect_2(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"M","ME",lat,2)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
                     Call Ham_tmp%destroy()

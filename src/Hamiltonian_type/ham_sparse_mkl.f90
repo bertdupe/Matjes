@@ -94,7 +94,7 @@ subroutine optimize(this)
     stat=mkl_sparse_optimize(this%H)
 end subroutine
 
-subroutine init_1(this,line,Hval,Hval_ind,order,lat)
+subroutine init_1(this,line,Hval,Hval_ind,order,lat,mult_M_single)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(inout)    :: this
     type(lattice),intent(in)        :: lat
@@ -102,14 +102,16 @@ subroutine init_1(this,line,Hval,Hval_ind,order,lat)
     real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)              :: Hval_ind(:,:)
     integer,intent(in)              :: line(:,:)
+    integer,intent(in)              :: mult_M_single
+
     !local
     type(t_H_coo)           :: H_coo
 
-    Call H_coo%init_1(line,Hval,Hval_ind,order,lat)
+    Call H_coo%init_1(line,Hval,Hval_ind,order,latmult_M_single)
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
-subroutine init_connect(this,connect,Hval,Hval_ind,order,lat)
+subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(inout)    :: this
     type(lattice),intent(in)        :: lat
@@ -117,14 +119,15 @@ subroutine init_connect(this,connect,Hval,Hval_ind,order,lat)
     real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)              :: Hval_ind(:,:)
     integer,intent(in)              :: connect(:,:)
+    integer,intent(in)              :: mult_M_single
     !local
     type(t_H_coo)           :: H_coo
 
-    Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat)
+    Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat,mult_M_single)
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
-subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
     !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
     !(example: ME-coupling M_i*E_i*M_j
     use m_derived_types, only: lattice,op_abbrev_to_int
@@ -136,14 +139,15 @@ subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     character(len=*),intent(in)     :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
     character(len=*),intent(in)     :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
     integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
+    integer,intent(in)              :: mult_M_single
     !local
     type(t_H_coo)           :: H_coo
 
-    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat)
+    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine
 
-subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
+subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
     use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(inout)    :: this
     type(lattice),intent(in)        :: lat
@@ -151,10 +155,25 @@ subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
     real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)              :: Hval_ind(:,:)
     integer,intent(in)              :: connect(:,:)
+<<<<<<< HEAD
+||||||| ebe65f9
+
+=======
+    integer,intent(in)              :: mult_M_single
+
+>>>>>>> develop
     !local
     type(t_H_coo)           :: H_coo
 
+<<<<<<< HEAD
     Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
+||||||| ebe65f9
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
+    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
+=======
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
+    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,latmult_M_single)
+>>>>>>> develop
     Call set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
@@ -273,6 +292,7 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     if(stat /= 0) STOP "error destroying H"
 
     Call this%init_base(lat,H_coo%op_l,H_coo%op_r)
+    this%mult_M_single=H_coo%mult_M_single
 end subroutine 
 
 

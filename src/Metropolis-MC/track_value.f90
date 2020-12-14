@@ -21,13 +21,9 @@ subroutine init(this,lat,hams,cone_in)
     type(lattice),intent(in)        :: lat
     class(t_H), intent(in)          :: Hams(:)
     real(8),intent(in)              :: cone_in
-    ! dumy
-    real(8),pointer :: M3(:,:)
-    
-    M3(1:3,1:lat%nmag*product(lat%dim_lat))=>lat%M%all_modes
-    this%magnetization=sum(M3,2) !sum over magnetization of all magnetic atoms without magnetic moment, probably not what is really wanted
+
+    this%magnetization=sum(lat%M%modes_3,2) !sum over magnetization of all magnetic atoms without magnetic moment, probably not what is really wanted
     this%E_total=energy_all(Hams,lat)
     this%cone=cone_in
-    nullify(M3)
 END subroutine 
 end module

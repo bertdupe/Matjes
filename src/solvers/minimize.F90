@@ -45,8 +45,8 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     ! internal
     real(8)     :: dumy,force_norm,Energy,vmax,vtest,test_torque,max_torque
     ! the computation time
-    integer(8)  :: i_min,gra_freq
-    integer     :: gra_int
+    integer(8)  :: i_min
+    integer     :: gra_freq,gra_int
     logical :: gra_log
     integer :: iomp,dim_mode,N_cell
 
@@ -121,7 +121,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
         endif
         
         if (gra_log.and.(mod(i_min-1,gra_freq).eq.0)) then
-            gra_int=int((i_min-1)/gra_freq,4)
+            gra_int=int((i_min-1)/int(gra_freq,8),4)
             call WriteSpinAndCorrFile(gra_int,lat%M%modes_v,'spin_minimization')
             call CreateSpinFile(gra_int,lat%M)
         endif
@@ -203,7 +203,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     
         !write config to files
         if ((gra_log).and.(mod(iter,gra_freq).eq.0)) then
-            gra_int=int((iter-1)/gra_freq,4)
+            gra_int=int((iter-1)/int(gra_freq,8),4)
             call WriteSpinAndCorrFile(gra_int,lat%M%modes_v,'spin_minimization')
             call CreateSpinFile(gra_int,lat%M)
             write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq

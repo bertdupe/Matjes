@@ -121,7 +121,7 @@ Implicit None
         Call io_simu%bcast(mpi_world)
         Call ext_param%bcast(mpi_world)
         Call bcast_Harr(Ham_comb,mpi_world)
-        call MonteCarlo(all_lattices,io_simu,ext_param,Ham_comb,mpi_world)
+        call MonteCarlo(all_lattices,io_simu,ext_param,Ham_res,mpi_world)
     endif
 
     if(mpi_world%ismas)then
