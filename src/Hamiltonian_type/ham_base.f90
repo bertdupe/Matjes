@@ -13,10 +13,8 @@ type,abstract :: t_H
 contains
 
     !Hamiltonian initialization routines
-    procedure(int_init_H_1),deferred                :: init_1 !based on Hamiltonian in coo format input (arrays), only rank_2, line input
     procedure(int_init_H_connect),deferred          :: init_connect !based on Hamiltonian in coo format input (arrays), only rank_2, connection input
     procedure(int_init_H_mult_connect_2),deferred   :: init_mult_connect_2 !based on Hamiltonian in coo format input (arrays), for rank >2, but only at 2 sites at once, connection input
-    procedure(int_init_H_mult_2),deferred           :: init_mult_2 !for rank >2, but only at 2 sites at once
 
     procedure(int_destroy),deferred         :: optimize  !calls possible optimization routines rearanging internal Hamiltonian layout
     procedure(int_mult),deferred            :: mult_r,mult_l !multipy out with left/right side
@@ -37,6 +35,7 @@ contains
     procedure,NON_OVERRIDABLE               :: copy
     procedure,NON_OVERRIDABLE               :: add
     procedure,NON_OVERRIDABLE               :: init_base
+    procedure,NON_OVERRIDABLE               :: init_otherH
 
     procedure(int_add_H),deferred           :: add_child
     procedure(int_destroy),deferred         :: destroy_child
@@ -112,7 +111,6 @@ interface
         integer,intent(in)          :: mult_M_single
     end subroutine
 
-
     subroutine int_init_H_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
         import t_h,lattice
         class(t_H),intent(inout)    :: this
@@ -123,32 +121,6 @@ interface
         integer,intent(in)          :: connect(:,:)
         integer,intent(in)          :: mult_M_single
     end subroutine
-
-    subroutine int_init_H_1(this,line,Hval,Hval_ind,order,lat,mult_M_single)
-        import t_h,lattice
-        class(t_H),intent(inout)    :: this
-        type(lattice),intent(in)    :: lat
-        integer,intent(in)          :: order(2)
-        real(8),intent(in)          :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-        integer,intent(in)          :: Hval_ind(:,:)
-        integer,intent(in)          :: line(:,:)
-        integer,intent(in)          :: mult_M_single
-    end subroutine
-
-    subroutine int_init_H_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-        !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
-        !(example: ME-coupling M_i*E_i*M_j
-        import t_H,lattice
-        class(t_H),intent(inout)    :: this
-        type(lattice),intent(in)        :: lat
-        !input Hamiltonian
-        real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
-        integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
-        integer,intent(in)              :: op_l(:),op_r(:) !which order parameters are used at left/right side of local Hamiltonian-matrix
-        integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
-        integer,intent(in)          :: mult_M_single
-    end subroutine
-
 
     subroutine int_add_H(this,H_in)
         import t_h
@@ -419,6 +391,20 @@ contains
         enddo
         this%set=.true.
     end subroutine
+
+    subroutine init_otherH(this,H_in)
+        class(t_H),intent(inout)    :: this
+        class(t_H),intent(in)       :: h_in
+
+        this%dimH=H_in%dimH
+        this%op_l=H_in%op_l
+        this%op_r=H_in%op_r
+        this%dim_mode=H_in%dim_mode
+        this%mult_M_single=H_in%mult_M_single
+        this%desc=H_in%desc
+        this%set=.true.
+    end subroutine
+
 
     function is_set(this) result(l)
         class(t_H),intent(in)       ::  this

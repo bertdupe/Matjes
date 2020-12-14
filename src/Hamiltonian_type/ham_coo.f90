@@ -11,9 +11,7 @@ type,extends(t_H) :: t_H_coo
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: init_1
     procedure :: init_connect
-    procedure :: init_mult_2
     procedure :: init_mult_connect_2
 
     procedure :: bcast_child
@@ -139,9 +137,7 @@ subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
     dim_mode(2)=lat%get_order_dim(order_int(2))
 
     this%nnz=sizeHin*N_connect
-    this%dimH=lat%Ncell*dim_mode
 
-    this%mult_M_single=mult_M_single
 !$omp parallel do 
     do i=1,N_connect
         this%rowind(1+(i-1)*sizeHin:i*sizeHin)=(connect(1,i)-1)*dim_mode(1)+Hval_ind(1,:)
@@ -151,76 +147,10 @@ subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
 !$omp end parallel do 
 
     Call this%init_base(lat,[order_int(1)],[order_int(2)])
-    Call check_H(this)
-end subroutine 
-
-
-
-subroutine init_1(this,line,Hval,Hval_ind,order,lat,mult_M_single)
-    !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
-    use m_derived_types, only: lattice
-    class(t_H_coo),intent(inout)    :: this
-
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: order(2)
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: line(:,:)
-    integer,intent(in)              :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
-
-    integer             :: dim_mode(2)
-    integer             :: nnz
-    integer             :: i,j,l,ii
-    integer             :: ival
-    integer             :: N_neigh,N_site
-
-    real(8),allocatable :: val(:)
-    integer,allocatable :: rowind(:),colind(:)
-
-
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    N_neigh=size(line,1)
-    N_site=size(line,2)
-    
-    nnz=size(Hval)*N_site*N_neigh
-
-    !fill temporary coordinate format spare matrix
-    allocate(val(nnz),source=0.0d0)
-    allocate(colind(nnz),source=0)
-    allocate(rowind(nnz),source=0)
-    dim_mode(1)=lat%get_order_dim(order(1))
-    dim_mode(2)=lat%get_order_dim(order(2))
-
+    this%dimH=lat%Ncell*dim_mode
     this%mult_M_single=mult_M_single
-
-    ii=0
-    do i=1,N_site
-        !this could give problems where there are different numbers of neighbors per line
-        do l=1,N_neigh
-            j=line(l,i)
-            do ival=1,size(Hval) 
-                ii=ii+1
-                rowind(ii)=(i-1)*dim_mode(1)+Hval_ind(1,ival)
-                colind(ii)=(j-1)*dim_mode(2)+Hval_ind(2,ival)
-                val(ii)=Hval(ival)
-            enddo
-        enddo
-    enddo
-
-    !fill type
-    this%nnz=ii
-    this%dimH=N_site*dim_mode
-    allocate(this%colind,source=colind(1:this%nnz))
-    deallocate(colind)
-    allocate(this%rowind,source=rowind(1:this%nnz))
-    deallocate(rowind)
-    allocate(this%val,source=val(1:this%nnz))
-    deallocate(val)
-    Call this%init_base(lat,order(1:1),order(2:2))
     Call check_H(this)
-
 end subroutine 
-
 
 subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
     !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
@@ -282,64 +212,6 @@ subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_s
     this%nnz=nnz
     this%dimH=lat%Ncell*dim_mode
     Call this%init_base(lat,order_l,order_r)
-    Call check_H(this)
-end subroutine 
-
-
-subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
-    !(example: ME-coupling M_i*E_i*M_j
-    use m_derived_types, only: lattice
-    class(t_H_coo),intent(inout)    :: this
-
-    type(lattice),intent(in)        :: lat
-    !input Hamiltonian
-    real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
-    integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
-    integer,intent(in)              :: op_l(:),op_r(:) !which order parameters are used at left/right side of local Hamiltonian-matrix
-    integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
-    integer,intent(in)              :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
-
-    integer             :: dim_mode(2)
-    integer             :: nnz
-    integer             :: i,j
-    integer             :: ival
-    integer             :: N_connect
-
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    N_connect=size(connect,2)
-    nnz=size(Hval)*N_connect
-
-    !fill temporary coordinate format spare matrix
-    dim_mode=1
-    do i=1,size(op_l)
-        dim_mode(1)=dim_mode(1)*lat%get_order_dim(op_l(i))
-    enddo
-    do i=1,size(op_r)
-        dim_mode(2)=dim_mode(2)*lat%get_order_dim(op_r(i))
-    enddo
-
-
-    this%mult_M_single=mult_M_single
-
-    !set local H
-    allocate(this%val(nnz),source=0.0d0)
-    allocate(this%colind(nnz),source=0)
-    allocate(this%rowind(nnz),source=0)
-    nnz=0
-    do j=1,N_connect
-        do ival=1,size(Hval)
-            nnz=nnz+1
-            this%rowind(nnz)=(connect(1,j)-1)*dim_mode(1)+Hval_ind(1,ival)
-            this%colind(nnz)=(connect(2,j)-1)*dim_mode(2)+Hval_ind(2,ival)
-            this%val(nnz)=Hval(ival)
-        enddo
-    enddo
-
-    !fill additional type parameters
-    this%nnz=nnz
-    this%dimH=lat%Ncell*dim_mode
-    Call this%init_base(lat,op_l,op_r)
     Call check_H(this)
 end subroutine 
 

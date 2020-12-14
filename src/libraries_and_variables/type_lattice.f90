@@ -91,12 +91,12 @@ public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbre
 
 contains 
 
-subroutine init_geo(this,areal,alat,dim_lat,boundary)
+subroutine init_geo(this,areal_in,alat,dim_lat,boundary)
     !initialize the lattice with the geometric inputs
     use m_vector, only : norm,cross
     use m_constants, only : pi
     class(lattice),intent(inout)    ::  this
-    real(8),intent(in)              ::  areal(3,3),alat(3)
+    real(8),intent(in)              ::  areal_in(3,3),alat(3)
     integer,intent(in)              ::  dim_lat(3)
     logical,intent(in)              ::  boundary(3)
     !internal
@@ -107,9 +107,12 @@ subroutine init_geo(this,areal,alat,dim_lat,boundary)
     real(8)         :: tmp_vec(3,3)
     integer         :: j,l,i_vec
 
+    real(8)         ::  areal(3,3)
+
     do i=1,3
-       this%areal(i,:)=areal(i,:)*alat(i)
+       this%areal(i,:)=areal_in(i,:)*alat(i)
     enddo
+    areal=transpose(this%areal)
     this%dim_lat=dim_lat
     this%ncell=product(dim_lat)
     do i=1,3
@@ -119,10 +122,10 @@ subroutine init_geo(this,areal,alat,dim_lat,boundary)
     this%periodic=boundary
 
     ! build up the reciprocal lattice vectors
-    volume=dot_product(this%areal(1,:),cross(this%areal(2,:),this%areal(3,:)))
-    this%astar(1,:) = cross(this%areal(2,:),this%areal(3,:))/volume
-    this%astar(2,:) = cross(this%areal(3,:),this%areal(1,:))/volume
-    this%astar(3,:) = cross(this%areal(1,:),this%areal(2,:))/volume
+    volume=dot_product(areal(:,1),cross(areal(:,2),areal(:,3)))
+    this%astar(1,:) = cross(areal(:,2),areal(:,3))/volume
+    this%astar(2,:) = cross(areal(:,3),areal(:,1))/volume
+    this%astar(3,:) = cross(areal(:,1),areal(:,2))/volume
     this%astar=2.0d0*pi*this%astar
 
     this%a_sc_inv(1,:)= cross(this%a_sc(2,:),this%a_sc(3,:))

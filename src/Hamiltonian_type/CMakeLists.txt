@@ -2,6 +2,7 @@ set(main_f90 ${main_f90}
 src/Hamiltonian_type/ham_public.f90
 src/Hamiltonian_type/ham_base.f90
 src/Hamiltonian_type/ham_coo.f90
+src/Hamiltonian_type/ham_coo_based.f90
 src/Hamiltonian_type/ham_dense.f90
 src/Hamiltonian_type/ham_dense_blas.f90
 src/Hamiltonian_type/ham_eigen.f90

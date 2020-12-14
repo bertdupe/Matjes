@@ -1,21 +1,18 @@
 module m_H_eigen
 #ifdef CPP_EIGEN_H
 !Hamiltonian type specifications using dense matrices and no external library
-use m_H_type
-use m_H_coo
 use m_derived_types, only: lattice
 use m_eigen_H_interface
+use m_H_coo_based
 
-type,extends(t_H) :: t_H_eigen
+type,extends(t_H_coo_based) :: t_H_eigen
     type(C_PTR)     ::  H=c_null_ptr
 !some pointer to Hamiltonian
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: init_1    
-    procedure :: init_connect    
-    procedure :: init_mult_2   
-    procedure :: init_mult_connect_2   
+
+    procedure :: set_from_Hcoo
 
     procedure :: add_child 
     procedure :: bcast_child 
@@ -111,87 +108,12 @@ subroutine mult_l(this,lat,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-
 subroutine optimize(this)
     class(t_H_eigen),intent(inout)   :: this
 
     !THERE MIGHT BE SOMETHING TO DO HERE
     continue 
 end subroutine
-
-subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
-    use m_derived_types, only: lattice
-    class(t_H_eigen),intent(inout)  :: this
-
-    type(lattice),intent(in)        :: lat
-    character(2),intent(in)         :: order
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: connect(:,:)
-    integer,intent(in)              :: mult_M_single
-    !local
-    type(t_H_coo)           :: H_coo
-
-    Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat,mult_M_single)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
-
-subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
-    !(example: ME-coupling M_i*E_i*M_j
-    use m_derived_types, only: lattice,op_abbrev_to_int
-    class(t_H_eigen),intent(inout)    :: this
-
-    type(lattice),intent(in)        :: lat
-    !input Hamiltonian
-    real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
-    integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
-    character(len=*),intent(in)     :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
-    character(len=*),intent(in)     :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
-    integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
-    integer,intent(in)              :: mult_M_single
-    !local
-    type(t_H_coo)           :: H_coo
-
-    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine
-
-
-subroutine init_1(this,line,Hval,Hval_ind,order,lat,mult_M_single)
-    use m_derived_types, only: lattice
-    class(t_H_eigen),intent(inout)  :: this
-
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: order(2)
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: line(:,:)
-    integer,intent(in)              :: mult_M_single
-    !local
-    type(t_H_coo)           :: H_coo
-
-    Call H_coo%init_1(line,Hval,Hval_ind,order,lat,mult_M_single)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
-
-subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    use m_derived_types, only: lattice
-    class(t_H_eigen),intent(inout)  :: this
-
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: op_l(:),op_r(:)
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: connect(:,:)
-    integer,intent(in)              :: mult_M_single
-
-    !local
-    type(t_H_coo)           :: H_coo
-
-    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
 
 subroutine copy_child(this,Hout)
     class(t_H_eigen),intent(in)     :: this
@@ -237,19 +159,18 @@ subroutine destroy_child(this)
 end subroutine
 
 subroutine set_from_Hcoo(this,H_coo,lat)
-    type(t_H_eigen),intent(inout)       :: this
-    type(t_H_coo),intent(inout)         :: H_coo
-    type(lattice),intent(in)            :: lat
+    class(t_H_eigen),intent(inout)  :: this
+    type(t_H_coo),intent(inout)     :: H_coo
+    type(lattice),intent(in)        :: lat
     !local
     integer                 :: nnz
     real(8),allocatable     :: val(:)
     integer,allocatable     :: rowind(:),colind(:)
 
+    Call this%init_otherH(H_coo)
     Call H_coo%pop_par(this%dimH,nnz,val,rowind,colind)
     colind=colind-1;rowind=rowind-1
     Call eigen_H_init(nnz,this%dimH,rowind,colind,val,this%H)
-    Call this%init_base(lat,H_coo%op_l,H_coo%op_r)
-    this%mult_M_single=H_coo%mult_M_single
 end subroutine 
 
 subroutine eval_single(this,E,i_m,lat)

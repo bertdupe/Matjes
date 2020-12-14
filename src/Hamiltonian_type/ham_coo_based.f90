@@ -1,0 +1,69 @@
+module m_H_coo_based
+use m_H_type, only: t_H
+use m_derived_types, only: lattice
+use m_H_coo, only: t_H_coo
+
+public
+
+type,abstract,extends(t_H) :: t_H_coo_based
+    contains
+    procedure(int_set_from_Hcoo),deferred   :: set_from_Hcoo    !routine to set the local parameters of the Hamiltonian based from a set t_H_coo-type
+    procedure :: init_connect    
+    procedure :: init_mult_connect_2
+end type
+
+interface
+    subroutine int_set_from_Hcoo(this,H_coo,lat)
+        import t_H_coo,t_H_coo_based,lattice
+        class(t_H_coo_based),intent(inout)  :: this
+        type(t_H_coo),intent(inout)         :: H_coo
+        type(lattice),intent(in)            :: lat
+    end subroutine
+end interface
+
+contains
+
+subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
+    use m_derived_types, only: lattice
+    class(t_H_coo_based),intent(inout)    :: this
+    type(lattice),intent(in)        :: lat
+    character(2),intent(in)         :: order
+    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+    integer,intent(in)              :: Hval_ind(:,:)
+    integer,intent(in)              :: connect(:,:)
+    integer,intent(in)              :: mult_M_single
+    !local
+    type(t_H_coo)           :: H_coo
+
+    Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat,mult_M_single)
+    Call this%set_from_Hcoo(H_coo,lat)
+    write(*,*) this%op_l,this%op_r
+    write(*,*) this%dim_mode
+    write(*,*) H_coo%dimH
+    write(*,*) this%dimH
+    write(*,'(100/)')
+end subroutine 
+
+subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
+    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
+    !(example: ME-coupling M_i*E_i*M_j
+    use m_derived_types, only: lattice,op_abbrev_to_int
+    class(t_H_coo_based),intent(inout)  :: this
+    type(lattice),intent(in)            :: lat
+    !input Hamiltonian
+    real(8),intent(in)                  :: Hval(:)          !values of local Hamiltonian for each line
+    integer,intent(in)                  :: Hval_ind(:,:)    !indices in order-parameter space for Hval
+    character(len=*),intent(in)         :: op_l             !which order parameters are used at left  side of local Hamiltonian-matrix
+    character(len=*),intent(in)         :: op_r             !which order parameters are used at right side of local Hamiltonian-matrix
+    integer,intent(in)                  :: connect(:,:)     !lattice sites to be connected (2,Nconnections)
+    integer,intent(in)                  :: mult_M_single
+    !local
+    type(t_H_coo)           :: H_coo
+
+    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
+    Call this%set_from_Hcoo(H_coo,lat)
+end subroutine
+
+
+
+end module

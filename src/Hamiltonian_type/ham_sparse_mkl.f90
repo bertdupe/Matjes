@@ -3,24 +3,21 @@ module m_H_sparse_mkl
 #if defined(CPP_MKL_SPBLAS)
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
 !eval_single single energy evaluation is rather cumbersome...
-use m_H_type
 use MKL_SPBLAS
-use m_H_coo
 use m_derived_types, only: lattice
+use m_H_coo_based
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE,C_INT
 
 
-type,extends(t_H) :: t_H_mkl_csr
+type,extends(t_H_coo_based) :: t_H_mkl_csr
     private
     type(SPARSE_MATRIX_T) :: H
     type(matrix_descr)    :: descr
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: init_1    
-    procedure :: init_connect    
-    procedure :: init_mult_connect_2   
-    procedure :: init_mult_2   
+
+    procedure :: set_from_Hcoo
 
     procedure :: add_child 
     procedure :: destroy_child    
@@ -93,90 +90,6 @@ subroutine optimize(this)
     stat=mkl_sparse_set_dotmv_hint ( this%H , SPARSE_OPERATION_NON_TRANSPOSE , this%descr , 100000 )
     stat=mkl_sparse_optimize(this%H)
 end subroutine
-
-subroutine init_1(this,line,Hval,Hval_ind,order,lat,mult_M_single)
-    use m_derived_types, only: lattice
-    class(t_H_mkl_csr),intent(inout)    :: this
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: order(2)
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: line(:,:)
-    integer,intent(in)              :: mult_M_single
-
-    !local
-    type(t_H_coo)           :: H_coo
-
-    Call H_coo%init_1(line,Hval,Hval_ind,order,latmult_M_single)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
-
-subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
-    use m_derived_types, only: lattice
-    class(t_H_mkl_csr),intent(inout)    :: this
-    type(lattice),intent(in)        :: lat
-    character(2),intent(in)         :: order
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: connect(:,:)
-    integer,intent(in)              :: mult_M_single
-    !local
-    type(t_H_coo)           :: H_coo
-
-    Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat,mult_M_single)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
-
-subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
-    !(example: ME-coupling M_i*E_i*M_j
-    use m_derived_types, only: lattice,op_abbrev_to_int
-    class(t_H_mkl_csr),intent(inout)    :: this
-    type(lattice),intent(in)        :: lat
-    !input Hamiltonian
-    real(8),intent(in)              :: Hval(:)  !values of local Hamiltonian for each line
-    integer,intent(in)              :: Hval_ind(:,:)  !indices in order-parameter space for Hval
-    character(len=*),intent(in)     :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
-    character(len=*),intent(in)     :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
-    integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
-    integer,intent(in)              :: mult_M_single
-    !local
-    type(t_H_coo)           :: H_coo
-
-    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine
-
-subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
-    use m_derived_types, only: lattice
-    class(t_H_mkl_csr),intent(inout)    :: this
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: op_l(:),op_r(:)
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: connect(:,:)
-<<<<<<< HEAD
-||||||| ebe65f9
-
-=======
-    integer,intent(in)              :: mult_M_single
-
->>>>>>> develop
-    !local
-    type(t_H_coo)           :: H_coo
-
-<<<<<<< HEAD
-    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
-||||||| ebe65f9
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
-=======
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,latmult_M_single)
->>>>>>> develop
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
-
 
 subroutine copy_child(this,Hout)
     class(t_H_mkl_csr),intent(in)   :: this
@@ -267,8 +180,8 @@ subroutine destroy_child(this)
 end subroutine
 
 subroutine set_from_Hcoo(this,H_coo,lat)
+    class(t_H_mkl_csr),intent(inout)    :: this
     type(t_H_coo),intent(inout)         :: H_coo
-    type(t_H_mkl_csr),intent(inout)     :: this
     type(lattice),intent(in)            :: lat
 
     !local
@@ -278,6 +191,7 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     real(C_DOUBLE),allocatable     :: val(:)
     integer,allocatable     :: rowind(:),colind(:)
 
+    Call this%init_otherH(H_coo)
     Call H_coo%pop_par(this%dimH,nnz,val,rowind,colind)
     stat=mkl_sparse_d_create_coo(H, SPARSE_INDEX_BASE_ONE , this%dimH(1) , this%dimH(2) , nnz , rowind , colind , val)
 
@@ -291,8 +205,6 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     stat=MKL_SPARSE_DESTROY(H)
     if(stat /= 0) STOP "error destroying H"
 
-    Call this%init_base(lat,H_coo%op_l,H_coo%op_r)
-    this%mult_M_single=H_coo%mult_M_single
 end subroutine 
 
 
@@ -316,6 +228,7 @@ subroutine eval_single(this,E,i_m,lat)
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 
+    ERROR STOP "THIS CAUSES MEMORY LEAKS AND GENERALLY SHOULDN'T be used as it is super slow"
 
     !is it smarter to multiply in the other direction first with 1 entry only?-> probably easier to use different implementation 
     !where this is required
@@ -357,7 +270,6 @@ subroutine create_sparse_vec(i_m,modes,dim_mode,dim_H,vec)
     if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
     stat=mkl_sparse_destroy(vec_coo)
     if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
-
 end subroutine
 
 #endif
