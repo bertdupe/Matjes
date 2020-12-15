@@ -91,11 +91,11 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
     integer      :: i_sh, i_x, i_y, i_z, i_nei, temp1(3),temp2(3), i_flat, j_flat
     
     N_cell=lat%Ncell
-    N_shells = 1 !choose how many shells of neighbours: 1 = first neighbours
+    N_shells = 1 !choose how many shells of neighbours: 1 = first neighbours  /!\currently boundary wont work for more than 1 shell 
     Call get_table_nn(lat,N_shells,indexNN,tableNN)
     allocate(flat_nei(N_cell,sum(indexNN))) !flat nei is N x number of neighbours per site
 	flat_nei(:,:)=0;
-
+	
     !convert to a table with linear indices (Ncell, indexNN), /!\ taking only forward neighbours along x,y,z
     do i_sh=1,N_shells !loop on shell of neighbours
         do i_x=1,lat%dim_lat(1) !loop on lattice sites
@@ -103,21 +103,26 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
                 do i_z=1,lat%dim_lat(3) 
                     temp1=[i_x,i_y,i_z]
                     i_flat=lat%index_m_1(temp1)  !get i_flat
+					!write(*,*) 'not in nei loop temp1=', temp1(1:3), 'flat index : ', i_flat 
                     do i_nei=1,indexNN(i_sh) !loop on neighbours
                         temp2=tableNN(1:3,i_nei,i_x,i_y,i_z,1)!get x,y,z indices of neighbour
-				
-						!write(*,*) 'temp1=', temp1(1:2), ' temp2= ', temp2(1:2), ' temp1.gt.temp2 = ' , all(temp1.ge.temp2)
+			
 
 						if( (all(temp1.ge.temp2)).or.(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) ) then  !do not keep backwards neighbours or non-connected neighbours
 							j_flat=-1; 
-						else if ( ( temp1(2)==1.and.temp2(2)==lat%dim_lat(2) ) .or. ( temp1(1)==1.and.temp2(1)==lat%dim_lat(1)) ) then !boundary:remove left and top
+						else if ( ( temp1(1)==1.and.temp2(1)==lat%dim_lat(1).and.lat%dim_lat(1).ne.1 ) &
+						.or.      ( temp1(2)==1.and.temp2(2)==lat%dim_lat(2).and.lat%dim_lat(2).ne.1 ) &
+						.or.      ( temp1(3)==1.and.temp2(3)==lat%dim_lat(3).and.lat%dim_lat(3).ne.1 ) )  then !boundary:remove left and top
 							j_flat=-1 
+							!write(*,*) 'boundary nei to remove: verified for temp1, temp2=', temp1(1:3), temp2(1:3)
 						else
                        		j_flat=lat%index_m_1(temp2) !get j_flat
 						end if
 
 						!boundary: add right and bottom
-						if ( (temp1(2)==lat%dim_lat(2).and.temp2(2)==1) .or. (temp1(1)==lat%dim_lat(1).and.temp2(1)==1) ) then
+						if ( (temp1(1)==lat%dim_lat(1).and.temp2(1)==1.and.lat%dim_lat(1).ne.1) &
+						.or. (temp1(2)==lat%dim_lat(2).and.temp2(2)==1.and.lat%dim_lat(2).ne.1) &
+						.or. (temp1(3)==lat%dim_lat(3).and.temp2(3)==1.and.lat%dim_lat(3).ne.1)	) then
                        		j_flat=lat%index_m_1(temp2) 
 						end if
 
@@ -128,7 +133,7 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
         enddo
     enddo
 
-! do i_flat=1,N_cell
+ !do i_flat=1,N_cell
 !	write(*,*)'flat_nei for spin',i_flat, ' =', flat_nei(i_flat,:)
 !enddo
 
