@@ -1,6 +1,6 @@
 module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H
-use m_derived_types, only : lattice
+use m_derived_types, only : lattice,number_different_order_parameters
 implicit none
 
 type,abstract :: t_H
@@ -91,12 +91,13 @@ interface
         real(8),intent(out)         ::  E
     end subroutine
 
-    subroutine int_eval_single(this,E,i_m, lat)
-        import t_H,lattice
+    subroutine int_eval_single(this,E,i_m,dim_bnd,lat)
+        import t_H,lattice,number_different_order_parameters
         class(t_H),intent(in)    ::  this
         type(lattice),intent(in)    ::  lat
-        integer,intent(in)          ::  i_m
-        real(8),intent(out)         ::  E
+        integer,intent(in)          ::  i_m     !site index in (1:Ncell)-basis
+        integer,intent(in)          ::  dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
+        real(8),intent(out)         ::  E       !energy caused by considered site
     end subroutine
 
     subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
@@ -296,10 +297,12 @@ contains
         integer     :: ierr
         integer     :: N(2)
     
-        Call MPI_Bcast(this%dimH    ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%dim_mode,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%set     ,   1, MPI_LOGICAL  , comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%desc    , 100, MPI_CHARACTER, comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dimH         ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_mode     ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%mult_M_single,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%set          ,   1, MPI_LOGICAL  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%desc         , 100, MPI_CHARACTER, comm%mas, comm%com,ierr)
+
 
         if(comm%ismas)then
             N(1)=size(this%op_l)

@@ -25,7 +25,6 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     integer     :: div,color,tmp
     integer     :: ierr,i
 
-    CALL MPI_BARRIER(com_in%com,ierr)
     if(N>=com_in%NP)then
         Call com_outer%init(com_in)
         com_outer%cnt=N/com_in%NP

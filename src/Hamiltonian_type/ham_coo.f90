@@ -226,12 +226,13 @@ subroutine check_H(this)
 
 end subroutine
 
-subroutine eval_single(this,E,i_m,lat)
-    use m_derived_types, only: lattice
+subroutine eval_single(this,E,i_m,dim_bnd,lat)
+    use m_derived_types, only: lattice, number_different_order_parameters
     ! input
     class(t_H_coo),intent(in)    :: this
-    type(lattice), intent(in)       :: lat
-    integer, intent(in)             :: i_m
+    type(lattice), intent(in)    :: lat
+    integer, intent(in)          :: i_m
+    integer, intent(in)          :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
     ! output
     real(kind=8), intent(out)       :: E
 

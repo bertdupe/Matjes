@@ -4,7 +4,7 @@ module m_H_sparse_mkl
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
 !eval_single single energy evaluation is rather cumbersome...
 use MKL_SPBLAS
-use m_derived_types, only: lattice
+use m_derived_types, only: lattice,number_different_order_parameters
 use m_H_coo_based
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE,C_INT
 
@@ -208,12 +208,13 @@ subroutine set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
 
-subroutine eval_single(this,E,i_m,lat)
+subroutine eval_single(this,E,i_m,dim_bnd,lat)
     use m_derived_types, only: lattice
     ! input
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
+    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !not implemented
     ! output
     real(8), intent(out)            :: E
     ! internal
@@ -228,7 +229,10 @@ subroutine eval_single(this,E,i_m,lat)
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 
+    ERROR STOP "Do not try to evaluate single energies (Monte Carlo) with mkl_spblas Hamiltonian implementation"
     ERROR STOP "THIS CAUSES MEMORY LEAKS AND GENERALLY SHOULDN'T be used as it is super slow"
+    !one could probably use the explicit csr format, but mult_l_single will still difficult and eigen seems better suited for this
+    !If you really want to update this, look at the eigen implementation with point_order_single
 
     !is it smarter to multiply in the other direction first with 1 entry only?-> probably easier to use different implementation 
     !where this is required

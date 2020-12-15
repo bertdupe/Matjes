@@ -57,27 +57,29 @@ subroutine mult_l(this,lat,res)
 end subroutine 
 
 
-subroutine eval_single(this,E,i_m,lat)
-    use m_derived_types, only: lattice
+subroutine eval_single(this,E,i_m,dim_bnd,lat)
+    use m_derived_types, only: lattice,number_different_order_parameters
     ! input
     class(t_h_dense_blas),intent(in)    :: this
     type(lattice), intent(in)           :: lat
     integer, intent(in)                 :: i_m
+    integer, intent(in)                 :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
     ! output
     real(8), intent(out)                :: E
     ! internal
     real(8),pointer                 :: modes_l(:),modes_r(:)
     real(8),allocatable,target      :: vec_l(:),vec_r(:)
+    integer                     :: bnd(2)
+    integer                     :: size_vec_r
     real(8)                     :: tmp(this%dimH(1))
-    integer                     :: ind
     real(8),external            :: ddot !blas routine
     real(8),parameter           :: alpha=1.0d0,beta=0.0d0
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
+    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
 
-    ind=1+(i_m-1)*this%dim_mode(2)
-    Call DGEMV('N',this%dimH(1),this%dim_mode(2),alpha,this%H(1,ind),this%dimH(1),modes_r(ind),1,beta,tmp,1)
+    size_vec_r=bnd(2)-bnd(1)+1
+    Call DGEMV('N',this%dimH(1),size_vec_r,alpha,this%H(1,bnd(1)),this%dimH(1),modes_r(1),1,beta,tmp,1)
     E=ddot(this%dimH(2),modes_l,1,tmp,1)
 end subroutine 
 #endif

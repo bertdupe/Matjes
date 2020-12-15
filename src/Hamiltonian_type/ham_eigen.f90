@@ -1,7 +1,7 @@
 module m_H_eigen
 #ifdef CPP_EIGEN_H
 !Hamiltonian type specifications using dense matrices and no external library
-use m_derived_types, only: lattice
+use m_derived_types, only: lattice, number_different_order_parameters
 use m_eigen_H_interface
 use m_H_coo_based
 
@@ -173,24 +173,26 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     Call eigen_H_init(nnz,this%dimH,rowind,colind,val,this%H)
 end subroutine 
 
-subroutine eval_single(this,E,i_m,lat)
+subroutine eval_single(this,E,i_m,dim_bnd,lat)
     use m_derived_types, only: lattice
     ! input
     class(t_H_eigen),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
+    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)
     ! output
     real(8), intent(out)            :: E
     ! internal
     real(8),pointer                 :: modes_l(:),modes_r(:)
     real(8),allocatable,target      :: vec_l(:),vec_r(:)
-    integer     ::  ind
+    integer                         :: bnd(2)
+    integer                         :: size_vec_r
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order_single(this%op_r,i_m,this%dim_mode(2),modes_r,vec_r)
+    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
 
-    ind=1+(i_m-1)*this%dim_mode(2)
-    Call eigen_H_eval_single(ind-1,this%dim_mode(2),modes_l,modes_r,this%H,E)
+    size_vec_r=bnd(2)-bnd(1)+1
+    Call eigen_H_eval_single(bnd(1)-1,size_vec_r,modes_l,modes_r,this%H,E)
     
     if(allocated(vec_l)) deallocate(vec_l)
     if(allocated(vec_r)) deallocate(vec_r)

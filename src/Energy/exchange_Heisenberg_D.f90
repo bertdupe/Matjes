@@ -62,6 +62,7 @@ subroutine get_exchange_D(Ham,io,lat)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1
                     Call get_DMI(neigh%at_pair(:,i_trip),neigh%pairs(:,connect_bnd(1)),io%trip(i_attrip)%attype(3),lat,DMI)
+                    Call print_DMI(DMI,neigh%at_pair(:,i_trip),neigh%pairs(:,connect_bnd(1)),io%trip(i_attrip)%attype(3),io%trip(i_attrip)%dist(i_dist),lat)
                     connect_bnd(2)=neigh%ishell(i_trip)
                     if(norm2(DMI)>1.0d-8)then 
                         !set local Hamiltonian in basis of magnetic orderparameter
@@ -177,5 +178,34 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
     enddo
     nrm=norm2(DMI_sum)
     if(nrm>1.0d-8) DMI_sum=DMI_sum/nrm
+end subroutine
+
+subroutine print_DMI(DMI,at_pair,pairs,type_mediate,dist,lat)
+    use, intrinsic :: iso_fortran_env,only : output_unit
+    use m_derived_types, only: lattice
+    real(8),intent(in)          :: DMI(3)
+    integer,intent(in)          :: at_pair(2)
+    integer,intent(in)          :: pairs(2) 
+    integer,intent(in)          :: type_mediate
+    integer,intent(in)          :: dist
+    type(lattice),intent(in)    :: lat
+
+    integer         ::  transl(3)
+    integer         ::  i
+
+    transl=lat%index_1_3(pairs(2))-lat%index_1_3(pairs(1))
+    !make sure periodicity is used for shortes translation
+    do i=1,3
+        if(lat%periodic(i))then
+            if(abs(transl(i)-lat%dim_lat(i))<abs(transl(i))) transl(i)=transl(i)-lat%dim_lat(i)
+            if(abs(transl(i)+lat%dim_lat(i))<abs(transl(i))) transl(i)=transl(i)+lat%dim_lat(i)
+        endif
+    enddo
+
+    write(output_unit,'(/A,3(/F12.6))') 'Found DMI-vector',DMI
+    write(output_unit,'(A,2I6)')        '  between atoms:',at_pair
+    write(output_unit,'(A,3I6)')        '  with lattice translation:',transl
+    write(output_unit,'(A,I6)')         '  connected by atom type:',type_mediate
+    write(output_unit,'(A,I4,A/)')      '  corresponding to distance no.', dist
 end subroutine
 end module
