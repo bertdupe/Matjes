@@ -34,7 +34,7 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     type(simulation_parameters),intent (inout) :: ext_param
     class(t_H),intent(inout),allocatable      ::  Ham_res(:), Ham_comb(:)
     ! variable of the system
-    real(8),allocatable :: pos(:,:,:,:,:)
+    real(8),allocatable :: pos(:)
     integer             :: io
     real(8)             :: time
     type(extpar_input)  :: extpar_io
@@ -126,13 +126,13 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     ! get position
     n_motif=size(my_motif%atomic)
     dim_lat=my_lattice%dim_lat
-    allocate(pos(3,dim_lat(1),dim_lat(2),dim_lat(3),n_motif),source=0.0d0,stat=alloc_check)
     ! UPDATE POSITION TO NEW SET
     if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate position for the mapping procedure'
-    call get_position(pos,dim_lat,my_lattice%areal,my_motif)
     ! write the positions into a file
     io=open_file_write('positions.dat')
-    call dump_config(io,pos)
+    call my_lattice%get_pos_mag(pos)
+    write(io,'(3E16.8)') pos
+    deallocate(pos)
     call close_file('positions.dat',io)
     
 !OLD DMI PART WHICH HAS TO BE SOMEHOW UPDATED TO NEW LATTICE INPUT (but not here)
