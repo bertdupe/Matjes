@@ -20,6 +20,7 @@ subroutine get_exchange_D(Ham,io,lat)
     use m_derived_types
     use m_setH_util,only: get_coo
     use m_neighbor_type, only: neighbors
+    use, intrinsic :: iso_fortran_env,only : output_unit
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_D),intent(in)     :: io
@@ -62,6 +63,11 @@ subroutine get_exchange_D(Ham,io,lat)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1
                     Call get_DMI(neigh%at_pair(:,i_trip),neigh%pairs(:,connect_bnd(1)),io%trip(i_attrip)%attype(3),lat,DMI)
+                    write(output_unit,'(A/,3F12.8/,A,2I6/,A,I6/A,I6,A/)') &
+                            &'Found DMI-vector',DMI,&
+                            &'  between atoms ',neigh%at_pair(:,i_trip),&
+                            &'  connected by atom type',io%trip(i_attrip)%attype(3),&
+                            &'  at',io%trip(i_attrip)%dist(i_dist),'th neighbor'
                     connect_bnd(2)=neigh%ishell(i_trip)
                     if(norm2(DMI)>1.0d-8)then 
                         !set local Hamiltonian in basis of magnetic orderparameter
