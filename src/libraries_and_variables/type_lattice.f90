@@ -22,7 +22,7 @@ type lattice
      integer        :: Ncell !number of unit-cells (product of dim_lat)
      real(8)        :: a_sc(3,3) !real space lattice vectors of supercell
      real(8)        :: a_sc_inv(3,3) !inverse of real space lattice vectors of supercell (can be used to get back into supercell)
-     integer        :: dim_mode !probably obsolete
+     integer        :: dim_modes(number_different_order_parameters)=0 !saves the dimension of the set order_parameters
      integer        :: n_system !no clue what this does
      integer, allocatable :: world(:)
      logical        :: periodic(3) !lattice periodic in direction
@@ -60,6 +60,7 @@ contains
     procedure :: set_order_comb_exc_single
     procedure :: point_order => point_order_onsite
     procedure :: point_order_single => point_order_onsite_single
+    procedure :: bnd_single => get_bnd_single
     !!reduce that order parameter again
     procedure :: reduce
     procedure :: reduce_single
@@ -180,7 +181,7 @@ subroutine init_order(this,cell,extpar_io)
     type(t_cell), intent(in)        :: cell
     type(extpar_input),intent(in)   :: extpar_io
 
-    integer                         :: dim_modes(number_different_order_parameters),i
+    integer                         :: i
 
     this%cell=cell
     this%nmag=count(cell%atomic(:)%moment/=0.0d0)
@@ -193,21 +194,20 @@ subroutine init_order(this,cell,extpar_io)
         WRITE(*,'(A)') 'However Bertrand insists this should crash, so BAM'
         STOP 'Please tell Bertrand if you do not think this should crash'
     endif
-    dim_modes=0
-    dim_modes(1)=this%nmag*3
-    if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) dim_modes(2)=3
-    if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) dim_modes(3)=3
-    if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) dim_modes(4)=1
-    dim_modes(5)=this%nph*3
+    this%dim_modes(1)=this%nmag*3
+    if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) this%dim_modes(2)=3
+    if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) this%dim_modes(3)=3
+    if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) this%dim_modes(4)=1
+    this%dim_modes(5)=this%nph*3
     !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
-    this%order_set=dim_modes>0
+    this%order_set=this%dim_modes>0
 
     !new orderparameter format
-    if(this%order_set(1)) Call this%M%init(this%dim_lat,dim_modes(1))
-    if(this%order_set(2)) Call this%E%init(this%dim_lat,dim_modes(2))
-    if(this%order_set(3)) Call this%B%init(this%dim_lat,dim_modes(3))
-    if(this%order_set(4)) Call this%T%init(this%dim_lat,dim_modes(4))
-    if(this%order_set(5)) Call this%u%init(this%dim_lat,dim_modes(5))
+    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1))
+    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2))
+    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3))
+    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4))
+    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5))
 end subroutine
 
 subroutine read_order(this,suffix_in,fexist_out)
@@ -375,16 +375,15 @@ subroutine set_order_point(this,order,point)
     end select
 end subroutine
 
-subroutine set_order_point_single(this,order,ilat,point)
+subroutine set_order_point_single(this,order,i_site,dim_bnd,dim_mode,point,bnd)
     class(lattice),intent(in)   :: this
-    integer,intent(in)          :: order,ilat
+    integer,intent(in)          :: order,i_site,dim_mode
+    integer, intent(in)         :: dim_bnd(2,number_different_order_parameters)  
     real(8),pointer,intent(out) :: point(:)
+    integer,intent(out)         :: bnd(2)
 
-    integer                     :: bnd(2),dim_mode
-
-    dim_mode=this%get_order_dim(order)
-    bnd(1)=dim_mode*(ilat-1)+1
-    bnd(2)=dim_mode*ilat
+    Call get_bnd_single_1(this,order,i_site,dim_bnd,bnd)
+    !this select case might be ultra slow, make another indexable pointer array in lattice?
     select case(order)
     case(1)
         point=>this%M%all_modes(bnd(1):bnd(2))
@@ -409,14 +408,10 @@ subroutine reduce_cell(this,vec_in,order,vec_out)
     integer,intent(in)              ::  order(:)
     real(8),intent(inout)           ::  vec_out(:)
 
-    integer                 :: dim_modes(size(order))
     integer                 :: dim_mode_sum
     integer                 :: i
 
-    do i=1,size(order)
-        dim_modes(i)=this%get_order_dim(order(i))
-    enddo
-    dim_mode_sum=product(dim_modes)
+    dim_mode_sum=product(this%dim_modes)
 
     if(size(vec_in)/=this%Ncell*dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
     if(size(vec_out)/=this%Ncell) STOP "vec_out of reduce has wrong dimension"
@@ -435,7 +430,6 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
     integer,intent(in)              ::  order_keep
     real(8),intent(inout)           ::  vec_out(:)
 
-    integer                 :: dim_modes(size(order))
     integer                 :: dim_mode_sum,dim_mode_keep
     integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
 
@@ -452,16 +446,13 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
             exit
         endif
     enddo
-    do i=1,size(order)
-        dim_modes(i)=this%get_order_dim(order(i))
-    enddo
-    dim_mode_sum=product(dim_modes)
-    dim_mode_keep=dim_modes(ind_keep)
-    ind_div=product(dim_modes(:ind_keep-1))
+    dim_mode_sum=product(this%dim_modes)
+    dim_mode_keep=this%dim_modes(ind_keep)
+    ind_div=product(this%dim_modes(:ind_keep-1))
 
     if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"
     if(size(vec_in)/=this%Ncell*dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
+    if(size(vec_out)/=this%Ncell*this%dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
 
     vec_out=0.0d0
     do i=1,size(vec_in)
@@ -480,7 +471,6 @@ subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
     integer,intent(in)              :: order_keep
     real(8),intent(inout)           :: vec_out(:)
 
-    integer                 :: dim_modes(size(order))
     integer                 :: dim_mode_sum,dim_mode_keep
     integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
 
@@ -497,16 +487,13 @@ subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
             exit
         endif
     enddo
-    do i=1,size(order)
-        dim_modes(i)=this%get_order_dim(order(i))
-    enddo
-    dim_mode_sum=product(dim_modes)
-    dim_mode_keep=dim_modes(ind_keep)
-    ind_div=product(dim_modes(:ind_keep-1))
+    dim_mode_sum=product(this%dim_modes)
+    dim_mode_keep=this%dim_modes(ind_keep)
+    ind_div=product(this%dim_modes(:ind_keep-1))
 
     if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"
     if(size(vec_in)/=dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
+    if(size(vec_out)/=this%dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
 
     vec_out=0.0d0
     do i=1,size(vec_in)
@@ -695,7 +682,7 @@ subroutine point_order_onsite(lat,op,dimH,modes,vec)
     endif
 end subroutine
 
-subroutine point_order_onsite_single(lat,op,i_site,dim_mode,modes,vec)
+subroutine point_order_onsite_single(lat,op,i_site,dim_bnd,dim_mode,modes,vec,bnd)
     !Subroutine that points modes to the order parameter vector according to op and dimH input
     !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
     !, and points modes
@@ -703,11 +690,13 @@ subroutine point_order_onsite_single(lat,op,i_site,dim_mode,modes,vec)
     class(lattice), intent(in)              :: lat
     integer,intent(in)                      :: op(:)
     integer,intent(in)                      :: dim_mode,i_site
+    integer, intent(in)                     :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
     real(8),pointer,intent(out)             :: modes(:)
-    real(8),allocatable,target,intent(out)  :: vec(:)
+    real(8),allocatable,target,intent(out)  :: vec(:)   !space to allocate array if not single operator
+    integer,intent(out)                     :: bnd(2)   !boundary indices in (1:dim_mode*N_cell)-basis
 
     if(size(op)==1)then
-        Call set_order_point_single(lat,op(1),i_site,modes)
+        Call set_order_point_single(lat,op(1),i_site,dim_bnd,dim_mode,modes,bnd)
     else
         allocate(vec(dim_mode),source=0.0d0)
         Call set_order_comb_single(lat,op,i_site,vec)
@@ -715,31 +704,52 @@ subroutine point_order_onsite_single(lat,op,i_site,dim_mode,modes,vec)
     endif
 end subroutine
 
+subroutine get_bnd_single_1(lat,op,i_site,dim_bnd,bnd)
+    class(lattice), intent(in)  :: lat
+    integer,intent(in)          :: op
+    integer,intent(in)          :: i_site
+    integer,intent(in)          :: dim_bnd(2,number_different_order_parameters)
+    integer,intent(out)         :: bnd(2)
+
+    bnd=dim_bnd(:,op)+(i_site-1)*lat%dim_modes(op)
+end subroutine
+
+subroutine get_bnd_single(lat,op,i_site,dim_bnd,bnd)
+    class(lattice), intent(in)   :: lat
+    integer,intent(in)          :: op(:)
+    integer,intent(in)          :: i_site
+    integer,intent(in)          :: dim_bnd(2,number_different_order_parameters)
+    integer,intent(out)         :: bnd(2)
+
+    integer     ::  dim_mode
+
+    if(size(op)==1)then
+        Call get_bnd_single_1(lat,op(1),i_site,dim_bnd,bnd)
+    else
+        STOP "IMPLEMENT FOR RANK2 and higher parameters"
+    endif
+
+end subroutine
+
+
 function get_order_dim(this,order,ignore) result(dim_mode)
     class(lattice),intent(in)   :: this
     integer,intent(in)          :: order
     logical,intent(in),optional :: ignore
     integer                     :: dim_mode
 
-    select case(order)
-    case(1)
-        dim_mode=this%M%dim_mode
-    case(2)
-        dim_mode=this%E%dim_mode
-    case(3)
-        dim_mode=this%B%dim_mode
-    case(4)
-        dim_mode=this%T%dim_mode
-    case(5)
-        dim_mode=this%u%dim_mode
-    case default
+#ifdef CPP_DEBUG
+    !this could spot a programming mistake
+    if(order<1.or.order>number_different_order_parameters)then
         write(*,*) "order=",order
         STOP "trying to get dim_mode for unset orderparameter"
-    end select
-    if(present(ignore))then
-        if(ignore) return
     endif
+#endif
+    dim_mode=this%dim_modes(order)
     if(dim_mode<1)then
+        if(present(ignore))then
+            if(ignore) return
+        endif
         write(*,*) 'trying to get dim_mode for order=',order 
         ERROR STOP "dim_mode not positive, requested order parameter not set?"
     endif
@@ -832,7 +842,7 @@ subroutine copy_lattice(this,copy)
     copy%dim_lat=this%dim_lat
     copy%ncell=this%ncell
     copy%n_system=this%n_system
-    copy%dim_mode=this%dim_mode
+    copy%dim_modes=this%dim_modes
     copy%nmag=this%nmag
     copy%nph=this%nph
     copy%periodic=this%periodic
@@ -923,18 +933,18 @@ use mpi_basic
     integer     :: ierr
     integer     :: N
 
-    Call MPI_Bcast(this%areal   , 9, MPI_REAL8, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%astar   , 9, MPI_REAL8, comm%mas, comm%com,ierr)
     CALL this%cell%bcast(comm)
-    Call MPI_Bcast(this%dim_lat , 3, MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%Ncell   , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%a_sc    , 9, MPI_REAL8, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%a_sc_inv, 9, MPI_REAL8, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%dim_mode, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%n_system, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%nmag    , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%nph     , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%periodic, 3, MPI_LOGICAL, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%areal    , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%astar    , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%dim_lat  , 3                   , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%Ncell    , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%a_sc     , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%a_sc_inv , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%dim_modes, size(this%dim_modes), MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%n_system , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%nmag     , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%nph      , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%periodic , 3                   , MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%order_set, size(this%order_set), MPI_LOGICAL, comm%mas, comm%com,ierr)
 
     if(comm%ismas) N=size(this%world)

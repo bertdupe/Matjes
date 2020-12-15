@@ -109,7 +109,6 @@ subroutine measure_gatherv(this,com)
         Call measure_set_MPI_type()
         MPI_set=.true.
     endif
-    CALL MPI_BARRIER(com%com,ierr)
     Call MPI_Gatherv(this(1),com%cnt(com%id+1),MPI_exp_val,this(1),com%cnt,com%displ,MPI_exp_val,com%mas,com%com,ierr)
 #else
     continue

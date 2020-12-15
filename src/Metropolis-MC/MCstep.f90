@@ -33,9 +33,14 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     real(kind=8) :: S_new(3),S_old(3)
     integer :: i_spin   !chosen spin index (1:N_cell*nmag)
     integer :: i_site   !unit cell index of chosen spin index
+    integer :: i_spin_uc    !spin index in unit-cell
     
     call choose_spin(i_spin,N_spin)
     i_site=(i_spin-1)/lat%nmag+1
+    i_spin_uc= modulo((i_spin-1),lat%nmag)+1
+    !1 has to be magnetic moment order parameter
+    state_prop%dim_bnd(:,1)=[(i_spin_uc-1)*3+1,i_spin_uc*3] 
+
 #ifdef CPP_DEBUG
     if(lat%nmag>1) ERROR STOP "A lot of things will not work in this routine with nmag>1"
 #endif
@@ -64,12 +69,12 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
     !       and decider, if the Spin flip will be performed
     !----------------------------------
     !Energy of old configuration
-    E_old=energy_single(Hams,i_site,lat)
+    E_old=energy_single(Hams,i_site,state_prop%dim_bnd,lat)
     S_old=lat%M%modes_3(:,i_spin)
     
     !Energy of the new configuration
     lat%M%modes_3(:,i_spin)=S_new
-    E_new=energy_single(Hams,i_site,lat)
+    E_new=energy_single(Hams,i_site,state_prop%dim_bnd,lat)
     lat%M%modes_3(:,i_spin)=S_old
     !! variation of the energy for this step
     DE=E_new-E_old

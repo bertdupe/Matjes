@@ -28,7 +28,7 @@ subroutine GNEB(my_lattice,io_simu,Ham)
     integer :: nim
     
     N_cell=my_lattice%ncell
-    size_order=my_lattice%dim_mode
+    size_order=my_lattice%M%dim_mode
     gra_log=io_simu%io_Xstruct
     ci=1
     Call rw_gneb(io_gneb)

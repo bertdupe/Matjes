@@ -1,6 +1,6 @@
 module m_H_dense
 !Hamiltonian type specifications using dense matrices and no external library
-use m_derived_types, only: lattice
+use m_derived_types, only: lattice, number_different_order_parameters
 use m_H_coo_based
 
 type,extends(t_H_coo_based) :: t_H_dense
@@ -188,24 +188,29 @@ subroutine set_from_Hcoo(this,H_coo,lat)
 end subroutine 
 
 
-subroutine eval_single(this,E,i_m,lat)
-    use m_derived_types, only: lattice
+subroutine eval_single(this,E,i_m,dim_bnd,lat)
     ! input
     class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
+    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
     ! output
-    real(kind=8), intent(out)       :: E
+    real(8), intent(out)            :: E
     ! internal
     real(8),pointer                 :: modes_l(:),modes_r(:)
     real(8),allocatable,target      :: vec_l(:),vec_r(:)
     real(8)                         :: tmp(this%dimH(2))
+    integer                         :: bnd(2)
 
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
+    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
 
-    tmp=matmul(this%H(:,1+(i_m-1)*this%dim_mode(2):i_m*this%dim_mode(2)),modes_r(1+(i_m-1)*this%dim_mode(2):i_m*this%dim_mode(2)))
+    tmp=matmul(this%H(:,bnd(1):bnd(2)),modes_r)
     E=dot_product(modes_l,tmp)
+
+    if(allocated(vec_l)) deallocate(vec_l)
+    if(allocated(vec_r)) deallocate(vec_r)
 end subroutine 
+
 
 end module
