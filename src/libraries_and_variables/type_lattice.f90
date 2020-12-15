@@ -60,7 +60,6 @@ contains
     procedure :: set_order_comb_exc_single
     procedure :: point_order => point_order_onsite
     procedure :: point_order_single => point_order_onsite_single
-    procedure :: bnd_single => get_bnd_single
     !!reduce that order parameter again
     procedure :: reduce
     procedure :: reduce_single
@@ -502,43 +501,57 @@ subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
     enddo
 end subroutine
 
-subroutine set_order_comb_single(this,order,i_site,vec)
+subroutine set_order_comb_single(this,order,i_site,dim_bnd_in,vec,bnd)
     !fills the combination of several order parameters according to order
     !probably quite slow implementation, but should at least work for any reasonable size of order
     !I SHOULD CHECK HOW SLOW THIS IS
     !vec should already be allocated to the size of the final vector ->product(dim_modes)
-    class(lattice),intent(in)         ::  this
-    integer,intent(in)                ::  order(:),i_site
-    real(8),intent(inout)             ::  vec(:)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: order(:) !order integers (1:rank reduce operator)->(1:number_different_order_parameters)
+    integer,intent(in)          :: i_site   !site index (1:Ncell)
+    integer, intent(in)         :: dim_bnd_in(2,number_different_order_parameters)  
+    real(8),intent(inout)       :: vec(:)
+    integer,intent(out)         :: bnd(2)
 
-    type(point_arr)         :: points(size(order))
-    integer                 :: dim_modes(size(order))
-    integer                 :: dim_mode_sum
-    integer                 :: i,i_entry,i_ord
-    integer                 :: ind_site(size(order))
-    integer                 :: ind(size(order))
-    integer                 :: ind_div(size(order))
-    integer                 :: entry_per_site
+    !local instance of dim_bnd to only have reduce bnd for the first occurance of the order-parameter (multiple M on one site?, biquadratic?)
+    !(NOT TESTED SINCE NO SUCH HAMILTIONIAN EXISTS YES)
+    integer                 :: dim_bnd(2,number_different_order_parameters)
+    type(point_arr)         :: points(size(order))      !pointers to the respective order parameter
+    integer                 :: dim_modes(size(order))   !overall dim_mode  (1:size(order))-> dim_mode of this order parameter
+    integer                 :: dim_mode_all             !product of all considered order parameters
+    integer                 :: ind_site(size(order))    !index offset to entries of sites for all considered order-parameters
+    integer                 :: ind(size(order))         !index of considered component in space of respective order parameter
+    integer                 :: ind_div(size(order))     !temp. values to get all indices as vector operation 
+    integer                 :: bnd_loc(2,size(order))   !bondaries locally used for each 
+
+    integer                 :: i,i_ord
     
+    dim_bnd=dim_bnd_in
     do i=1,size(order)
         Call this%set_order_point(order(i),points(i)%v)
         dim_modes(i)=this%get_order_dim(order(i))
+        bnd_loc(:,i)=dim_bnd(:,order(i))
+        dim_bnd(:,order(i))=[1,dim_modes(i)]
     enddo
-    dim_mode_sum=product(dim_modes)
+    dim_mode_all=product(dim_modes)
     do i=1,size(order)
         ind_div(i)=product(dim_modes(:i-1))
     enddo
     vec=1.0d0
-    entry_per_site=product(dim_modes)
     ind_site=(i_site-1)*dim_modes
-    do i=1,entry_per_site
+    do i=1,dim_mode_all
         ind=(i-1)/ind_div
-        ind=modulo(ind,dim_modes)+1+ind_site
-        i_entry=i
+        ind=modulo(ind,dim_modes)+1
+        if(any(bnd_loc(1,:)>ind).or.any(bnd_loc(2,:)<ind))then   !probably rather slow and certainly could be solved quicker
+            vec(i)=0.0d0
+            cycle
+        endif
+        ind=ind+ind_site
         do i_ord=1,size(order)
-            vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
+            vec(i)=vec(i)*points(i_ord)%v(ind(i_ord))
         enddo
     enddo
+    bnd=(i_site-1)*dim_mode_all+[1,dim_mode_all]    !return full array, could be optimizes especially if the boundary order parameter is the slowly varying parameter
 end subroutine
 
 subroutine set_order_comb(this,order,vec)
@@ -552,29 +565,27 @@ subroutine set_order_comb(this,order,vec)
     !internal
     type(point_arr)         :: points(size(order))
     integer                 :: dim_modes(size(order))
-    integer                 :: dim_mode_sum
+    integer                 :: dim_mode_all
     integer                 :: i_site,i,i_entry,i_ord
     integer                 :: ind_site(size(order))
     integer                 :: ind(size(order))
     integer                 :: ind_div(size(order))
-    integer                 :: entry_per_site
     
     do i=1,size(order)
         Call this%set_order_point(order(i),points(i)%v)
         dim_modes(i)=this%get_order_dim(order(i))
     enddo
-    dim_mode_sum=product(dim_modes)
+    dim_mode_all=product(dim_modes)
     do i=1,size(order)
         ind_div(i)=product(dim_modes(:i-1))
     enddo
     vec=1.0d0
-    entry_per_site=product(dim_modes)
     do i_site=1,this%ncell
         ind_site=(i_site-1)*dim_modes
-        do i=1,entry_per_site
+        do i=1,dim_mode_all
             ind=(i-1)/ind_div
             ind=modulo(ind,dim_modes)+1+ind_site
-            i_entry=i+(i_site-1)*dim_mode_sum
+            i_entry=i+(i_site-1)*dim_mode_all
             do i_ord=1,size(order)
                 vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
             enddo
@@ -699,7 +710,7 @@ subroutine point_order_onsite_single(lat,op,i_site,dim_bnd,dim_mode,modes,vec,bn
         Call set_order_point_single(lat,op(1),i_site,dim_bnd,dim_mode,modes,bnd)
     else
         allocate(vec(dim_mode),source=0.0d0)
-        Call set_order_comb_single(lat,op,i_site,vec)
+        Call set_order_comb_single(lat,op,i_site,dim_bnd,vec,bnd)
         modes=>vec
     endif
 end subroutine

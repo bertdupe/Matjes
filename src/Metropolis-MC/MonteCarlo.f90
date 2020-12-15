@@ -110,6 +110,9 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
         Call measure_eval(measure(i_kt),io_MC%Cor_log,N_spin)
         if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)
         Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', size(measure),' steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
+#ifdef CPP_DEBUG
+        write(*,*) 'energy internal:', state_prop%E_total,' energy total:', energy_all(Hams,lat)
+#endif        
     end do !over i_kT
 
     Call gatherv(measure,com_outer)
