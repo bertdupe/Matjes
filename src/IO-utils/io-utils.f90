@@ -473,12 +473,12 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
                 if(val/=0.0d0) Nnonzero=Nnonzero+1
             enddo
             if(Ntriple<1)then
-                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,'Skipping this Hamiltonian'
-                exit
+                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+                ERROR STOP "INPUT PROBABLY WRONG"
             endif
             if(Nnonzero<1)then
-                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,'Skipping this Hamiltonian'
-                exit
+                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+                ERROR STOP "INPUT PROBABLY WRONG"
             endif
             write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
             success=.true.
@@ -569,12 +569,12 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
                 if(val/=0.0d0) Nnonzero=Nnonzero+1
             enddo
             if(Npair<1)then
-                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,'Skipping this Hamiltonian'
-                exit
+                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+                ERROR STOP "INPUT PROBABLY WRONG"
             endif
             if(Nnonzero<1)then
-                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,'Skipping this Hamiltonian'
-                exit
+                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+                ERROR STOP "INPUT PROBABLY WRONG"
             endif
             write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
             success=.true.

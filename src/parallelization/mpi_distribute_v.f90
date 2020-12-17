@@ -1,11 +1,13 @@
 module mpi_distrib_v
 use mpi_basic
 use m_mc_exp_val, only: exp_val,measure_gatherv,measure_scatterv
+use m_mc_therm_val, only: thermo_gatherv
 implicit none
 
 interface gatherv
     module procedure gatherv_real
     module procedure measure_gatherv
+    module procedure thermo_gatherv
 end interface gatherv
 
 interface scatterv 
@@ -22,7 +24,8 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     type(mpi_type),intent(out)      :: com_inner
 
 #ifdef CPP_MPI
-    integer     :: div,color,tmp
+    integer     :: div,color
+    integer     :: mpi_comm_tmp !temporary MPI_comm
     integer     :: ierr,i
 
     if(N>=com_in%NP)then
@@ -33,18 +36,17 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
         do i=2,com_in%NP
             com_outer%displ(i)=sum(com_outer%cnt(1:i-1))
         enddo
-        Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
-        Call com_inner%set(tmp)
-
+        Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
+        Call com_inner%set(mpi_comm_tmp)
     else
         div=(com_in%Np-1)/N+1
         color=com_in%id/div
-        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,tmp,ierr)
-        Call com_inner%set(tmp)
+        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+        Call com_inner%set(mpi_comm_tmp)
         color=1
         if(com_inner%ismas) color=0
-        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,tmp,ierr)
-        Call com_outer%set(tmp)
+        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+        Call com_outer%set(mpi_comm_tmp)
         allocate(com_outer%cnt(com_outer%Np),source=0)
         allocate(com_outer%displ(com_outer%Np),source=0)
         com_outer%cnt=[(1,i=1,com_outer%Np)]

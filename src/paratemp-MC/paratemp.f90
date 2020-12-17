@@ -129,11 +129,11 @@ subroutine calculate_diffusion_paratemp_track(v,relaxation_steps,i_optTset)
     call calculate_diffusion(v%kT_all,v%kt_updated,v%nup,v%ndown,v%Nsuccess,relaxation_steps,size(v%kt_all),i_optTset)
 end subroutine
 
-subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_thousand,isize,i_optTset)
+subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_swapT,isize,i_optTset)
        use m_fit
        use m_constants, only : k_B
        implicit none
-       integer, intent(in) :: n_thousand,isize
+       integer, intent(in) :: n_swapT,isize
        real(kind=8), intent(in) :: kT_all(:)
        integer, intent(in) :: Nsuccess(:),nup(:),ndown(:)
        logical, intent(in) :: i_optTset
@@ -171,7 +171,7 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
 
 !calculation of the fraction of images going up
        do i=1,isize
-           if (nup(i)+ndown(i)==0) then
+           if (nup(i)+ndown(i)/=0) then
                frac(i)=real(nup(i),8)/real(nup(i)+ndown(i),8)
            else
                write(6,'(a)') 'some up+down fractions are 0'
@@ -179,11 +179,7 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
                write(6,*) (frac(j),j=1,i)
                write(6,*) (nup(j),j=1,i)
                write(6,*) (ndown(j),j=1,i)
-!#ifdef CPP_MPI
-!               if (i_optTset) call mpi_abort(MPI_COMM,errcode,ierr)
-!#else
                if (i_optTset) stop
-!#endif
            endif
        enddo
 
@@ -195,11 +191,7 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
            write(6,'(a)') 'the fraction is not 1 at lower temperature'
            write(6,'(a)') 'you can not optimise the temperature set in these conditions'
            write(6,'(a)') 'try to increase N_thousand'
-!#ifdef CPP_MPI
-!           if (i_optTset) call mpi_abort(MPI_COMM,errcode,ierr)
-!#else
            if (i_optTset) stop
-!#endif
        endif
 
        if (frac(isize).gt.1.0d-8) then
@@ -216,7 +208,7 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
 ! if the temperature is not optimized, write the fraction and go out
        if (.not.i_optTset) then
            do i=1,isize-1
-               write(21,'(3(E20.12E3,2x))') kT_all(i)/k_B,frac(i),(real(Nsuccess(i),8)/n_thousand)
+               write(21,'(3(E20.12E3,2x))') kT_all(i)/k_B,frac(i),(real(Nsuccess(i),8)/n_swapT)
            enddo
            write(21,'(2(E20.12E3,2x))') kT_all(isize)/k_B,frac(isize)
            write(21,'(a)') ''
@@ -347,7 +339,7 @@ subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_tho
        endif
 
        do i=1,isize-1
-            write(21,'(7(E20.12E3,2x))') kt_updated(i)/k_B,kT_all(i)/k_B,frac(i),diffusivity(i),Dfrac(i),real(Nsuccess(i),8)/dble(n_thousand),etaTprim(i)
+            write(21,'(7(E20.12E3,2x))') kt_updated(i)/k_B,kT_all(i)/k_B,frac(i),diffusivity(i),Dfrac(i),real(Nsuccess(i),8)/dble(n_swapT),etaTprim(i)
        enddo
 
        write(21,'(3(E20.12E3,2x),a,/)') kt_updated(isize)/k_B,kT_all(isize)/k_B,frac(isize),'   #  ""  ""  ""  "" '

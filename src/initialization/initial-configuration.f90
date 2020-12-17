@@ -2,6 +2,7 @@ module m_init_config
 use m_derived_types, only: lattice
 use m_io_utils,only: get_parameter
 use m_input_types, only: extpar_input
+use m_init_default
 private
 public :: init_config_lattice
 contains
@@ -20,7 +21,6 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
     character(:), allocatable           :: fname
     logical :: exists
     integer :: i
-    integer :: dim_mode
     real(8),pointer ::  state(:)
 
     if(present(fname_in))then
@@ -29,25 +29,27 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
         fname=fname_default
     endif
     inquire(file=fname,exist=exists)
-    if(.not.exists)then
-        write(*,'(///A)') 'FILE:',fname," NOT FOUND"
-        write(*,'(A///)') 'SKIPPING init_config'
-        return
+    if(exists)then
+        io=open_file_read(fname)
+    else
+        write(*,'(///A/A///A)') 'FILE:',fname," NOT FOUND",'SKIPPING init_config',"SETTING DEFAULT CONFIGURATION"
     endif
-    io=open_file_read(fname)
+
     do i=1,number_different_order_parameters
-        if(initialized(i)) cycle    !don't try to intialize, if already initialized before
-        dim_mode=lat%get_order_dim(i,ignore=.true.)
-        if(dim_mode<1) cycle
+        if(initialized(i).or.lat%dim_modes(i)<1) cycle    !don't try to intialize, if already initialized before or not used
         Call lat%set_order_point(i,state)
-        Call init_config_order(io,fname,lat,trim(order_parameter_name(i)),dim_mode,state,extpar_io,initialized(i))
+        if(exists)then
+            Call init_config_order(io,fname,lat,trim(order_parameter_name(i)),lat%dim_modes(i),state,extpar_io,initialized(i))
+        else
+            call init_default(trim(order_parameter_name(i)),lat%dim_modes(i),state,extpar_io)
+            initialized(i)=.true.
+        endif
         nullify(state)
     enddo
-    call close_file(fname,io)
+    if(exists) call close_file(fname,io)
 end subroutine
 
 subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
-    use m_init_default
     use m_init_DW
     use m_init_heavyside
     use m_init_Sk

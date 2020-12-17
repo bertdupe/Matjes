@@ -3,6 +3,8 @@ module m_relaxtyp
     use m_eff_field, only : get_eff_field_single
     use m_H_public
     implicit none
+    private
+    public :: underrelax, overrelax
     
     contains
     ! functions that relaxes the spins with respect of the dE/dM

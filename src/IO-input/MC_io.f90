@@ -8,12 +8,11 @@ type MC_input
     integer     :: n_Tsteps=1
     integer     :: n_sizerelax=1
     integer     :: n_thousand=1000
-    integer     :: restart_MC_steps=0
     integer     :: T_relax=1
     integer     :: T_auto=1
     integer     :: Total_MC_Steps=1000
+    integer     :: N_Topt=1 !number temperature optimization steps in parallel tempering
 
-    logical     :: i_restart=.false.
     logical     :: print_relax=.false.
     logical     :: Cor_log=.false.
     logical     :: do_fluct=.True.
@@ -22,6 +21,8 @@ type MC_input
     logical     :: overrelax=.false.
     logical     :: equi=.false.
     logical     :: sphere=.false.
+    logical     :: expval_save=.false. !save the expectation values
+    logical     :: expval_read=.false.  !read expectation values from previous calculation
     real(8)     :: cone=pi
 end type
 
@@ -40,12 +41,11 @@ subroutine bcast_MC(this,com)
     Call MPI_BCAST( this%n_Tsteps        ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%n_sizerelax     ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%n_thousand      ,1,MPI_INTEGER,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%restart_MC_steps,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%T_relax         ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%T_auto          ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%Total_MC_Steps  ,1,MPI_INTEGER,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%N_Topt          ,1,MPI_INTEGER,com%mas,com%com,ierr)
 
-    Call MPI_BCAST( this%i_restart  ,1,MPI_LOGICAL,com%mas,com%com,ierr)
     Call MPI_BCAST( this%print_relax,1,MPI_LOGICAL,com%mas,com%com,ierr)
     Call MPI_BCAST( this%Cor_log    ,1,MPI_LOGICAL,com%mas,com%com,ierr)
     Call MPI_BCAST( this%do_fluct   ,1,MPI_LOGICAL,com%mas,com%com,ierr)
@@ -54,6 +54,8 @@ subroutine bcast_MC(this,com)
     Call MPI_BCAST( this%overrelax  ,1,MPI_LOGICAL,com%mas,com%com,ierr)
     Call MPI_BCAST( this%equi       ,1,MPI_LOGICAL,com%mas,com%com,ierr)
     Call MPI_BCAST( this%sphere     ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%expval_save,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%expval_read,1,MPI_LOGICAL,com%mas,com%com,ierr)
 
     Call MPI_BCAST( this%cone  ,1,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
 #else
@@ -61,7 +63,6 @@ subroutine bcast_MC(this,com)
 #endif
 end subroutine
 
-!subroutine rw_MC(n_Tsteps,n_sizerelax,n_thousand,restart_MC_steps,Total_MC_Steps,T_relax,T_auto,cone,i_restart,ising,underrel,overrel,sphere,equi,print_relax,Cor_log)
 subroutine rw_MC(inp_MC,io_in)
     use m_io_utils
     use m_io_files_utils
@@ -78,15 +79,14 @@ subroutine rw_MC(inp_MC,io_in)
     call get_parameter(io_input,'input','n_Tsteps',inp_MC%n_Tsteps)
     call get_parameter(io_input,'input','n_sizerelax',inp_MC%n_sizerelax)
     call get_parameter(io_input,'input','n_relaxation',inp_MC%n_thousand)
-    call get_parameter(io_input,'input','restart_MC_steps',inp_MC%restart_MC_steps)
     call get_parameter(io_input,'input','Total_MC_Steps',inp_MC%Total_MC_Steps)
     call get_parameter(io_input,'input','T_relax',inp_MC%T_relax)
     call get_parameter(io_input,'input','T_auto',inp_MC%T_auto)
+    call get_parameter(io_input,'input','n_Topt',inp_MC%N_Topt)
     
     call get_parameter(io_input,'input','cone',inp_MC%cone)
     call get_parameter(io_input,'input','print_relax',inp_MC%print_relax)
     call get_parameter(io_input,'input','Cor_log',inp_MC%Cor_log)
-    call get_parameter(io_input,'input','restart',inp_MC%i_restart)
     call get_parameter(io_input,'input','do_fluct',inp_MC%do_fluct)
 
     call get_parameter(io_input,'input','ising',inp_MC%ising)
@@ -94,6 +94,9 @@ subroutine rw_MC(inp_MC,io_in)
     call get_parameter(io_input,'input','overrelaxation',inp_MC%overrelax)
     call get_parameter(io_input,'input','sphere_samp',inp_MC%sphere)
     call get_parameter(io_input,'input','equi_samp',inp_MC%equi)
+
+    call get_parameter(io_input,'input','expval_save',inp_MC%expval_save)
+    call get_parameter(io_input,'input','expval_read',inp_MC%expval_read)
 
     methods=[inp_mc%ising,inp_MC%underrelax,inp_MC%overrelax,inp_MC%sphere,inp_MC%equi]
     if(count(methods)>1)then

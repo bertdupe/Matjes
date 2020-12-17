@@ -66,7 +66,7 @@ subroutine eval_fluct(MjpMim_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,fluct_v
                 MipMjp=MipMjp+cmplx(Mi(1)*Mj(1)-Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)+Mi(2)*Mj(1),8)  ! Mi+Mj+
 
 
-				!write(*,*) 'i,j  = ', i_cell, j_flat,  ', Mi = ' , Mi(1), Mi(2),Mi(3), 'Mj=', Mj(1), Mj(2),Mj(3), '  and (Mi x Mj)_z =  ', aimag( MjpMim)
+                !write(*,*) 'i,j  = ', i_cell, j_flat,  ', Mi = ' , Mi(1), Mi(2),Mi(3), 'Mj=', Mj(1), Mj(2),Mj(3), '  and (Mi x Mj)_z =  ', aimag( MjpMim)
             enddo
         enddo
 
@@ -76,7 +76,7 @@ subroutine eval_fluct(MjpMim_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,fluct_v
     MipMim_sum=MipMim_sum+MipMim
     MipMjp_sum=MipMjp_sum+MipMjp
 
-	!write(*,*) 'end of one step, MjpMim_sum = ' , MjpMim_sum
+    !write(*,*) 'end of one step, MjpMim_sum = ' , MjpMim_sum
 
 end subroutine
 
@@ -94,8 +94,8 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
     N_shells = 1 !choose how many shells of neighbours: 1 = first neighbours  /!\currently boundary wont work for more than 1 shell 
     Call get_table_nn(lat,N_shells,indexNN,tableNN)
     allocate(flat_nei(N_cell,sum(indexNN))) !flat nei is N x number of neighbours per site
-	flat_nei(:,:)=0;
-	
+    flat_nei(:,:)=0;
+    
     !convert to a table with linear indices (Ncell, indexNN), /!\ taking only forward neighbours along x,y,z
     do i_sh=1,N_shells !loop on shell of neighbours
         do i_x=1,lat%dim_lat(1) !loop on lattice sites
@@ -103,28 +103,23 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
                 do i_z=1,lat%dim_lat(3) 
                     temp1=[i_x,i_y,i_z]
                     i_flat=lat%index_m_1(temp1)  !get i_flat
-					!write(*,*) 'not in nei loop temp1=', temp1(1:3), 'flat index : ', i_flat 
+                    !write(*,*) 'not in nei loop temp1=', temp1(1:3), 'flat index : ', i_flat 
                     do i_nei=1,indexNN(i_sh) !loop on neighbours
                         temp2=tableNN(1:3,i_nei,i_x,i_y,i_z,1)!get x,y,z indices of neighbour
-			
+            
+                        if( (all(temp1.ge.temp2)).or.(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) ) then  !do not keep backwards neighbours or non-connected neighbours
+                            j_flat=-1
+                        else if( any(temp1==1.and.temp2==lat%dim_lat.and.lat%dim_lat/=1))then
+                            j_flat=-1 
+                            !write(*,*) 'boundary nei to remove: verified for temp1, temp2=', temp1(1:3), temp2(1:3)
+                        else
+                            j_flat=lat%index_m_1(temp2) !get j_flat
+                        end if
 
-						if( (all(temp1.ge.temp2)).or.(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) ) then  !do not keep backwards neighbours or non-connected neighbours
-							j_flat=-1; 
-						else if ( ( temp1(1)==1.and.temp2(1)==lat%dim_lat(1).and.lat%dim_lat(1).ne.1 ) &
-						.or.      ( temp1(2)==1.and.temp2(2)==lat%dim_lat(2).and.lat%dim_lat(2).ne.1 ) &
-						.or.      ( temp1(3)==1.and.temp2(3)==lat%dim_lat(3).and.lat%dim_lat(3).ne.1 ) )  then !boundary:remove left and top
-							j_flat=-1 
-							!write(*,*) 'boundary nei to remove: verified for temp1, temp2=', temp1(1:3), temp2(1:3)
-						else
-                       		j_flat=lat%index_m_1(temp2) !get j_flat
-						end if
-
-						!boundary: add right and bottom
-						if ( (temp1(1)==lat%dim_lat(1).and.temp2(1)==1.and.lat%dim_lat(1).ne.1) &
-						.or. (temp1(2)==lat%dim_lat(2).and.temp2(2)==1.and.lat%dim_lat(2).ne.1) &
-						.or. (temp1(3)==lat%dim_lat(3).and.temp2(3)==1.and.lat%dim_lat(3).ne.1)	) then
-                       		j_flat=lat%index_m_1(temp2) 
-						end if
+                        !boundary: add right and bottom
+                        if ( any(temp1==lat%dim_lat.and.temp2==1.and.lat%dim_lat/=1))then
+                            j_flat=lat%index_m_1(temp2) 
+                        end if
 
                         flat_nei(i_flat,i_nei)=j_flat
                     enddo
@@ -134,7 +129,7 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
     enddo
 
  !do i_flat=1,N_cell
-!	write(*,*)'flat_nei for spin',i_flat, ' =', flat_nei(i_flat,:)
+!   write(*,*)'flat_nei for spin',i_flat, ' =', flat_nei(i_flat,:)
 !enddo
 
 END subroutine get_neighbours
