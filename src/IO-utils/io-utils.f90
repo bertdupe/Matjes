@@ -1,7 +1,8 @@
 module m_io_utils
 use m_convert
 use m_derived_types
-use, intrinsic :: iso_fortran_env, only : output_unit
+use m_io_read_util
+use, intrinsic :: iso_fortran_env, only : output_unit,error_unit
 implicit none
 
 interface get_lines
@@ -42,6 +43,7 @@ interface get_parameter
  module procedure get_1D_vec_cmplx
  module procedure get_1D_vec_int
  module procedure get_1D_vec_bool
+ module procedure get_vec1D_real
  module procedure get_int
  module procedure get_int8
  module procedure get_real
@@ -609,7 +611,7 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
         do i=1,size(Hpairs)
             do j=2,size(Hpairs(i)%dist)
                 if(any(Hpairs(i)%dist(j)==Hpairs(i)%dist(:j-1)))then
-                    write(output_unit,*) "ERROR, found the same distance twice for for Hamiltonian ",var_name
+                    write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
                     write(output_unit,*) "       at atom indices  :",Hpairs(i)%attype
                     write(output_unit,*) "       with the distance:",Hpairs(i)%dist(j)
                     STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
@@ -637,66 +639,48 @@ subroutine get_cell(io,fname,attype,cell)
     character(len=*),parameter  ::  var_name='atoms'
     character(len=30)       ::  atname
     integer     :: id
-    integer :: nread,i,j,check,length_string,n_read_at
+    integer :: i,j,length_string
     integer :: stat
     character(len=100) :: str
     logical :: used(size(attype))
-    
-    nread=0
-    n_read_at=0
+
+    Call set_pos_entry(io,fname,var_name)
     length_string=len_trim(var_name)
-    rewind(io)
-    do
-        read (io,'(a)',iostat=stat) str
-        if (stat /= 0) exit
-        str= trim(adjustl(str))
-        if (len_trim(str)==0) cycle
-        if (str(1:1) == '#' ) cycle
-
-        !We start to read the input
-        if ( str(1:length_string) == var_name(1:length_string)) then
-            read(str(length_string+1:),*,iostat=stat) N_atoms
-            if(stat/=0) STOP "atoms keyword found in input, but the number of atoms is not specified there"
-            write(output_unit,'(/A,I6,A)') "found atomcell keyword, start reading the ",N_atoms," atoms"
-            allocate(cell%atomic(N_atoms))
-            nread=nread+1
-            do i=1,N_atoms
-                read(io,'(a)',iostat=stat) str
-                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-                read(str,*,iostat=stat) atname,cell%atomic(i)%position
-                if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
-                read(atname,*,iostat=stat) id
-                if(stat/=0)then
-                    id=0
-                    do j=1,size(attype)
-                        if(trim(attype(j)%name)==trim(atname))then
-                            id=j
-                            exit
-                        endif
-                    enddo
-                    if(id==0) STOP "Did not find name of atom in atom types"
+    read (io,'(a)',iostat=stat) str
+    read(str(length_string+1:),*,iostat=stat) N_atoms
+    if(stat/=0) STOP "atoms keyword found in input, but the number of atoms is not specified there"
+    write(output_unit,'(/A,I6,A)') "found atomcell keyword, start reading the ",N_atoms," atoms"
+    allocate(cell%atomic(N_atoms))
+    do i=1,N_atoms
+        read(io,'(a)',iostat=stat) str
+        if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+        read(str,*,iostat=stat) atname,cell%atomic(i)%position
+        if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        read(atname,*,iostat=stat) id
+        if(stat/=0)then
+            id=0
+            do j=1,size(attype)
+                if(trim(attype(j)%name)==trim(atname))then
+                    id=j
+                    exit
                 endif
-                if(id<1.or.id>size(attype)) STOP "ATOM TYPE ID IS NONSENSICAL"
-                cell%atomic(i)%type_id=id
-                Call cell%atomic(i)%set_attype(attype(id))
-                write(output_unit,*) "successfully read atom number:",i," of ",N_atoms
             enddo
+            if(id==0) STOP "Did not find name of atom in atom types"
         endif
+        if(id<1.or.id>size(attype)) STOP "ATOM TYPE ID IS NONSENSICAL"
+        cell%atomic(i)%type_id=id
+        Call cell%atomic(i)%set_attype(attype(id))
+        write(output_unit,*) "successfully read atom number:",i," of ",N_atoms
     enddo
 
-    if(.not.allocated(cell%atomic)) STOP "FAILED TO READ ATOMS, add atoms input"
+    Call check_further_entry(io,fname,var_name)
+
     !check all types are used
-    used=.false.
-    do i=1,size(cell%atomic)
-        used(cell%atomic(i)%type_id)=.true.
-    enddo
+    used=[(any(cell%atomic(:)%type_id==i),i=1,size(attype))]
     do j=1,size(used)
-        if(.not.used(j)) write(output_unit,'(3A)') 'ATOM TYPE "',trim(attype(j)%name), '" is not used'
+        if(.not.used(j)) write(error_unit,'(3A)') 'ATOM TYPE "',trim(attype(j)%name), '" is not used'
     enddo
     if(.not.all(used)) STOP "SOME ATOM TYPES ARE NOT USED, CHECK CELL SETUP"
-
-
-    check=check_read(nread,var_name,fname)
 end subroutine 
 
 
@@ -715,44 +699,50 @@ subroutine get_atomtype(io,fname,attype)
     ! internal variable
     integer     ::  N_attype,j
     character(len=*),parameter  ::  var_name='atomtypes'
-    integer :: nread,i,check,length_string,n_read_at
+    integer :: i,length_string
     integer :: stat
     character(len=100) :: str
+
+    Call set_pos_entry(io,fname,var_name)
     
-    nread=0
-    n_read_at=0
     length_string=len_trim(var_name)
-    rewind(io)
-    do
-        read (io,'(a)',iostat=stat) str
-        if (stat /= 0) exit
-        str= trim(adjustl(str))
-        if (len_trim(str)==0) cycle
-        if (str(1:1) == '#' ) cycle
-
-        !We start to read the input
-        if ( str(1:length_string) == var_name(1:length_string)) then
-            nread=nread+1
-            read(str(length_string+1:),*,iostat=stat) N_attype
-            if(stat/=0) STOP "atomtypes keyword found in input, but the number of atom types is not specified there"
-            if(allocated(attype)) STOP "PROGRAMMING MISTAKE? attype should not be allocated at start of get_atomic"
-            allocate(attype(N_attype))
-            do i=1,N_attype
-                read(io,'(a)',iostat=stat) str
-                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-                read(str,*,iostat=stat) attype(i)%name,attype(i)%moment,attype(i)%charge,attype(i)%mass,attype(i)%use_ph
-                if (stat /= 0) STOP "FAILED TO READ PARAMETERS IN ATOMTYPE, ARE ALL RELEVANT PARAMETERS SPECIFIED AND ARE ALL ATOM TYPES SET?"
-                do j=1,i-1
-                    if(trim(attype(i)%name)==trim(attype(j)%name)) STOP "Found atom types with same name, this should not happen"
-                enddo
-                write(output_unit,*) "successfully read atom type number:",i," of ",N_attype
-                write(output_unit,*) attype(i)
-            enddo
+    read (io,'(a)',iostat=stat) str
+    read(str(length_string+1:),*,iostat=stat) N_attype
+    if(stat/=0) STOP "atomtypes keyword found in input, but the number of atom types is not specified there"
+    if(allocated(attype)) STOP "PROGRAMMING MISTAKE? attype should not be allocated at start of get_atomic"
+    allocate(attype(N_attype))
+    do i=1,N_attype
+        write(output_unit,*) "Trying to read atom type ",i," of ",N_attype
+        read(io,'(a)',iostat=stat) str
+        if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+        read(str,*,iostat=stat) attype(i)%name,attype(i)%moment,attype(i)%charge,attype(i)%mass,attype(i)%use_ph,attype(i)%orbitals
+        if (stat == 0)then
+            write(output_unit,*) attype(i)
+            cycle
         endif
+        read(str,*,iostat=stat) attype(i)%name,attype(i)%moment,attype(i)%charge,attype(i)%mass,attype(i)%use_ph
+        if (stat == 0)then
+            write(output_unit,*) attype(i)
+            cycle
+        endif
+        STOP "FAILED TO READ PARAMETERS IN ATOMTYPE, ARE ALL RELEVANT PARAMETERS SPECIFIED AND ARE ALL ATOM TYPES SET?"
     enddo
-    
-    check=check_read(nread,var_name,fname)
 
+    Call check_further_entry(io,fname,var_name)
+
+    do j=1,N_attype
+        do i=1,j-1
+            if(trim(attype(i)%name)==trim(attype(j)%name))then
+                write(error_unit,*) "Error, found 2 atoms types with the same name: atom type",i," and ", j
+                write(error_unit,*) "atom type ",i
+                write(error_unit,*) attype(i)
+                write(error_unit,*) 
+                write(error_unit,*) "atom type ",j
+                write(error_unit,*) attype(j)
+                STOP
+            endif
+        enddo
+    enddo
 end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1209,6 +1199,29 @@ if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', vec
 
 end subroutine get_1D_vec_real
 
+subroutine get_vec1d_real(io,fname,vname,vec)
+    real(8), intent(inout) :: vec(:)
+    integer, intent(in) :: io
+    character(len=*), intent(in) :: vname,fname
+    !internal
+    logical :: success
+    integer :: stat
+    character(len=len(vname))   ::  tmp
+   
+    Call set_pos_entry(io,fname,vname,success)
+    if(success)then
+        read(io,*,iostat=stat) tmp, vec
+        if(stat/=0)then
+            write(error_unit,'(/3A)') 'Failed to read ',vname,' but keyword is given'
+            STOP "Fix input"
+        endif
+    else
+        write(error_unit,'(2A)') 'No entry found for ',vname
+        write(error_unit,'(A)') 'Using default value:'
+        write(error_unit,'(3E16.8)') vec
+    endif
+    Call check_further_entry(io,fname,vname)
+end subroutine 
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

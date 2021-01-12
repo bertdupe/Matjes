@@ -10,7 +10,7 @@ subroutine tightbinding(lat)
     type(lattice), intent(in) :: lat
 
     !read tight-binding io parameter from input and set them in TB_params(m_tb_params)
-    Call set_TB_params(lat%ncell)
+    Call set_TB_params(lat)
     !do real-space tight-binding stuff
     if(TB_params%flow%do_r) Call tightbinding_r(lat,TB_params%H)   
     !TAKE OUT K-SPACE STUFF SO FAR

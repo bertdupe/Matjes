@@ -2,7 +2,6 @@ module m_tightbinding_r
 use m_tb_params, only : TB_params
 use m_tb_types
 use m_derived_types, only : lattice
-use m_energy_r, only: get_eigenval_r,get_eigenvec_r,init_Hr
 use m_occupation, only: calc_occupation
 use m_occupation_mult, only: occupation_mult
 use m_fermi, only: calc_fermi 
@@ -10,6 +9,9 @@ use m_dos, only: calc_dos
 use m_dos_sc, only: calc_dos_sc
 use m_distribution, only: int_distrib,fermi_distrib,dE_fermi_distrib
 use m_save_state_r,only: TB_write_states_r, TB_read_states_r
+use m_init_Hr
+use m_H_tb_public
+use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
 private
 public :: tightbinding_r
@@ -26,6 +28,7 @@ subroutine tightbinding_r(lat,h_par)
     logical                     :: calc_eigval,calc_eigvec
 
     logical                     :: read_success
+    class(H_tb),allocatable     :: H
 
     procedure(int_distrib),pointer  :: dist_ptr => null()
 
@@ -43,16 +46,16 @@ subroutine tightbinding_r(lat,h_par)
     endif
 
     !initialize Hamiltonian
-    if(calc_eigvec.or.calc_eigval) Call init_Hr(lat,h_par,TB_params%io_H,lat%M%modes_v)
+    if(calc_eigvec.or.calc_eigval) Call get_all_Hr(lat,TB_params%io_H,H)
 
     !calculate eigenvalue/eigenvector
     if(calc_eigvec)then
-        write(*,*) 'start eigenvec_r'
-        Call get_eigenvec_r(h_par,eigval,eigvec)
+        write(output_unit,'(//A)') 'Start calculating eigenvectors'
+        Call H%get_evec(eigval,eigvec)
         read_success=.false.
     elseif(calc_eigval)then
-        write(*,*) 'start eigenval_r'
-        Call get_eigenval_r(h_par,eigval)
+        write(output_unit,'(//A)') 'Start calculating eigenvalues'
+        Call H%get_eval(eigval)
         read_success=.false.
     endif
 
@@ -61,22 +64,23 @@ subroutine tightbinding_r(lat,h_par)
 
     !write spectrum
     if(TB_params%flow%spec_r)then
-        write(*,*) 'start write spectrum'
+        write(output_unit,'(/A)') 'start write spectrum'
         Call write_realarray('eigval.dat',eigval)
     endif
 
     !Calculate Fermi energy (only useful without SC)
     E_f=TB_params%io_ef%E_F_in
     if(TB_params%flow%fermi_r)then
-        write(*,*) 'start calculate Fermi energy'
+        write(output_unit,'(/A)') 'start calculate Fermi energy'
         if(TB_params%is_sc)then
             STOP "calculation of Fermi energy doesn't work when using superconductivity"
         else
             Call calc_fermi(eigval, TB_params%io_EF%N_electrons*h_par%ncell, TB_params%io_ef%kt, E_f)
         endif
     endif
+
     if(TB_params%flow%dos_r)then
-        write(*,*) 'start calculate DOS'
+        write(output_unit,'(/A)') 'start calculate DOS'
         if(TB_params%is_sc)then
             Call calc_dos_sc(eigval,eigvec,TB_params%io_dos,'dos_r_sc.dat')
         else
@@ -85,7 +89,7 @@ subroutine tightbinding_r(lat,h_par)
     endif
 
     if(TB_params%flow%occ_r)then
-        write(*,*) 'start calculate occupation'
+        write(output_unit,'(/A)') 'start calculate occupation'
          !maybe use different smearing than EF input
         dist_ptr=>fermi_distrib
         Call calc_occupation(h_par,eigvec,eigval,E_f,TB_params%io_Ef%kt,'occ.dat',dist_ptr)
@@ -94,13 +98,11 @@ subroutine tightbinding_r(lat,h_par)
     endif
 
     if(TB_params%flow%occ_mult_r)then
-        write(*,*) 'start calculate multiple occupations'
+        write(output_unit,'(/A)') 'start calculate multiple occupations'
         Call occupation_mult(h_par,TB_params%io_occ_mult,eigval,eigvec)
     endif
 
 end subroutine 
-
-
 
 
 subroutine write_realarray(fname,realarr)
@@ -110,9 +112,7 @@ subroutine write_realarray(fname,realarr)
     integer                     :: i,io
 
     io=open_file_write(fname)
-    do i=1,size(realarr)
-       write(io,'(E16.8)') realarr(i)
-    enddo
+    write(io,'(E16.8)') realarr
     call close_file(fname,io)
 end subroutine 
 

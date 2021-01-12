@@ -1,20 +1,32 @@
 module m_TB_types
+use m_input_H_types
+use m_types_tb_h_inp
 implicit none
 public
 private upd_h_par
+
+
+
 type parameters_TB_IO_H
     !parameters directly for the Hamiltonian
-    real(kind=8), allocatable :: hopping(:,:,:)   ! 1: up or down, 2: orbital, 3: neighbor
-    real(kind=8), allocatable :: onsite(:,:)     ! 1:up or down, 2: orbital
-    integer :: nb_shell=-1
-    integer :: nb_orbitals=-1
-    integer :: nb_spin=1
-    real(8), allocatable :: Jsd(:)  !1: orbital
-    complex(8), allocatable :: delta(:)  !1: orbital   !super conductivity delta
-    integer             ::  i_diag=3  !different diagonalization methods
+    !new parameters
+    type(TB_hopping),allocatable    :: hop(:)   !hopping parameters
+    type(TB_delta),allocatable      :: del(:)   !delta parameters
+    type(TB_Jsd),allocatable        :: Jsd(:)   !delta parameters
+
+    integer             ::  nspin=1         !number of spins (1 or 2) for each orbital
+    integer             ::  ncell=-1        !overall number of cells
+    integer             ::  norb=-1         !number of orbitals in cell
+    integer             ::  nsc=1           !2 if doubling for BdG superconductivity
+    integer             ::  dimH=-1         !final size of Hamiltonian including all modifications
+    integer             ::  nsite=1         !overall number of states in each cells
+    integer,allocatable ::  norb_at(:)      !number of orbitals at each atom
+    integer,allocatable ::  norb_at_off(:)  !offset of orbitals at each atom
+
+    integer             ::  i_diag=1  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
     logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
-    real(8)             ::  extE(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines
+    real(8)             ::  Ebnd(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines
     integer             ::  estNe=0                       !estimated number of eigenvalues in interval
     real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 end type 
@@ -48,12 +60,12 @@ end type
 
 
 type parameters_TB_Hsolve
+    !might want to remove this and put it in the io_H or Hamiltonian-type
     !basic parameters
     integer         ::  nspin=1     !number of spins (1 or 2) for each orbital
     integer         ::  ncell=-1    !overall number of cells
     integer         ::  norb=-1     !number of orbitals in cell
     integer         ::  nsc=1       !2 if doubling for BdG superconductivity
-    !set through upd
     integer         ::  dimH=-1     !final size of Hamiltonian including all modifications
     integer         ::  nsite=1     !overall number of states in each cells
 !    !externally set for compatibility with Energy routines
@@ -65,7 +77,7 @@ type parameters_TB_Hsolve
     real(8)         ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 
     !calculating only part of spectrum 
-    real(8)         ::  extE(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines
+    real(8)         ::  Ebnd(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines
     integer         ::  estNe=0                    !estimated number of eigenvalues in interval  (0 correponds to dimH)
 
     contains
@@ -103,11 +115,11 @@ type parameters_TB
 end type
 
 contains
+
 subroutine upd_h_par(this)
     class(parameters_TB_Hsolve) ::   this
 
     this%nsite=this%nsc*this%nspin*this%norb
     this%dimH=this%nsite*this%ncell
 end subroutine
-
 end module

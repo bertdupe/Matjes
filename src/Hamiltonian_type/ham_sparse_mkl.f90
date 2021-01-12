@@ -191,7 +191,6 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     real(C_DOUBLE),allocatable     :: val(:)
     integer,allocatable     :: rowind(:),colind(:)
 
-    Call this%init_otherH(H_coo)
     Call H_coo%pop_par(this%dimH,nnz,val,rowind,colind)
     stat=mkl_sparse_d_create_coo(H, SPARSE_INDEX_BASE_ONE , this%dimH(1) , this%dimH(2) , nnz , rowind , colind , val)
 

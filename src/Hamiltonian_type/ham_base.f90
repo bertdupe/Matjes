@@ -54,7 +54,7 @@ end type
 private
 public t_H
 
-interface
+abstract interface
     subroutine int_mult(this,lat,res)
         import t_H,lattice
         class(t_H),intent(in)     :: this
