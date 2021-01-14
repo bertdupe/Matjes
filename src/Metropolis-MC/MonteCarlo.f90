@@ -23,6 +23,7 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     use m_average_MC, only: get_neighbours
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_MC_io
+    use m_get_table_nn,only :get_table_nn
 
     type(lattice), intent(inout)            :: lat
     type(io_parameter), intent(in)          :: io_simu
@@ -54,8 +55,9 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     integer                     :: ierr
     integer,parameter           :: io_status=output_unit
     integer                     :: filen_kt_acc(2)  !some control about file-output name
+    integer,allocatable        ::  indexNN(:)
+    integer, allocatable :: tableNN(:,:,:,:,:,:)
 
-    
     ! initialize the variables
     N_spin=lat%Ncell*lat%nmag
     if(com_all%ismas)then
@@ -67,10 +69,13 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
         call ini_temp(kt_all,ext_param%ktfin,ext_param%ktini,NT_global,io_simu%io_warning)
         filen_kt_acc=5
         filen_kt_acc(1)=max(int(log10(maxval(kt_all))),1)
+
         !initialize measure-array
         allocate(measure(NT_global))
         measure(:)%kt=kt_all(:)
         deallocate(kt_all)
+    	Call get_table_nn(lat,1,indexNN,tableNN) !need indexNN to allocate fluctuation arrays in measure
+
         !get neighbors to topological charge calculation
         Call neighbor_Q(lat,Q_neigh)
     endif
@@ -96,6 +101,16 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     Do i_kT=1,NT_local
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
 
+		allocate(measure(i_kt)%MjpMim_sum(sum(indexNN)))
+		allocate(measure(i_kt)%MjpMim_av(sum(indexNN)))
+		allocate(measure(i_kt)%MjpMim_ij_sum(sum(indexNN),lat%Ncell))
+		allocate(measure(i_kt)%MjpMim_ij_av(sum(indexNN),lat%Ncell))
+
+		measure(i_kt)%MjpMim_sum(:)=cmplx(0.0d0,0.0d0,8)
+		measure(i_kt)%MjpMim_av(:)=cmplx(0.0d0,0.0d0,8)
+		measure(i_kt)%MjpMim_ij_sum(:,:)=cmplx(0.0d0,0.0d0,8)
+		measure(i_kt)%MjpMim_ij_av(:,:)=cmplx(0.0d0,0.0d0,8)
+
         call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,hams,Q_neigh)
         !Monte Carlo steps, calculate the values
         do i_MC=1+io_MC%restart_MC_steps,io_MC%Total_MC_Steps+io_MC%restart_MC_steps
@@ -109,11 +124,19 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
    
         Call measure_eval(measure(i_kt),io_MC%Cor_log,N_spin)
         if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)
+		if(fluct_val%l_use) call  print_spatial_fluct(measure(i_kt),com_all) !write spatial distribution of fluctuations
         Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', size(measure),' steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
+
+		!deallocate(measure(i_kt)%MjpMim_sum)
+		!deallocate(measure(i_kt)%MjpMim_av)
+		!deallocate(measure(i_kt)%MjpMim_ij_sum)
+		!deallocate(measure(i_kt)%MjpMim_ij_av)
+
     end do !over i_kT
 
     Call gatherv(measure,com_outer)
     if (io_simu%io_spstmL) call spstm  ! The program of Tobias is used only at last iteration
     Call measure_print_thermo(measure,com_all) ! write EM.dat output
+
 end subroutine montecarlo
 end module

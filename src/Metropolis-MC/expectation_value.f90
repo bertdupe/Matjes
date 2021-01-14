@@ -4,7 +4,7 @@ use m_mc_track_val, only: track_val
 use m_fluct,only: fluct_parameters, eval_fluct
 implicit none
 private
-public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av
+public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av,  print_spatial_fluct
 public :: measure_print_thermo_init
 !public MPI_routines
 public :: measure_scatterv,measure_gatherv
@@ -38,10 +38,6 @@ type exp_val
     real(8) :: vortex_av(3)=0.0d0
     real(8) :: chi_l(3)=0.0d0
 
-	!<Mj+Mi->
-    complex(8)  :: MjpMim_sum=cmplx(0.0d0,0.0d0,8)
-    complex(8)  :: MjpMim_av=cmplx(0.0d0,0.0d0,8)
-
 	!<Mi+Mi+>
     complex(8)  :: MipMip_sum=cmplx(0.0d0,0.0d0,8)
     complex(8)  :: MipMip_av=cmplx(0.0d0,0.0d0,8)
@@ -55,6 +51,13 @@ type exp_val
     complex(8)  :: MipMjp_av=cmplx(0.0d0,0.0d0,8)
 
     integer :: N_add=0 !counts how often values have been added
+
+	!<Mj+Mi->
+    complex(8),allocatable:: MjpMim_sum(:) !for propagation along +-x, +-y, +-z, should be allocatable to number of nearest neighbours
+    complex(8),allocatable:: MjpMim_av(:)
+    complex(8),allocatable :: MjpMim_ij_sum(:,:) !at each unique pair
+    complex(8),allocatable:: MjpMim_ij_av(:,:) 
+
 
 end type
 
@@ -168,11 +171,39 @@ subroutine measure_print_thermo(this,com,io_unit_in)
              &             norm2(this(i)%M_av),this(i)%M_av, this(i)%M_err_av,&
              &             this(i)%chi_M, this(i)%vortex_av, -this(i)%qeulerm_av+this(i)%qeulerp_av, this(i)%chi_Q(1),&
              &             this(i)%qeulerp_av, this(i)%chi_Q(2), -this(i)%qeulerm_av, this(i)%chi_Q(3), this(i)%chi_l(:), this(i)%chi_Q(4),&
-			 &			   this(i)%MjpMim_av, this(i)%MipMip_av, real(this(i)%MipMim_av,8), this(i)%MipMjp_av
+			 &			   this(i)%MjpMim_av(1), this(i)%MipMip_av, real(this(i)%MipMim_av,8), this(i)%MipMjp_av
         enddo
         if(.not.present(io_unit_in)) close(io_unit) 
     endif
 end subroutine
+
+!!!!! print spatial distribution for <Mj+Mi->
+subroutine print_spatial_fluct(this,com,io_unit_in)
+    use m_constants, only : k_b
+	use m_convert
+    use mpi_basic, only: mpi_type
+	use m_io_files_utils, only: open_file_write,close_file
+    class(exp_val),intent(inout)    :: this
+    class(mpi_type),intent(in)      :: com
+    integer,optional                :: io_unit_in
+  ! internal
+	integer :: shape_MiMj(2),io_file(2),iomp
+	character(len=50) :: file_name(2),form
+
+	shape_MiMj=shape(this%MjpMim_ij_av)
+	form=convert('(',shape_MiMj(1),'(E20.12E3,2x))')
+	file_name(1)=convert('fluct_Re_MjpMim_per_site_',this%kT/k_B,'.dat')
+	file_name(2)=convert('fluct_Im_MjpMim_per_site_',this%kT/k_B,'.dat')
+	io_file(1)=open_file_write(file_name(1))
+	io_file(2)=open_file_write(file_name(2))
+	do iomp=1,shape_MiMj(2)
+   		write(io_file(1),form) real(this%MjpMim_ij_av(:,iomp))
+   		write(io_file(2),form) aimag(this%MjpMim_ij_av(:,iomp))
+	enddo
+	call close_file(file_name(1),io_file(1))
+	call close_file(file_name(2),io_file(2))
+end subroutine
+
 
 subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     use m_topo_commons
@@ -207,6 +238,7 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     this%vortex_av=this%vortex_av+dumy(3:5)
 
     if(fluct_val%l_use) Call eval_fluct(this%MjpMim_sum, &
+									   &this%MjpMim_ij_sum, &
                                        &this%MipMip_sum, &
                                        &this%MipMim_sum, &
                                        &this%MipMjp_sum, &
@@ -242,11 +274,12 @@ subroutine measure_eval(this,Cor_log, N_cell_in)
 
     this%vortex_av=this%vortex_av*av_Nadd/3.0d0/sqrt(3.0d0)
 
-	this%MjpMim_av=this%MjpMim_sum*av_Nadd*av_site
+	this%MjpMim_av(:)=this%MjpMim_sum(:)*av_Nadd*av_site
+	this%MjpMim_ij_av(:,:)=this%MjpMim_ij_sum(:,:)*av_Nadd
 	this%MipMip_av=this%MipMip_sum*av_Nadd*av_site
 	this%MipMim_av=this%MipMim_sum*av_Nadd*av_site
 	this%MipMjp_av=this%MipMjp_sum*av_Nadd*av_site
-	!write(*,*) "in measure_eval,   MjpMim_av = " , this%MjpMim_av
+	!write(*,*) "in measure_eval,   MjpMim_av = " , this%MjpMim_av(:)
 
     if (Cor_log) this%chi_l=this%N_add !what is this supposed to do?
     Call print_av(this)
