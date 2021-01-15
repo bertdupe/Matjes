@@ -127,10 +127,8 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
 		if(fluct_val%l_use) call  print_spatial_fluct(measure(i_kt),com_all) !write spatial distribution of fluctuations
         Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', size(measure),' steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
 
-		!deallocate(measure(i_kt)%MjpMim_sum)
-		!deallocate(measure(i_kt)%MjpMim_av)
-		!deallocate(measure(i_kt)%MjpMim_ij_sum)
-		!deallocate(measure(i_kt)%MjpMim_ij_av)
+		deallocate(measure(i_kt)%MjpMim_ij_sum)
+		deallocate(measure(i_kt)%MjpMim_ij_av)
 
     end do !over i_kT
 

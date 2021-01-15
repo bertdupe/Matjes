@@ -53,7 +53,7 @@ type exp_val
     integer :: N_add=0 !counts how often values have been added
 
 	!<Mj+Mi->
-    complex(8),allocatable:: MjpMim_sum(:) !for propagation along +-x, +-y, +-z, should be allocatable to number of nearest neighbours
+    complex(8),allocatable:: MjpMim_sum(:) !for propagation along x,y,z,-z,-y,-x should be allocatable to number of nearest neighbours
     complex(8),allocatable:: MjpMim_av(:)
     complex(8),allocatable :: MjpMim_ij_sum(:,:) !at each unique pair
     complex(8),allocatable:: MjpMim_ij_av(:,:) 

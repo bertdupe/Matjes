@@ -89,18 +89,6 @@ subroutine eval_fluct(MjpMim_sum, MjpMim_ij_sum,  MipMip_sum, MipMim_sum, MipMjp
 end subroutine
 
 
-!to allocate fluctuation arrays 
-!subroutine allocate_fluct(this,lat,fluct_val)
-!	type(lattice),intent(in)           :: lat
- !   type(fluct_parameters),intent(in)  :: fluct_val
-
-!	allocate(this%MjpMim_ij_sum(fluct_val%indexNN(i_sh),lat%Ncell)) 
-!	allocate(this%MjpMim_ij_av(fluct_val%indexNN(i_sh),lat%Ncell)) !fluct average per unique pair of neighbours, shape is Nnei x N
-
-!end subroutine allocate_fluct
-
-
-
 subroutine get_neighbours(lat,flat_nei, indexNN)
 	use m_io_utils
 	use m_io_files_utils
@@ -124,16 +112,15 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
 	flat_nei(:,:)=0;
 	
 
-	!get positions for no reason other than to know in which spatial direction i move for pair of neighbours
+	!get positions for no reason other than to know in which spatial direction the bond is for given pair of neighbours
 	N=get_lines('positions.dat')
 	allocate(position(3,N))
 	position=0.0d0
 	call get_position(position,'positions.dat')
 	
 
-	!write(*,*) 'Only fluctuations propagating in lattice direction ',propag_dir,' will be considered.'
-    !convert to a table with linear indices (Ncell, indexNN), /!\ taking only forward neighbours along x,y,z
-	!simple cubic lattice: columns 1:6 of flat_nei correspond to neighbours along +-x,+-y,+-z
+	!simple cubic lattice: columns 1:6 of flat_nei(i,:) correspond to neighbours of i along: x,y,z,-z,-y,-x
+	!careful: if film in xy plane then it's only along x,y,-y,-x
     do i_sh=1,N_shells !loop on shell of neighbours
         do i_x=1,lat%dim_lat(1) !loop on lattice sites
             do i_y=1,lat%dim_lat(2)
@@ -146,34 +133,34 @@ subroutine get_neighbours(lat,flat_nei, indexNN)
 						!write(*,*)'spin',i_flat, ' with  coordinates ',temp1(1),temp1(2),temp1(3) 
                         temp2=tableNN(1:3,i_nei,i_x,i_y,i_z,1)!get x,y,z indices of neighbour
 
-
-						if( (all(temp1.ge.temp2)).or.(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) ) then  !do not keep backwards neighbours or non-connected neighbours
-							j_flat=-1; 
-						else if ( ( temp1(1)==1.and.temp2(1)==lat%dim_lat(1).and.lat%dim_lat(1).ne.1 ) &
-						.or.      ( temp1(2)==1.and.temp2(2)==lat%dim_lat(2).and.lat%dim_lat(2).ne.1 ) &
-						.or.      ( temp1(3)==1.and.temp2(3)==lat%dim_lat(3).and.lat%dim_lat(3).ne.1 ) )  then !boundary:remove left and top
-							j_flat=-1 
+						if (tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) j_flat=-1 !remove non-connected neighbours
+						!if( (all(temp1.ge.temp2)).or.(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) ) then  !do not keep backwards neighbours or non-connected neighbours
+						!	j_flat=-1; 
+						!else if ( ( temp1(1)==1.and.temp2(1)==lat%dim_lat(1).and.lat%dim_lat(1).ne.1 ) &
+						!.or.      ( temp1(2)==1.and.temp2(2)==lat%dim_lat(2).and.lat%dim_lat(2).ne.1 ) &
+						!.or.      ( temp1(3)==1.and.temp2(3)==lat%dim_lat(3).and.lat%dim_lat(3).ne.1 ) )  then !boundary:remove left and top
+						!	j_flat=-1 
 							!write(*,*) 'boundary nei to remove: verified for temp1, temp2=', temp1(1:3), temp2(1:3)
-						else
+						!else
                        		j_flat=lat%index_m_1(temp2) !get j_flat
-						end if
+						!end if
 
 						!boundary: add right and bottom
-						if ( (temp1(1)==lat%dim_lat(1).and.temp2(1)==1.and.lat%dim_lat(1).ne.1) &
-						.or. (temp1(2)==lat%dim_lat(2).and.temp2(2)==1.and.lat%dim_lat(2).ne.1) &
-						.or. (temp1(3)==lat%dim_lat(3).and.temp2(3)==1.and.lat%dim_lat(3).ne.1)	) then
-                       		j_flat=lat%index_m_1(temp2) 
-						end if
+						!if ( (temp1(1)==lat%dim_lat(1).and.temp2(1)==1.and.lat%dim_lat(1).ne.1) &
+						!.or. (temp1(2)==lat%dim_lat(2).and.temp2(2)==1.and.lat%dim_lat(2).ne.1) &
+						!.or. (temp1(3)==lat%dim_lat(3).and.temp2(3)==1.and.lat%dim_lat(3).ne.1)	) then
+                       !		j_flat=lat%index_m_1(temp2) 
+						!end if
 
 						!only keep neighbour along the propagation direction
 						!if (temp1(propag_dir).eq.temp2(propag_dir)) then
 						!	j_flat=-1 
 						!endif
 					
-
+						if (i_flat.eq.j_flat) j_flat=-1 !remove self interaction
                         flat_nei(i_flat,i_nei)=j_flat
 
-						!write(*,*)'>>neighbour',j_flat, ' with xyz positions ', position(:,j_flat) 
+					!	write(*,*)'>>neighbour',j_flat, ' with xyz positions ', position(:,j_flat) 
                     enddo
                 enddo
             enddo
