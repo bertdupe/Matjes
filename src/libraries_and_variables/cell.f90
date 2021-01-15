@@ -5,7 +5,7 @@ private
 public :: t_cell
 
 type t_cell
-    integer ::  n_attype
+    integer ::  n_attype=0
     type(atom), allocatable :: atomic(:)
     contains
     procedure :: ind_mag_all

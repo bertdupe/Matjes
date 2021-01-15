@@ -1,4 +1,6 @@
 module m_types_tb_h_inp
+use m_derived_types, only: lattice
+use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 private
 public TB_H_par,TB_hopping, TB_Jsd, TB_delta, alloc_TB_H
@@ -11,6 +13,12 @@ contains
 end type
 
 abstract interface
+    subroutine int_check(par, lat)
+        import TB_H_par, lattice
+        class(TB_H_par), intent(inout):: par
+        type(lattice),intent(in)      :: lat
+    end subroutine
+
     subroutine int_read(par, unit, iotype, v_list, iostat, iomsg)
         import TB_H_par
         class(TB_H_par), intent(inout):: par
@@ -21,10 +29,11 @@ abstract interface
         character(*), intent(inout)   :: iomsg
     end subroutine
 
-    subroutine int_print(this)
+    subroutine int_print(this,io_in)
         !prints the set information out to the standart output
         import TB_H_par
         class(TB_H_par),intent(in)     :: this
+        integer,intent(in),optional     :: io_in
     end subroutine
 
     function int_is_zero(this)result(is_zero)
@@ -50,6 +59,7 @@ type,extends(TB_H_par) :: TB_hopping
     generic :: assignment(=) => TB_hopping_assign
     procedure :: print_std => hop_print
     procedure :: is_zero => hopping_is_zero
+    procedure :: check => TB_hopping_check
 end type
 
 type,extends(TB_H_par) :: TB_delta
@@ -63,6 +73,7 @@ type,extends(TB_H_par) :: TB_delta
     generic :: assignment(=) => TB_delta_assign
     procedure :: print_std => del_print
     procedure :: is_zero => delta_is_zero
+    procedure :: check => TB_delta_check
 end type
 
 type,extends(TB_H_par) :: TB_Jsd
@@ -76,6 +87,7 @@ type,extends(TB_H_par) :: TB_Jsd
     generic :: assignment(=) => TB_Jsd_assign
     procedure :: print_std => Jsd_print
     procedure :: is_zero => Jsd_is_zero
+    procedure :: check => TB_Jsd_check
 end type
 
 
@@ -115,6 +127,10 @@ subroutine TB_hopping_read(par, unit, iotype, v_list, iostat, iomsg)
     endif
     read(unit,*)    !together with backspace make sure that is advances
     if(iostat==0) par=tmp
+    if(par%attype(1)>par%attype(2))then
+        par%attype=tmp%attype(2:1:-1)
+        par%orbital=tmp%orbital(2:1:-1)
+    endif
 end subroutine
 
 subroutine TB_hopping_assign(par,par_in)
@@ -126,6 +142,40 @@ subroutine TB_hopping_assign(par,par_in)
     par%spin   =par_in%spin    
     par%dist   =par_in%dist       
     par%val    =par_in%val        
+end subroutine
+
+subroutine TB_hopping_check(this,lat)
+    class(TB_hopping), intent(in)   :: this
+    type(lattice),intent(in)        :: lat
+    logical     :: spin_error
+
+    if(any(this%attype<1).or.any(this%attype>lat%cell%n_attype))then
+        write(error_unit,'(//A/A)') "Atom types in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(any(this%orbital<1).or.any(this%orbital>lat%cell%atomic(this%attype)%orbitals))then
+        write(error_unit,'(//A/A)') "Orbital in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(this%dist<0.or.(this%dist==0.and.this%attype(1)/=this%attype(2)))then
+        write(error_unit,'(//A/A)') "Distance in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    spin_error=any(this%spin<0)
+    spin_error=spin_error.or.any(this%spin>2)
+    spin_error=spin_error.or.any(this%spin==0).and.any(this%spin/=0)
+    !will not catch in Hamiltonian is not magnetic but this%spin=2... but that information is not in lat..., either check later,ignore, or include here
+    if(spin_error)then
+        write(error_unit,'(//A/A)') "Spin in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
 end subroutine
 
 subroutine TB_delta_read(par, unit, iotype, v_list, iostat, iomsg)
@@ -146,6 +196,10 @@ subroutine TB_delta_read(par, unit, iotype, v_list, iostat, iomsg)
     endif
     read(unit,*)    !together with backspace make sure that it advances
     if(iostat==0) par=tmp
+    if(par%attype(1)>par%attype(2))then
+        par%attype=tmp%attype(2:1:-1)
+        par%orbital=tmp%orbital(2:1:-1)
+    endif
 end subroutine
 
 
@@ -159,6 +213,29 @@ subroutine TB_delta_assign(par,par_in)
     par%val    =par_in%val        
 end subroutine
 
+subroutine TB_delta_check(this,lat)
+    class(TB_delta), intent(in) :: this
+    type(lattice),intent(in)    :: lat
+    logical     :: spin_error
+
+    if(any(this%attype<1).or.any(this%attype>lat%cell%n_attype))then
+        write(error_unit,'(//A/A)') "Atom types in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(any(this%orbital<1).or.any(this%orbital>lat%cell%atomic(this%attype)%orbitals))then
+        write(error_unit,'(//A/A)') "Orbital in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(this%dist<-1.or.(this%dist==0.and.this%attype(1)/=this%attype(2)))then
+        write(error_unit,'(//A/A)') "Distance in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+end subroutine
 
 subroutine TB_Jsd_read(par, unit, iotype, v_list, iostat, iomsg)
     class(TB_Jsd), intent(inout)  :: par
@@ -184,37 +261,70 @@ subroutine TB_Jsd_assign(par,par_in)
     par%val    =par_in%val        
 end subroutine
 
-subroutine del_print(this)
+subroutine TB_Jsd_check(this,lat)
+    class(TB_Jsd), intent(in) :: this
+    type(lattice),intent(in)    :: lat
+    logical     :: spin_error
+
+    if(this%attype<1.or.this%attype>lat%cell%n_attype)then
+        write(error_unit,'(//A/A)') "Atom types in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(this%orbital<1.or.this%orbital>lat%cell%atomic(this%attype)%orbitals)then
+        write(error_unit,'(//A/A)') "Orbital in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+end subroutine
+
+subroutine del_print(this,io_in)
     use, intrinsic :: iso_fortran_env, only : output_unit
     class(TB_delta),intent(in)    :: this
+    integer,intent(in),optional     :: io_in
+    integer                         :: io_unit
 
-    write(output_unit,'(A)')         'Delta Hamiltonian input data:'
-    write(output_unit,'(A,2I6)')     '  atom types:', this%attype
-    write(output_unit,'(A,2I6)')     '  orbitals  :', this%orbital
-    write(output_unit,'(A,2I6)')     '  distance  :', this%dist
-    write(output_unit,'(A,2E16.8/)') '  energy    :', this%val
+    io_unit=output_unit
+    if(present(io_in)) io_unit=io_in
+
+    write(io_unit,'(A)')         'Delta Hamiltonian input data:'
+    write(io_unit,'(A,2I6)')     '  atom types:', this%attype
+    write(io_unit,'(A,2I6)')     '  orbitals  :', this%orbital
+    write(io_unit,'(A,2I6)')     '  distance  :', this%dist
+    write(io_unit,'(A,2E16.8/)') '  energy    :', this%val
 end subroutine
 
-subroutine hop_print(this)
+subroutine hop_print(this,io_in)
     use, intrinsic :: iso_fortran_env, only : output_unit
     class(TB_hopping),intent(in)    :: this
+    integer,intent(in),optional     :: io_in
+    integer                         :: io_unit
 
-    write(output_unit,'(A)')         'Hopping Hamiltonian input data:'
-    write(output_unit,'(A,2I6)')     '  atom types:', this%attype
-    write(output_unit,'(A,2I6)')     '  orbitals  :', this%orbital
-    write(output_unit,'(A,2I6)')     '  spin      :', this%spin
-    write(output_unit,'(A,2I6)')     '  distance  :', this%dist
-    write(output_unit,'(A,E16.8/)')  '  energy    :', this%val
+    io_unit=output_unit
+    if(present(io_in)) io_unit=io_in
+
+    write(io_unit,'(A)')         'Hopping Hamiltonian input data:'
+    write(io_unit,'(A,2I6)')     '  atom types:', this%attype
+    write(io_unit,'(A,2I6)')     '  orbitals  :', this%orbital
+    write(io_unit,'(A,2I6)')     '  spin      :', this%spin
+    write(io_unit,'(A,2I6)')     '  distance  :', this%dist
+    write(io_unit,'(A,E16.8/)')  '  energy    :', this%val
 end subroutine
 
-subroutine Jsd_print(this)
+subroutine Jsd_print(this,io_in)
     use, intrinsic :: iso_fortran_env, only : output_unit
-    class(TB_Jsd),intent(in)    :: this
+    class(TB_Jsd),intent(in)        :: this
+    integer,intent(in),optional     :: io_in
+    integer                         :: io_unit
 
-    write(output_unit,'(A)')         'Jsd Hamiltonian input data:'
-    write(output_unit,'(A,2I6)')     '  atom types:', this%attype
-    write(output_unit,'(A,2I6)')     '  orbitals  :', this%orbital
-    write(output_unit,'(A,E16.8/)')  '  energy    :', this%val
+    io_unit=output_unit
+    if(present(io_in)) io_unit=io_in
+
+    write(io_unit,'(A)')         'Jsd Hamiltonian input data:'
+    write(io_unit,'(A,2I6)')     '  atom types:', this%attype
+    write(io_unit,'(A,2I6)')     '  orbitals  :', this%orbital
+    write(io_unit,'(A,E16.8/)')  '  energy    :', this%val
 end subroutine
 
 function Jsd_is_zero(this)result(is_zero)

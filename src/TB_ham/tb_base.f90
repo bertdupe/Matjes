@@ -1,16 +1,16 @@
 module m_H_tb_base
-use m_TB_types, only: parameters_TB_IO_H 
+use m_TB_types, only: parameters_ham_init 
 private
 public H_TB
 type,abstract :: H_TB   !
     logical,private         :: set=.false. !has this object been set?
-    !ddsize parameters
-    integer                 :: dimH=0   !dimension of Hamiltonian
+    !size parameters
     integer                 :: nsc=0    !size multiplicator due to BdG-trafo (set to 1 or 2)
     integer                 :: nspin=0  !size multiplicator due to spin-multiplicity (set to 1 or 2)
     integer                 :: norb=0   !size multiplicator due to number of orbitals per unit-cell
     integer                 :: ncell=0  !number of unit-cells in super-cell
     integer                 :: ndim=0   !size of basis for each unit_cell (within each BdG quadrant)
+    integer                 :: dimH=0   !dimension of Hamiltonian
     !solve parameters
     integer                 :: estNe=0          !estimated number of eigenvalues  
     real(8)                 :: Ebnd(2)=0.0d0    !minimal and maximal considered eigenvalue( if such a 
@@ -25,9 +25,11 @@ contains
     procedure,NON_OVERRIDABLE       :: destroy
     procedure,NON_OVERRIDABLE       :: init_base
     procedure,NON_OVERRIDABLE       :: init_otherH
+    procedure,NON_OVERRIDABLE       :: get_hinit
 
-    procedure(int_init_connect),deferred :: init_connect
-    procedure(int_init_coo),deferred :: init_coo
+    procedure(int_init_connect),deferred    :: init_connect
+    procedure(int_init_coo),deferred        :: init_coo
+    procedure(int_mv),deferred              :: mv
 
     procedure(int_destroy),deferred :: destroy_child
     procedure(int_add_H),deferred   :: add_child
@@ -45,6 +47,13 @@ abstract interface
 !        real(8),allocatable,intent(out)     ::  eval(:)
 !    end subroutine
 
+    subroutine int_mv(this,Hout)
+        import H_TB
+        class(H_tb),intent(inout)  ::  this
+        class(H_tb),intent(inout)  ::  Hout
+    end subroutine
+
+
     subroutine int_get_evec(this,eval,evec)
         import H_TB
         class(H_tb),intent(in)  ::  this
@@ -54,21 +63,21 @@ abstract interface
 
 
     subroutine int_init_connect(this,connect,Hval,Hval_ind,io,ind_offset)
-        import H_TB, parameters_TB_IO_H
+        import H_TB, parameters_ham_init
         class(H_tb),intent(inout)           :: this
         complex(8),intent(in)               :: Hval(:) 
         integer,intent(in)                  :: Hval_ind(:,:)
         integer,intent(in)                  :: connect(:,:) 
-        type(parameters_TB_IO_H),intent(in) :: io
+        type(parameters_ham_init),intent(in):: io
         integer,intent(in),optional         :: ind_offset(2)
     end subroutine
 
     subroutine int_init_coo(this,val,row,col,io,ind_offset)
-        import H_TB, parameters_TB_IO_H
+        import H_TB, parameters_ham_init
         class(H_tb),intent(inout)           :: this
         complex(8),intent(in)               :: val(:) 
         integer,intent(in)                  :: row(size(val)),col(size(val))
-        type(parameters_TB_IO_H),intent(in) :: io
+        type(parameters_ham_init),intent(in):: io
         integer,intent(in),optional         :: ind_offset(2)
     end subroutine
 
@@ -110,20 +119,36 @@ end subroutine
 
 subroutine init_base(this,io)
     class(H_TB),intent(inout)           :: this
-    type(parameters_TB_IO_H),intent(in) :: io
+    type(parameters_ham_init),intent(in) :: io
 
-    this%dimH    =io%dimH
     this%nsc     =io%nsc  
     this%nspin   =io%nspin  
     this%norb    =io%norb  
     this%ncell   =io%ncell  
-    this%ndim    =this%norb*this%nspin  
+
     this%Ebnd    =io%Ebnd
     this%estNe   =io%estNe
     this%diag_acc=io%diag_acc
 
-    this%set=.true.
+    this%ndim    =this%norb*this%nspin  
+    this%dimH    =this%norb*this%nspin*this%nsc*this%ncell
+    this%set =.true.
 end subroutine
+
+subroutine get_hinit(this,hinit)
+    class(H_TB),intent(in)                  :: this
+    type(parameters_ham_init),intent(inout) :: hinit
+
+    hinit%nsc     =this%nsc  
+    hinit%nspin   =this%nspin  
+    hinit%norb    =this%norb  
+    hinit%ncell   =this%ncell  
+
+    hinit%Ebnd    =this%Ebnd
+    hinit%estNe   =this%estNe
+    hinit%diag_acc=this%diag_acc
+end subroutine
+
 
 
 function is_set(this) result(l)
@@ -162,7 +187,7 @@ recursive subroutine copy(this,Hout)
         Call this%copy_child(Hout)
         Call Hout%set_prepared(.true.)
     else
-        STOP "cannot copy H since source is not set"
+        ERROR STOP "cannot copy H since source is not set"
     endif
 end subroutine
 

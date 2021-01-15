@@ -13,6 +13,7 @@ type,extends(H_TB_coo_based),abstract :: H_tb_csr
     procedure   :: add_child
     procedure   :: copy_child
     procedure   :: destroy_child
+    procedure   :: mv
 end type
 
 type,extends(H_TB_csr)  :: H_feast_csr
@@ -43,6 +44,22 @@ subroutine set_from_Hcoo(this,H_coo)
     call mkl_zcsrcoo(job, this%dimH, this%csr, this%j, this%i, nnz, val_coo, rowind, colind, info)
     if(info/=0) STOP "mkl_zcsrcoo error"
 end subroutine 
+
+subroutine mv(this,Hout)
+    class(H_tb_csr),intent(inout) :: this
+    class(H_TB),intent(inout)       :: Hout
+    
+    select type(Hout)
+    class is(H_TB_csr)
+        Call Hout%init_otherH(this)
+        Call move_alloc(this%i,Hout%i)
+        Call move_alloc(this%j,Hout%j)
+        Call move_alloc(this%csr,Hout%csr)
+    class default
+        STOP "Cannot move H_TB_csr type to Hamiltonian that is not a class of H_TB_csr"
+    end select
+    Call this%destroy()
+end subroutine
 
 subroutine copy_child(this,Hout)
     class(H_tb_csr),intent(in)  :: this

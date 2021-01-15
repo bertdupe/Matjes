@@ -24,11 +24,12 @@ subroutine tightbinding_r(lat,h_par)
     real(8),allocatable         ::  eigval(:)
     complex(8),allocatable      ::  eigvec(:,:)
 
-    real(8)                     ::  E_f
+    real(8)                     :: E_f
     logical                     :: calc_eigval,calc_eigvec
 
     logical                     :: read_success
     class(H_tb),allocatable     :: H
+    integer                     :: i
 
     procedure(int_distrib),pointer  :: dist_ptr => null()
 
@@ -46,7 +47,7 @@ subroutine tightbinding_r(lat,h_par)
     endif
 
     !initialize Hamiltonian
-    if(calc_eigvec.or.calc_eigval) Call get_all_Hr(lat,TB_params%io_H,H)
+    if(calc_eigvec.or.calc_eigval) Call get_Hr(lat,TB_params%io_H,H)
 
     !calculate eigenvalue/eigenvector
     if(calc_eigvec)then
@@ -65,7 +66,7 @@ subroutine tightbinding_r(lat,h_par)
     !write spectrum
     if(TB_params%flow%spec_r)then
         write(output_unit,'(/A)') 'start write spectrum'
-        Call write_realarray('eigval.dat',eigval)
+        open(newunit=i,file='eigval.dat'); write(i,'(E16.8)') eigval; close(i)
     endif
 
     !Calculate Fermi energy (only useful without SC)
@@ -102,18 +103,6 @@ subroutine tightbinding_r(lat,h_par)
         Call occupation_mult(h_par,TB_params%io_occ_mult,eigval,eigvec)
     endif
 
-end subroutine 
-
-
-subroutine write_realarray(fname,realarr)
-    use m_io_files_utils, only: close_file,open_file_write
-    real(8),intent(in)          :: realarr(:)
-    character(len=*),intent(in) ::  fname
-    integer                     :: i,io
-
-    io=open_file_write(fname)
-    write(io,'(E16.8)') realarr
-    call close_file(fname,io)
 end subroutine 
 
 end module

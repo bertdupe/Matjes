@@ -14,7 +14,6 @@ subroutine calc_dos(eigval,io_dos,fname)
     type(parameters_TB_IO_DOS) :: io_dos
     character(len=*)    ::  fname
 
-
     integer             ::  NE,iE
     real(8),allocatable ::  dos(:),Eval(:)
 
@@ -47,10 +46,10 @@ subroutine get_dos(val,E,res,sigma)
 
     Call gauss_dist(val,E,sigma,tmp)
     res=sum(tmp)
-
 end subroutine
 
 subroutine gauss_dist(val,mu,sigma,res)
+    use m_constants, only : pi
     !gauss distribution using 1/\sqrt{2*\pi*sigma^2}*e^{-(val-mu)^2/(2*sigma^2)} for all values in val respective to one given mu and sigma
     real(8),intent(in)  ::  val(:),mu,sigma
     real(8),intent(out) ::  res(size(val,1))
@@ -61,7 +60,6 @@ subroutine gauss_dist(val,mu,sigma,res)
     real(8),parameter   ::  dist_inc=5.0d0
 
     integer             ::  i_min,i_max,Ne
-
     
     Ne=size(val,1)
     res=0.0d0
@@ -84,7 +82,6 @@ subroutine gauss_dist(val,mu,sigma,res)
     res(i_min:i_max)=(val(i_min:i_max)-mu)*(val(i_min:i_max)-mu)
     res(i_min:i_max)=-res(i_min:i_max)*0.5d0/sigma/sigma
     res(i_min:i_max)=exp(res(i_min:i_max))
-    res=res/sqrt(2.0d0*3.14159265359d0)/sigma
-
+    res=res/sqrt(2.0d0*pi)/sigma
 end subroutine
 end module

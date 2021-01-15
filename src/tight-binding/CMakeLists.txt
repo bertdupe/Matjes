@@ -1,11 +1,15 @@
 set(main_f90 ${main_f90}
 src/tight-binding/distribution.f90
 src/tight-binding/dos.f90
+src/tight-binding/dos2.f90
 src/tight-binding/dos_sc.f90
 #src/tight-binding/energy_k.f90
+src/tight-binding/init_H.f90
 src/tight-binding/init_Hr.f90
+src/tight-binding/init_Hk.f90
 src/tight-binding/fermi.f90
-#src/tight-binding/highsymmetry.f90
+src/tight-binding/ham_input_arrange.f90
+src/tight-binding/highsymmetry.f90
 src/tight-binding/mkl_lib_include.f90
 src/tight-binding/mkl_util.f90
 src/tight-binding/occupation.f90
@@ -15,6 +19,6 @@ src/tight-binding/tb_params.f90
 src/tight-binding/types_tb_H_inp.f90
 src/tight-binding/TB_types.f90
 src/tight-binding/tightbinding.f90
-#src/tight-binding/tightbinding_k.f90
+src/tight-binding/tightbinding_k.f90
 src/tight-binding/tightbinding_r.f90
 )

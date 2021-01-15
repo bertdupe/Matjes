@@ -44,6 +44,7 @@ interface get_parameter
  module procedure get_1D_vec_int
  module procedure get_1D_vec_bool
  module procedure get_vec1D_real
+ module procedure get_vec1D_int
  module procedure get_int
  module procedure get_int8
  module procedure get_real
@@ -644,6 +645,7 @@ subroutine get_cell(io,fname,attype,cell)
     character(len=100) :: str
     logical :: used(size(attype))
 
+    cell%n_attype=size(attype)
     Call set_pos_entry(io,fname,var_name)
     length_string=len_trim(var_name)
     read (io,'(a)',iostat=stat) str
@@ -1222,6 +1224,31 @@ subroutine get_vec1d_real(io,fname,vname,vec)
     endif
     Call check_further_entry(io,fname,vname)
 end subroutine 
+
+subroutine get_vec1d_int(io,fname,vname,vec)
+    integer, intent(inout) :: vec(:)
+    integer, intent(in) :: io
+    character(len=*), intent(in) :: vname,fname
+    !internal
+    logical :: success
+    integer :: stat
+    character(len=len(vname))   ::  tmp
+   
+    Call set_pos_entry(io,fname,vname,success)
+    if(success)then
+        read(io,*,iostat=stat) tmp, vec
+        if(stat/=0)then
+            write(error_unit,'(/3A)') 'Failed to read ',vname,' but keyword is given'
+            STOP "Fix input"
+        endif
+    else
+        write(error_unit,'(2A)') 'No entry found for ',vname
+        write(error_unit,'(A)') 'Using default value:'
+        write(error_unit,'(3I10)') vec
+    endif
+    Call check_further_entry(io,fname,vname)
+end subroutine 
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

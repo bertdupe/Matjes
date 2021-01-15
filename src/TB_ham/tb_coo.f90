@@ -1,6 +1,6 @@
 module m_H_tb_coo
 use m_H_tb_base
-use m_TB_types, only: parameters_TB_IO_H 
+use m_TB_types, only: parameters_ham_init 
 implicit none
 private
 public H_TB_coo, H_TB_coo_based
@@ -21,15 +21,19 @@ type,extends(H_TB) :: H_tb_coo
     complex(8),allocatable  :: val(:)
     integer,allocatable     :: rowind(:),colind(:)
 contains
-    procedure,pass :: init_coo
-    procedure,pass :: init_connect
-    procedure,pass :: add_child
-    procedure,pass :: copy_child
-    procedure,pass :: destroy_child
-    procedure,pass :: pop_par
+    procedure   :: init_coo
+    procedure   :: init_connect
+    procedure   :: add_child
+    procedure   :: copy_child
+    procedure   :: destroy_child
+    procedure   :: pop_par
+    procedure   :: get_par
+    procedure   :: mv
 
-    procedure,pass :: get_eval
-    procedure,pass :: get_evec
+    procedure   :: to_BdG
+
+    procedure   :: get_eval
+    procedure   :: get_evec
 end type
 
 abstract interface
@@ -42,6 +46,68 @@ end interface
 
 
 contains
+
+subroutine to_BdG(this)
+    !adds the BdG hole/hole part if only the electronic part is described
+    class(H_TB_coo),intent(inout)   :: this
+    integer                     :: nnz
+    complex(8),allocatable      :: val(:)
+    integer,allocatable         :: rowind(:),colind(:)
+    type(parameters_ham_init)   :: hinit
+    integer                     :: nBdG,i
+
+    if(this%nsc==1)then
+        Call this%get_hinit(hinit)
+        nBdG=hinit%norb*hinit%nspin*hinit%ncell
+        hinit%nsc=2
+        Call this%pop_par(nnz,val,rowind,colind)
+        Call this%init_base(hinit)
+        this%nnz=2*nnz
+        allocate(this%val(this%nnz),this%rowind(this%nnz),this%colind(this%nnz))
+        this%val   (1:nnz)=val  
+        this%rowind(1:nnz)=rowind
+        this%colind(1:nnz)=colind
+        this%val   (nnz+1:2*nnz)=conjg(val)
+        this%rowind(nnz+1:2*nnz)=rowind+nBdG
+        this%colind(nnz+1:2*nnz)=colind+nBdG
+        forall(i=1+nnz:2*nnz,modulo(this%rowind(i),2)==modulo(this%colind(i),2)) this%val(i)=-this%val(i)   !minus for spin-conserving terms
+    elseif(this%nsc/=2)then
+        STOP "Unexected nsc"
+    endif
+
+end subroutine
+
+
+subroutine mv(this,Hout)
+    class(H_TB_coo),intent(inout)   :: this
+    class(H_TB),intent(inout)       :: Hout
+    
+    select type(Hout)
+    type is(H_TB_coo)
+        Call Hout%init_otherH(this)
+        Hout%nnz=this%nnz
+        Call move_alloc(this%val,Hout%val)
+        Call move_alloc(this%rowind,Hout%rowind)
+        Call move_alloc(this%colind,Hout%colind)
+    class is(H_TB_coo_based)
+        Call Hout%set_from_Hcoo(this)
+    class default
+        STOP "Cannot move H_TB_coo type with Hamiltonian that is not a class of H_TB_coo or H_TB_coo_based"
+    end select
+    Call this%destroy()
+end subroutine
+
+
+subroutine get_par(this,val,rowind,colind)
+    class(H_TB_coo),intent(in)          :: this
+    complex(8),allocatable,intent(out)  :: val(:)
+    integer,allocatable,intent(out)     :: rowind(:),colind(:)
+
+    val=this%val
+    rowind=this%rowind
+    colind=this%colind
+end subroutine
+
 subroutine pop_par(this,nnz,val,rowind,colind)
     class(H_TB_coo),intent(inout)     :: this
     integer,intent(out)                 :: nnz
@@ -64,7 +130,7 @@ subroutine init_connect_based(this,connect,Hval,Hval_ind,io,ind_offset)
     complex(8),intent(in)                   :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)                      :: Hval_ind(:,:)
     integer,intent(in)                      :: connect(:,:)
-    type(parameters_TB_IO_H),intent(in)     :: io
+    type(parameters_ham_init),intent(in)     :: io
     integer,intent(in),optional             :: ind_offset(2)
     !local
     type(H_TB_coo)    :: H_coo
@@ -79,7 +145,7 @@ subroutine init_coo_based(this,val,row,col,io,ind_offset)
     class(H_TB_coo_based),intent(inout)     :: this
     complex(8),intent(in)                   :: val(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)                      :: row(size(val)),col(size(val))
-    type(parameters_TB_IO_H),intent(in)     :: io
+    type(parameters_ham_init),intent(in)     :: io
     integer,intent(in),optional             :: ind_offset(2)
     !local
     type(H_TB_coo)    :: H_coo
@@ -94,7 +160,7 @@ subroutine init_coo(this,val,row,col,io,ind_offset)
     class(H_tb_coo),intent(inout)       :: this
     complex(8),intent(in)               :: val(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)                  :: row(size(val)),col(size(val))
-    type(parameters_TB_IO_H),intent(in) :: io
+    type(parameters_ham_init),intent(in) :: io
     integer,intent(in),optional         :: ind_offset(2) !integer offset in each Hamiltonian dimension (to easily access other sectors in BdG-space)
 
 
@@ -117,7 +183,7 @@ subroutine init_connect(this,connect,Hval,Hval_ind,io,ind_offset)
     complex(8),intent(in)               :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)                  :: Hval_ind(:,:)
     integer,intent(in)                  :: connect(:,:)  !(2,Nentries) index in (1:Ncell) basis of both connected sites 
-    type(parameters_TB_IO_H),intent(in) :: io
+    type(parameters_ham_init),intent(in) :: io
     integer,intent(in),optional         :: ind_offset(2) !integer offset in each Hamiltonian dimension (to easily access other sectors in BdG-space)
 
     integer :: nnz

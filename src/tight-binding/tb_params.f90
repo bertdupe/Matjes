@@ -1,5 +1,6 @@
 module m_tb_params
 use m_tb_types
+use m_ham_arrange
 implicit none
 public
 
@@ -26,8 +27,11 @@ subroutine set_TB_params(lat)
         par%norb_at=lat%cell%atomic%orbitals
         par%norb_at_off=[(sum(par%norb_at(1:i-1)),i=1,size(par%norb_at))]
         par%norb=sum(par%norb_at)
-        par%nsite=par%nsc*par%nspin*par%norb
-        par%dimH=par%nsite*par%ncell
+        par%dimH=par%nsc*par%nspin*par%norb*par%ncell
+        do i=1,size(par%hop_io)
+            Call par%hop_io(i)%check(lat)
+        enddo
+        Call par%hop%set(par%hop_io,lat,par%nspin)
     end associate
 
     !REMOVE-> move to H_io
@@ -46,7 +50,5 @@ subroutine set_TB_params(lat)
 
     !TB_params%H%rearrange=TB_params%io_H%rearrange !this is not really implementend and most probably breakes dos or something else
 end subroutine
-
-
 
 end module

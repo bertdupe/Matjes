@@ -12,6 +12,7 @@ type,extends(H_TB_coo_based),abstract :: H_tb_dense
     procedure   :: add_child
     procedure   :: copy_child
     procedure   :: destroy_child
+    procedure   :: mv
 end type
 
 type,extends(H_tb_dense)  ::  H_zheev
@@ -47,9 +48,9 @@ contains
 subroutine set_from_Hcoo(this,H_coo)
     class(H_tb_dense),intent(inout)   :: this
     type(H_tb_coo),intent(inout)      :: H_coo
-    integer             :: nnz,i 
-    complex(8),allocatable :: val(:)
-    integer,allocatable :: rowind(:),colind(:)
+    integer                 :: nnz,i 
+    complex(8),allocatable  :: val(:)
+    integer,allocatable     :: rowind(:),colind(:)
 
     Call this%init_otherH(H_coo)
     Call H_coo%pop_par(nnz,val,rowind,colind)
@@ -58,6 +59,21 @@ subroutine set_from_Hcoo(this,H_coo)
         this%H(rowind(i),colind(i))=this%H(rowind(i),colind(i))+val(i)
     enddo
 end subroutine 
+
+subroutine mv(this,Hout)
+    class(H_tb_dense),intent(inout) :: this
+    class(H_TB),intent(inout)       :: Hout
+    
+    select type(Hout)
+    class is(H_TB_dense)
+        Call Hout%init_otherH(this)
+        Call move_alloc(this%H,Hout%H)
+    class default
+        STOP "Cannot move H_TB_dense type to Hamiltonian that is not a class of H_TB_dense"
+    end select
+    Call this%destroy()
+end subroutine
+
 
 recursive subroutine add_child(this,H_in)
     class(H_tb_dense),intent(inout)     :: this

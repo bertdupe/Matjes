@@ -86,6 +86,7 @@ subroutine read_TB_dos(io,fname,io_dos)
     call get_parameter(io,fname,'dos_sigma',io_dos%sigma)
     call get_parameter(io,fname,'dos_E_ext',io_dos%E_ext)
     call get_parameter(io,fname,'dos_dE',io_dos%dE)
+    call get_parameter(io,fname,'dos_kgrid',io_dos%kgrid)
 end subroutine
 
 
@@ -121,8 +122,8 @@ subroutine read_TB_H(io,fname,TB_params)
 
     Call number_Hpar(io,fname,'TB_hopping',N)
     if(N>0)then
-        allocate(TB_params%hop(N))
-        Call read_Hpar(io,fname,'TB_hopping',TB_params%hop)
+        allocate(TB_params%hop_io(N))
+        Call read_Hpar(io,fname,'TB_hopping',TB_params%hop_io)
     else
         STOP "FAILED TO READ tight-binding hopping Hamiltonian (TB_hopping), but orbitals are set"
     endif
