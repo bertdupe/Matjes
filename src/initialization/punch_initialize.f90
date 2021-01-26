@@ -59,7 +59,7 @@ subroutine punch_order(io,fname,lat,ordname,dim_mode,state)
     integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
     real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
 
-    real(8)             :: pos(3),radius,width,height,angle
+    real(8)             :: pos(3),normal(3),radius,width,height,angle
     character(len=30)   :: configuration
     logical             :: do_punch
 
@@ -72,6 +72,7 @@ subroutine punch_order(io,fname,lat,ordname,dim_mode,state)
     if(.not.do_punch) return
     !get parameters for punch
     pos=0.0d0
+    normal=[1.0d0,0.0d0,0.0d0]
     radius=Huge(1.0d0)
     width=Huge(1.0d0)
     height=Huge(1.0d0)
@@ -84,6 +85,7 @@ subroutine punch_order(io,fname,lat,ordname,dim_mode,state)
     call get_parameter(io,fname,'punch_width' ,width)
     call get_parameter(io,fname,'punch_height',height)
     call get_parameter(io,fname,'punch_angle' ,angle)
+    call get_parameter(io,fname,'punch_normal' ,normal)
 
     !specialized input parameter for this order parameter?
     call get_parameter(io,fname,'punch_config_'//ordname,configuration)
@@ -92,6 +94,7 @@ subroutine punch_order(io,fname,lat,ordname,dim_mode,state)
     call get_parameter(io,fname,'punch_width_' //ordname,width)
     call get_parameter(io,fname,'punch_height_'//ordname,height)
     call get_parameter(io,fname,'punch_angle_' //ordname,angle)
+    call get_parameter(io,fname,'punch_normal_' //ordname,normal)
 
     Call get_pos(lat,dim_mode,ordname,pos_arr,dim_state)
     state_pt(1:dim_state,1:size(state)/dim_state)=>state
@@ -106,6 +109,8 @@ subroutine punch_order(io,fname,lat,ordname,dim_mode,state)
             Call punch_texture_hexagon(pos,width,angle,pos_3,state_pt)
         case('rectangle')
             Call punch_texture_rectangle(pos,width,height,angle,pos_3,state_pt)
+        case('heaviside')
+            Call punch_texture_heaviside(pos,normal,pos_3,state_pt)
         case("")
             write(*,'(//3A)') 'Failing to do punch_order for: ',ordname
             write(*,'(A)') 'Punching is requested (punch_), but no punch_config is set'
@@ -158,6 +163,24 @@ subroutine punch_texture_rectangle(center,width,height,angle_in,pos,state)
     remove=abs(pos(1,:))>width*0.5d0.or.abs(pos(2,:))>height*0.5d0
     forall(i=1:size(pos,2), remove(i)) state(:,i)=0.0d0
 end subroutine
+
+subroutine punch_texture_heaviside(center,normal,pos,state)
+!sets all order parameters to 0 for which (position-center) projected along the normal vector is larger than 0
+    !shape parameters:
+    real(8),intent(in)          :: center(3)    !center position  of heaviside function
+    real(8),intent(in)          :: normal(3)    !normal direction of heaviside function
+    !lattice parameters:
+    real(8),intent(inout)       :: pos(:,:)
+    real(8),intent(inout)       :: state(:,:)
+    ! Internal variables
+    integer                 :: i
+    logical                 :: remove(size(pos,2))
+
+    Call center_pos(center,pos)
+    remove=matmul(normal,pos)>0.0d0
+    forall(i=1:size(pos,2), remove(i)) state(:,i)=0.0d0
+end subroutine
+
 
 subroutine punch_texture_hexagon(center,width,angle_in,pos,state)
     !shape parameters:

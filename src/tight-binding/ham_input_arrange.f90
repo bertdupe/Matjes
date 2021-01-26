@@ -28,8 +28,9 @@ end type
 contains 
 
 subroutine set_ham(ham,hop,lat,nspin)
+    !sets Htb_inp type from TB_hopping input
     use m_sort
-    class(Htb_inp),intent(out)       :: Ham
+    class(Htb_inp),intent(out)          :: Ham
     type(TB_hopping),intent(in)         :: hop(:)
     integer,intent(in)                  :: nspin
     type(lattice),intent(in)            :: lat

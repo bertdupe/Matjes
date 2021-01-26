@@ -17,13 +17,27 @@ end type
 
 contains
 subroutine get_Hk_inp(lat,h_io,Hk_inp)
+    use m_init_HR, only: get_delta
     !get Hk_inp, which contains the Hamiltonian data to construct the Hamiltonian at arbitrary k
     type(lattice),intent(in)                :: lat
     type(parameters_TB_IO_H),intent(in)     :: h_io
     type(Hk_inp_t),intent(out)              :: Hk_inp
 
-    !Call get_Hop_arr(lat,h_io,Hk_inp%H,diffR=Hk_inp%diffR)
-    Call get_H(lat,h_io,Hk_inp%H,diffR=Hk_inp%diffR)
+    type(parameters_TB_IO_H)                :: h_io_scf
+
+    if(h_io%use_scf)then    
+        if(.true.)then 
+            !use reciprocal-space self-consistent delta
+
+        else
+            !use real-space self-consistent delta
+            H_io_scf=h_io
+            Call get_delta(lat,h_io,h_io_scf%del)
+            Call get_H(lat,h_io_scf,Hk_inp%H,diffR=Hk_inp%diffR)
+        endif
+    else
+        Call get_H(lat,h_io,Hk_inp%H,diffR=Hk_inp%diffR)
+    endif
 end subroutine
 
 subroutine Hk_eval(Hk_inp,k,h_io,eval)

@@ -15,7 +15,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
     use m_get_position
     use m_io_files_utils, only: open_file_write, close_file
     use m_io_utils, only: dump_config
-    use m_rw_TB, only : rw_TB
     use m_set_Hamiltonians,only: set_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
     use m_orders_initialize, only: orders_initialize 
@@ -62,9 +61,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
 
     !read the Hamiltonian parameters
     Call rw_H(H_io)
-    
-    ! read the TB parameters
-    if(any(my_motif%atomic%orbitals>0)) call rw_TB('input')
     
     ! find the symmetry of the lattice here
     call user_info(6,time,'reading the input file',.false.)

@@ -2,13 +2,56 @@ module m_init_H
 use m_derived_types, only: lattice
 use m_H_tb_public
 use m_types_tb_h_inp 
+use m_delta_onsite
  
 use m_TB_types, only: parameters_ham_init
 use m_neighbor_type, only: neighbors
 
 private
-public :: get_H
+public :: get_H, get_H_TB, get_H_sc
 contains
+
+
+subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
+    type(lattice),intent(in)                            :: lat
+    type(parameters_TB_IO_H),intent(in)                 :: h_io
+    type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)
+    logical,intent(in)                                  :: sc
+    real(8),allocatable,intent(out),optional            :: diffR(:,:)
+
+    type(H_tb_coo),allocatable  :: H(:)
+    real(8),allocatable         :: diffR_loc(:,:)
+    integer                     :: i
+
+    Call get_Hop_arr(lat,h_io,H_out,diffR=diffR)
+    if(allocated(h_io%jsd))then
+        allocate(H(1))
+        Call get_H_Jsd(lat,h_io,H(1))
+        Call H_append(H_out,H)
+        if(present(diffR))then
+            allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
+            Call append_arr(diffR,diffR_loc)
+        endif
+    endif
+    if(sc)then    !some hamiltonian is written in BdG-space, change all to that
+        do i=1,size(H_out)
+            Call H_out(i)%to_BdG()
+        enddo
+    endif
+end subroutine 
+
+subroutine get_H_sc(lat,h_io,H_out,del,diffR)
+    type(lattice),intent(in)                            :: lat
+    type(parameters_TB_IO_H),intent(in)                 :: h_io
+    type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)
+    type(Hdelta),intent(in)                             :: del
+    real(8),allocatable,intent(out),optional            :: diffR(:,:)
+
+    if(.not.allocated(h_io%del_io)) STOP "h_io%del_io should be allocated when calculating delta"
+    allocate(H_out(1)) !increase if more than onsite-delta
+    Call get_H_delta_onsite(lat,h_io,H_out(1),del)
+    if(present(diffR)) allocate(diffR(3,1),source=0.0d0) !single onsite term, so difference is 0
+end subroutine 
 
 subroutine get_H(lat,h_io,H_out,diffR)
     type(lattice),intent(in)                            :: lat
@@ -30,9 +73,9 @@ subroutine get_H(lat,h_io,H_out,diffR)
             Call append_arr(diffR,diffR_loc)
         endif
     endif
-    if(allocated(h_io%del))then
+    if(allocated(h_io%del_io))then
         allocate(H(1))
-        Call get_H_delta(lat,h_io,H(1))
+        Call get_H_delta_onsite(lat,h_io,H(1),h_io%del)
         Call H_append(H_out,H)
         if(present(diffR))then
             allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
@@ -44,53 +87,96 @@ subroutine get_H(lat,h_io,H_out,diffR)
             Call H_out(i)%to_BdG()
         enddo
     endif
-
 end subroutine 
 
-subroutine get_H_delta(lat,h_io,H)
-    !TODO, make neigh%get more efficient by first sorting though h_io%del to get all required connections for an atom type pair at once
+
+subroutine get_H_delta_onsite(lat,h_io,H,del)
     type(lattice),intent(in)                :: lat
     type(parameters_TB_IO_H),intent(in)     :: h_io
     class(H_tb),intent(inout)               :: H
+    type(Hdelta),intent(in)                 :: del
 
-    integer         :: i_del,i_pair
+    integer         :: i_del,i_cell, i_nnz
 
     type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
-    type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
-    integer         :: at_pair(2)       !pair of atoms locally considered
-    integer         :: orb(2)           !orbital offset in basic unit-cell
-    integer         :: ind(2,2)         !index in basic unit-cell 
-    integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
-    complex(8)      :: val(2)
+    integer         :: orb              !orbital offset in basic unit-cell
     integer         :: nBdG             !length to next BdG sector
+    integer         :: ndim             !length to next unit-cell
+    integer         :: add_row(4),add_col(4)
 
     type(H_tb_coo)  :: Htmp             !local Hamiltonian to save 
+    integer,allocatable ::  row(:),col(:)
+    complex(8),allocatable  :: val(:)
 
+    ndim=h_io%norb*h_io%nspin
     Call hinit%init(h_io)
     nBdG=hinit%norb*hinit%nspin*hinit%ncell
-    do i_del=1,size(h_io%del)
-        Call neigh%get(h_io%del(i_del)%attype,[h_io%del(i_del)%dist],lat)
-        connect_bnd=1
-        do i_pair=1,neigh%Nshell(1)
-            connect_bnd(2)=neigh%ishell(i_pair)
-            at_pair=neigh%at_pair(:,i_pair)
-            orb=h_io%norb_at_off(at_pair)+h_io%del(i_del)%orbital
-            ind(:,1)=(orb-1)*hinit%nspin+[1,2] !spin_up, spin_dn
-            ind(:,2)=(orb-1)*hinit%nspin+[2,1] !spin_dn, spin_up
-            !electron/hole-term
-            val=h_io%del(i_del)%val
-            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,hinit,[0,nBdG])
-            Call H%add(Htmp)
-            Call Htmp%destroy()
-            !hole/electron-term
-            val=conjg(h_io%del(i_del)%val)
-            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,hinit,[nBdG,0])
-            Call H%add(Htmp)
-            Call Htmp%destroy()
-            connect_bnd(1)=connect_bnd(2)+1
+    allocate(row(lat%ncell*4),col(lat%ncell*4),val(lat%ncell*4))
+    !order of entries 
+    add_row=[1     , 2     , nBdG+1, nBdG+2]
+    add_col=[nBdG+2, nBdG+1, 2     , 1     ]
+    do i_del=1,size(del%orb)
+        orb=(del%orb(i_del)-1)*hinit%nspin
+        i_nnz=0
+        do i_cell=1,lat%ncell
+            row(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb+add_row
+            col(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb+add_col
+            val(i_nnz+1:i_nnz+4)=del%delta(i_cell,i_del)
+            val(i_nnz+3:i_nnz+4)=conjg(val(i_nnz+3:i_nnz+4))
+            i_nnz=i_nnz+4
         enddo
+        Call Htmp%init_coo(val,row,col,hinit)
+        Call H%add(Htmp)
+        Call Htmp%destroy()
     enddo
 end subroutine 
+
+
+! not really working for converging delta
+!subroutine get_H_delta(lat,h_io,H)
+!    !TODO, make neigh%get more efficient by first sorting though h_io%del to get all required connections for an atom type pair at once
+!    type(lattice),intent(in)                :: lat
+!    type(parameters_TB_IO_H),intent(in)     :: h_io
+!    class(H_tb),intent(inout)               :: H
+!
+!    integer         :: i_del,i_pair
+!
+!    type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
+!    type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
+!    integer         :: at_pair(2)       !pair of atoms locally considered
+!    integer         :: orb(2)           !orbital offset in basic unit-cell
+!    integer         :: ind(2,2)         !index in basic unit-cell 
+!    integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
+!    complex(8)      :: val(2)
+!    integer         :: nBdG             !length to next BdG sector
+!
+!    type(H_tb_coo)  :: Htmp             !local Hamiltonian to save 
+!
+!    Call hinit%init(h_io)
+!    nBdG=hinit%norb*hinit%nspin*hinit%ncell
+!    do i_del=1,size(h_io%del_io)
+!        Call neigh%get(h_io%del_io(i_del)%attype,[h_io%del_io(i_del)%dist],lat)
+!        connect_bnd=1
+!        do i_pair=1,neigh%Nshell(1)
+!            connect_bnd(2)=neigh%ishell(i_pair)
+!            at_pair=neigh%at_pair(:,i_pair)
+!            orb=h_io%norb_at_off(at_pair)+h_io%del_io(i_del)%orbital
+!            ind(:,1)=(orb-1)*hinit%nspin+[1,2] !spin_up, spin_dn
+!            ind(:,2)=(orb-1)*hinit%nspin+[2,1] !spin_dn, spin_up
+!            !electron/hole-term
+!            val=h_io%del_io(i_del)%val
+!            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,hinit,[0,nBdG])
+!            Call H%add(Htmp)
+!            Call Htmp%destroy()
+!            !hole/electron-term
+!            val=conjg(h_io%del_io(i_del)%val)
+!            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,hinit,[nBdG,0])
+!            Call H%add(Htmp)
+!            Call Htmp%destroy()
+!            connect_bnd(1)=connect_bnd(2)+1
+!        enddo
+!    enddo
+!end subroutine 
 
 
 subroutine get_H_Jsd(lat,h_io,H)

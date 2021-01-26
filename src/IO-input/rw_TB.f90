@@ -4,22 +4,13 @@ use m_io_utils
 use m_io_files_utils
 use m_io_read_util
 implicit none
-
-type(parameters_TB), private :: TB_params
-
 private
-public :: rw_TB, get_parameters_io_TB
-
+public :: rw_TB
 contains
 
-subroutine get_parameters_io_TB(param)
-    type(parameters_TB),intent(out) :: param
-    param=TB_params
-
-end subroutine
-
-subroutine rw_TB(fname)
-    character(len=*), intent(in) :: fname
+subroutine rw_TB(TB_params,fname)
+    type(parameters_TB),intent(out) :: TB_params
+    character(len=*), intent(in)    :: fname
     integer     ::  io
     
     io=open_file_read(fname)
@@ -31,7 +22,6 @@ subroutine rw_TB(fname)
     Call read_TB_occ_mult(io,fname,TB_params%io_occ_mult)
     call close_file(fname,io)
 end subroutine
-
 
 subroutine read_TB_highs(io,fname,highs)
     use m_convert
@@ -130,10 +120,18 @@ subroutine read_TB_H(io,fname,TB_params)
 
     Call number_Hpar(io,fname,'TB_delta',N)
     if(N>0)then
-        allocate(TB_params%del(N))
-        Call read_Hpar(io,fname,'TB_delta',TB_params%del)
+        allocate(TB_params%del_io(N))
+        Call read_Hpar(io,fname,'TB_delta',TB_params%del_io)
     else
         write(output_unit,'(/A/)') "No tight-binding superconducting delta found"
+    endif
+
+    Call number_Hpar(io,fname,'TB_scfdelta',N)
+    if(N>0)then
+        allocate(TB_params%del_scf_io(N))
+        Call read_Hpar(io,fname,'TB_scfdelta',TB_params%del_scf_io)
+    else
+        write(output_unit,'(/A/)') "No tight-binding self-consistent superconducting delta found"
     endif
 
     Call number_Hpar(io,fname,'TB_Jsd',N)
@@ -144,6 +142,10 @@ subroutine read_TB_H(io,fname,TB_params)
         write(output_unit,'(/A/)') "No tight-binding Jsd-coupling found"
     endif
 
+    call get_parameter(io,fname,'TB_scf_print',TB_params%scf_print)
+    call get_parameter(io,fname,'TB_scf_loopmax',TB_params%scf_loopmax)
+    call get_parameter(io,fname,'TB_scf_diffconv',TB_params%scf_diffconv)
+    call get_parameter(io,fname,'TB_scf_Ecut',TB_params%scf_Ecut)
     call get_parameter(io,fname,'TB_sparse',TB_params%sparse)
     call get_parameter(io,fname,'TB_diag',TB_params%i_diag)
     call get_parameter(io,fname,'TB_diag_acc',TB_params%diag_acc)

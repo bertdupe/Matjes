@@ -145,7 +145,7 @@ subroutine init_coo_based(this,val,row,col,io,ind_offset)
     class(H_TB_coo_based),intent(inout)     :: this
     complex(8),intent(in)                   :: val(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)                      :: row(size(val)),col(size(val))
-    type(parameters_ham_init),intent(in)     :: io
+    type(parameters_ham_init),intent(in)    :: io
     integer,intent(in),optional             :: ind_offset(2)
     !local
     type(H_TB_coo)    :: H_coo

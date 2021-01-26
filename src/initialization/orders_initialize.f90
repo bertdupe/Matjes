@@ -24,6 +24,7 @@ subroutine orders_initialize(lat,extpar_io)
     if (fexist) stop 'please rename the file "init-modes.dat" to "*_init.dat", eg."magnetic_init.dat"'
 
     Call lat%read_order(fexist_out=initialized)
+    Call lat%read_order("_init.dat",fexist_out=initialized) !backwards compatible name, remove at some point?
     Call init_config_lattice(lat,initialized,extpar_io)
     Call punch_lattice(lat)
 end subroutine

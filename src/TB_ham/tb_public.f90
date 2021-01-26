@@ -26,15 +26,20 @@ subroutine H_append(H,Hadd)
 
     integer ::  i
 
-    allocate(Htmp(size(H)+size(Hadd)),mold=H)
-    do i=1,size(H)
-        Call H(i)%mv(Htmp(i))
-    enddo
-    do i=1,size(Hadd)
-        Call Hadd(i)%mv(Htmp(i+size(H)))
-    enddo
-    deallocate(H,Hadd)
-    Call move_alloc(Htmp,H)
+    if(.not.allocated(Hadd)) ERROR STOP "Cannot append H as the added H is not allocated"
+    if(allocated(H))then
+        allocate(Htmp(size(H)+size(Hadd)),mold=H)
+        do i=1,size(H)
+            Call H(i)%mv(Htmp(i))
+        enddo
+        do i=1,size(Hadd)
+            Call Hadd(i)%mv(Htmp(i+size(H)))
+        enddo
+        deallocate(H,Hadd)
+        Call move_alloc(Htmp,H)
+    else
+        Call move_alloc(Hadd,H)
+    endif
 end subroutine
 
 subroutine set_H_single(H,io)

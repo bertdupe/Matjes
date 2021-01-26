@@ -15,8 +15,8 @@ src/tight-binding/mkl_util.f90
 src/tight-binding/occupation.f90
 src/tight-binding/occupation_mult.f90
 src/tight-binding/save_states.f90
-src/tight-binding/tb_params.f90
 src/tight-binding/types_tb_H_inp.f90
+src/tight-binding/types_delta_onsite.f90
 src/tight-binding/TB_types.f90
 src/tight-binding/tightbinding.f90
 src/tight-binding/tightbinding_k.f90

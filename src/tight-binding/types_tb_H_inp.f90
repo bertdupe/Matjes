@@ -3,7 +3,7 @@ use m_derived_types, only: lattice
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 private
-public TB_H_par,TB_hopping, TB_Jsd, TB_delta, alloc_TB_H
+public TB_H_par,TB_hopping, TB_Jsd, TB_delta, alloc_TB_H, TBio_delta_onsite_scf
 type,abstract :: TB_H_par
 contains
     procedure(int_print)  ,deferred :: print_std
@@ -90,6 +90,21 @@ type,extends(TB_H_par) :: TB_Jsd
     procedure :: check => TB_Jsd_check
 end type
 
+type,extends(TB_H_par) :: TBio_delta_onsite_scf
+    integer     :: attype=0     !atom type
+    integer     :: orbital=0    !orbital of atom-type (excluding spin)
+    real(8)     :: val=0.0d0    !attractive potential magnitude
+    !add maximal energy?
+    contains
+    procedure :: local_read => delta_onsite_scf_read
+    procedure :: delta_onsite_scf_assign
+    generic :: assignment(=) => delta_onsite_scf_assign
+    procedure :: print_std => delta_onsite_scf_print
+    procedure :: is_zero => delta_onsite_scf_is_zero
+    procedure :: check => delta_onsite_scf_check
+end type
+
+
 
 contains 
 
@@ -104,8 +119,11 @@ subroutine alloc_TB_H(par,var_name)
         allocate(TB_delta::par)
     case("TB_Jsd")
         allocate(TB_Jsd::par)
+    case("TB_scfdelta")
+        allocate(TBio_delta_onsite_scf::par)
     case default
-        STOP "FAILED TO set Hamiltonian, var_name not implemented"
+        write(error_unit,'(3A)') 'Could not allocate general TB_H_par input type based on name: "',var_name,'"'
+        STOP "Implement in types_tb_H_inp.f90, probably new type has been defined"
     end select
 end subroutine
 
@@ -261,6 +279,50 @@ subroutine TB_Jsd_assign(par,par_in)
     par%val    =par_in%val        
 end subroutine
 
+
+subroutine delta_onsite_scf_check(this,lat)
+    class(TBio_delta_onsite_scf), intent(in)    :: this
+    type(lattice),intent(in)                    :: lat
+
+    if(this%attype<1.or.this%attype>lat%cell%n_attype)then
+        write(error_unit,'(//A/A)') "Atom types in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(this%orbital<1.or.this%orbital>lat%cell%atomic(this%attype)%orbitals)then
+        write(error_unit,'(//A/A)') "Orbital in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+    !check negative value?
+end subroutine
+
+subroutine delta_onsite_scf_read(par, unit, iotype, v_list, iostat, iomsg)
+    class(TBio_delta_onsite_scf), intent(inout)  :: par
+    integer, intent(in)           :: unit
+    character(*), intent(in)      :: iotype
+    integer, intent(in)           :: v_list(:)
+    integer, intent(out)          :: iostat
+    character(*), intent(inout)   :: iomsg
+    
+    type(TBio_delta_onsite_scf)        :: tmp
+   
+    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital , tmp%val
+    if(iostat==0) par=tmp
+end subroutine
+
+
+subroutine delta_onsite_scf_assign(par,par_in)
+    class(TBio_delta_onsite_scf), intent(out):: par
+    type(TBio_delta_onsite_scf),  intent(in ):: par_in
+
+    par%attype =par_in%attype  
+    par%orbital=par_in%orbital 
+    par%val    =par_in%val        
+end subroutine
+
+
 subroutine TB_Jsd_check(this,lat)
     class(TB_Jsd), intent(in) :: this
     type(lattice),intent(in)    :: lat
@@ -294,6 +356,22 @@ subroutine del_print(this,io_in)
     write(io_unit,'(A,2I6)')     '  distance  :', this%dist
     write(io_unit,'(A,2E16.8/)') '  energy    :', this%val
 end subroutine
+
+subroutine delta_onsite_scf_print(this,io_in)
+    use, intrinsic :: iso_fortran_env, only : output_unit
+    class(TBio_delta_onsite_scf),intent(in)     :: this
+    integer,intent(in),optional                 :: io_in
+    integer                                     :: io_unit
+
+    io_unit=output_unit
+    if(present(io_in)) io_unit=io_in
+
+    write(io_unit,'(A)')         'onsite scf delta Hamiltonian input data:'
+    write(io_unit,'(A,2I6)')     '  atom type:', this%attype
+    write(io_unit,'(A,2I6)')     '  orbital  :', this%orbital
+    write(io_unit,'(A,2E16.8/)') '  potential:', this%val
+end subroutine
+
 
 subroutine hop_print(this,io_in)
     use, intrinsic :: iso_fortran_env, only : output_unit
@@ -343,6 +421,13 @@ end function
 
 function delta_is_zero(this)result(is_zero)
     class(TB_delta),intent(in)   ::  this
+    logical :: is_zero
+
+    is_zero=this%val==0.0d0
+end function
+
+function delta_onsite_scf_is_zero(this)result(is_zero)
+    class(TBio_delta_onsite_scf),intent(in)   ::  this
     logical :: is_zero
 
     is_zero=this%val==0.0d0

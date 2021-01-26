@@ -142,6 +142,7 @@ end subroutine
 
 
 subroutine print_dos(this,fname)
+    use, intrinsic :: iso_fortran_env, only : error_unit
     class(dos_t),intent(inout)  :: this
     character(len=*),intent(in) :: fname
     real(8),allocatable         :: dos_loc(:)
@@ -152,7 +153,11 @@ subroutine print_dos(this,fname)
     open(newunit=io,file=fname)
     dos_loc=this%dos
     norm=sum(dos_loc)
-    dos_loc=dos_loc/norm
+    if(norm==0.0d0) then
+        write(error_unit,'(A)') "sum over all dos entries is 0, check dos input"
+    else
+        dos_loc=dos_loc/norm
+    endif
     do i=1,size(this%dos)
        write(io,'(2E16.8)') this%Eval(i),dos_loc(i)
     enddo

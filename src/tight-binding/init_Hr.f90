@@ -5,214 +5,209 @@ use m_tb_types ,only: parameters_TB_Hsolve,parameters_TB_IO_H
 use m_types_tb_h_inp 
 use m_neighbor_type, only: neighbors
 use m_init_H
+use m_delta_onsite
+use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 private
-public get_Hr
+public get_Hr, get_delta
 
 contains
+
+subroutine get_delta(lat,h_io,del)
+    !subroutine to only get self-consistent delta (necessary only for k-space calculation which uses the self-consistent delta obtained from real-space)
+    type(lattice),intent(in)                :: lat
+    type(parameters_TB_IO_H),intent(in)     :: h_io
+    type(Hdelta),intent(out)                :: del
+
+    class(H_tb),allocatable :: H
+    if(h_io%use_scf)then !use self-conistent version
+        del=h_io%del
+        Call get_Hr_conv(lat,h_io,H,del)
+    else
+        STOP "It does not make sense to call this routine if no self-consistent delta is considered"
+    endif
+end subroutine
 
 subroutine get_Hr(lat,h_io,H)
     type(lattice),intent(in)                :: lat
     type(parameters_TB_IO_H),intent(in)     :: h_io
     class(H_tb),allocatable,intent(out)     :: H
 
+    type(Hdelta)                            :: del
     type(H_tb_coo),allocatable              :: H_list(:)
     integer         ::  i
 
-    Call set_H(H,h_io)
+    if(h_io%use_scf)then !use self-conistent version
+        del=h_io%del
+        Call get_Hr_conv(lat,h_io,H,del)
+    else
+        Call set_H(H,h_io)
 
-    Call get_H(lat,h_io,H_list)
-    do i=1,size(H_list)
-        Call H%add(H_list(i))
-    enddo
-
+        Call get_H(lat,h_io,H_list)
+        do i=1,size(H_list)
+            Call H%add(H_list(i))
+        enddo
+    endif
 end subroutine
 
-!subroutine get_Hr_hop(lat,h_io,H)
-!    !extract the real space Hamiltonian Hr from the electronic part in energy
-!    !TODO, make neigh%get more efficient by first sorting though h_io%hop to get all required connections for an atom type pair at once
-!    use m_ham_arrange
-!    use m_setH_util, only: get_coo
-!    type(lattice),intent(in)                :: lat
-!    type(parameters_TB_IO_H),intent(in)     :: h_io
-!    class(H_tb),intent(inout)               :: H
-!
-!    integer         :: i_hop,i_pair,i_dist
-!
-!    type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
-!    integer         :: at_pair(2)       !pair of atoms locally considered
-!    integer         :: orb(2)           !orbital offset in basic unit-cell
-!    integer         :: spin(2)          !spin offset in basic unit-cell
-!    integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
-!
-!    complex(8),allocatable  :: val(:)
-!    integer,allocatable     :: ind(:,:)
-!    integer,allocatable     :: ind_loc(:,:)
-!    integer,allocatable     :: dist(:)
-!
-!    type(H_tb_coo)  :: Htmp         !local Hamiltonian to save 
-!
-!    do i_hop=1,size(h_io%hop%at)
-!        dist=h_io%hop%at(i_hop)%dist%dist
-!        Call neigh%get(h_io%hop%at(i_hop)%atpair,dist,lat)
-!        do i_dist=1,size(h_io%hop%at(i_hop)%dist)
-!            connect_bnd=1
-!            Call get_coo(h_io%hop%at(i_hop)%dist(i_dist)%Hloc,val,ind)
-!            allocate(ind_loc,mold=ind)
-!            do i_pair=1,neigh%Nshell(i_dist)
-!                connect_bnd(2)=neigh%ishell(i_pair)
-!                at_pair=neigh%at_pair(:,i_pair)
-!                ind_loc=ind+spread(h_io%norb_at_off(at_pair)*h_io%nspin,2,size(ind,2))
-!
-!                !electron/electron-term
-!                Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind_loc,h_io)
-!                Call H%add(Htmp)
-!                Call Htmp%destroy()
-!                !hole/hole-term
-!                if(h_io%nsc==2) Call add_BdG(H,neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind_loc,h_io)
-!                connect_bnd(1)=connect_bnd(2)+1
-!            enddo
-!            deallocate(val,ind,ind_loc)
-!        enddo
-!        deallocate(dist)
-!    enddo
-!end subroutine 
-!
-!subroutine get_Hr_delta(lat,h_io,H)
-!    !TODO, make neigh%get more efficient by first sorting though h_io%del to get all required connections for an atom type pair at once
-!    type(lattice),intent(in)                :: lat
-!    type(parameters_TB_IO_H),intent(in)     :: h_io
-!    class(H_tb),intent(inout)               :: H
-!
-!    integer         :: i_del,i_pair
-!
-!    type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
-!    integer         :: at_pair(2)       !pair of atoms locally considered
-!    integer         :: orb(2)           !orbital offset in basic unit-cell
-!    integer         :: ind(2,2)         !index in basic unit-cell 
-!    integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
-!    complex(8)      :: val(2)
-!    integer         :: nBdG             !length to next BdG sector
-!
-!    type(H_tb_coo)  :: Htmp             !local Hamiltonian to save 
-!
-!    nBdG=h_io%norb*h_io%nspin*h_io%ncell
-!    do i_del=1,size(h_io%del)
-!        Call neigh%get(h_io%del(i_del)%attype,[h_io%del(i_del)%dist],lat)
-!        connect_bnd=1
-!        do i_pair=1,neigh%Nshell(1)
-!            connect_bnd(2)=neigh%ishell(i_pair)
-!            at_pair=neigh%at_pair(:,i_pair)
-!            orb=h_io%norb_at_off(at_pair)+h_io%del(i_del)%orbital
-!            ind(:,1)=(orb-1)*h_io%nspin+[1,2] !spin_up, spin_dn
-!            ind(:,2)=(orb-1)*h_io%nspin+[2,1] !spin_dn, spin_up
-!            !electron/hole-term
-!            val=h_io%del(i_del)%val
-!            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,h_io,[0,nBdG])
-!            Call H%add(Htmp)
-!            Call Htmp%destroy()
-!            !hole/electron-term
-!            val=conjg(h_io%del(i_del)%val)
-!            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,h_io,[nBdG,0])
-!            Call H%add(Htmp)
-!            Call Htmp%destroy()
-!
-!            connect_bnd(1)=connect_bnd(2)+1
-!        enddo
-!    enddo
-!end subroutine 
-!
-!
-!subroutine add_BdG(H,connect,Hval_in,Hval_ind,io)
-!    !adds the lower right quadrant of the BdG-equation from the upper quadrant
-!    use m_derived_types, only: lattice,op_abbrev_to_int
-!    class(H_tb),intent(inout)       :: H
-!    complex(8),intent(in)           :: Hval_in(:)  !all entries between 2 cell sites of considered orderparameter
-!    integer,intent(in)              :: Hval_ind(2,size(Hval_in))
-!    integer,intent(in)              :: connect(:,:)  !(2,Nentries) index in (1:Ncell) basis of both connected sites 
-!    type(parameters_TB_IO_H),intent(in) :: io
-!
-!    complex(8)     :: Hval(size(Hval_in))  !all entries between 2 cell sites of considered orderparameter
-!    integer     :: i
-!    type(H_tb_coo)    :: Htmp         !local Hamiltonian to save 
-!
-!    hval=conjg(hval_in)
-!    forall(i=1:size(Hval), modulo(Hval_ind(1,i),2)==modulo(Hval_ind(2,i),2)) Hval(i)=-Hval(i)     !minus for spin-conserving terms
-!    Call Htmp%init_connect(connect,hval,hval_ind,io,[io%norb*io%nspin*io%ncell,io%norb*io%nspin*io%ncell])
-!    Call H%add(Htmp)
-!    Call Htmp%destroy()
-!end subroutine
-!
-!subroutine get_Hr_Jsd(lat,h_io,H)
-!    type(lattice),intent(in)                :: lat
-!    type(parameters_TB_IO_H),intent(in)     :: h_io
-!    class(H_tb),intent(inout)               :: H
-!
-!    integer,allocatable     :: at_arr(:)        !atom locally considered
-!    integer                 :: at
-!    integer                 :: orb_offset       !orbital offset in basic unit-cell
-!    integer                 :: ndim
-!
-!    integer                 ::  nnz
-!    complex(8),allocatable  ::  val(:)
-!    integer,allocatable     ::  row(:),col(:)
-!
-!    type(H_tb_coo)    :: Htmp         !local Hamiltonian to save 
-!    integer ::  i
-!    integer ::  i_jsd,i_at,i_nnz,i_cell
-!    integer :: mag_offset
-!
-!    ndim=h_io%norb*h_io%nspin
-!    do i_jsd=1,size(h_io%Jsd)
-!        at_arr=pack([(i,i=1,size(lat%cell%atomic))],lat%cell%atomic%type_id==h_io%jsd(i_jsd)%attype)
-!        nnz=size(at_arr)*h_io%ncell*4   !4=2**2 spin entries
-!        allocate(val(nnz),source=(0.0d0,0.0d0))
-!        allocate(row(nnz),col(nnz),source=0)
-!        i_nnz=0
-!        do i_at=1,size(at_arr)
-!            at=at_arr(i_at)
-!            mag_offset=3*count(lat%cell%atomic(1:at-1)%moment/=0.0d0)
-!            orb_offset=(h_io%norb_at_off(at)+h_io%jsd(i_jsd)%orbital-1)*h_io%nspin
-!            do i_cell=1,h_io%ncell
-!                row(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,2,1,2]
-!                col(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,1,2,2]
-!                val(i_nnz+1)=cmplx( lat%M%modes_v(mag_offset+3,i_cell), 0.0d0                             ,8)
-!                val(i_nnz+2)=cmplx( lat%M%modes_v(mag_offset+1,i_cell), lat%M%modes_v(mag_offset+2,i_cell),8)
-!                val(i_nnz+3)=cmplx( lat%M%modes_v(mag_offset+1,i_cell),-lat%M%modes_v(mag_offset+2,i_cell),8)
-!                val(i_nnz+4)=cmplx(-lat%M%modes_v(mag_offset+3,i_cell), 0.0d0                             ,8)
-!                i_nnz=i_nnz+4
-!            enddo
-!        enddo
-!        val=val*h_io%jsd(i_jsd)%val
-!        !electron/electron-term
-!        Call Htmp%init_coo(val,row,col,h_io)
-!        Call H%add(Htmp)
-!        Call Htmp%destroy()
-!        !hole/hole-term
-!        if(h_io%nsc==2) Call add_BdG_coo(H,val,row,col,h_io)
-!        deallocate(at_arr)
-!        deallocate(val,row,col)
-!    enddo
-!end subroutine 
-!
-!subroutine add_BdG_coo(H,val,col,row,io)
-!    !adds the lower right quadrant of the BdG-equation from the upper quadrant
-!    !values get destroyed
-!    class(H_tb),intent(inout)       :: H
-!    complex(8),intent(inout)        :: val(:) 
-!    integer,intent(in)              :: row(size(val)),col(size(val))
-!    type(parameters_TB_IO_H),intent(in) :: io
-!    integer     :: i
-!
-!    type(H_tb_coo)    :: Htmp         !local Hamiltonian to save 
-!
-!    val=conjg(val)
-!    forall(i=1:size(val),modulo(row(i),2)==modulo(col(i),2)) val(i)=-val(i)   !minus for spin-conserving terms
-!    Call Htmp%init_coo(val,row,col,io,[io%norb*io%nspin*io%ncell,io%norb*io%nspin*io%ncell])
-!    Call H%add(Htmp)
-!    Call Htmp%destroy()
-!end subroutine
 
 
+subroutine get_Hr_conv(lat,h_io,H,del)
+    use m_convert
+    type(lattice),intent(in)                :: lat
+    type(parameters_TB_IO_H),intent(in)     :: h_io 
+    class(H_tb),allocatable,intent(out)     :: H
+    type(Hdelta),intent(inout)              :: del
 
+    type(H_tb_coo),allocatable              :: H_nc_tmp(:)
+    class(H_tb),allocatable                 :: H_nc
+    type(H_tb_coo),allocatable              :: H_sc_tmp(:)
+    class(H_tb),allocatable                 :: H_sc
+    class(H_tb),allocatable                 :: H_sum
+    integer         ::  i,j
+    complex(8)          :: delta_sum(2)
+    real(8)             :: diff
+    character(len=3)    :: i_str
+
+    !get constant non-superconducting terms
+    Call get_H_TB(lat,h_io,H_nc_tmp,.true.)
+    Call set_H(H_nc,h_io)
+    do i=1,size(H_nc_tmp)
+        Call H_nc%add(H_nc_tmp(i))
+        Call H_nc_tmp(i)%destroy()
+    enddo
+    deallocate(H_nc_tmp)
+
+    !get initial superconducting term
+    Call get_H_sc(lat,h_io,H_sc_tmp,del)
+    Call set_H(H_sc,h_io)
+    do i=1,size(H_sc_tmp)
+        Call H_sc%add(H_sc_tmp(i))
+        Call H_sc_tmp(i)%destroy()
+    enddo
+
+    Call set_H(H_sum,h_io)
+    Call H_sum%add(H_nc)
+    Call H_sum%add(H_sc)
+    delta_sum=(0.0d0,0.0d0)
+    diff=h_io%scf_diffconv*2.0d0
+    do i=1,h_io%scf_loopmax
+        if(diff<h_io%scf_diffconv)then
+            write(output_unit,'(A,E16.8)') "Reached set convergence criterium for delta-convergence:",h_io%scf_diffconv
+            exit
+        endif
+        Call get_delta_scf(H_sum,del,h_io%scf_Ecut)
+        delta_sum(2)=sum(del%delta)/size(del%delta)
+        
+        deallocate(H_sc_tmp)
+        Call get_H_sc(lat,h_io,H_sc_tmp,del)
+        if(h_io%scf_print)then
+            write(i_str,'(I0.3)') i
+            Call del%print_file("delta_onsite_"//i_str//".dat",lat)
+        endif
+        Call H_sc%destroy()
+        do j=1,size(H_sc_tmp)
+            Call H_sc%add(H_sc_tmp(j))
+            Call H_sc_tmp(j)%destroy()
+        enddo
+        Call H_nc%copy(H_sum)
+        Call H_sum%add(H_sc)
+
+        diff=abs(delta_sum(2)-delta_sum(1))
+        delta_sum(1)=delta_sum(2)
+        write(output_unit,'(2(A,I6)A,2E16.8,A,E16.8)') 'Finished delta scf loop',i,' of',h_io%scf_loopmax,'  delta-av sum :',delta_sum(1), '  delta-av diff:',diff
+    enddo
+    Call del%print_file("delta_onsite_final.dat",lat)
+    write(output_unit,'(A,2E16.8)') "Final real delta extremal values:", minval(del%delta%re),maxval(del%delta%re)
+
+    allocate(H,mold=H_sum)
+    Call H_sum%mv(H)
+end subroutine
+
+subroutine get_delta_scf(H_in,del,emax)
+    !so far only working for onsite Hdelta
+    class(H_tb),allocatable     :: H_in
+    type(Hdelta),intent(inout)  :: del
+    real(8),intent(in)          :: emax
+
+    complex(8),allocatable      :: evec(:,:)
+    real(8),allocatable         :: eval(:)
+    integer                     :: ndim,nspin, nBdG
+    integer                     :: orb
+    integer                     :: i_cell
+    integer :: j,iE
+    real(8)                     :: temp !temperature
+    real(8)                     :: Vpot !attractive potential value
+
+
+    Call H_in%get_evec(eval,evec)
+    Call restict_solution_positive(eval,evec,emax)
+    ndim =H_in%ndim
+    nspin=H_in%nspin
+    nBdG=H_in%norb*H_in%nspin*H_in%ncell
+
+    temp=0.0d0
+    if(temp<1.0d-5)then
+        eval=1.0d0
+    else
+        eval=tanh(eval*0.5d0/temp)
+    endif
+
+    del%delta=(0.0d0,0.0d0)
+    Vpot=2.0d-0
+    do j=1,size(del%delta,2)
+        orb=(del%orb(j)-1)*nspin
+        do i_cell=1,size(del%delta,1)
+            do iE=1,size(eval)
+                Associate (u_up=>evec((i_cell-1)*ndim+orb+1     ,iE)&
+                        & ,u_dn=>evec((i_cell-1)*ndim+orb+2     ,iE)&
+                        & ,v_up=>evec((i_cell-1)*ndim+orb+1+nBdG,iE)&
+                        & ,v_dn=>evec((i_cell-1)*ndim+orb+2+nBdG,iE))
+                    !make this more efficient with vector operations, blas
+                    del%delta(i_cell,j)=del%delta(i_cell,j)+(u_up*conjg(v_dn)+u_dn*conjg(v_up))*eval(ie) !(eq. 2.43 Jian-Xin Zhu book, DOI: 10.1007/978-3-319-31314-6 )
+                end associate
+            enddo
+        enddo
+        del%delta(:,j)=del%delta(:,j)*del%V(j)*0.5d0
+    enddo
+end subroutine
+
+subroutine restict_solution_positive(eval,evec,emax)
+    !restrict the eigenvalues and eigenvectors only to positive energies, up to the optional maximal energy emax
+    complex(8),allocatable,intent(inout)    :: evec(:,:) !eigenvectors
+    real(8),allocatable,intent(inout)       :: eval(:)   !eigenvalues
+    real(8),optional,intent(in)             :: emax
+    complex(8),allocatable  :: tmp_c(:,:)
+    real(8),allocatable     :: tmp_r(:)
+
+    integer     :: ie_bnd(2)
+    integer     :: i
+
+    !only sum over positive energies
+    ie_bnd=size(eval)+1
+    do i=1,size(eval)
+        if(eval(i)>0.0d0)then
+            ie_bnd(1)=i
+            exit
+        endif
+    enddo
+    if(ie_bnd(1)>size(eval)) STOP "need positive eigenvalues for selfconsistent delta"
+    ie_bnd(2)=size(eval)
+    if(present(emax).and.emax>0.0d0)then
+        do i=ie_bnd(1),size(eval)
+            if(eval(i)>emax)then
+                ie_bnd(2)=i-1
+                exit
+            endif
+        enddo
+    endif
+    if(ie_bnd(2)<ie_bnd(1)) STOP "there needs to be a non-vanishing set of positive eigenvalues up to emax" !reference input parameter setting emax once defined
+    Call move_alloc(evec,tmp_c)
+    Call move_alloc(eval,tmp_r)
+    allocate(eval,source=tmp_r(  ie_bnd(1):ie_bnd(2)))
+    deallocate(tmp_r)
+    allocate(evec,source=tmp_c(:,ie_bnd(1):ie_bnd(2)))
+    deallocate(tmp_c)
+end subroutine
 end module
+

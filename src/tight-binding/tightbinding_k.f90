@@ -2,7 +2,6 @@ module m_tightbinding_k
 use m_tb_types
 use m_derived_types, only : t_cell,lattice
 use m_get_position, only: calculate_distances,get_position
-use m_tb_params, only : TB_params
 use m_fftw, only: set_k_mesh, kmesh, N_kpoint
 use m_highsym, only: plot_highsym_kpts,set_highs_path
 use m_fermi, only: get_fermi_k
@@ -16,8 +15,9 @@ public :: tightbinding_k
 contains
 
 
-subroutine tightbinding_k(lat)
-    type(lattice), intent(in) :: lat
+subroutine tightbinding_k(lat,tb_par)
+    type(lattice), intent(in)       :: lat
+    type(parameters_TB),intent(in)  :: tb_par
 
     ! N_cell is the variable that will contain the number of unit
     ! cells in the simulation
@@ -27,19 +27,19 @@ subroutine tightbinding_k(lat)
 
     type(Hk_inp_t)      :: Hk_inp
 
-    Call get_Hk_inp(lat,TB_params%io_H,Hk_inp)
+    Call get_Hk_inp(lat,tb_par%io_H,Hk_inp)
 
-    if(TB_params%flow%dos_k)then
-        if(TB_params%is_sc)then
-            Call write_dos_sc(Hk_inp,TB_params%io_H,lat,TB_params%io_dos)
+    if(tb_par%flow%dos_k)then
+        if(tb_par%is_sc)then
+            Call write_dos_sc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
         else
-            Call write_dos(Hk_inp,TB_params%io_H,lat,TB_params%io_dos)
+            Call write_dos(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
         endif
     endif
 
-    if(TB_params%flow%highs_k)then
-        Call set_highs_path(lat,TB_params%io_highs)
-        Call plot_highsym_kpts(Hk_inp,TB_params%io_H) 
+    if(tb_par%flow%highs_k)then
+        Call set_highs_path(lat,tb_par%io_highs)
+        Call plot_highsym_kpts(Hk_inp,tb_par%io_H) 
     endif
 end subroutine 
 

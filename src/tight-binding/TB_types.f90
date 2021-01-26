@@ -2,6 +2,7 @@ module m_TB_types
 use m_input_H_types
 use m_types_tb_h_inp
 use m_ham_arrange
+use m_delta_onsite
 implicit none
 public
 private upd_h_par, init_ham_init
@@ -19,16 +20,16 @@ contains
     procedure       :: init => init_ham_init
 end type
 
-
-
 type parameters_TB_IO_H
     !parameters directly for the Hamiltonian
     !new parameters
     type(TB_hopping),allocatable    :: hop_io(:)   !hopping parameters
-    type(TB_delta),allocatable      :: del(:)   !delta parameters
+    type(TB_delta),allocatable      :: del_io(:)   !delta parameters
     type(TB_Jsd),allocatable        :: Jsd(:)   !delta parameters
+    type(TBio_delta_onsite_scf),allocatable ::  del_scf_io(:)   !self-consistent delta on-site parameters
 
     type(Htb_inp)       ::  hop
+    type(Hdelta)        ::  del
 
     integer             ::  nspin=1         !number of spins (1 or 2) for each orbital
     integer             ::  ncell=-1        !overall number of cells
@@ -38,13 +39,21 @@ type parameters_TB_IO_H
     integer,allocatable ::  norb_at(:)      !number of orbitals at each atom
     integer,allocatable ::  norb_at_off(:)  !offset of orbitals at each atom
 
+    !solving parameters
     integer             ::  i_diag=1  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
     logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
-
     real(8)             ::  Ebnd(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines
     integer             ::  estNe=0                       !estimated number of eigenvalues in interval
     real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
+
+    !selfconsistent delta parameters
+    logical             ::  use_scf=.false.     !use selfconsistent delta
+    logical             ::  scf_print=.false.   !print intermediate delta steps
+    integer             ::  scf_loopmax=100     !maximal number of loop iterations converging delta
+    real(8)             ::  scf_diffconv=1.0d-6 !convergence criterion for difference of delta sum
+    real(8)             ::  scf_Ecut=-1.0d0     !energy cutoff for selfconsistent delta energy sum 
+
 end type 
 
 type parameters_TB_IO_EF
@@ -66,7 +75,6 @@ type parameters_TB_IO_HIGHS
    integer,allocatable     ::  k_highs_frac(:) !(Nighsym): integer fractions to apply on input k_highs
    real(8)                 ::  aim_dist=1.0d-2 !aimed k-space distance between neighboring points along high symmetry line
 end type
-
 
 type parameters_TB_IO_OCC_MULT
    !parameters for multiple occupation calculation at different energies
@@ -128,6 +136,8 @@ type parameters_TB
     type(parameters_TB_IO_OCC_MULT)     ::  io_occ_mult
     logical         ::  is_mag=.False. !Hamiltonian has spins
     logical         ::  is_sc=.False. !Hamiltonian is superconducting-> everything doubles to include creators and destructors
+contains
+    procedure :: init => init_parameters_TB
 end type
 
 contains
@@ -151,6 +161,56 @@ subroutine upd_h_par(this)
     this%dimH=this%nsc*this%nspin*this%norb*this%ncell
 end subroutine
 
+subroutine init_parameters_TB(TB_params,lat)
+    !subroutine which does operation to prepare the TB-hamiltonian 
+    ! starting from the pure input using lattice properties etc.
+    use m_derived_types, only: lattice
+    class(parameters_TB),intent(inout)  :: TB_params
+    type(lattice), intent(in)           :: lat
 
+    integer :: i
+    logical :: fexist
+
+    !use superconducting version if any delta is set
+    TB_params%is_sc=allocated(TB_params%io_H%del_io)
+    !use magnetic version if any atom has both a magnetic moment and an orbital or if superconducting is set
+    TB_params%is_mag=any(lat%cell%atomic%moment/=0.0d0.and.lat%cell%atomic%orbitals>0).or.TB_params%is_sc
+    !set dimension of Hamiltonian parameters
+    associate( par=>TB_params%io_H)
+        if(TB_params%is_sc) par%nsc=2
+        if(TB_params%is_mag) par%nspin=2
+        par%ncell=lat%Ncell
+        par%norb_at=lat%cell%atomic%orbitals
+        par%norb_at_off=[(sum(par%norb_at(1:i-1)),i=1,size(par%norb_at))]
+        par%norb=sum(par%norb_at)
+        par%dimH=par%nsc*par%nspin*par%norb*par%ncell
+        do i=1,size(par%hop_io)
+            Call par%hop_io(i)%check(lat)
+        enddo
+        Call par%hop%set(par%hop_io,lat,par%nspin)
+        inquire(file='delta_onsite.inp',exist=fexist)
+        if(fexist)then
+            Call par%del%read_file('delta_onsite.inp',lat)
+        else
+            if(allocated(par%del_io)) Call par%del%set(par%del_io,lat,par%norb_at_off)
+        endif
+        par%use_scf=allocated(par%del_scf_io)
+        if(par%use_scf) Call par%del%set_scf(par%del_scf_io,lat,par%norb_at_off)
+    end associate
+
+    !REMOVE-> move to H_io
+    !set dimensions of the Hamiltonian
+    if(TB_params%is_sc) TB_params%H%nsc=2
+    if(TB_params%is_mag) TB_params%H%nspin=2
+    TB_params%H%ncell=lat%Ncell
+    TB_params%H%norb=sum(lat%cell%atomic%orbitals)
+    Call TB_params%H%upd()
+
+    TB_params%H%sparse=TB_params%io_H%sparse
+    TB_params%H%i_diag=TB_params%io_H%i_diag
+    TB_params%H%estNe=TB_params%io_H%estNe
+    TB_params%H%Ebnd=TB_params%io_H%Ebnd
+    TB_params%H%diag_acc=TB_params%io_H%diag_acc
+end subroutine
 
 end module
