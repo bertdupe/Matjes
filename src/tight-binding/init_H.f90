@@ -16,7 +16,7 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
     type(lattice),intent(in)                            :: lat
     type(parameters_TB_IO_H),intent(in)                 :: h_io
     type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)
-    logical,intent(in)                                  :: sc
+    logical,intent(in),optional                         :: sc
     real(8),allocatable,intent(out),optional            :: diffR(:,:)
 
     type(H_tb_coo),allocatable  :: H(:)
@@ -32,11 +32,23 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
             allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
             Call append_arr(diffR,diffR_loc)
         endif
+
     endif
-    if(sc)then    !some hamiltonian is written in BdG-space, change all to that
-        do i=1,size(H_out)
-            Call H_out(i)%to_BdG()
-        enddo
+    if(allocated(h_io%defect))then
+        allocate(H(1))
+        Call get_H_defect(lat,h_io,H(1))
+        Call H_append(H_out,H)
+        if(present(diffR))then
+            allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
+            Call append_arr(diffR,diffR_loc)
+        endif
+    endif
+    if(present(sc))then
+        if(sc)then    !some hamiltonian is written in BdG-space, change all to that
+            do i=1,size(H_out)
+                Call H_out(i)%to_BdG()
+            enddo
+        endif
     endif
 end subroutine 
 
@@ -48,7 +60,11 @@ subroutine get_H_sc(lat,h_io,H_out,del,diffR)
     real(8),allocatable,intent(out),optional            :: diffR(:,:)
 
     if(.not.allocated(h_io%del_io)) STOP "h_io%del_io should be allocated when calculating delta"
-    allocate(H_out(1)) !increase if more than onsite-delta
+    if(allocated(H_out))then
+        if(size(H_out)/=1) STOP "get_H_sc H_out has wrong size"
+    else
+        allocate(H_out(1)) !increase if more than onsite-delta
+    endif
     Call get_H_delta_onsite(lat,h_io,H_out(1),del)
     if(present(diffR)) allocate(diffR(3,1),source=0.0d0) !single onsite term, so difference is 0
 end subroutine 
@@ -63,24 +79,12 @@ subroutine get_H(lat,h_io,H_out,diffR)
     real(8),allocatable         :: diffR_loc(:,:)
     integer                     :: i
 
-    Call get_Hop_arr(lat,h_io,H_out,diffR=diffR)
-    if(allocated(h_io%jsd))then
-        allocate(H(1))
-        Call get_H_Jsd(lat,h_io,H(1))
-        Call H_append(H_out,H)
-        if(present(diffR))then
-            allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
-            Call append_arr(diffR,diffR_loc)
-        endif
-    endif
+    Call get_H_TB(lat,h_io,H_out,diffR=diffR)
     if(allocated(h_io%del_io))then
         allocate(H(1))
-        Call get_H_delta_onsite(lat,h_io,H(1),h_io%del)
+        Call get_H_sc(lat,h_io,H,h_io%del,diffR=diffR_loc)
         Call H_append(H_out,H)
-        if(present(diffR))then
-            allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
-            Call append_arr(diffR,diffR_loc)
-        endif
+        if(present(diffR)) Call append_arr(diffR,diffR_loc)
     endif
     if(any(H_out%nsc>1))then    !some hamiltonian is written in BdG-space, change all to that
         do i=1,size(H_out)
@@ -131,52 +135,60 @@ subroutine get_H_delta_onsite(lat,h_io,H,del)
     enddo
 end subroutine 
 
+subroutine get_H_defect(lat,h_io,H)
+    type(lattice),intent(in)                    :: lat
+    type(parameters_TB_IO_H),intent(in)         :: h_io
+    type(H_tb_coo),intent(inout)                :: H
 
-! not really working for converging delta
-!subroutine get_H_delta(lat,h_io,H)
-!    !TODO, make neigh%get more efficient by first sorting though h_io%del to get all required connections for an atom type pair at once
-!    type(lattice),intent(in)                :: lat
-!    type(parameters_TB_IO_H),intent(in)     :: h_io
-!    class(H_tb),intent(inout)               :: H
-!
-!    integer         :: i_del,i_pair
-!
-!    type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
-!    type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
-!    integer         :: at_pair(2)       !pair of atoms locally considered
-!    integer         :: orb(2)           !orbital offset in basic unit-cell
-!    integer         :: ind(2,2)         !index in basic unit-cell 
-!    integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
-!    complex(8)      :: val(2)
-!    integer         :: nBdG             !length to next BdG sector
-!
-!    type(H_tb_coo)  :: Htmp             !local Hamiltonian to save 
-!
-!    Call hinit%init(h_io)
-!    nBdG=hinit%norb*hinit%nspin*hinit%ncell
-!    do i_del=1,size(h_io%del_io)
-!        Call neigh%get(h_io%del_io(i_del)%attype,[h_io%del_io(i_del)%dist],lat)
-!        connect_bnd=1
-!        do i_pair=1,neigh%Nshell(1)
-!            connect_bnd(2)=neigh%ishell(i_pair)
-!            at_pair=neigh%at_pair(:,i_pair)
-!            orb=h_io%norb_at_off(at_pair)+h_io%del_io(i_del)%orbital
-!            ind(:,1)=(orb-1)*hinit%nspin+[1,2] !spin_up, spin_dn
-!            ind(:,2)=(orb-1)*hinit%nspin+[2,1] !spin_dn, spin_up
-!            !electron/hole-term
-!            val=h_io%del_io(i_del)%val
-!            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,hinit,[0,nBdG])
-!            Call H%add(Htmp)
-!            Call Htmp%destroy()
-!            !hole/electron-term
-!            val=conjg(h_io%del_io(i_del)%val)
-!            Call Htmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val,ind,hinit,[nBdG,0])
-!            Call H%add(Htmp)
-!            Call Htmp%destroy()
-!            connect_bnd(1)=connect_bnd(2)+1
-!        enddo
-!    enddo
-!end subroutine 
+    integer,allocatable     :: at_arr(:)        !atom locally considered
+    integer                 :: at
+    integer                 :: orb_offset       !orbital offset in basic unit-cell
+    integer                 :: mag_offset
+    integer                 :: ndim
+
+    integer                 ::  nnz
+    complex(8),allocatable  ::  val(:)
+    integer,allocatable     ::  row(:),col(:)
+    real(8)                 ::  mag(3)
+
+    type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
+    type(H_tb_coo)    :: Htmp         !local Hamiltonian to save 
+    integer ::  i
+    integer ::  i_defect,i_at,i_nnz,i_cell
+
+    ndim=h_io%norb*h_io%nspin
+    Call hinit%init(h_io)
+    Hinit%nsc=1 !set hoppings without BdG
+    nnz=0
+    do i_defect=1,size(h_io%defect)
+        nnz=nnz+4
+    enddo
+    allocate(val(nnz),source=(0.0d0,0.0d0))
+    allocate(row(nnz),col(nnz),source=0)
+    i_nnz=0
+    do i_defect=1,size(h_io%defect)
+        i_cell=lat%index_m_1(h_io%defect(i_defect)%site)
+        at=h_io%defect(i_defect)%atom
+        mag_offset=3*count(lat%cell%atomic(1:at-1)%moment/=0.0d0)
+        orb_offset=(h_io%norb_at_off(at)+h_io%defect(i_defect)%orbital-1)*hinit%nspin
+        row(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,2,1,2]
+        col(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,1,2,2]
+        mag=lat%M%modes_v(mag_offset+1:mag_offset+3,i_cell)
+
+        val(i_nnz+1)=cmplx( mag(3)*h_io%defect(i_defect)%mag, 0.0d0                             ,8)
+        val(i_nnz+2)=cmplx( mag(1)*h_io%defect(i_defect)%mag, mag(2)*h_io%defect(i_defect)%mag  ,8)
+        val(i_nnz+3)=cmplx( mag(1)*h_io%defect(i_defect)%mag,-mag(2)*h_io%defect(i_defect)%mag  ,8)
+        val(i_nnz+4)=cmplx(-mag(3)*h_io%defect(i_defect)%mag, 0.0d0                             ,8)
+        val(i_nnz+1)=val(i_nnz+1)+cmplx(h_io%defect(i_defect)%nonmag,0.0d0,8)
+        val(i_nnz+4)=val(i_nnz+4)+cmplx(h_io%defect(i_defect)%nonmag,0.0d0,8)
+        i_nnz=i_nnz+4
+    enddo
+    Call Htmp%init_coo(val,row,col,hinit)
+    Call H%add(Htmp)
+    Call Htmp%destroy()
+    deallocate(val,row,col)
+end subroutine 
+
 
 
 subroutine get_H_Jsd(lat,h_io,H)
@@ -223,7 +235,6 @@ subroutine get_H_Jsd(lat,h_io,H)
             enddo
         enddo
         val=val*h_io%jsd(i_jsd)%val
-        !electron/electron-term
         Call Htmp%init_coo(val,row,col,hinit)
         Call H%add(Htmp)
         Call Htmp%destroy()

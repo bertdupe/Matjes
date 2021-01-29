@@ -209,13 +209,13 @@ subroutine init_order(this,cell,extpar_io)
     if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5))
 end subroutine
 
-subroutine read_order(this,suffix_in,fexist_out)
+subroutine read_order(this,suffix_in,isinit_opt)
     !read the order parameters from a 
     class(lattice),intent(inout)        :: this
-    character(*),intent(in),optional    :: suffix_in
-    logical,intent(out),optional        :: fexist_out(number_different_order_parameters)
+    character(*),intent(in),optional    :: suffix_in    !suffix to order parameter name for input file
+    logical,intent(inout),optional      :: isinit_opt(number_different_order_parameters)    !(in) true is already initialized, (out) true if previously or now initialized
 
-    logical                             :: fexist(number_different_order_parameters)
+    logical                             :: isinit(number_different_order_parameters)
     character(*),parameter              :: suffix_default='.inp'
     character(:), allocatable           :: suffix
 
@@ -224,13 +224,15 @@ subroutine read_order(this,suffix_in,fexist_out)
     else
         suffix=suffix_default
     endif
-    fexist=.false.
-    if(this%order_set(1)) Call this%M%read_file(trim(order_parameter_name(1))//suffix,fexist(1))
-    if(this%order_set(2)) Call this%E%read_file(trim(order_parameter_name(2))//suffix,fexist(2))
-    if(this%order_set(3)) Call this%B%read_file(trim(order_parameter_name(3))//suffix,fexist(3))
-    if(this%order_set(4)) Call this%T%read_file(trim(order_parameter_name(4))//suffix,fexist(4))
-    if(this%order_set(5)) Call this%u%read_file(trim(order_parameter_name(5))//suffix,fexist(5))
-    if(present(fexist_out)) fexist_out=fexist
+    isinit=.false.
+    if(present(isinit_opt)) isinit=isinit_opt
+    if(this%order_set(1).and..not.isinit(1)) Call this%M%read_file(trim(order_parameter_name(1))//suffix,isinit(1))
+    if(this%order_set(2).and..not.isinit(2)) Call this%E%read_file(trim(order_parameter_name(2))//suffix,isinit(2))
+    if(this%order_set(3).and..not.isinit(3)) Call this%B%read_file(trim(order_parameter_name(3))//suffix,isinit(3))
+    if(this%order_set(4).and..not.isinit(4)) Call this%T%read_file(trim(order_parameter_name(4))//suffix,isinit(4))
+    if(this%order_set(5).and..not.isinit(5)) Call this%u%read_file(trim(order_parameter_name(5))//suffix,isinit(5))
+    deallocate(suffix)
+    if(present(isinit_opt)) isinit_opt=isinit
 end subroutine
 
 subroutine lattice_position(this,ind,pos)

@@ -4,12 +4,11 @@ use m_derived_types, only : lattice
 use m_occupation, only: calc_occupation
 use m_occupation_mult, only: occupation_mult
 use m_fermi, only: calc_fermi 
-use m_dos, only: calc_dos 
-use m_dos_sc, only: calc_dos_sc
 use m_distribution, only: int_distrib,fermi_distrib,dE_fermi_distrib
 use m_save_state_r,only: TB_write_states_r, TB_read_states_r
 use m_init_Hr
 use m_H_tb_public
+use m_dos
 use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
 private
@@ -86,9 +85,19 @@ subroutine tightbinding_r(lat,tb_par)
     if(tb_par%flow%dos_r)then
         write(output_unit,'(/A)') 'start calculate DOS'
         if(tb_par%is_sc)then
-            Call calc_dos_sc(eigval,eigvec,tb_par%io_dos,'dos_r_sc.dat')
+            block
+                type(dos_sc)    :: dos
+                Call dos%init(tb_par%io_dos)
+                Call dos%add(eigval,eigvec)
+                Call dos%print('dos_r_sc.dat')
+            end block
         else
-            Call calc_dos(eigval,tb_par%io_dos,'dos_r.dat')
+            block
+                type(dos_nc)    :: dos
+                Call dos%init(tb_par%io_dos)
+                Call dos%add(eigval)
+                Call dos%print('dos_r.dat')
+            end block
         endif
     endif
 

@@ -5,7 +5,6 @@ use m_get_position, only: calculate_distances,get_position
 use m_fftw, only: set_k_mesh, kmesh, N_kpoint
 use m_highsym, only: plot_highsym_kpts,set_highs_path
 use m_fermi, only: get_fermi_k
-use m_dos, only: calc_dos
 use m_TB_types
 
 use m_init_Hk
@@ -44,7 +43,7 @@ subroutine tightbinding_k(lat,tb_par)
 end subroutine 
 
 subroutine write_dos(Hk_inp,h_io,lat,io_dos)
-    use m_dos2, only: dos_nc
+    use m_dos, only: dos_nc
     use m_constants, only : pi
     type(Hk_inp_t),intent(in)               :: Hk_inp
     type(parameters_TB_IO_H),intent(in)     :: h_io
@@ -82,8 +81,9 @@ subroutine write_dos(Hk_inp,h_io,lat,io_dos)
 end subroutine
 
 subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
-    use m_dos2, only: dos_sc
+    use m_dos, only: dos_sc
     use m_constants, only : pi
+    use m_derived_types, only: k_grid_t
     type(Hk_inp_t),intent(in)               :: Hk_inp
     type(parameters_TB_IO_H),intent(in)     :: h_io
     type(lattice), intent(in)               :: lat
@@ -100,17 +100,15 @@ subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
     real(8)                                 :: kdiff(3,3)
     real(8),allocatable                     :: eval(:)
     complex(8),allocatable                  :: evec(:,:)
+    type(k_grid_t)                          :: k_grid
 
     Call dos%init(io_dos)
-    !get k_grid parameter
-    Nk=product(io_dos%kgrid)
-    kdiff=lat%a_sc_inv/spread(real(io_dos%kgrid),2,3)*2.0d0*pi
-    k_offset=[(product(io_dos%kgrid(1:i)),i=0,2)]
+    Call k_grid%set(lat%a_sc_inv,io_dos%kgrid)
+    Nk=k_grid%get_NK()
 
     !calculate eigenvalues for each k and add to dos
     do ik=1,Nk
-        kint=modulo((ik-1)/k_offset,io_dos%kgrid)
-        k=matmul(kint,kdiff)
+        k=k_grid%get_K(ik)
         Call Hk_evec(Hk_inp,k,h_io,eval,evec) 
         Call dos%add(eval,evec)
         deallocate(eval,evec)

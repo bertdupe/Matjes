@@ -27,6 +27,7 @@ type parameters_TB_IO_H
     type(TB_delta),allocatable      :: del_io(:)   !delta parameters
     type(TB_Jsd),allocatable        :: Jsd(:)   !delta parameters
     type(TBio_delta_onsite_scf),allocatable ::  del_scf_io(:)   !self-consistent delta on-site parameters
+    type(TBio_defect),allocatable   ::  defect(:)    !defect onsite-terms in super-cell
 
     type(Htb_inp)       ::  hop
     type(Hdelta)        ::  del
@@ -48,11 +49,12 @@ type parameters_TB_IO_H
     real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 
     !selfconsistent delta parameters
-    logical             ::  use_scf=.false.     !use selfconsistent delta
-    logical             ::  scf_print=.false.   !print intermediate delta steps
-    integer             ::  scf_loopmax=100     !maximal number of loop iterations converging delta
-    real(8)             ::  scf_diffconv=1.0d-6 !convergence criterion for difference of delta sum
-    real(8)             ::  scf_Ecut=-1.0d0     !energy cutoff for selfconsistent delta energy sum 
+    logical             ::  use_scf=.false.         !use selfconsistent delta
+    logical             ::  scf_print=.false.       !print intermediate delta steps
+    integer             ::  scf_loopmax=100         !maximal number of loop iterations converging delta
+    real(8)             ::  scf_diffconv=1.0d-6     !convergence criterion for difference of delta sum
+    real(8)             ::  scf_Ecut=-1.0d0         !energy cutoff for selfconsistent delta energy sum 
+    integer             ::  scf_kgrid(3)=[10,10,1]  !kgrid for delta-selfconsistency cycle in reciprocal space
 
 end type 
 

@@ -1,8 +1,6 @@
 set(main_f90 ${main_f90}
 src/tight-binding/distribution.f90
 src/tight-binding/dos.f90
-src/tight-binding/dos2.f90
-src/tight-binding/dos_sc.f90
 #src/tight-binding/energy_k.f90
 src/tight-binding/init_H.f90
 src/tight-binding/init_Hr.f90

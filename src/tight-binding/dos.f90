@@ -1,87 +1,236 @@
 module m_dos
-!this module contains a badly designed dos calculation using a gauss smearing, but so far it was sufficiently fast
 use m_TB_types, only: parameters_TB_IO_DOS
 implicit none
 private
-public calc_dos
+public dos_nc, dos_sc
+real(8),parameter       ::  dist_inc=8.0d0  !how many sigma away from my the energy entries are still considered
+
+type,abstract   :: dos_t
+    private
+    integer             :: N_entry=0    !number of times dos has been added !obsolete?, manually norm anyways...
+    real(8)             :: sigma        !smearing sigma
+    real(8),allocatable :: Eval(:)      !energy values
+    real(8),allocatable :: dos(:)       !summed dos
+    real(8)             :: dE
+    real(8)             :: E_ext(2)
+contains
+    procedure :: init => init_dos
+    procedure :: print=> print_dos
+end type
+
+type,extends(dos_t) ::  dos_nc
+contains
+    procedure :: add  => add_dos_nc
+end type
+
+type,extends(dos_t) :: dos_sc
+contains
+    procedure :: add  => add_dos_sc
+end type
+
+
+type,abstract,extends(dos_t)    ::  dos_bnd
+    private
+    integer     ::  bnd(2)
+contains
+    procedure :: init_bnd => init_dos_bnd
+end type
+
+!DOS BND stuff not tested
+type,extends(dos_bnd) ::  dos_bnd_nc
+contains
+    procedure :: add  => add_dos_bnd_nc
+end type
+
+type,extends(dos_bnd) ::  dos_bnd_sc
+contains
+    procedure :: add  => add_dos_bnd_sc
+end type
+
 contains
 
-subroutine calc_dos(eigval,io_dos,fname)
-    !subroutine to calculate the density of states
-    !eigval input has to be sorted
-    use m_io_files_utils, only: close_file,open_file_write
-    real(8),intent(in)  ::  eigval(:)
-    type(parameters_TB_IO_DOS) :: io_dos
-    character(len=*)    ::  fname
+subroutine init_dos_bnd(this,io_dos,bnd)
+    class(dos_bnd),intent(inout)            :: this
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+    integer,intent(in)                      :: bnd(2)
+
+    Call this%init(io_dos)
+    this%bnd=bnd
+end subroutine
+
+subroutine init_dos(this,io_dos)
+    class(dos_t),intent(inout)              :: this
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
 
     integer             ::  NE,iE
-    real(8),allocatable ::  dos(:),Eval(:)
-
-    integer                     :: i,io
 
     Ne=int((io_dos%E_ext(2)-io_dos%E_ext(1))/io_dos%dE)+1
-    allocate(dos(Ne),Eval(Ne),source=0.0d0)
+    allocate(this%dos(Ne),source=0.0d0)
+    allocate(this%Eval(Ne))
     do iE=1,Ne
-        Eval(iE)=(iE-1)*io_dos%dE+io_dos%E_ext(1)
+        this%Eval(iE)=(iE-1)*io_dos%dE+io_dos%E_ext(1)
     enddo
+    this%N_entry=0
+    this%sigma=io_dos%sigma
+    this%dE=io_dos%dE
+    this%E_ext=io_dos%E_ext
+end subroutine
 
-    do iE=1,Ne
-        Call get_dos(eigval,Eval(iE),dos(iE),io_dos%sigma)
-    enddo
-    dos=dos/real(size(eigval,1))
+subroutine add_dos_nc(this,eigval)
+    class(dos_nc),intent(inout) :: this
+    real(8),intent(in)          :: eigval(:)
 
-    io=open_file_write(fname)
-    do i=1,size(dos)
-       write(io,'(2E16.8)') Eval(i),dos(i)
+    real(8)                     :: dos_loc(size(this%dos))
+    integer                     :: i
+    integer                     :: bnd(2)
+
+    if(.not.allocated(this%Eval)) STOP "Trying to add to dos, by type is not initialized"
+    dos_loc=0.0d0
+    do i=1,size(eigval)
+        Call get_ibnd (eigval(i),this,bnd)
+        Call add_gauss(eigval(i),1.0d0,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
-    call close_file(fname,io)
+    this%dos=this%dos+dos_loc/real(size(eigval))
+    this%N_entry=this%N_entry+1
+end subroutine
+
+subroutine add_dos_bnd_nc(this,eigval,eigvec)
+    class(dos_bnd_nc),intent(inout) :: this
+    real(8),intent(in)              :: eigval(:)
+    complex(8),intent(in)           :: eigvec(:,:)
+
+    real(8)                     :: dos_loc(size(this%dos))
+    integer                     :: i,bnd(2)
+    real(8)                     :: pref 
+
+    if(.not.allocated(this%Eval)) STOP "Trying to add to dos, by type is not initialized"
+    dos_loc=0.0d0
+    do i=1,size(eigval)
+        pref=real(dot_product(eigvec(this%bnd(1):this%bnd(2),i),eigvec(this%bnd(1):this%bnd(2),i)),8)
+        Call get_ibnd (eigval(i),this,bnd)
+        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+    enddo
+    this%dos=this%dos+dos_loc/real(size(eigval))
+    this%N_entry=this%N_entry+1
+end subroutine
+
+subroutine add_dos_sc(this,eigval,eigvec)
+    class(dos_sc),intent(inout) :: this
+    real(8),intent(in)          :: eigval(:)
+    complex(8),intent(in)       :: eigvec(:,:)
+
+    real(8)                     :: dos_loc(size(this%dos))
+    integer                     :: i, i_start, n_state, dimH, bnd(2)
+    real(8)                     :: pref
+
+    if(.not.allocated(this%Eval)) STOP "Trying to add to dos, by type is not initialized"
+    !only consider the states above the zero energy
+    i_start=0
+    do i=1,size(eigval)
+        if(eigval(i)>0.0d0)then
+            i_start=i 
+            exit
+        endif
+    enddo
+    if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
+
+    dimH=size(eigvec)
+    dos_loc=0.0d0
+    do i=i_start,size(eigval)
+        !u-part of BdG
+        pref=real(dot_product(eigvec(1:dimH/2,i),eigvec(1:dimH/2,i)),8)
+        Call get_ibnd (eigval(i),this,bnd)
+        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        !v-part of BdG
+        pref=real(dot_product(eigvec(dimH/2+1:dimH,i),eigvec(dimH/2+1:dimH,i)),8)
+        Call get_ibnd (-eigval(i),this,bnd)
+        Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+    enddo
+    this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
+    this%N_entry=this%N_entry+1
+end subroutine
+
+subroutine add_dos_bnd_sc(this,eigval,eigvec)
+    class(dos_bnd_sc),intent(inout) :: this
+    real(8),intent(in)          :: eigval(:)
+    complex(8),intent(in)       :: eigvec(:,:)
+
+    real(8)                     :: dos_loc(size(this%dos))
+    integer                     :: i, i_start, n_state, dimH, bnd(2)
+    real(8)                     :: pref
+
+    if(.not.allocated(this%Eval)) STOP "Trying to add to dos, by type is not initialized"
+    !only consider the states above the zero energy
+    i_start=0
+    do i=1,size(eigval)
+        if(eigval(i)>0.0d0)then
+            i_start=i 
+            exit
+        endif
+    enddo
+    if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
+
+    dimH=size(eigvec)
+    dos_loc=0.0d0
+    do i=i_start,size(eigval)
+        !u-part of BdG
+        pref=real(dot_product(eigvec(this%bnd(1):this%bnd(2),i),eigvec(this%bnd(1):this%bnd(2),i)),8)
+        Call get_ibnd (eigval(i),this,bnd)
+        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        !v-part of BdG
+        pref=real(dot_product(eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i),eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i)),8)
+        Call get_ibnd (-eigval(i),this,bnd)
+        Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+    enddo
+    this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
+    this%N_entry=this%N_entry+1
 end subroutine
 
 
-subroutine get_dos(val,E,res,sigma)
-    real(8),intent(in)  ::  val(:),E,sigma
-    real(8),intent(out) ::  res
-
-    real(8)             ::  tmp(size(val,1))
-
-    Call gauss_dist(val,E,sigma,tmp)
-    res=sum(tmp)
-end subroutine
-
-subroutine gauss_dist(val,mu,sigma,res)
+subroutine add_gauss(val,pref,E,dos,sigma)
+    !add to dos:
+    !gauss distribution from single energy point val into the spacing supplied by E with std. sigma and an additional prefactor pref 
     use m_constants, only : pi
-    !gauss distribution using 1/\sqrt{2*\pi*sigma^2}*e^{-(val-mu)^2/(2*sigma^2)} for all values in val respective to one given mu and sigma
-    real(8),intent(in)  ::  val(:),mu,sigma
-    real(8),intent(out) ::  res(size(val,1))
-    integer             ::  i
+    real(8),intent(in)     ::  val,pref,sigma
+    real(8),intent(in)     ::  E(:)
+    real(8),intent(inout)  ::  dos(:)
+    real(8)                ::  tmp(size(dos))
+    tmp=(val-E)**2
+    tmp=-tmp*0.5d0/sigma/sigma
+    tmp=exp(tmp)
+    tmp=tmp/sqrt(2.0d0*pi)/sigma
+    dos=dos+pref*tmp
+end subroutine
 
-    !only consider vals which are within [mu-dist_inc*sigma,mu+dist_inc*sigma], because all 
-    !other results in small res  anyways and a too small exponent becomes numerically problematic
-    real(8),parameter   ::  dist_inc=5.0d0
+subroutine print_dos(this,fname)
+    use, intrinsic :: iso_fortran_env, only : error_unit
+    class(dos_t),intent(inout)  :: this
+    character(len=*),intent(in) :: fname
+    real(8),allocatable         :: dos_loc(:)
+    real(8)                     :: norm
+    integer ::  io,i
+    if(.not.allocated(this%Eval)) STOP "Trying to print dos, by type is not initialized"
+    if(this%N_entry<1) STOP "Trying to print dos, no eigenvalue sets have been added"
+    open(newunit=io,file=fname)
+    dos_loc=this%dos
+    norm=sum(dos_loc)
+    if(norm==0.0d0) then
+        write(error_unit,'(A)') "sum over all dos entries is 0, check dos input"
+    else
+        dos_loc=dos_loc/norm
+    endif
+    do i=1,size(this%dos)
+       write(io,'(2E16.8)') this%Eval(i),dos_loc(i)
+    enddo
+    close(io)
+end subroutine
 
-    integer             ::  i_min,i_max,Ne
-    
-    Ne=size(val,1)
-    res=0.0d0
-    if(val(Ne) <=mu-dist_inc*sigma.or.val(1) >=mu+dist_inc*sigma) return
-    i_min=1
-    do i=1,Ne
-        if(val(i) >=mu-dist_inc*sigma)then
-            i_min=i
-            exit
-        endif
-    enddo
-    i_max=i_min
-    do i=Ne,i_min,-1
-        if(val(i) <=mu+dist_inc*sigma)then
-            i_max=i
-            exit
-        endif
-    enddo
-    if(i_min.eq.i_max) return
-    res(i_min:i_max)=(val(i_min:i_max)-mu)*(val(i_min:i_max)-mu)
-    res(i_min:i_max)=-res(i_min:i_max)*0.5d0/sigma/sigma
-    res(i_min:i_max)=exp(res(i_min:i_max))
-    res=res/sqrt(2.0d0*pi)/sigma
+pure subroutine get_ibnd(val,dos,bnd)
+    !get the minimal-maximal index dist_inc*sigma around the considered energy eigenvalue needed for adding up the gauss distributions
+    class(dos_t),intent(in) ::  dos
+    real(8),intent(in)      ::  val
+    integer,intent(out)     ::  bnd(2)
+    bnd(1)=max(int(((val-dos%sigma*dist_inc)-dos%E_ext(1))/dos%dE)+1,1)
+    bnd(2)=min(int(((val+dos%sigma*dist_inc)-dos%E_ext(1))/dos%dE),size(dos%Eval))
 end subroutine
 end module

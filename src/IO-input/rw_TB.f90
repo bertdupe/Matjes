@@ -86,7 +86,7 @@ subroutine read_TB_occ_mult(io,fname,io_occ_mult)
     type(parameters_TB_IO_OCC_MULT),intent(out)     :: io_occ_mult
 
     call get_parameter(io, fname, 'occ_mult_dE', io_occ_mult%dE)
-    call get_parameter(io, fname, 'occ_mult_E_ext', io_occ_mult%E_ext)
+    call get_parameter(io, fname, 'occ_mult_E_ext',2, io_occ_mult%E_ext)
     call get_parameter(io, fname, 'occ_mult_kt',  io_occ_mult%kt)
 end subroutine
 
@@ -142,10 +142,20 @@ subroutine read_TB_H(io,fname,TB_params)
         write(output_unit,'(/A/)') "No tight-binding Jsd-coupling found"
     endif
 
+    Call number_Hpar(io,fname,'TB_defect',N)
+    if(N>0)then
+        allocate(TB_params%defect(N))
+        Call read_Hpar(io,fname,'TB_defect',TB_params%defect)
+    else
+        write(output_unit,'(/A/)') "No tight-binding defect found"
+    endif
+
+
     call get_parameter(io,fname,'TB_scf_print',TB_params%scf_print)
     call get_parameter(io,fname,'TB_scf_loopmax',TB_params%scf_loopmax)
     call get_parameter(io,fname,'TB_scf_diffconv',TB_params%scf_diffconv)
     call get_parameter(io,fname,'TB_scf_Ecut',TB_params%scf_Ecut)
+    call get_parameter(io,fname,'TB_scf_kgrid',TB_params%scf_kgrid)
     call get_parameter(io,fname,'TB_sparse',TB_params%sparse)
     call get_parameter(io,fname,'TB_diag',TB_params%i_diag)
     call get_parameter(io,fname,'TB_diag_acc',TB_params%diag_acc)

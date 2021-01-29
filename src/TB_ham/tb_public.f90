@@ -12,6 +12,56 @@ end interface
 
 contains
 
+subroutine restict_solution_positive(eval,evec,emax,vanish)
+    !restrict the eigenvalues and eigenvectors only to positive energies, up to the optional maximal energy emax
+    complex(8),allocatable,intent(inout)    :: evec(:,:) !eigenvectors
+    real(8),allocatable,intent(inout)       :: eval(:)   !eigenvalues
+    real(8),optional,intent(in)             :: emax
+    logical,intent(out),optional            :: vanish 
+    complex(8),allocatable  :: tmp_c(:,:)
+    real(8),allocatable     :: tmp_r(:)
+
+    integer     :: ie_bnd(2)
+    integer     :: i
+
+    if(present(vanish)) vanish=.false.
+
+    !only sum over positive energies
+    ie_bnd=size(eval)+1
+    do i=1,size(eval)
+        if(eval(i)>0.0d0)then
+            ie_bnd(1)=i
+            exit
+        endif
+    enddo
+    if(ie_bnd(1)>size(eval)) STOP "need positive eigenvalues for selfconsistent delta"
+    ie_bnd(2)=size(eval)
+    if(present(emax).and.emax>0.0d0)then
+        do i=ie_bnd(1),size(eval)
+            if(eval(i)>emax)then
+                ie_bnd(2)=i-1
+                exit
+            endif
+        enddo
+    endif
+    if(ie_bnd(2)<ie_bnd(1))then
+        if(present(vanish))then
+            vanish=.true.
+            deallocate(evec,eval)
+            return
+        else
+            STOP "there needs to be a non-vanishing set of positive eigenvalues up to emax" !reference input parameter setting emax once defined
+        endif
+    endif
+    Call move_alloc(evec,tmp_c)
+    Call move_alloc(eval,tmp_r)
+    allocate(eval,source=tmp_r(  ie_bnd(1):ie_bnd(2)))
+    deallocate(tmp_r)
+    allocate(evec,source=tmp_c(:,ie_bnd(1):ie_bnd(2)))
+    deallocate(tmp_c)
+end subroutine
+
+
 subroutine H_append(H,Hadd)
     !adds the entries from Hadd to H, and destroys the Hadd array
     type(H_tb_coo),allocatable,intent(inout)   :: H(:)
@@ -46,6 +96,7 @@ subroutine set_H_single(H,io)
     use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
     class(H_tb),allocatable,intent(inout)   :: H
     type(parameters_TB_IO_H),intent(in)     :: io
+    logical,save    :: nsaid=.true.
 
     if(allocated(H)) STOP "CANNOT set H which is already set"
     if(io%sparse)then
@@ -54,22 +105,23 @@ subroutine set_H_single(H,io)
     else
         select case(io%i_diag)
         case(1)
-            write(output_unit,'(2/A/)') "Chose lapack zheevd algoritm for tight-binding Hamiltonian"
+            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevd algoritm for tight-binding Hamiltonian"
             allocate(H_zheevd::H)
         case(2)
-            write(output_unit,'(2/A/)') "Chose lapack zheev algoritm for tight-binding Hamiltonian"
+            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheev algoritm for tight-binding Hamiltonian"
             allocate(H_zheev::H)
         case(3)
-            write(output_unit,'(2/A/)') "Chose dense feast algoritm for tight-binding Hamiltonian"
+            if(nsaid) write(output_unit,'(2/A/)') "Chose dense feast algoritm for tight-binding Hamiltonian"
             allocate(H_feast_den::H)
         case(4)
-            write(output_unit,'(2/A/)') "Chose lapack zheevr algoritm for tight-binding Hamiltonian"
+            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevr algoritm for tight-binding Hamiltonian"
             allocate(H_zheevr::H)
         case default
             write(error_unit,'(2/A,I6,A)') "Unable to choose dense tight-binding Hamiltonian as TB_diag=",io%i_diag," is not implemented"
             STOP "CHECK INPUT"
         end select
     endif
+    nsaid=.false.
 end subroutine
 
 subroutine set_H_multiple(H,N,io)

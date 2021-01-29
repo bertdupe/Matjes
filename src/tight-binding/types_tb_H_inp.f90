@@ -3,7 +3,7 @@ use m_derived_types, only: lattice
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 private
-public TB_H_par,TB_hopping, TB_Jsd, TB_delta, alloc_TB_H, TBio_delta_onsite_scf
+public TB_H_par,TB_hopping, TB_Jsd, TB_delta, alloc_TB_H, TBio_delta_onsite_scf, TBio_defect
 type,abstract :: TB_H_par
 contains
     procedure(int_print)  ,deferred :: print_std
@@ -104,6 +104,23 @@ type,extends(TB_H_par) :: TBio_delta_onsite_scf
     procedure :: check => delta_onsite_scf_check
 end type
 
+type,extends(TB_H_par) :: TBio_defect
+    integer     :: atom=0           !atom id
+    integer     :: orbital=0        !orbital of atom-type (excluding spin)
+    integer     :: site(3)=[0,0,0]  !position in super-lattice
+    real(8)     :: nonmag=0.0d0     !spin independent term
+    real(8)     :: mag=0.0d0       !attractive potential magnitude
+    !add maximal energy?
+    contains
+    procedure :: local_read => defect_read
+    procedure :: defect_assign
+    generic :: assignment(=) => defect_assign
+    procedure :: print_std => defect_print
+    procedure :: is_zero => defect_is_zero
+    procedure :: check => defect_check
+end type
+
+
 
 
 contains 
@@ -121,11 +138,76 @@ subroutine alloc_TB_H(par,var_name)
         allocate(TB_Jsd::par)
     case("TB_scfdelta")
         allocate(TBio_delta_onsite_scf::par)
+    case("TB_defect")
+        allocate(TBio_defect::par)
     case default
         write(error_unit,'(3A)') 'Could not allocate general TB_H_par input type based on name: "',var_name,'"'
         STOP "Implement in types_tb_H_inp.f90, probably new type has been defined"
     end select
 end subroutine
+
+subroutine defect_read(par, unit, iotype, v_list, iostat, iomsg)
+    class(TBio_defect), intent(inout):: par
+    integer, intent(in)           :: unit
+    character(*), intent(in)      :: iotype
+    integer, intent(in)           :: v_list(:)
+    integer, intent(out)          :: iostat
+    character(*), intent(inout)   :: iomsg
+    
+    type(TBio_defect)             :: tmp
+   
+    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site
+    backspace(unit)
+    if (iostat > 0)then    !try to read without z-site
+        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site(1:2)
+        tmp%site(3)=1
+        backspace(unit)
+    endif
+    if (iostat > 0)then    !try to read without yz-site
+        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site(1)
+        tmp%site(2:3)=1
+        backspace(unit)
+    endif
+    read(unit,*)    !together with backspace make sure that is advances
+    if(iostat==0) par=tmp
+end subroutine
+
+subroutine defect_assign(par,par_in)
+    class(TBio_defect), intent(out):: par
+    type(TBio_defect) , intent(in ):: par_in
+
+    par%atom   =par_in%atom  
+    par%orbital=par_in%orbital 
+    par%nonmag =par_in%nonmag 
+    par%mag    =par_in%mag       
+    par%site   =par_in%site
+end subroutine
+
+subroutine defect_check(this,lat)
+    class(TBio_defect), intent(in)  :: this
+    type(lattice),intent(in)        :: lat
+    logical     :: spin_error
+
+    if(this%atom<1.or.this%atom>size(lat%cell%atomic))then
+        write(error_unit,'(//A/A)') "Atom in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(this%orbital<1.or.this%orbital>lat%cell%atomic(this%atom)%orbitals)then
+        write(error_unit,'(//A/A)') "Orbital in TB-input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+
+    if(any(this%site<1).or.any(this%site>lat%dim_lat))then
+        write(error_unit,'(//A/A)') "Site input out of range","Error in entry:" 
+        Call this%print_std(error_unit)
+        Stop "Check input"
+    endif
+    !will not catch in Hamiltonian is not magnetic but this%spin=2... but that information is not in lat..., either check later,ignore, or include here
+end subroutine
+
 
 subroutine TB_hopping_read(par, unit, iotype, v_list, iostat, iomsg)
     class(TB_hopping), intent(inout):: par
@@ -405,6 +487,24 @@ subroutine Jsd_print(this,io_in)
     write(io_unit,'(A,E16.8/)')  '  energy    :', this%val
 end subroutine
 
+subroutine defect_print(this,io_in)
+    use, intrinsic :: iso_fortran_env, only : output_unit
+    class(TBio_defect),intent(in)   :: this
+    integer,intent(in),optional     :: io_in
+    integer                         :: io_unit
+
+    io_unit=output_unit
+    if(present(io_in)) io_unit=io_in
+
+    write(io_unit,'(A)')         'defect Hamiltonian input data:'
+    write(io_unit,'(A,2I6)')     '  atom id     :', this%atom
+    write(io_unit,'(A,2I6)')     '  orbital     :', this%orbital
+    write(io_unit,'(A,E16.8)')   '  non-magnetic:', this%nonmag
+    write(io_unit,'(A,E16.8)')   '  magnetic    :', this%mag
+    write(io_unit,'(A,3I6/)')    '  site        :', this%site
+end subroutine
+
+
 function Jsd_is_zero(this)result(is_zero)
     class(TB_Jsd),intent(in)   ::  this
     logical :: is_zero
@@ -432,4 +532,13 @@ function delta_onsite_scf_is_zero(this)result(is_zero)
 
     is_zero=this%val==0.0d0
 end function
+
+
+function defect_is_zero(this)result(is_zero)
+    class(TBio_defect),intent(in)   ::  this
+    logical :: is_zero
+
+    is_zero=this%mag==0.0d0.and.this%nonmag==0.0d0
+end function
+
 end module
