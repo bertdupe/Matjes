@@ -37,7 +37,7 @@ subroutine tightbinding_r(lat,tb_par)
 
     !check what to calculate (eigenvalue/eigenvector)
     calc_eigval=tb_par%flow%dos_r.or.tb_par%flow%occ_r.or.tb_par%flow%spec_r.or.tb_par%flow%fermi_r
-    calc_eigvec=(tb_par%flow%dos_r.and.tb_par%is_sc).or.tb_par%flow%occ_r
+    calc_eigvec=(tb_par%flow%dos_r.and.(tb_par%is_sc.or.allocated(tb_par%io_dos%bnd))).or.tb_par%flow%occ_r
 
     !possibly read previous solution
     if(tb_par%flow%read_solution_r)then
@@ -85,19 +85,9 @@ subroutine tightbinding_r(lat,tb_par)
     if(tb_par%flow%dos_r)then
         write(output_unit,'(/A)') 'start calculate DOS'
         if(tb_par%is_sc)then
-            block
-                type(dos_sc)    :: dos
-                Call dos%init(tb_par%io_dos)
-                Call dos%add(eigval,eigvec)
-                Call dos%print('dos_r_sc.dat')
-            end block
+            Call write_dos_sc(eigval,eigvec,lat,tb_par%io_dos)
         else
-            block
-                type(dos_nc)    :: dos
-                Call dos%init(tb_par%io_dos)
-                Call dos%add(eigval)
-                Call dos%print('dos_r.dat')
-            end block
+            Call write_dos_nc(eigval,eigvec,lat,tb_par%io_dos)
         endif
     endif
 
@@ -116,5 +106,74 @@ subroutine tightbinding_r(lat,tb_par)
     endif
 
 end subroutine 
+
+subroutine write_dos_nc(eval,evec,lat,io_dos) 
+    real   (8),intent(in)       :: eval(:)
+    complex(8),intent(in)       :: evec(:,:)
+    type(lattice),intent(in)    :: lat
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+
+    type(dos_nc)                            :: dos
+
+    type(dos_bnd_nc),allocatable            :: dos_bnd(:)
+    integer                                 :: idos,Ndos
+    character(len=3)                        :: bnd_id
+    Call dos%init(io_dos)
+
+    Ndos=0
+    if(allocated(io_dos%bnd))then
+        Ndos=size(io_dos%bnd,2)
+        allocate(dos_bnd(Ndos))
+        do idos=1,Ndos
+            Call dos_bnd(idos)%init_bnd(io_dos,io_dos%bnd(:,idos))
+        enddo
+    endif
+
+    Call dos%add(eval)
+    do idos=1,Ndos
+        Call dos_bnd(idos)%add(eval,evec)
+    enddo
+
+    Call dos%print("dos_r_nc.dat")
+    do idos=1,Ndos
+        write(bnd_id,'(I0.3)') idos
+        Call dos_bnd(idos)%print("dos_r_nc_bnd_"//bnd_id//".dat")
+    enddo
+end subroutine
+
+
+subroutine write_dos_sc(eval,evec,lat,io_dos) 
+    real   (8),intent(in)       :: eval(:)
+    complex(8),intent(in)       :: evec(:,:)
+    type(lattice),intent(in)    :: lat
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+
+    type(dos_sc)                            :: dos
+
+    type(dos_bnd_sc),allocatable            :: dos_bnd(:)
+    integer                                 :: idos,Ndos
+    character(len=3)                        :: bnd_id
+    Call dos%init(io_dos)
+
+    Ndos=0
+    if(allocated(io_dos%bnd))then
+        Ndos=size(io_dos%bnd,2)
+        allocate(dos_bnd(Ndos))
+        do idos=1,Ndos
+            Call dos_bnd(idos)%init_bnd(io_dos,io_dos%bnd(:,idos))
+        enddo
+    endif
+
+    Call dos%add(eval,evec)
+    do idos=1,Ndos
+        Call dos_bnd(idos)%add(eval,evec)
+    enddo
+
+    Call dos%print("dos_r_sc.dat")
+    do idos=1,Ndos
+        write(bnd_id,'(I0.3)') idos
+        Call dos_bnd(idos)%print("dos_r_sc_bnd_"//bnd_id//".dat")
+    enddo
+end subroutine
 
 end module

@@ -2,7 +2,7 @@ module m_dos
 use m_TB_types, only: parameters_TB_IO_DOS
 implicit none
 private
-public dos_nc, dos_sc
+public dos_nc, dos_sc, dos_bnd_nc, dos_bnd_sc
 real(8),parameter       ::  dist_inc=8.0d0  !how many sigma away from my the energy entries are still considered
 
 type,abstract   :: dos_t
@@ -36,7 +36,6 @@ contains
     procedure :: init_bnd => init_dos_bnd
 end type
 
-!DOS BND stuff not tested
 type,extends(dos_bnd) ::  dos_bnd_nc
 contains
     procedure :: add  => add_dos_bnd_nc
@@ -134,7 +133,7 @@ subroutine add_dos_sc(this,eigval,eigvec)
     enddo
     if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
 
-    dimH=size(eigvec)
+    dimH=size(eigvec,1)
     dos_loc=0.0d0
     do i=i_start,size(eigval)
         !u-part of BdG
@@ -170,7 +169,7 @@ subroutine add_dos_bnd_sc(this,eigval,eigvec)
     enddo
     if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
 
-    dimH=size(eigvec)
+    dimH=size(eigvec,1)
     dos_loc=0.0d0
     do i=i_start,size(eigval)
         !u-part of BdG
@@ -215,9 +214,10 @@ subroutine print_dos(this,fname)
     dos_loc=this%dos
     norm=sum(dos_loc)
     if(norm==0.0d0) then
-        write(error_unit,'(A)') "sum over all dos entries is 0, check dos input"
+        write(error_unit,'(3A)') "sum over all dos entries for ",fname," is 0, check dos input"
     else
-        dos_loc=dos_loc/norm
+        !dos_loc=dos_loc/norm
+        dos_loc=dos_loc/real(this%N_entry,8)
     endif
     do i=1,size(this%dos)
        write(io,'(2E16.8)') this%Eval(i),dos_loc(i)

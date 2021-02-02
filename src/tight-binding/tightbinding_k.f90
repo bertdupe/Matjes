@@ -6,6 +6,7 @@ use m_fftw, only: set_k_mesh, kmesh, N_kpoint
 use m_highsym, only: plot_highsym_kpts,set_highs_path
 use m_fermi, only: get_fermi_k
 use m_TB_types
+use, intrinsic :: iso_fortran_env, only : output_unit
 
 use m_init_Hk
 implicit none
@@ -43,78 +44,119 @@ subroutine tightbinding_k(lat,tb_par)
 end subroutine 
 
 subroutine write_dos(Hk_inp,h_io,lat,io_dos)
-    use m_dos, only: dos_nc
-    use m_constants, only : pi
-    type(Hk_inp_t),intent(in)               :: Hk_inp
-    type(parameters_TB_IO_H),intent(in)     :: h_io
-    type(lattice), intent(in)               :: lat
-    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
-    character(len=*),parameter              :: fname='dos_k.dat'
-
-    type(dos_nc)                            :: dos
-
-    !parameters to describe integration k-grid
-    integer                                 :: i
-    integer                                 :: ik,Nk
-    real(8)                                 :: k(3)
-    integer                                 :: kint(3),k_offset(3)
-    real(8)                                 :: kdiff(3,3)
-    real(8),allocatable                     :: eval(:)
-
-    Call dos%init(io_dos)
-
-    !get k_grid parameter
-    Nk=product(io_dos%kgrid)
-    kdiff=lat%a_sc_inv/spread(real(io_dos%kgrid),2,3)*2.0d0*pi
-    k_offset=[(product(io_dos%kgrid(1:i)),i=0,2)]
-
-    !calculate eigenvalues for each k and add to dos
-    do ik=1,Nk
-        kint=modulo((ik-1)/k_offset,io_dos%kgrid)
-        k=matmul(kint,kdiff)
-        Call Hk_eval(Hk_inp,k,h_io,eval) 
-        Call dos%add(eval)
-        deallocate(eval)
-    enddo
-
-    Call dos%print(fname)
-end subroutine
-
-subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
-    use m_dos, only: dos_sc
+    use m_dos, only: dos_nc, dos_bnd_nc
     use m_constants, only : pi
     use m_derived_types, only: k_grid_t
     type(Hk_inp_t),intent(in)               :: Hk_inp
     type(parameters_TB_IO_H),intent(in)     :: h_io
     type(lattice), intent(in)               :: lat
     type(parameters_TB_IO_DOS),intent(in)   :: io_dos
-    character(len=*),parameter              :: fname='dos_k_sc.dat'
 
-    type(dos_sc)                            :: dos
-
-    !parameters to describe integration k-grid
-    integer                                 :: i
-    integer                                 :: ik,Nk
-    real(8)                                 :: k(3)
-    integer                                 :: kint(3),k_offset(3)
-    real(8)                                 :: kdiff(3,3)
+    type(dos_nc)                            :: dos
     real(8),allocatable                     :: eval(:)
     complex(8),allocatable                  :: evec(:,:)
+
+    !parameters to describe integration k-grid
     type(k_grid_t)                          :: k_grid
+    integer                                 :: ik,Nk
+    real(8)                                 :: k(3)
+
+    type(dos_bnd_nc),allocatable            :: dos_bnd(:)
+    logical                                 :: use_bnd
+    integer                                 :: idos,Ndos
+    character(len=3)                        :: bnd_id
+
 
     Call dos%init(io_dos)
     Call k_grid%set(lat%a_sc_inv,io_dos%kgrid)
     Nk=k_grid%get_NK()
 
+    Ndos=0
+    use_bnd=allocated(io_dos%bnd)
+    if(use_bnd)then
+        Ndos=size(io_dos%bnd,2)
+        allocate(dos_bnd(Ndos))
+        do idos=1,Ndos
+            Call dos_bnd(idos)%init_bnd(io_dos,io_dos%bnd(:,idos))
+        enddo
+    endif
+
     !calculate eigenvalues for each k and add to dos
     do ik=1,Nk
+        if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        k=k_grid%get_K(ik)
+        if(use_bnd)then
+            Call Hk_evec(Hk_inp,k,h_io,eval,evec) 
+        else
+            Call Hk_eval(Hk_inp,k,h_io,eval) 
+        endif
+        Call dos%add(eval)
+        do idos=1,Ndos
+            Call dos_bnd(idos)%add(eval,evec)
+        enddo
+        deallocate(eval)
+        if(use_bnd) deallocate(evec)
+    enddo
+
+    Call dos%print('dos_k.dat')
+    do idos=1,Ndos
+        write(bnd_id,'(I0.3)') idos
+        Call dos_bnd(idos)%print("dos_k_nc_bnd_"//bnd_id//".dat")
+    enddo
+end subroutine
+
+subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
+    use m_dos, only: dos_sc,dos_bnd_sc
+    use m_constants, only : pi
+    use m_derived_types, only: k_grid_t
+    type(Hk_inp_t),intent(in)               :: Hk_inp
+    type(parameters_TB_IO_H),intent(in)     :: h_io
+    type(lattice), intent(in)               :: lat
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+
+    type(dos_sc)                            :: dos
+    real(8),allocatable                     :: eval(:)
+    complex(8),allocatable                  :: evec(:,:)
+
+    !parameters to describe integration k-grid
+    type(k_grid_t)                          :: k_grid
+    integer                                 :: ik,Nk
+    real(8)                                 :: k(3)
+
+    type(dos_bnd_sc),allocatable            :: dos_bnd(:)
+    integer                                 :: idos,Ndos
+    character(len=3)                        :: bnd_id
+
+    Call dos%init(io_dos)
+    Call k_grid%set(lat%a_sc_inv,io_dos%kgrid)
+    Nk=k_grid%get_NK()
+
+    Ndos=0
+    if(allocated(io_dos%bnd))then
+        Ndos=size(io_dos%bnd,2)
+        allocate(dos_bnd(Ndos))
+        do idos=1,Ndos
+            Call dos_bnd(idos)%init_bnd(io_dos,io_dos%bnd(:,idos))
+        enddo
+    endif
+
+    !calculate eigenvalues for each k and add to dos
+    do ik=1,Nk
+        if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
         k=k_grid%get_K(ik)
         Call Hk_evec(Hk_inp,k,h_io,eval,evec) 
         Call dos%add(eval,evec)
+        do idos=1,Ndos
+            Call dos_bnd(idos)%add(eval,evec)
+        enddo
         deallocate(eval,evec)
     enddo
 
-    Call dos%print(fname)
+    Call dos%print('dos_k_sc.dat')
+    do idos=1,Ndos
+        write(bnd_id,'(I0.3)') idos
+        Call dos_bnd(idos)%print("dos_k_sc_bnd_"//bnd_id//".dat")
+    enddo
 end subroutine
 
 end module

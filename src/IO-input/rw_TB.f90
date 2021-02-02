@@ -69,14 +69,36 @@ subroutine read_TB_flow(io,fname,flow)
 end subroutine
 
 subroutine read_TB_dos(io,fname,io_dos)
+    use, intrinsic :: iso_fortran_env, only : output_unit
     integer,intent(in)                      :: io
     character(len=*), intent(in)            :: fname
     type(parameters_TB_IO_dos),intent(out)  :: io_dos
+
+    integer ::  N,ii,stat
+    character(len=100) :: str
 
     call get_parameter(io,fname,'dos_sigma',io_dos%sigma)
     call get_parameter(io,fname,'dos_E_ext',io_dos%E_ext)
     call get_parameter(io,fname,'dos_dE',io_dos%dE)
     call get_parameter(io,fname,'dos_kgrid',io_dos%kgrid)
+    call get_parameter(io,fname,'dos_print_kint',io_dos%print_kint)
+
+    N=0
+    call get_parameter(io,fname,'TB_loc_dos',N)
+    if(N>0)then
+        Call set_pos_entry(io,fname,'TB_loc_dos')
+        read(io,'(A)') str
+        allocate(io_dos%bnd_io(N))
+        ii=1
+        do while (ii<=size(io_dos%bnd_io))
+            read(io,'(a)',iostat=stat) str
+            read(str,*,iostat=stat) io_dos%bnd_io(ii)
+            write(output_unit,'(A,I6,A)') 'TB_loc_dos entry no.',ii,':'
+            Call io_dos%bnd_io(ii)%print_std()
+            ii=ii+1
+        enddo 
+        Call check_further_entry(io,fname,"TB_loc_dos")
+    endif
 end subroutine
 
 

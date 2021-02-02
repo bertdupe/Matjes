@@ -3,6 +3,7 @@ use m_input_H_types
 use m_types_tb_h_inp
 use m_ham_arrange
 use m_delta_onsite
+use m_dos_io
 implicit none
 public
 private upd_h_par, init_ham_init
@@ -65,10 +66,13 @@ type parameters_TB_IO_EF
 end type
 
 type parameters_TB_IO_DOS
-    real(8)     :: E_ext(2)=[-1.0d0,1.0d0]      !minimum and maximum energy to plot in dos
-    real(8)     :: dE=1.0d-2                    !energy binning size
-    real(8)     :: sigma=1.0d-2                 !gauss smearing parameter for dos
-    integer     :: kgrid(3)=[1,1,1]    !number of k-points in each direction in case of k-space dos
+    real(8)     :: E_ext(2)=[-1.0d0,1.0d0]          !minimum and maximum energy to plot in dos
+    real(8)     :: dE=1.0d-2                        !energy binning size
+    real(8)     :: sigma=1.0d-2                     !gauss smearing parameter for dos
+    integer     :: kgrid(3)=[1,1,1]                 !number of k-points in each direction in case of k-space dos
+    logical     :: print_kint=.false.               !print out the index of the currently considered k index 
+    type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos
+    integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local dos)
 end type
 
 type parameters_TB_IO_HIGHS
@@ -199,6 +203,12 @@ subroutine init_parameters_TB(TB_params,lat)
         par%use_scf=allocated(par%del_scf_io)
         if(par%use_scf) Call par%del%set_scf(par%del_scf_io,lat,par%norb_at_off)
     end associate
+    if(allocated(TB_params%io_dos%bnd_io))then
+        do i=1,size(TB_params%io_dos%bnd_io)
+            Call TB_params%io_dos%bnd_io(i)%check(lat)
+        enddo
+        Call dos_get_ind(TB_params%io_dos%bnd_io,lat,TB_params%io_H%nspin,TB_params%io_H%norb_at,TB_params%io_H%norb_at_off,TB_params%io_dos%bnd)
+    endif
 
     !REMOVE-> move to H_io
     !set dimensions of the Hamiltonian

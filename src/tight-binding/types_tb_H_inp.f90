@@ -44,8 +44,6 @@ abstract interface
     end function
 end interface
 
-
-
 type,extends(TB_H_par) :: TB_hopping
     integer     :: attype(2)=[0,0]      !atom types which are connected
     integer     :: orbital(2)=[0,0]     !orbitals of atom-type (excluding spin)
@@ -53,10 +51,9 @@ type,extends(TB_H_par) :: TB_hopping
     integer     :: dist=0               !nth distance (1=nearest neighbor)
     real(8)     :: val=0.0d0            !value for this pair of atom-types at distance(dist)
     contains
-    procedure :: TB_hopping_read
     procedure :: local_read => TB_hopping_read
     procedure :: TB_hopping_assign
-    generic :: assignment(=) => TB_hopping_assign
+    generic   :: assignment(=) => TB_hopping_assign
     procedure :: print_std => hop_print
     procedure :: is_zero => hopping_is_zero
     procedure :: check => TB_hopping_check
@@ -119,9 +116,6 @@ type,extends(TB_H_par) :: TBio_defect
     procedure :: is_zero => defect_is_zero
     procedure :: check => defect_check
 end type
-
-
-
 
 contains 
 
