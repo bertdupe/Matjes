@@ -20,4 +20,5 @@ src/tight-binding/TB_types.f90
 src/tight-binding/tightbinding.f90
 src/tight-binding/tightbinding_k.f90
 src/tight-binding/tightbinding_r.f90
+src/tight-binding/wannier_inp.f90
 )

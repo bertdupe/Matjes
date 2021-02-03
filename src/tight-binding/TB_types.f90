@@ -4,6 +4,7 @@ use m_types_tb_h_inp
 use m_ham_arrange
 use m_delta_onsite
 use m_dos_io
+use m_wannier_inp, only: wann_dat
 implicit none
 public
 private upd_h_par, init_ham_init
@@ -32,6 +33,8 @@ type parameters_TB_IO_H
 
     type(Htb_inp)       ::  hop
     type(Hdelta)        ::  del
+
+    type(wann_dat)      ::  wann_io
 
     integer             ::  nspin=1         !number of spins (1 or 2) for each orbital
     integer             ::  ncell=-1        !overall number of cells

@@ -21,6 +21,7 @@ subroutine rw_TB(TB_params,fname)
     Call read_TB_highs   (io,fname,TB_params%io_highs)
     Call read_TB_occ_mult(io,fname,TB_params%io_occ_mult)
     call close_file(fname,io)
+
 end subroutine
 
 subroutine read_TB_highs(io,fname,highs)
@@ -131,6 +132,12 @@ subroutine read_TB_H(io,fname,TB_params)
     type(parameters_TB_IO_H),intent(out)     :: TB_params
     ! Internal variables
     integer :: N
+    character(len=100)  :: wann_file 
+
+
+    wann_file=""
+    call get_parameter(io,fname,'wann_ham',wann_file)
+    if(len_trim(wann_file)/=0) Call TB_params%wann_io%read_file(trim(adjustl(wann_file)))
 
     Call number_Hpar(io,fname,'TB_hopping',N)
     if(N>0)then
