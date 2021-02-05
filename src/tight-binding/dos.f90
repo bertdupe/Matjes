@@ -2,7 +2,7 @@ module m_dos
 use m_TB_types, only: parameters_TB_IO_DOS
 implicit none
 private
-public dos_nc, dos_sc, dos_bnd_nc, dos_bnd_sc
+public dos_nc, dos_sc, dos_bnd_nc, dos_bnd_sc, dos_orb_nc, dos_orb_sc
 real(8),parameter       ::  dist_inc=8.0d0  !how many sigma away from my the energy entries are still considered
 
 type,abstract   :: dos_t
@@ -46,6 +46,25 @@ contains
     procedure :: add  => add_dos_bnd_sc
 end type
 
+
+type,abstract,extends(dos_t)    ::  dos_orb
+    private
+    integer     :: orb
+    integer     :: freq
+contains
+    procedure :: init_bnd => init_dos_orb
+end type
+
+type,extends(dos_orb) ::  dos_orb_nc
+contains
+    procedure :: add  => add_dos_orb_nc
+end type
+
+type,extends(dos_orb) ::  dos_orb_sc
+contains
+    procedure :: add  => add_dos_orb_sc
+end type
+
 contains
 
 subroutine init_dos_bnd(this,io_dos,bnd)
@@ -55,6 +74,16 @@ subroutine init_dos_bnd(this,io_dos,bnd)
 
     Call this%init(io_dos)
     this%bnd=bnd
+end subroutine
+
+subroutine init_dos_orb(this,io_dos,orb,ndim)
+    class(dos_orb),intent(inout)            :: this
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+    integer,intent(in)                      :: orb, ndim
+
+    Call this%init(io_dos)
+    this%orb=orb
+    this%freq=ndim
 end subroutine
 
 subroutine init_dos(this,io_dos)
@@ -112,6 +141,27 @@ subroutine add_dos_bnd_nc(this,eigval,eigvec)
     this%dos=this%dos+dos_loc/real(size(eigval))
     this%N_entry=this%N_entry+1
 end subroutine
+
+subroutine add_dos_orb_nc(this,eigval,eigvec)
+    class(dos_orb_nc),intent(inout) :: this
+    real(8),intent(in)              :: eigval(:)
+    complex(8),intent(in)           :: eigvec(:,:)
+
+    real(8)                     :: dos_loc(size(this%dos))
+    integer                     :: i,bnd(2)
+    real(8)                     :: pref 
+
+    if(.not.allocated(this%Eval)) STOP "Trying to add to dos, by type is not initialized"
+    dos_loc=0.0d0
+    do i=1,size(eigval)
+        pref=real(dot_product(eigvec(this%orb::this%freq,i),eigvec(this%orb::this%freq,i)),8)
+        Call get_ibnd (eigval(i),this,bnd)
+        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+    enddo
+    this%dos=this%dos+dos_loc/real(size(eigval))
+    this%N_entry=this%N_entry+1
+end subroutine
+
 
 subroutine add_dos_sc(this,eigval,eigvec)
     class(dos_sc),intent(inout) :: this
@@ -184,6 +234,43 @@ subroutine add_dos_bnd_sc(this,eigval,eigvec)
     this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
     this%N_entry=this%N_entry+1
 end subroutine
+
+subroutine add_dos_orb_sc(this,eigval,eigvec)
+    class(dos_orb_sc),intent(inout) :: this
+    real(8),intent(in)          :: eigval(:)
+    complex(8),intent(in)       :: eigvec(:,:)
+
+    real(8)                     :: dos_loc(size(this%dos))
+    integer                     :: i, i_start, n_state, dimH, bnd(2)
+    real(8)                     :: pref
+
+    if(.not.allocated(this%Eval)) STOP "Trying to add to dos, by type is not initialized"
+    !only consider the states above the zero energy
+    i_start=0
+    do i=1,size(eigval)
+        if(eigval(i)>0.0d0)then
+            i_start=i 
+            exit
+        endif
+    enddo
+    if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
+
+    dimH=size(eigvec,1)
+    dos_loc=0.0d0
+    do i=i_start,size(eigval)
+        !u-part of BdG
+        pref=real(dot_product(eigvec(this%orb:dimH/2:this%freq,i),eigvec(this%orb:dimH/2:this%freq,i)),8)
+        Call get_ibnd (eigval(i),this,bnd)
+        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        !v-part of BdG
+        pref=real(dot_product(eigvec(this%orb+dimH/2::this%freq,i),eigvec(this%orb+dimH/2::this%freq,i)),8)
+        Call get_ibnd (-eigval(i),this,bnd)
+        Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+    enddo
+    this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
+    this%N_entry=this%N_entry+1
+end subroutine
+
 
 
 subroutine add_gauss(val,pref,E,dos,sigma)

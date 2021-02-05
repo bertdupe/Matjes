@@ -65,6 +65,7 @@ subroutine read_TB_flow(io,fname,flow)
     call get_parameter(io,fname,'do_TB_k',flow%do_k)
     call get_parameter(io,fname,'do_dos_k',flow%dos_k)
     call get_parameter(io,fname,'do_fermi_k',flow%fermi_k)
+    call get_parameter(io,fname,'do_fermi_dos_k',flow%fermi_dos_k)
     call get_parameter(io,fname,'do_highs_k',flow%highs_k)
 end subroutine
 
@@ -99,6 +100,24 @@ subroutine read_TB_dos(io,fname,io_dos)
         enddo 
         Call check_further_entry(io,fname,"TB_loc_dos")
     endif
+
+    N=0
+    call get_parameter(io,fname,'TB_orb_dos',N)
+    if(N>0)then
+        Call set_pos_entry(io,fname,'TB_orb_dos')
+        read(io,'(A)') str
+        allocate(io_dos%orb_io(N))
+        ii=1
+        do while (ii<=size(io_dos%orb_io))
+            read(io,'(a)',iostat=stat) str
+            read(str,*,iostat=stat) io_dos%orb_io(ii)
+            write(output_unit,'(A,I6,A)') 'TB_orb_dos entry no.',ii,':'
+            Call io_dos%orb_io(ii)%print_std()
+            ii=ii+1
+        enddo 
+        Call check_further_entry(io,fname,"TB_orb_dos")
+    endif
+
 end subroutine
 
 

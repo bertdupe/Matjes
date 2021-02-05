@@ -7,6 +7,7 @@ src/tight-binding/init_H.f90
 src/tight-binding/init_Hr.f90
 src/tight-binding/init_Hk.f90
 src/tight-binding/fermi.f90
+src/tight-binding/fermi_dos.f90
 src/tight-binding/ham_input_arrange.f90
 src/tight-binding/highsymmetry.f90
 src/tight-binding/mkl_lib_include.f90

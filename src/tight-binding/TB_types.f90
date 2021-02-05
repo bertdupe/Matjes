@@ -71,8 +71,11 @@ type parameters_TB_IO_DOS
     real(8)     :: sigma=1.0d-2                     !gauss smearing parameter for dos
     integer     :: kgrid(3)=[1,1,1]                 !number of k-points in each direction in case of k-space dos
     logical     :: print_kint=.false.               !print out the index of the currently considered k index 
-    type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos
-    integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local dos)
+    type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos site dependent
+    type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
+    integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local site dos)
+    integer,allocatable :: orb(:)                   !local dos orbitals (number local orbital dos)
+    logical     :: print_fermi=.false.              !print the energy dos at the fermi surface
 end type
 
 type parameters_TB_IO_HIGHS
@@ -130,6 +133,7 @@ type parameters_TB_IO_FLOW
     logical         ::  dos_k=.False.
     logical         ::  highs_k=.False.
     logical         ::  fermi_k=.False.
+    logical         ::  fermi_dos_k=.False. !plot fermi surface at Fermi energy
 end type
 
 type parameters_TB
@@ -208,6 +212,12 @@ subroutine init_parameters_TB(TB_params,lat)
             Call TB_params%io_dos%bnd_io(i)%check(lat)
         enddo
         Call dos_get_ind(TB_params%io_dos%bnd_io,lat,TB_params%io_H%nspin,TB_params%io_H%norb_at,TB_params%io_H%norb_at_off,TB_params%io_dos%bnd)
+    endif
+    if(allocated(TB_params%io_dos%orb_io))then
+        do i=1,size(TB_params%io_dos%orb_io)
+            Call TB_params%io_dos%orb_io(i)%check(lat)
+        enddo
+        Call dos_get_orb(TB_params%io_dos%orb_io,lat,TB_params%io_H%nspin,TB_params%io_H%norb_at,TB_params%io_H%norb_at_off,TB_params%io_dos%orb)
     endif
 
     !REMOVE-> move to H_io
