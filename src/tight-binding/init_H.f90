@@ -271,6 +271,7 @@ subroutine get_Hop_arr(lat,h_io,Hhop,neigh_out,diffR)
         dist=h_io%hop%at(i_att)%dist%dist
         attpair=h_io%hop%at(i_att)%atpair
         Call neigh(i_att)%get(attpair,dist,lat)
+        Call neigh(i_att)%prt()
         N_pair=N_pair+sum(neigh(i_att)%Nshell)
         deallocate(dist)
     enddo
@@ -331,6 +332,5 @@ subroutine append_arr(arr,arr_append)
     deallocate(arr,arr_append)
     Call move_alloc(tmp,arr)
 end subroutine
-
 
 end module
