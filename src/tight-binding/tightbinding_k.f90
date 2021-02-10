@@ -3,7 +3,7 @@ use m_tb_types
 use m_derived_types, only : lattice
 use m_highsym, only: plot_highsym_kpts,set_highs_path
 use m_TB_types
-use m_fermi_dos, only: fermi_dos_nc 
+use m_fermi_dos, only: fermi_dos_nc , fermi_dos_proj_nc
 use, intrinsic :: iso_fortran_env, only : output_unit
 
 use m_init_Hk
@@ -35,7 +35,10 @@ subroutine tightbinding_k(lat,tb_par)
         endif
     endif
 
-    if(tb_par%flow%fermi_dos_k) Call fermi_dos_nc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
+    if(tb_par%flow%fermi_dos_k)then
+        Call fermi_dos_nc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
+        if(allocated(tb_par%io_dos%fermi_orb)) Call fermi_dos_proj_nc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
+    endif
 
     if(tb_par%flow%highs_k)then
         Call set_highs_path(lat,tb_par%io_highs)

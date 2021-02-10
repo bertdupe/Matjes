@@ -118,6 +118,14 @@ subroutine read_TB_dos(io,fname,io_dos)
         Call check_further_entry(io,fname,"TB_orb_dos")
     endif
 
+    N=0
+    call get_parameter(io,fname,'N_fermi_orb',N)
+    if(N/=0)then
+        allocate(io_dos%fermi_orb(N),source=0)
+        call get_parameter(io,fname,'fermi_orb',N,io_dos%fermi_orb)
+    endif
+
+
 end subroutine
 
 

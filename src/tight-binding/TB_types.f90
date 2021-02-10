@@ -75,7 +75,8 @@ type parameters_TB_IO_DOS
     type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
     integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local site dos)
     integer,allocatable :: orb(:)                   !local dos orbitals (number local orbital dos)
-    logical     :: print_fermi=.false.              !print the energy dos at the fermi surface
+
+    integer,allocatable :: fermi_orb(:)             !orbital indices of projections for fermi-surfaces
 end type
 
 type parameters_TB_IO_HIGHS
