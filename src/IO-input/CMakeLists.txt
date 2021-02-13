@@ -4,6 +4,7 @@ src/IO-input/input_types.f90
 src/IO-input/input_H_types.f90
 src/IO-input/rw_cell.f90
 src/IO-input/rw_dyna.f90
+src/IO-input/rw_dyna_MD.f90
 src/IO-input/rw_extpar.f90
 src/IO-input/rw_extfield.f90
 src/IO-input/rw_GNEB.f90

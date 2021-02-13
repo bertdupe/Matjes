@@ -22,7 +22,7 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
     real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
 
-    real(8)         :: qvec(3),Rq(3),Iq(3)
+    real(8)         :: qvec(3),Rq(3),Iq(3),norm,qnorm(3)
     real(8),allocatable,target :: pos(:)
 !    real(8),allocatable ::  position(:)
     real(8),pointer :: pos_3(:,:),state_3(:,:)
@@ -31,6 +31,8 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     qvec=0.0d0
     Rq=[0.0d0,0.0d0,1.0d0]
     Iq=[1.0d0,0.0d0,0.0d0]
+    norm=1.0d0
+    qnorm=0.0d0
     
     call get_parameter(io,fname,'qvec_'//ordname,3,qvec)
     qvec=matmul(qvec,lat%astar)
@@ -43,13 +45,19 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     Iq=matmul(Iq,lat%areal)
     Iq=Iq/norm2(Iq)
 
+    call get_parameter(io,fname,'q_norm_'//ordname,3,qnorm,1.0d0)
+    qnorm=matmul(qnorm,lat%areal)
+
+    call get_parameter(io,fname,'norm_'//ordname,norm)
+
     Call get_pos_vec(lat,dim_mode,ordname,pos)
 
     pos_3(1:3,1:size(pos)/3)=>pos
     state_3(1:3,1:size(pos)/3)=>state
     do i=1,size(state_3,2)
         state_3(:,i)=(cos(dot_product(qvec,pos_3(:,i)))*Rq+ &
-                      sin(dot_product(qvec,pos_3(:,i)))*Iq)
+                      sin(dot_product(qvec,pos_3(:,i)))*Iq)* &
+                      norm*cos(dot_product(qnorm,pos_3(:,i)))
     enddo
     nullify(pos_3,state_3)
     deallocate(pos)

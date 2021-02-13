@@ -14,6 +14,10 @@ type t_cell
     procedure :: ind_attype
     procedure :: get_magmom
     procedure :: get_mag_magmom
+    procedure :: ind_Z_all
+    procedure :: get_Z_phonon
+    procedure :: ind_M_all
+    procedure :: get_M_phonon
     procedure :: bcast
 end type
 contains
@@ -90,6 +94,42 @@ subroutine get_mag_magmom(this,magmom)
     deallocate(ind)
 end subroutine
 
+subroutine get_Z_phonon(this,phonon)
+    !returns the magnetic moments of all magnetic atoms included in cell
+    class(t_cell),intent(in)    ::  this
+    real(8),allocatable,intent(out) ::  phonon(:)
+
+    integer,allocatable     ::  ind(:)
+
+    integer     ::  i,N
+
+    Call this%ind_Z_all(ind)
+    N=size(ind)
+    allocate(phonon(N),source=0.0d0)
+    do i=1,N
+        phonon(i)=this%atomic(ind(i))%charge
+    enddo
+    deallocate(ind)
+end subroutine
+
+subroutine get_m_phonon(this,phonon)
+    !returns the masses of all atoms included in cell
+    class(t_cell),intent(in)    ::  this
+    real(8),allocatable,intent(out) ::  phonon(:)
+
+    integer,allocatable     ::  ind(:)
+
+    integer     ::  i,N
+
+    Call this%ind_M_all(ind)
+    N=size(ind)
+    allocate(phonon(N),source=0.0d0)
+    do i=1,N
+        phonon(i)=this%atomic(ind(i))%mass
+    enddo
+    deallocate(ind)
+end subroutine
+
 function ind_ph(this,ind_at)
     class(t_cell),intent(in)    ::  this
     integer,intent(in)          ::  ind_at
@@ -120,6 +160,22 @@ subroutine ind_mag_all(this,ind_Nat)
     integer     ::  i
 
     ind_Nat=pack([(i,i=1,size(this%atomic))],this%atomic(:)%moment/=0.0d0)
+end subroutine
+
+subroutine ind_Z_all(this,ind_Nat)
+    class(t_cell),intent(in)    ::  this
+    integer,allocatable         ::  ind_Nat(:)
+    integer     ::  i
+
+    ind_Nat=pack([(i,i=1,size(this%atomic))],this%atomic(:)%charge/=0.0d0)
+end subroutine
+
+subroutine ind_M_all(this,ind_Nat)
+    class(t_cell),intent(in)    ::  this
+    integer,allocatable         ::  ind_Nat(:)
+    integer     ::  i
+
+    ind_Nat=pack([(i,i=1,size(this%atomic))],this%atomic(:)%mass/=0.0d0)
 end subroutine
 
 end module

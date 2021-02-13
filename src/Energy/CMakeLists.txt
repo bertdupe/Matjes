@@ -12,5 +12,7 @@ src/Energy/setH_util.f90
 src/Energy/set_Hamiltonians.f90
 src/Energy/zeeman.f90
 src/Energy/harmonic_phonon.f90
+src/Energy/stark.f90
+src/Energy/ASR_phonon.f90
 #src/Energy/demag-matrix.f90   #requires m_fft (not used?)
 )
