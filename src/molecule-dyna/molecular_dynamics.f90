@@ -41,6 +41,7 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
    real(8) :: E_potential,E_kinetic,E_total
    real(8),allocatable :: masses_motif(:)
    logical :: used(number_different_order_parameters)
+   real(8) :: damp_S,damp_F       ! solid and fluid damping
 
    ! arrays to take into account the dynamics
    real(8),allocatable,target       :: Du(:,:,:),Du_int(:,:),V_1(:,:),V_2(:,:),acceleration(:,:),masses(:,:)
@@ -49,7 +50,7 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
    real(8),pointer,contiguous       :: Du_3(:,:,:),Du_int_3(:,:)
 
    ! dummys
-   integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,i_loop,tag,i
+   integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,tag,i
    real(8) :: timestep_int,h_int(3),E_int(3),dt
    real(8) :: real_time,Eold,security,Einitial
    real(8) :: kt,ktini,ktfin,Pdy(3)
@@ -58,7 +59,7 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
    character(len=100) :: file
 
    ! prepare the matrices for integration
-   call rw_dyna_MD(timestep_int,Efreq,duration,file)
+   call rw_dyna_MD(timestep_int,Efreq,duration,file,damp_S,damp_F)
    N_cell=product(my_lattice%dim_lat)
    Call my_lattice%used_order(used)
    dim_mode=my_lattice%u%dim_mode
@@ -156,14 +157,11 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
         !get forces on the phonon lattice
         Call get_eff_field(Hams,lat_1,Feff,5)
 
-        acceleration=Feff_3/masses
+        acceleration=(Feff_3-damp_F*V_1)/masses
 
         V_2=acceleration*dt+V_1
 
         lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3
-
-
-
 
 
 

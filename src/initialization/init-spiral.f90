@@ -45,7 +45,7 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     Iq=matmul(Iq,lat%areal)
     Iq=Iq/norm2(Iq)
 
-    call get_parameter(io,fname,'q_norm_'//ordname,3,qnorm,1.0d0)
+    call get_parameter(io,fname,'q_norm_'//ordname,3,qnorm)
     qnorm=matmul(qnorm,lat%areal)
 
     call get_parameter(io,fname,'norm_'//ordname,norm)
