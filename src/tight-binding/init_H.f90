@@ -13,17 +13,32 @@ contains
 
 
 subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
+    !sets the Hamiltonian terms without superconductivity,
+    !i.e. only Block-diagonal terms in BdG-space
     type(lattice),intent(in)                            :: lat
     type(parameters_TB_IO_H),intent(in)                 :: h_io
     type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)
-    logical,intent(in),optional                         :: sc
+    logical,intent(in),optional                         :: sc           !transform terms to BdG-space
     real(8),allocatable,intent(out),optional            :: diffR(:,:)
 
     type(H_tb_coo),allocatable  :: H(:)
     real(8),allocatable         :: diffR_loc(:,:)
     integer                     :: i
 
-    Call get_Hop_arr(lat,h_io,H_out,diffR=diffR)
+    if(h_io%wann_io%nrpts/=0)then
+        Call get_wann_arr(lat,h_io,H,diffR=diffr_loc)
+        Call H_append(H_out,H)
+        if(present(diffR)) Call append_arr(diffR,diffR_loc)
+        if(allocated(diffR_loc)) deallocate(diffR_loc)
+    endif
+
+    if(allocated(h_io%hop_io))then
+        Call get_Hop_arr(lat,h_io,H,diffR=diffR_loc)
+        Call H_append(H_out,H)
+        if(present(diffR)) Call append_arr(diffR,diffR_loc)
+        if(allocated(diffR_loc)) deallocate(diffR_loc)
+    endif
+
     if(allocated(h_io%jsd))then
         allocate(H(1))
         Call get_H_Jsd(lat,h_io,H(1))
@@ -32,8 +47,8 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
             allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
             Call append_arr(diffR,diffR_loc)
         endif
-
     endif
+
     if(allocated(h_io%defect))then
         allocate(H(1))
         Call get_H_defect(lat,h_io,H(1))
@@ -43,6 +58,7 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
             Call append_arr(diffR,diffR_loc)
         endif
     endif
+
     if(present(sc))then
         if(sc)then    !some hamiltonian is written in BdG-space, change all to that
             do i=1,size(H_out)
@@ -243,6 +259,46 @@ subroutine get_H_Jsd(lat,h_io,H)
     enddo
 end subroutine 
 
+
+subroutine get_wann_arr(lat,h_io,Hhop,diffR)
+    !gets all hopping Hamiltonians according to the input from h_io%hop
+    !saves each entries with differing atom connections and connection direction separately in the Hhop-array
+    !if neigh_out is specified, returns the calculated neighbor entires (for so far unimplemented later reuse) (TODO,->intent(inout), check if correct and then reuse)
+    !if diffR is specified, returns the difference vector from the first atom the second for each Hamiltonian (used to calculate H in k-space)
+    use m_ham_arrange
+    use m_setH_util, only: get_coo
+    type(lattice),intent(in)                            :: lat
+    type(parameters_TB_IO_H),intent(in)                 :: h_io
+    type(H_tb_coo),allocatable,intent(inout)            :: Hhop(:)
+    real(8),allocatable,intent(out),optional            :: diffR(:,:)
+
+    type(parameters_ham_init)       :: hinit   !type containing variables defining shape of Hamiltonian
+    integer :: Natt_pair !number of unique atom-type pairs
+    integer :: i_att, i_dist,i_hop, i_shell, i_neigh_shell
+    integer :: N_R, irpts
+
+    !Hcoo
+    complex(8),allocatable  :: val(:)
+    integer,allocatable     :: ind(:,:),row(:),col(:)
+
+    !get Hamiltonians 
+    Call hinit%init(h_io)
+    Hinit%nsc=1 !set hoppings without BdG
+    if(Hinit%ncell>1) STOP "IMPLEMENT SEVERAL CELLS FOR HAMILTONIAN"
+    N_r=h_io%wann_io%nrpts 
+    allocate(Hhop(N_r))
+    if(present(diffR)) allocate(diffR(3,N_r),source=0.0d0)
+    do irpts=1,N_r
+        Call get_coo(h_io%wann_io%H(:,:,irpts),val,ind)
+        row=ind(1,:)
+        col=ind(2,:)
+        Call Hhop(irpts)%init_coo(val,row,col,hinit)    !this only works for a single unit-cell
+        val=val!/real(h_io%wann_io%ndegen(irpts),8)
+        diffr(:,irpts)=matmul(real(h_io%wann_io%irvec(:,irpts),8),lat%areal)
+    enddo
+    deallocate(row,col) 
+end subroutine
+
 subroutine get_Hop_arr(lat,h_io,Hhop,neigh_out,diffR)
     !gets all hopping Hamiltonians according to the input from h_io%hop
     !saves each entries with differing atom connections and connection direction separately in the Hhop-array
@@ -324,6 +380,10 @@ subroutine append_arr(arr,arr_append)
     real(8),intent(inout),allocatable       :: arr(:,:), arr_append(:,:)
     real(8),allocatable :: tmp(:,:)
 
+    if(.not.allocated(arr))then
+        Call move_alloc(arr_append,arr)
+        return
+    endif
     if(size(arr,1)/=size(arr_append,1)) STOP "CANNOT append real arrays whose first ranks differ"
     allocate(tmp(size(arr,1),size(arr,2)+size(arr_append,2)))
     tmp(:,1:size(arr,2))=arr

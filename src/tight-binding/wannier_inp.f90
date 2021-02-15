@@ -5,6 +5,7 @@ public wann_dat
 type wann_dat
     integer         :: num_wann=0
     integer         :: nrpts=0
+    logical                 :: spin_rearranged=.false.
     integer,allocatable     :: irvec(:,:)
     integer,allocatable     :: ndegen(:)
     real(8),allocatable     :: r(:,:,:)
@@ -42,7 +43,7 @@ subroutine read_file(this,fname)
     allocate(this%ndegen(nrpts))
     read(io,'(15I5)') this%ndegen
     allocate(this%irvec(3,nrpts))
-    allocate(this%H(num_wann,num_wann,nrpts),source=(1.0d99,0.0d0))
+    allocate(this%H(num_wann,num_wann,nrpts),source=(0.0d0,0.0d0))
     write(char_nentry,'(I10)') num_wann*num_wann
     do irpts=1,nrpts !!
         read(io,'(/3I5)') this%irvec(:, irpts)
@@ -54,6 +55,40 @@ subroutine read_file(this,fname)
     enddo
     !continue reading if real-space operator is necessary
     close(io)
+
+    Call rearrange_spin(this)
+end subroutine
+
+subroutine rearrange_spin(this)
+    !wann input may be aranged with first spin-up and then spin-down states
+    !this routine exchanges every second entry along the wannier directions to reorder
+    !the Hamiltonian to the expected format where the spin if the innermost index
+    use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
+    class(wann_dat),intent(inout)   :: this
+    complex(8),allocatable          :: tmp(:,:)
+    integer                         :: shp(3)
+    integer                         :: irpts,i
+    integer                         :: wan_half
+
+
+    if(this%spin_rearranged) STOP "Cannot rearrange spin of wannier, since this has already be done"
+    this%spin_rearranged=.true.
+    shp=shape(this%H)
+    wan_half=shp(1)/2
+    allocate(tmp(shp(1),shp(2)))
+    do irpts=1,shp(3)
+        tmp=this%H(:,:,irpts)
+        do i=2,wan_half,2
+            this%H(:,i,irpts)=tmp(:,i+wan_half)
+            this%H(:,i+wan_half,irpts)=tmp(:,i)
+        enddo
+        tmp=transpose(this%H(:,:,irpts))
+        do i=2,wan_half,2
+            this%H(i,:,irpts)=tmp(:,i+wan_half)
+            this%H(i+wan_half,:,irpts)=tmp(:,i)
+        enddo
+    enddo
+    write(error_unit,*) "CHECK rearrange_spin with bandstructure calculation"
 
 end subroutine
 
