@@ -172,7 +172,7 @@ Implicit None
         
         if (my_simu%name == 'molecular_dynamics')then
             write(6,'(a)') 'entering into the molecular dynamics routines'
-            call molecular_dynamics(all_lattices,motif,io_simu,ext_param,Ham_comb)
+            call molecular_dynamics(all_lattices,io_simu,ext_param,Ham_comb)
         endif
         
         !---------------------------------
