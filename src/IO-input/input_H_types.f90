@@ -62,8 +62,18 @@ type,extends(io_H_base) :: io_H_ME_D
     type(Hr_pair),allocatable   :: pair(:) 
 end type
 
-type,extends(io_H_base) :: io_H_F
+type,extends(io_H_base) :: io_H_Ph
     type(Hr_pair),allocatable   :: pair(:) 
+end type
+
+type,extends(io_H_base) :: io_H_stark
+    real(8)     :: c_stark=-1.0d0 !constant factor to furthermore rescale stark energy
+end type
+
+type,extends(io_H_base) :: io_U_ASR
+    type(Hr_pair),allocatable   :: pair(:)
+    integer,allocatable         ::  attype(:)
+    real(8)     :: c_ASR=-1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
 
 type :: io_H
@@ -74,7 +84,9 @@ type :: io_H
     type(io_H_J)        :: J
     type(io_H_TJ)       :: TJ
     type(io_H_D)        :: D
-    type(io_H_F)        :: F
+    type(io_H_Ph)       :: F
+    type(io_H_stark)    :: stark
+    type(io_U_ASR)      :: ASR_Ph
 end type
 
 contains

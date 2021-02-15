@@ -1,5 +1,5 @@
 module m_harmonic_phonon
-use m_input_H_types, only: io_H_F
+use m_input_H_types, only: io_H_Ph
 implicit none
 private
 public :: read_F_input, get_Forces_F
@@ -10,9 +10,9 @@ subroutine read_F_input(io_param,fname,io)
     use m_io_utils
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
-    type(io_H_F),intent(out)        :: io
+    type(io_H_Ph),intent(out)        :: io
 
-    Call get_parameter(io_param,fname,'phonon_harmonic',io%pair,io%is_set) 
+    Call get_parameter(io_param,fname,'phonon_harmonic',io%pair,io%is_set)
 end subroutine
 
 subroutine get_Forces_F(Ham,io,lat)
@@ -23,7 +23,7 @@ subroutine get_Forces_F(Ham,io,lat)
     use m_neighbor_type, only: neighbors
 
     class(t_H),intent(inout)    :: Ham
-    type(io_H_F),intent(in)     :: io
+    type(io_H_Ph),intent(in)     :: io
     type(lattice),intent(in)    :: lat
 
     !local Hamiltonian
@@ -61,16 +61,16 @@ subroutine get_Forces_F(Ham,io,lat)
                     !loop over all different connections with the same distance
                     i_pair=i_pair+1
 
-                    !set local Hamiltonian in basis of magnetic orderparameter
+                    !set local Hamiltonian in basis of displacement orderparameter
                     atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_pair))
                     atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_pair))
                     Htmp=0.0d0
                     offset_ph=(atind_ph-1)*3
-                    Htmp(offset_ph(1)+1,offset_ph(1)+1)=F
-                    Htmp(offset_ph(1)+2,offset_ph(1)+2)=F
-                    Htmp(offset_ph(1)+3,offset_ph(1)+3)=F
+                    Htmp(offset_ph(1)+1,offset_ph(2)+1)=F
+                    Htmp(offset_ph(1)+2,offset_ph(2)+2)=F
+                    Htmp(offset_ph(1)+3,offset_ph(2)+3)=F
                     connect_bnd(2)=neigh%ishell(i_pair)
-                    Htmp=-Htmp !flip sign corresponding to previous implementation
+
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type
