@@ -6,6 +6,8 @@ public :: neighbors, get_neigh_distances
 
 
 type :: neighbors
+    integer             :: atid(2)     !atom type indices
+    integer,allocatable :: dist(:)     !distances considered
     integer,allocatable :: Nshell(:)   !how many different connections are there for each distance  (1:number distance)
     integer,allocatable :: ishell(:)   !how many entries are there for each shell (1:number shells)
     integer,allocatable :: at_pair(:,:)    !what are the at_pairs for the shell (2,1:number shells)
@@ -13,11 +15,43 @@ type :: neighbors
     real(8),allocatable :: diff_vec(:,:) !difference vector between each shell (3,1:number shells) 
 
     contains
-    procedure   ::  get   => get_neighbors
-    procedure   ::  unset 
+    procedure   :: get   => get_neighbors
+    procedure   :: unset 
+    procedure   :: prt
 end type
 
 contains
+subroutine prt(neigh,io_in)
+    use,intrinsic :: iso_fortran_env, only : output_unit,error_unit
+    class(neighbors),intent(in) :: neigh
+    integer,intent(in),optional :: io_in
+
+    integer     :: io
+    logical     :: isopen
+
+    integer     :: i_dist
+    integer     :: i_shell,shell
+
+    io=output_unit
+    if(present(io_in)) io=io_in
+    inquire(unit=io,opened=isopen)
+    if(.not.isopen)then
+        write(error_unit,'(AI6)') "Warning, trying to write the neighbor parameters to unopenend unit:",io
+        write(error_unit,'(A)') "Aborting printing of neighbor parameters"
+        return
+    endif
+    write(io,'(//A,2I6,A,I3,A)') "Neighbors for atom types:",neigh%atid," with ", size(neigh%dist)," distances"
+    do i_dist=1,size(neigh%dist)
+        write(io,'(AI3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
+        do i_shell=1,neigh%Nshell(i_dist)
+            shell=i_shell+sum(neigh%Nshell(:i_dist-1))
+            write(io,'(A,2I4,A,3F10.6)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)
+        enddo
+        write(io,*)
+    enddo
+!    write(io,*)
+end subroutine
+
 subroutine unset(neigh)
     class(neighbors),intent(inout) :: neigh
 
@@ -41,6 +75,9 @@ subroutine get_neighbors(neigh,atid,neighval_in,lat)
     real(8)                 :: distance(size(neighval))
     integer,allocatable     :: pairs(:,:)
     integer,allocatable     :: Nshell(:)
+
+    neigh%atid=atid
+    allocate(neigh%dist,source=neighval_in)
 
     neighval=neighval_in
     if(atid(1)==atid(2)) neighval=neighval+1  !shift values so that a 0 input corresponds to the on-site term
@@ -191,7 +228,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
 
     !sort to get distances easily 
     allocate(all_distint(size(all_dist)),source=0)
-    eps=minval(norm2(lat%areal,1))*1.0d-8
+    eps=minval(norm2(lat%areal,1))*1.0d-7
     Call sort(size(all_dist),all_dist,all_distint,eps)
 
     !get starting indices of new distance set in sorted distances

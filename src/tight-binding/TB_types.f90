@@ -3,6 +3,8 @@ use m_input_H_types
 use m_types_tb_h_inp
 use m_ham_arrange
 use m_delta_onsite
+use m_dos_io
+use m_wannier_inp, only: wann_dat
 implicit none
 public
 private upd_h_par, init_ham_init
@@ -27,10 +29,14 @@ type parameters_TB_IO_H
     type(TB_delta),allocatable      :: del_io(:)   !delta parameters
     type(TB_Jsd),allocatable        :: Jsd(:)   !delta parameters
     type(TBio_delta_onsite_scf),allocatable ::  del_scf_io(:)   !self-consistent delta on-site parameters
+    type(TBio_defect),allocatable   ::  defect(:)    !defect onsite-terms in super-cell
 
     type(Htb_inp)       ::  hop
     type(Hdelta)        ::  del
 
+    type(wann_dat)      ::  wann_io
+
+    real(8)             ::  Efermi=0.0d0   !Fermi energy added to the tight-binding hamiltonian
     integer             ::  nspin=1         !number of spins (1 or 2) for each orbital
     integer             ::  ncell=-1        !overall number of cells
     integer             ::  norb=-1         !number of orbitals in cell
@@ -48,11 +54,12 @@ type parameters_TB_IO_H
     real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 
     !selfconsistent delta parameters
-    logical             ::  use_scf=.false.     !use selfconsistent delta
-    logical             ::  scf_print=.false.   !print intermediate delta steps
-    integer             ::  scf_loopmax=100     !maximal number of loop iterations converging delta
-    real(8)             ::  scf_diffconv=1.0d-6 !convergence criterion for difference of delta sum
-    real(8)             ::  scf_Ecut=-1.0d0     !energy cutoff for selfconsistent delta energy sum 
+    logical             ::  use_scf=.false.         !use selfconsistent delta
+    logical             ::  scf_print=.false.       !print intermediate delta steps
+    integer             ::  scf_loopmax=100         !maximal number of loop iterations converging delta
+    real(8)             ::  scf_diffconv=1.0d-6     !convergence criterion for difference of delta sum
+    real(8)             ::  scf_Ecut=-1.0d0         !energy cutoff for selfconsistent delta energy sum 
+    integer             ::  scf_kgrid(3)=[10,10,1]  !kgrid for delta-selfconsistency cycle in reciprocal space
 
 end type 
 
@@ -63,10 +70,17 @@ type parameters_TB_IO_EF
 end type
 
 type parameters_TB_IO_DOS
-    real(8)     :: E_ext(2)=[-1.0d0,1.0d0]      !minimum and maximum energy to plot in dos
-    real(8)     :: dE=1.0d-2                    !energy binning size
-    real(8)     :: sigma=1.0d-2                 !gauss smearing parameter for dos
-    integer     :: kgrid(3)=[1,1,1]    !number of k-points in each direction in case of k-space dos
+    real(8)     :: E_ext(2)=[-1.0d0,1.0d0]          !minimum and maximum energy to plot in dos
+    real(8)     :: dE=1.0d-2                        !energy binning size
+    real(8)     :: sigma=1.0d-2                     !gauss smearing parameter for dos
+    integer     :: kgrid(3)=[1,1,1]                 !number of k-points in each direction in case of k-space dos
+    logical     :: print_kint=.false.               !print out the index of the currently considered k index 
+    type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos site dependent
+    type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
+    integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local site dos)
+    integer,allocatable :: orb(:)                   !local dos orbitals (number local orbital dos)
+
+    integer,allocatable :: fermi_orb(:)             !orbital indices of projections for fermi-surfaces
 end type
 
 type parameters_TB_IO_HIGHS
@@ -124,6 +138,7 @@ type parameters_TB_IO_FLOW
     logical         ::  dos_k=.False.
     logical         ::  highs_k=.False.
     logical         ::  fermi_k=.False.
+    logical         ::  fermi_dos_k=.False. !plot fermi surface at Fermi energy
 end type
 
 type parameters_TB
@@ -197,6 +212,18 @@ subroutine init_parameters_TB(TB_params,lat)
         par%use_scf=allocated(par%del_scf_io)
         if(par%use_scf) Call par%del%set_scf(par%del_scf_io,lat,par%norb_at_off)
     end associate
+    if(allocated(TB_params%io_dos%bnd_io))then
+        do i=1,size(TB_params%io_dos%bnd_io)
+            Call TB_params%io_dos%bnd_io(i)%check(lat)
+        enddo
+        Call dos_get_ind(TB_params%io_dos%bnd_io,lat,TB_params%io_H%nspin,TB_params%io_H%norb_at,TB_params%io_H%norb_at_off,TB_params%io_dos%bnd)
+    endif
+    if(allocated(TB_params%io_dos%orb_io))then
+        do i=1,size(TB_params%io_dos%orb_io)
+            Call TB_params%io_dos%orb_io(i)%check(lat)
+        enddo
+        Call dos_get_orb(TB_params%io_dos%orb_io,lat,TB_params%io_H%nspin,TB_params%io_H%norb_at,TB_params%io_H%norb_at_off,TB_params%io_dos%orb)
+    endif
 
     !REMOVE-> move to H_io
     !set dimensions of the Hamiltonian

@@ -21,6 +21,7 @@ subroutine rw_TB(TB_params,fname)
     Call read_TB_highs   (io,fname,TB_params%io_highs)
     Call read_TB_occ_mult(io,fname,TB_params%io_occ_mult)
     call close_file(fname,io)
+
 end subroutine
 
 subroutine read_TB_highs(io,fname,highs)
@@ -65,18 +66,67 @@ subroutine read_TB_flow(io,fname,flow)
     call get_parameter(io,fname,'do_TB_k',flow%do_k)
     call get_parameter(io,fname,'do_dos_k',flow%dos_k)
     call get_parameter(io,fname,'do_fermi_k',flow%fermi_k)
+    call get_parameter(io,fname,'do_fermi_dos_k',flow%fermi_dos_k)
     call get_parameter(io,fname,'do_highs_k',flow%highs_k)
 end subroutine
 
 subroutine read_TB_dos(io,fname,io_dos)
+    use, intrinsic :: iso_fortran_env, only : output_unit
     integer,intent(in)                      :: io
     character(len=*), intent(in)            :: fname
     type(parameters_TB_IO_dos),intent(out)  :: io_dos
+
+    integer ::  N,ii,stat
+    character(len=100) :: str
 
     call get_parameter(io,fname,'dos_sigma',io_dos%sigma)
     call get_parameter(io,fname,'dos_E_ext',io_dos%E_ext)
     call get_parameter(io,fname,'dos_dE',io_dos%dE)
     call get_parameter(io,fname,'dos_kgrid',io_dos%kgrid)
+    call get_parameter(io,fname,'dos_print_kint',io_dos%print_kint)
+
+    N=0
+    call get_parameter(io,fname,'TB_loc_dos',N)
+    if(N>0)then
+        Call set_pos_entry(io,fname,'TB_loc_dos')
+        read(io,'(A)') str
+        allocate(io_dos%bnd_io(N))
+        ii=1
+        do while (ii<=size(io_dos%bnd_io))
+            read(io,'(a)',iostat=stat) str
+            read(str,*,iostat=stat) io_dos%bnd_io(ii)
+            write(output_unit,'(A,I6,A)') 'TB_loc_dos entry no.',ii,':'
+            Call io_dos%bnd_io(ii)%print_std()
+            ii=ii+1
+        enddo 
+        Call check_further_entry(io,fname,"TB_loc_dos")
+    endif
+
+    N=0
+    call get_parameter(io,fname,'TB_orb_dos',N)
+    if(N>0)then
+        Call set_pos_entry(io,fname,'TB_orb_dos')
+        read(io,'(A)') str
+        allocate(io_dos%orb_io(N))
+        ii=1
+        do while (ii<=size(io_dos%orb_io))
+            read(io,'(a)',iostat=stat) str
+            read(str,*,iostat=stat) io_dos%orb_io(ii)
+            write(output_unit,'(A,I6,A)') 'TB_orb_dos entry no.',ii,':'
+            Call io_dos%orb_io(ii)%print_std()
+            ii=ii+1
+        enddo 
+        Call check_further_entry(io,fname,"TB_orb_dos")
+    endif
+
+    N=0
+    call get_parameter(io,fname,'N_fermi_orb',N)
+    if(N/=0)then
+        allocate(io_dos%fermi_orb(N),source=0)
+        call get_parameter(io,fname,'fermi_orb',N,io_dos%fermi_orb)
+    endif
+
+
 end subroutine
 
 
@@ -86,7 +136,7 @@ subroutine read_TB_occ_mult(io,fname,io_occ_mult)
     type(parameters_TB_IO_OCC_MULT),intent(out)     :: io_occ_mult
 
     call get_parameter(io, fname, 'occ_mult_dE', io_occ_mult%dE)
-    call get_parameter(io, fname, 'occ_mult_E_ext', io_occ_mult%E_ext)
+    call get_parameter(io, fname, 'occ_mult_E_ext',2, io_occ_mult%E_ext)
     call get_parameter(io, fname, 'occ_mult_kt',  io_occ_mult%kt)
 end subroutine
 
@@ -109,6 +159,12 @@ subroutine read_TB_H(io,fname,TB_params)
     type(parameters_TB_IO_H),intent(out)     :: TB_params
     ! Internal variables
     integer :: N
+    character(len=100)  :: wann_file 
+
+
+    wann_file=""
+    call get_parameter(io,fname,'wann_ham',wann_file)
+    if(len_trim(wann_file)/=0) Call TB_params%wann_io%read_file(trim(adjustl(wann_file)))
 
     Call number_Hpar(io,fname,'TB_hopping',N)
     if(N>0)then
@@ -142,10 +198,21 @@ subroutine read_TB_H(io,fname,TB_params)
         write(output_unit,'(/A/)') "No tight-binding Jsd-coupling found"
     endif
 
+    Call number_Hpar(io,fname,'TB_defect',N)
+    if(N>0)then
+        allocate(TB_params%defect(N))
+        Call read_Hpar(io,fname,'TB_defect',TB_params%defect)
+    else
+        write(output_unit,'(/A/)') "No tight-binding defect found"
+    endif
+
+
+    call get_parameter(io,fname,'TB_Efermi',TB_params%Efermi)
     call get_parameter(io,fname,'TB_scf_print',TB_params%scf_print)
     call get_parameter(io,fname,'TB_scf_loopmax',TB_params%scf_loopmax)
     call get_parameter(io,fname,'TB_scf_diffconv',TB_params%scf_diffconv)
     call get_parameter(io,fname,'TB_scf_Ecut',TB_params%scf_Ecut)
+    call get_parameter(io,fname,'TB_scf_kgrid',TB_params%scf_kgrid)
     call get_parameter(io,fname,'TB_sparse',TB_params%sparse)
     call get_parameter(io,fname,'TB_diag',TB_params%i_diag)
     call get_parameter(io,fname,'TB_diag_acc',TB_params%diag_acc)

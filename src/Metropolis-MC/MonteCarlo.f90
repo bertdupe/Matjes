@@ -24,6 +24,7 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_MC_io
     use m_mc_therm_val
+    use m_get_table_nn,only :get_table_nn
 
     type(lattice), intent(inout)            :: lat
     type(io_parameter), intent(in)          :: io_simu
@@ -55,7 +56,7 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     integer                     :: ierr
     integer,parameter           :: io_status=output_unit
     integer                     :: filen_kt_acc(2)  !some control about file-output name
-    
+
     ! initialize the variables
     N_spin=lat%Ncell*lat%nmag
     if(com_all%ismas)then
@@ -73,7 +74,10 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     size_collect=NT_local
     if(com_all%isMas) size_collect=NT_global
     allocate(measure(size_collect))
-    if(com_inner%ismas) allocate(thermo(size_collect))
+    if(com_inner%ismas)then
+        allocate(thermo(size_collect))
+    endif
+
 
     !initialize necessary things on the master thread (temperatures,Q_neighbors)
     if(com_all%ismas)then
@@ -104,6 +108,10 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
         Call measure_bcast(measure(i_kt),com_inner)
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
 
+        if(fluct_val%l_use)then
+		    allocate(measure(i_kt)%MjpMim_ij(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
+        endif
+
         call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,hams,Q_neigh)
         !Monte Carlo steps, calculate the values
         do i_MC=1,io_MC%Total_MC_Steps
@@ -114,7 +122,7 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
             Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,Hams) ! at least one step
             Call measure_add(measure(i_kt),lat,state_prop,Q_neigh,fluct_val) 
         end do ! over i_MC
- 
+
         Call measure_reduce(measure(i_kt),com_inner)
         if(com_inner%ismas)then
             Call therm_set(thermo(i_kt),measure(i_kt),io_MC%Cor_log,N_spin)
@@ -124,6 +132,8 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
             write(*,*) 'energy internal:', state_prop%E_total,' energy total:', energy_all(Hams,lat)
 #endif      
         endif
+		if(fluct_val%l_use) call print_spatial_fluct(measure(i_kt),com_all) !write spatial distribution of fluctuations
+		deallocate(measure(i_kt)%MjpMim_ij)
     end do !over i_kT
 
     if(com_inner%ismas)then

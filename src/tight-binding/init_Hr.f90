@@ -50,10 +50,7 @@ subroutine get_Hr(lat,h_io,H)
     endif
 end subroutine
 
-
-
 subroutine get_Hr_conv(lat,h_io,H,del)
-    use m_convert
     type(lattice),intent(in)                :: lat
     type(parameters_TB_IO_H),intent(in)     :: h_io 
     class(H_tb),allocatable,intent(out)     :: H
@@ -86,6 +83,7 @@ subroutine get_Hr_conv(lat,h_io,H,del)
         Call H_sc_tmp(i)%destroy()
     enddo
 
+    !self-consistent loop
     Call set_H(H_sum,h_io)
     Call H_sum%add(H_nc)
     Call H_sum%add(H_sc)
@@ -96,7 +94,7 @@ subroutine get_Hr_conv(lat,h_io,H,del)
             write(output_unit,'(A,E16.8)') "Reached set convergence criterium for delta-convergence:",h_io%scf_diffconv
             exit
         endif
-        Call get_delta_scf(H_sum,del,h_io%scf_Ecut)
+        Call get_delta_scf(H_sum,h_io%scf_Ecut,del)
         delta_sum(2)=sum(del%delta)/size(del%delta)
         
         deallocate(H_sc_tmp)
@@ -115,7 +113,7 @@ subroutine get_Hr_conv(lat,h_io,H,del)
 
         diff=abs(delta_sum(2)-delta_sum(1))
         delta_sum(1)=delta_sum(2)
-        write(output_unit,'(2(A,I6)A,2E16.8,A,E16.8)') 'Finished delta scf loop',i,' of',h_io%scf_loopmax,'  delta-av sum :',delta_sum(1), '  delta-av diff:',diff
+        write(output_unit,'(2(A,I6)3XA,2E16.8,3XA,E16.8)') 'Finished delta scf loop',i,' of',h_io%scf_loopmax,'  delta-av sum :',delta_sum(1), '  delta-av diff:',diff
     enddo
     Call del%print_file("delta_onsite_final.dat",lat)
     write(output_unit,'(A,2E16.8)') "Final real delta extremal values:", minval(del%delta%re),maxval(del%delta%re)
@@ -124,7 +122,7 @@ subroutine get_Hr_conv(lat,h_io,H,del)
     Call H_sum%mv(H)
 end subroutine
 
-subroutine get_delta_scf(H_in,del,emax)
+subroutine get_delta_scf(H_in,emax,del)
     !so far only working for onsite Hdelta
     class(H_tb),allocatable     :: H_in
     type(Hdelta),intent(inout)  :: del
@@ -137,7 +135,6 @@ subroutine get_delta_scf(H_in,del,emax)
     integer                     :: i_cell
     integer :: j,iE
     real(8)                     :: temp !temperature
-    real(8)                     :: Vpot !attractive potential value
 
 
     Call H_in%get_evec(eval,evec)
@@ -154,7 +151,6 @@ subroutine get_delta_scf(H_in,del,emax)
     endif
 
     del%delta=(0.0d0,0.0d0)
-    Vpot=2.0d-0
     do j=1,size(del%delta,2)
         orb=(del%orb(j)-1)*nspin
         do i_cell=1,size(del%delta,1)
@@ -172,42 +168,5 @@ subroutine get_delta_scf(H_in,del,emax)
     enddo
 end subroutine
 
-subroutine restict_solution_positive(eval,evec,emax)
-    !restrict the eigenvalues and eigenvectors only to positive energies, up to the optional maximal energy emax
-    complex(8),allocatable,intent(inout)    :: evec(:,:) !eigenvectors
-    real(8),allocatable,intent(inout)       :: eval(:)   !eigenvalues
-    real(8),optional,intent(in)             :: emax
-    complex(8),allocatable  :: tmp_c(:,:)
-    real(8),allocatable     :: tmp_r(:)
-
-    integer     :: ie_bnd(2)
-    integer     :: i
-
-    !only sum over positive energies
-    ie_bnd=size(eval)+1
-    do i=1,size(eval)
-        if(eval(i)>0.0d0)then
-            ie_bnd(1)=i
-            exit
-        endif
-    enddo
-    if(ie_bnd(1)>size(eval)) STOP "need positive eigenvalues for selfconsistent delta"
-    ie_bnd(2)=size(eval)
-    if(present(emax).and.emax>0.0d0)then
-        do i=ie_bnd(1),size(eval)
-            if(eval(i)>emax)then
-                ie_bnd(2)=i-1
-                exit
-            endif
-        enddo
-    endif
-    if(ie_bnd(2)<ie_bnd(1)) STOP "there needs to be a non-vanishing set of positive eigenvalues up to emax" !reference input parameter setting emax once defined
-    Call move_alloc(evec,tmp_c)
-    Call move_alloc(eval,tmp_r)
-    allocate(eval,source=tmp_r(  ie_bnd(1):ie_bnd(2)))
-    deallocate(tmp_r)
-    allocate(evec,source=tmp_c(:,ie_bnd(1):ie_bnd(2)))
-    deallocate(tmp_c)
-end subroutine
 end module
 

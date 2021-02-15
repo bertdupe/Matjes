@@ -8,7 +8,7 @@ private
 public :: exp_val, measure_add!,measure_eval,print_av
 !public MPI_routines
 public :: measure_scatterv, measure_gatherv, measure_bcast, measure_reduce
-public :: measure_save, measure_read
+public :: measure_save, measure_read, print_spatial_fluct
 character(*),parameter  :: save_name='expval_save.dat'
 integer,protected       :: MPI_custom_type          ! mpi variable for direct mpi operations with this type 
 logical,protected       :: MPI_custom_set=.false.   !check is MPI_custom_type is set
@@ -36,10 +36,12 @@ type exp_val
     real(8) :: Qm_sq=0.0d0
     real(8) :: vortex(3)=0.0d0
     !fluctuation stuff
-    complex(8)  :: MjpMim =cmplx(0.0d0,0.0d0,8) !<Mj+Mi->
     complex(8)  :: MipMip =cmplx(0.0d0,0.0d0,8) !<Mi+Mi+>
     complex(8)  :: MipMim =cmplx(0.0d0,0.0d0,8) !<Mi+Mi-> (is real)
     complex(8)  :: MipMjp =cmplx(0.0d0,0.0d0,8) !<Mi+Mj+>
+
+	!<Mj+Mi->
+    complex(8),allocatable:: MjpMim_ij(:,:) 
 
     integer :: N_add=0 !counts how often values have been added
 end type
@@ -55,9 +57,10 @@ subroutine measure_save(this)
     write(output_unit,'(/2A/)') "Saving expectation values in file: ",save_name 
     open(newunit=io_unit,file=save_name)
     write(io_unit,*) size(this)
-    do i=1,size(this)
-        write(io_unit,*) this(i)
-    end do
+    ERROR STOP "MEASURE WRITE NO LONGER WORKS SINCE FLUCTUATIONS HAVE BEEN ADDED"
+    !do i=1,size(this)
+    !    write(io_unit,*) this(i)
+    !end do
     close(io_unit)
 end subroutine
 
@@ -78,9 +81,10 @@ subroutine measure_read(this)
     open(newunit=io_unit,file=save_name)
     read(io_unit,*) NT
     if(NT/=size(this)) ERROR STOP "Trying to read expectation values, but the number of temperatures has changes"
-    do i=1,size(this)
-        read(io_unit,*) this(i)
-    end do
+    ERROR STOP "MEASURE READ NO LONGER WORKS SINCE FLUCTUATIONS HAVE BEEN ADDED"
+    !do i=1,size(this)
+    !    read(io_unit,*) this(i)
+    !end do
     close(io_unit)
 end subroutine
 
@@ -133,11 +137,11 @@ subroutine measure_reduce(this,com)
         nsize(3)=sum(blocks(bnd_int  (1)  :bnd_int  (2)))
         if(com%ismas)then
             Call MPI_Reduce(MPI_IN_PLACE,this%E     ,nsize(1),MPI_DOUBLE_PRECISION,MPI_SUM,com%mas,com%com,ierr)
-            Call MPI_Reduce(MPI_IN_PLACE,this%MjpMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
+            Call MPI_Reduce(MPI_IN_PLACE,this%MipMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
             Call MPI_Reduce(MPI_IN_PLACE,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
         else
             Call MPI_Reduce(this%E      ,this%E     ,nsize(1),MPI_DOUBLE_PRECISION,MPI_SUM,com%mas,com%com,ierr)
-            Call MPI_Reduce(this%MjpMim ,this%MjpMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
+            Call MPI_Reduce(this%MipMim ,this%MjpMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
             Call MPI_Reduce(this%N_add  ,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
         endif
     endif
@@ -158,6 +162,36 @@ subroutine measure_bcast(this,com)
     continue
 #endif
 end subroutine
+
+!!!!! print spatial distribution for <Mj+Mi->
+subroutine print_spatial_fluct(this,com,io_unit_in)
+    use m_constants, only : k_b
+	use m_convert
+    use mpi_basic, only: mpi_type
+	use m_io_files_utils, only: open_file_write,close_file
+    class(exp_val),intent(inout)    :: this
+    class(mpi_type),intent(in)      :: com
+    integer,optional                :: io_unit_in
+  ! internal
+	integer             :: shape_MiMj(2),io_file(2),iomp
+	character(len=50)   :: file_name(2),form
+    real(8)             :: av_Nadd
+
+    av_Nadd=1.0d0/real(this%N_add,8)
+	shape_MiMj=shape(this%MjpMim_ij)
+	form=convert('(',shape_MiMj(1),'(E20.12E3,2x))')
+
+	file_name(1)=convert('fluct_Re_MjpMim_per_site_',this%kT/k_B,'.dat')
+	io_file(1)=open_file_write(file_name(1))
+   	write(io_file(1),form) real(this%MjpMim_ij)*av_Nadd
+	call close_file(file_name(1),io_file(1))
+
+	file_name(2)=convert('fluct_Im_MjpMim_per_site_',this%kT/k_B,'.dat')
+	io_file(2)=open_file_write(file_name(2))
+   	write(io_file(2),form) aimag(this%MjpMim_ij(:,iomp))*av_Nadd
+	call close_file(file_name(2),io_file(2))
+end subroutine
+
 
 subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     use m_topo_commons
@@ -192,7 +226,7 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     this%Qm_sq=this%Qm+qeulerm**2
     this%vortex=this%vortex+dumy(3:5)
 
-    if(fluct_val%l_use) Call eval_fluct(this%MjpMim, &
+    if(fluct_val%l_use) Call eval_fluct(this%MjpMim_ij, &
                                        &this%MipMip, &
                                        &this%MipMim, &
                                        &this%MipMjp, &
