@@ -36,6 +36,7 @@ type parameters_TB_IO_H
 
     type(wann_dat)      ::  wann_io
 
+    real(8)             ::  Efermi=0.0d0   !Fermi energy added to the tight-binding hamiltonian
     integer             ::  nspin=1         !number of spins (1 or 2) for each orbital
     integer             ::  ncell=-1        !overall number of cells
     integer             ::  norb=-1         !number of orbitals in cell

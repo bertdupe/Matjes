@@ -207,6 +207,7 @@ subroutine read_TB_H(io,fname,TB_params)
     endif
 
 
+    call get_parameter(io,fname,'TB_Efermi',TB_params%Efermi)
     call get_parameter(io,fname,'TB_scf_print',TB_params%scf_print)
     call get_parameter(io,fname,'TB_scf_loopmax',TB_params%scf_loopmax)
     call get_parameter(io,fname,'TB_scf_diffconv',TB_params%scf_diffconv)

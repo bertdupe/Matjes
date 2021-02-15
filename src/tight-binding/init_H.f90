@@ -59,6 +59,16 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
         endif
     endif
 
+    if(h_io%Efermi/=0.0d0)then
+        allocate(H(1))
+        Call get_H_fermi(lat,h_io,H(1))
+        Call H_append(H_out,H)
+        if(present(diffR))then
+            allocate(diffR_loc(3,1),source=0.0d0) !single onsite term, so difference is 0
+            Call append_arr(diffR,diffR_loc)
+        endif
+    endif
+
     if(present(sc))then
         if(sc)then    !some hamiltonian is written in BdG-space, change all to that
             do i=1,size(H_out)
@@ -150,6 +160,27 @@ subroutine get_H_delta_onsite(lat,h_io,H,del)
         Call Htmp%destroy()
     enddo
 end subroutine 
+
+subroutine get_H_fermi(lat,h_io,H)
+    type(lattice),intent(in)                    :: lat
+    type(parameters_TB_IO_H),intent(in)         :: h_io
+    type(H_tb_coo),intent(inout)                :: H
+
+    type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
+    integer                 ::  nnz,i_nnz
+    complex(8),allocatable  ::  val(:)
+    integer,allocatable     ::  row(:),col(:)
+
+    Call hinit%init(h_io)
+    Hinit%nsc=1 !set hoppings without BdG
+    nnz=h_io%norb*h_io%nspin*h_io%ncell
+    val=[(-h_io%Efermi,i_nnz=1,nnz)]
+    row=[(i_nnz,i_nnz=1,nnz)]
+    col=[(i_nnz,i_nnz=1,nnz)]
+    Call H%init_coo(val,row,col,hinit)
+    deallocate(val,row,col)
+end subroutine 
+
 
 subroutine get_H_defect(lat,h_io,H)
     type(lattice),intent(in)                    :: lat

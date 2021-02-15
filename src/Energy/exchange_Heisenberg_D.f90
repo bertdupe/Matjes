@@ -161,7 +161,7 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
         atpos_nonM(:,i)=lat%cell%atomic(id_nonM(i))%position
     enddo
     !get all considered non-magnetic atoms with minimal distance from pos_center_uc
-    Call get_neigh_distances(atpos_nonM,reshape(pos_center_uc,[3,1]),[1],lat,pairs,Nshell,distance)
+    Call get_neigh_distances(reshape(pos_center_uc,[3,1]),atpos_nonM,[1],lat,pairs,Nshell,distance)
 
     !sum the DMI caused by each found non-magnetic atom
     DMI_sum=0.0d0

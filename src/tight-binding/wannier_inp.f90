@@ -55,7 +55,6 @@ subroutine read_file(this,fname)
     enddo
     !continue reading if real-space operator is necessary
     close(io)
-
     Call rearrange_spin(this)
 end subroutine
 
@@ -89,7 +88,6 @@ subroutine rearrange_spin(this)
         enddo
     enddo
     write(error_unit,*) "CHECK rearrange_spin with bandstructure calculation"
-
 end subroutine
 
 
