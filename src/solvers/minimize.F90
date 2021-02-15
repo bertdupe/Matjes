@@ -195,7 +195,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
         if ( abs(test_torque).gt.max_torque ) max_torque=test_torque
         !align the moments onto normalized field
         do iomp=1,N_mag
-            M3(:,iomp)=F_eff3(:,iomp)/F_norm(iomp)
+            if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=F_eff3(:,iomp)/F_norm(iomp)
         enddo
 !        iter=iter+1
         !print max_torque every io_min%Efreq iterations
