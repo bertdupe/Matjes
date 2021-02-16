@@ -34,7 +34,10 @@ type parameters_TB_IO_H
     type(Htb_inp)       ::  hop
     type(Hdelta)        ::  del
 
-    type(wann_dat)      ::  wann_io
+    !wann_io xor (wann_io_up and wann_io_dn) should be specified
+    type(wann_dat)      ::  wann_io !full wannier input data
+    type(wann_dat)      ::  wann_io_up !wannier input for up-states
+    type(wann_dat)      ::  wann_io_dn !wannier input for down-states
 
     real(8)             ::  Efermi=0.0d0   !Fermi energy added to the tight-binding hamiltonian
     integer             ::  nspin=1         !number of spins (1 or 2) for each orbital
@@ -81,6 +84,7 @@ type parameters_TB_IO_DOS
     integer,allocatable :: orb(:)                   !local dos orbitals (number local orbital dos)
 
     integer,allocatable :: fermi_orb(:)             !orbital indices of projections for fermi-surfaces
+    logical             :: fermi_proj_all=.false.   !get fermi surface projection on all orbitals
 end type
 
 type parameters_TB_IO_HIGHS
@@ -211,6 +215,11 @@ subroutine init_parameters_TB(TB_params,lat)
         endif
         par%use_scf=allocated(par%del_scf_io)
         if(par%use_scf) Call par%del%set_scf(par%del_scf_io,lat,par%norb_at_off)
+
+        if(.not.par%wann_io%is_set)then
+            Call par%wann_io%combine_updn(par%wann_io_up,par%wann_io_dn)
+        endif
+        if(par%wann_io%is_set.and..true.) Call par%wann_io%rearrange_spin() !add additional parameter to control spin-rearangement
     end associate
     if(allocated(TB_params%io_dos%bnd_io))then
         do i=1,size(TB_params%io_dos%bnd_io)

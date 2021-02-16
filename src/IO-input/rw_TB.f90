@@ -125,6 +125,7 @@ subroutine read_TB_dos(io,fname,io_dos)
         allocate(io_dos%fermi_orb(N),source=0)
         call get_parameter(io,fname,'fermi_orb',N,io_dos%fermi_orb)
     endif
+    call get_parameter(io,fname,'fermi_proj_all',io_dos%fermi_proj_all)
 
 
 end subroutine
@@ -166,6 +167,16 @@ subroutine read_TB_H(io,fname,TB_params)
     call get_parameter(io,fname,'wann_ham',wann_file)
     if(len_trim(wann_file)/=0) Call TB_params%wann_io%read_file(trim(adjustl(wann_file)))
 
+    if(.not.TB_params%wann_io%is_set)then
+        wann_file=""
+        call get_parameter(io,fname,'wann_up_ham',wann_file)
+        if(len_trim(wann_file)/=0) Call TB_params%wann_io_up%read_file(trim(adjustl(wann_file)))
+
+        wann_file=""
+        call get_parameter(io,fname,'wann_dn_ham',wann_file)
+        if(len_trim(wann_file)/=0) Call TB_params%wann_io_dn%read_file(trim(adjustl(wann_file)))
+    endif
+
     Call number_Hpar(io,fname,'TB_hopping',N)
     if(N>0)then
         allocate(TB_params%hop_io(N))
@@ -205,7 +216,6 @@ subroutine read_TB_H(io,fname,TB_params)
     else
         write(output_unit,'(/A/)') "No tight-binding defect found"
     endif
-
 
     call get_parameter(io,fname,'TB_Efermi',TB_params%Efermi)
     call get_parameter(io,fname,'TB_scf_print',TB_params%scf_print)
