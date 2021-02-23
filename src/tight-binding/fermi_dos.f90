@@ -3,7 +3,7 @@ use m_derived_types, only : t_cell,lattice
 use m_get_position, only: calculate_distances,get_position
 use m_highsym, only: plot_highsym_kpts,set_highs_path
 use m_TB_types
-use m_init_Hk
+use m_Hk
 private
 public fermi_dos_nc, fermi_dos_proj_nc, fermi_dos_projall_nc
 real(8),parameter       ::  dist_inc=8.0d0  !how many sigma away from my the energy entries are still considered

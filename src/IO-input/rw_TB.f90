@@ -20,6 +20,7 @@ subroutine rw_TB(TB_params,fname)
     Call read_TB_flow    (io,fname,TB_params%flow)
     Call read_TB_highs   (io,fname,TB_params%io_highs)
     Call read_TB_occ_mult(io,fname,TB_params%io_occ_mult)
+    Call read_TB_kmesh   (io,fname,TB_params%io_kmesh)
     call close_file(fname,io)
 
 end subroutine
@@ -45,6 +46,15 @@ subroutine read_TB_highs(io,fname,highs)
     call get_parameter(io,fname,'k_highs_frac',highs%N_highsym,highs%k_highs_frac)
     call get_parameter(io,fname,'k_highs_dist',highs%aim_dist)
 end subroutine 
+
+subroutine read_TB_kmesh(io,fname,kmesh)
+    integer,intent(in)                          :: io
+    character(len=*), intent(in)                :: fname
+    type(parameters_TB_IO_kint),intent(out)     :: kmesh
+    
+    call get_parameter(io,fname,'kint_grid',3,kmesh%grid)
+    call get_parameter(io,fname,'kint_Ecut',2,kmesh%Ecut)
+end subroutine
 
 
 
@@ -84,6 +94,10 @@ subroutine read_TB_dos(io,fname,io_dos)
     call get_parameter(io,fname,'dos_dE',io_dos%dE)
     call get_parameter(io,fname,'dos_kgrid',io_dos%kgrid)
     call get_parameter(io,fname,'dos_print_kint',io_dos%print_kint)
+
+    str=" "
+    Call get_parameter(io,fname,'dos_kmesh_file',str)
+    if(len_trim(str)>1) io_dos%fname_kmesh=trim(adjustl(str))
 
     N=0
     call get_parameter(io,fname,'TB_loc_dos',N)
@@ -160,21 +174,21 @@ subroutine read_TB_H(io,fname,TB_params)
     type(parameters_TB_IO_H),intent(out)     :: TB_params
     ! Internal variables
     integer :: N
-    character(len=100)  :: wann_file 
+    character(len=100)  :: str
 
 
-    wann_file=""
-    call get_parameter(io,fname,'wann_ham',wann_file)
-    if(len_trim(wann_file)/=0) Call TB_params%wann_io%read_file(trim(adjustl(wann_file)))
+    str=""
+    call get_parameter(io,fname,'wann_ham',str)
+    if(len_trim(str)/=0) Call TB_params%wann_io%read_file(trim(adjustl(str)))
 
     if(.not.TB_params%wann_io%is_set)then
-        wann_file=""
-        call get_parameter(io,fname,'wann_up_ham',wann_file)
-        if(len_trim(wann_file)/=0) Call TB_params%wann_io_up%read_file(trim(adjustl(wann_file)))
+        str=""
+        call get_parameter(io,fname,'wann_up_ham',str)
+        if(len_trim(str)/=0) Call TB_params%wann_io_up%read_file(trim(adjustl(str)))
 
-        wann_file=""
-        call get_parameter(io,fname,'wann_dn_ham',wann_file)
-        if(len_trim(wann_file)/=0) Call TB_params%wann_io_dn%read_file(trim(adjustl(wann_file)))
+        str=""
+        call get_parameter(io,fname,'wann_dn_ham',str)
+        if(len_trim(str)/=0) Call TB_params%wann_io_dn%read_file(trim(adjustl(str)))
     endif
 
     Call number_Hpar(io,fname,'TB_hopping',N)
@@ -216,6 +230,10 @@ subroutine read_TB_H(io,fname,TB_params)
     else
         write(output_unit,'(/A/)') "No tight-binding defect found"
     endif
+
+    str=" "
+    Call get_parameter(io,fname,'TB_scf_kmesh_file',str)
+    if(len_trim(str)>1) TB_params%fname_kmesh=trim(adjustl(str))
 
     call get_parameter(io,fname,'TB_Efermi',TB_params%Efermi)
     call get_parameter(io,fname,'TB_scf_print',TB_params%scf_print)

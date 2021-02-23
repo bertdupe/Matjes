@@ -59,7 +59,7 @@ subroutine combine_updn(this,up,dn)
     allocate(this%irvec,source=up%irvec)
     allocate(this%ndegen,source=up%ndegen)
     num_wann_init=up%num_wann
-    this%H(num_wann_init+1:,num_wann_init+1:,:)=up%H
+    this%H(1:num_wann_init,1:num_wann_init,:)=up%H
     this%H(num_wann_init+1:,num_wann_init+1:,:)=dn%H
     this%is_set=.true.
     Call up%destroy()
@@ -138,7 +138,6 @@ subroutine rearrange_spin(this)
             this%H(i+wan_half,:,irpts)=tmp(:,i)
         enddo
     enddo
-    write(error_unit,*) "CHECK rearrange_spin with bandstructure calculation"
 end subroutine
 
 

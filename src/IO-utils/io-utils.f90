@@ -918,7 +918,6 @@ character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
-
 rewind(io)
 do
    read (io,'(a)',iostat=fin) str

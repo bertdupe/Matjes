@@ -63,6 +63,7 @@ type parameters_TB_IO_H
     real(8)             ::  scf_diffconv=1.0d-6     !convergence criterion for difference of delta sum
     real(8)             ::  scf_Ecut=-1.0d0         !energy cutoff for selfconsistent delta energy sum 
     integer             ::  scf_kgrid(3)=[10,10,1]  !kgrid for delta-selfconsistency cycle in reciprocal space
+    character(:),allocatable    ::  fname_kmesh     !file name for kmesh integration grid input
 
 end type 
 
@@ -82,6 +83,7 @@ type parameters_TB_IO_DOS
     type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
     integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local site dos)
     integer,allocatable :: orb(:)                   !local dos orbitals (number local orbital dos)
+    character(:),allocatable    ::  fname_kmesh     !file name for kmesh integration grid input
 
     integer,allocatable :: fermi_orb(:)             !orbital indices of projections for fermi-surfaces
     logical             :: fermi_proj_all=.false.   !get fermi surface projection on all orbitals
@@ -124,7 +126,12 @@ type parameters_TB_Hsolve
 
     contains
     procedure :: upd => upd_h_par
+end type
 
+type parameters_TB_IO_kint
+    !parameters for getting a kmesh with energies within a certain energy window [Ecut(1),Ecut(2)]
+    real(8)     :: Ecut(2)=0.d0
+    integer     :: grid(3)=0
 end type
 
 type parameters_TB_IO_FLOW
@@ -153,6 +160,7 @@ type parameters_TB
     type(parameters_TB_IO_flow)         ::  flow
     type(parameters_TB_Hsolve)          ::  H
     type(parameters_TB_IO_OCC_MULT)     ::  io_occ_mult
+    type(parameters_TB_IO_kint)       ::  io_kmesh
     logical         ::  is_mag=.False. !Hamiltonian has spins
     logical         ::  is_sc=.False. !Hamiltonian is superconducting-> everything doubles to include creators and destructors
 contains
