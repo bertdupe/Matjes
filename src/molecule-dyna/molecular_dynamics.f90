@@ -6,7 +6,7 @@ module m_molecular_dynamics
 implicit none
 contains
 
-subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
+subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    use m_derived_types, only : lattice,io_parameter,number_different_order_parameters,simulation_parameters
    use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
    use m_constants, only : k_b
@@ -28,7 +28,6 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
    !!!!!!!!!!!!!!!!!!!!!!!
 
    type(lattice), intent(inout) :: my_lattice
-   type(t_cell), intent(in) :: motif
    type(io_parameter), intent(in) :: io_simu
    type(simulation_parameters), intent(in) :: ext_param
    class(t_H), intent(in) :: Hams(:)
@@ -99,7 +98,7 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
 
    ! get the lattice of the masses
    allocate(masses(my_lattice%u%dim_mode,N_cell),source=0.0d0)
-   Call motif%get_M_phonon(masses_motif)
+   Call my_lattice%cell%get_M_phonon(masses_motif)
    do i=1,N_cell
      do j=1,my_lattice%u%dim_mode
        masses(j,i)=masses_motif((j-1)/3+1)

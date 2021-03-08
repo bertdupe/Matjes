@@ -179,7 +179,6 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     real(8),allocatable     :: val(:)
     integer,allocatable     :: rowind(:),colind(:)
 
-    Call this%init_otherH(H_coo)
     Call H_coo%pop_par(this%dimH,nnz,val,rowind,colind)
     allocate(this%H(this%dimH(1),this%dimH(2)),source=0.0d0)
     do i=1,nnz

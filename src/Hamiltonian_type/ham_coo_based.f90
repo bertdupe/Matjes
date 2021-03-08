@@ -12,7 +12,7 @@ type,abstract,extends(t_H) :: t_H_coo_based
     procedure :: init_mult_connect_2
 end type
 
-interface
+abstract interface
     subroutine int_set_from_Hcoo(this,H_coo,lat)
         import t_H_coo,t_H_coo_based,lattice
         class(t_H_coo_based),intent(inout)  :: this
@@ -36,6 +36,7 @@ subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
     type(t_H_coo)           :: H_coo
 
     Call H_coo%init_connect(connect,Hval,Hval_ind,order,lat,mult_M_single)
+    Call this%init_otherH(H_coo)
     Call this%set_from_Hcoo(H_coo,lat)
 end subroutine 
 
@@ -56,6 +57,7 @@ subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_s
     type(t_H_coo)           :: H_coo
 
     Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
+    Call this%init_otherH(H_coo)
     Call this%set_from_Hcoo(H_coo,lat)
 end subroutine
 

@@ -22,7 +22,6 @@ contains
     procedure :: optimize
     procedure :: mult_l,mult_r
 
-
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
     procedure :: pop_par

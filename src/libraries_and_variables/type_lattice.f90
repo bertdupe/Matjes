@@ -209,14 +209,14 @@ subroutine init_order(this,cell,extpar_io)
     if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5))
 end subroutine
 
-subroutine read_order(this,suffix_in,fexist_out)
+subroutine read_order(this,suffix_in,isinit_opt)
     !read the order parameters from a 
     class(lattice),intent(inout)        :: this
-    character(*),intent(in),optional    :: suffix_in
-    logical,intent(out),optional        :: fexist_out(number_different_order_parameters)
+    character(*),intent(in),optional    :: suffix_in    !suffix to order parameter name for input file
+    logical,intent(inout),optional      :: isinit_opt(number_different_order_parameters)    !(in) true is already initialized, (out) true if previously or now initialized
 
-    logical                             :: fexist(number_different_order_parameters)
-    character(*),parameter              :: suffix_default='_init.dat'
+    logical                             :: isinit(number_different_order_parameters)
+    character(*),parameter              :: suffix_default='.inp'
     character(:), allocatable           :: suffix
 
     if(present(suffix_in))then
@@ -224,13 +224,15 @@ subroutine read_order(this,suffix_in,fexist_out)
     else
         suffix=suffix_default
     endif
-    fexist=.false.
-    if(this%order_set(1)) Call this%M%read_file(trim(order_parameter_name(1))//suffix,fexist(1))
-    if(this%order_set(2)) Call this%E%read_file(trim(order_parameter_name(2))//suffix,fexist(2))
-    if(this%order_set(3)) Call this%B%read_file(trim(order_parameter_name(3))//suffix,fexist(3))
-    if(this%order_set(4)) Call this%T%read_file(trim(order_parameter_name(4))//suffix,fexist(4))
-    if(this%order_set(5)) Call this%u%read_file(trim(order_parameter_name(5))//suffix,fexist(5))
-    if(present(fexist_out)) fexist_out=fexist
+    isinit=.false.
+    if(present(isinit_opt)) isinit=isinit_opt
+    if(this%order_set(1).and..not.isinit(1)) Call this%M%read_file(trim(order_parameter_name(1))//suffix,isinit(1))
+    if(this%order_set(2).and..not.isinit(2)) Call this%E%read_file(trim(order_parameter_name(2))//suffix,isinit(2))
+    if(this%order_set(3).and..not.isinit(3)) Call this%B%read_file(trim(order_parameter_name(3))//suffix,isinit(3))
+    if(this%order_set(4).and..not.isinit(4)) Call this%T%read_file(trim(order_parameter_name(4))//suffix,isinit(4))
+    if(this%order_set(5).and..not.isinit(5)) Call this%u%read_file(trim(order_parameter_name(5))//suffix,isinit(5))
+    deallocate(suffix)
+    if(present(isinit_opt)) isinit_opt=isinit
 end subroutine
 
 subroutine lattice_position(this,ind,pos)
@@ -410,10 +412,10 @@ subroutine reduce_cell(this,vec_in,order,vec_out)
     integer                 :: dim_mode_sum
     integer                 :: i
 
-    dim_mode_sum=product(this%dim_modes)
+    dim_mode_sum=product(this%dim_modes(order))
 
-    if(size(vec_in)/=this%Ncell*dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=this%Ncell) STOP "vec_out of reduce has wrong dimension"
+    if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
+    if(size(vec_out)/=this%Ncell) ERROR STOP "vec_out of reduce has wrong dimension"
 
     vec_out=0.0d0
     do i=1,this%Ncell
@@ -431,6 +433,7 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
 
     integer                 :: dim_mode_sum,dim_mode_keep
     integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
 
     integer                 :: ind_div
 
@@ -438,20 +441,20 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
     integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
     integer                 :: dir
 
-!   ind_keep=findloc(order,order_keep,dim=1)
     do i=1,size(order)
         if(order(i)==order_keep)then
             ind_keep=i
             exit
         endif
     enddo
-    dim_mode_sum=product(this%dim_modes)
-    dim_mode_keep=this%dim_modes(ind_keep)
-    ind_div=product(this%dim_modes(:ind_keep-1))
+    dim_modes=this%dim_modes(order)
+    dim_mode_sum=product(dim_modes)
+    dim_mode_keep=dim_modes(ind_keep)
+    ind_div=product(dim_modes(:ind_keep-1))
 
     if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"
-    if(size(vec_in)/=this%Ncell*dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=this%Ncell*this%dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
+    if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
+    if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
 
     vec_out=0.0d0
     do i=1,size(vec_in)
@@ -472,6 +475,7 @@ subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
 
     integer                 :: dim_mode_sum,dim_mode_keep
     integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
 
     integer                 :: ind_div
 
@@ -486,13 +490,14 @@ subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
             exit
         endif
     enddo
-    dim_mode_sum=product(this%dim_modes)
-    dim_mode_keep=this%dim_modes(ind_keep)
-    ind_div=product(this%dim_modes(:ind_keep-1))
+    dim_modes=this%dim_modes(order)
+    dim_mode_sum=product(dim_modes)
+    dim_mode_keep=dim_modes(ind_keep)
+    ind_div=product(dim_modes(:ind_keep-1))
 
-    if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"
-    if(size(vec_in)/=dim_mode_sum) STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=this%dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
+    if(count(order==order_keep)/=1) ERROR STOP "implement reduce also for multiple entries of order_keep in order"
+    if(size(vec_in)/=dim_mode_sum) Error STOP "vec_in of reduce has wrong dimension"
+    if(size(vec_out)/=dim_modes(ind_keep)) ERROR STOP "vec_out of reduce has wrong dimension"
 
     vec_out=0.0d0
     do i=1,size(vec_in)

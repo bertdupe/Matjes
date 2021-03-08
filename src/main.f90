@@ -36,8 +36,6 @@ Implicit None
     type(lattice) :: all_lattices
 ! unit parameters for the file
     integer :: io_param
-! description of the unit cell
-    type(t_cell) :: motif
 ! external parameter
     type(simulation_parameters) :: ext_param
 ! Hamiltonian used (extend to array with different basis + higher ranks)
@@ -71,7 +69,7 @@ Implicit None
         call close_file('input',io_param)
         
         ! read the input and prepare the lattices, the Hamitlonian and all this mess
-        call setup_simu(io_simu,all_lattices,motif,ext_param,Ham_res,Ham_comb)
+        call setup_simu(io_simu,all_lattices,ext_param,Ham_res,Ham_comb)
         
         ! number of cell in the simulation
         N_cell=product(all_lattices%dim_lat)
@@ -137,7 +135,7 @@ Implicit None
         !---------------------------------
         if (my_simu%name == 'entropic')then
             STOP "put entropic back in"
-            !call entropic(all_lattices,motif,io_simu)
+            !call entropic(all_lattices,all_lattices%cell,io_simu)
         endif
         
         
@@ -174,15 +172,13 @@ Implicit None
         
         if (my_simu%name == 'molecular_dynamics')then
             write(6,'(a)') 'entering into the molecular dynamics routines'
-            call molecular_dynamics(all_lattices,motif,io_simu,ext_param,Ham_comb)
+            call molecular_dynamics(all_lattices,io_simu,ext_param,Ham_comb)
         endif
         
         !---------------------------------
         !---------------------------------
         
         Call write_config('end',all_lattices)
-        !call CreateSpinFile('Spinse_end.dat',all_lattices,motif)
-        !call WriteSpinAndCorrFile('SpinSTM_end.dat',all_lattices)
     
         call cpu_time(computation_time)
         write(*,*) 'computation time:',computation_time,'seconds'

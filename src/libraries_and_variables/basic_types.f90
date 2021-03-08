@@ -25,9 +25,10 @@ type atomtype
     real(8) :: charge=0.0d0 !effective charge 
     real(8) :: mass=0.0d0   !effective mass for phonons
     logical :: use_ph=.false.   !use for phonon calculation
+    integer :: orbitals=0   !number of tight-binding orbitals per spin
     contains
     procedure :: atomtype_write
-    generic :: write(formatted) => atomtype_write
+    generic :: write(formatted) => atomtype_write   !this is rather nonsensical and should rather be used to write it the atom-type in some internal format
 end type
 
 type atom
@@ -39,6 +40,7 @@ type atom
     real(8) :: charge=0.0d0 !effective charge 
     real(8) :: mass=0.0d0   !effective mass for phonons
     logical :: use_ph=.false.   !use for phonon calculation
+    integer :: orbitals=0   !number of tight-binding orbitals per spin
     contains
     procedure :: bcast => atom_bcast
     procedure :: set_attype => atom_set_attype
@@ -146,12 +148,13 @@ subroutine atomtype_write(attype, unit, iotype, v_list, iostat, iomsg)
   integer, intent(out)          :: iostat
   character(*), intent(inout)   :: iomsg
 
-  write (unit, "(2A,/3(A,F8.4/),A,L3/)", IOSTAT=iostat, IOMSG=iomsg)  &
-      "atom type:   name: ",trim(attype%name),&
-      "            moment: ",attype%moment,&
-      "            charge: ",attype%charge,&
-      "            mass  : ",attype%mass,&
-      "            use ph: ",attype%use_ph
+  write (unit, "(2A,/3(A,F8.4/),A,L3/,A,I3)", IOSTAT=iostat, IOMSG=iomsg)  &
+      "atom type:  name     : ",trim(attype%name),&
+      "            moment   : ",attype%moment,&
+      "            charge   : ",attype%charge,&
+      "            mass     : ",attype%mass,&
+      "            use ph   : ",attype%use_ph,&
+      "            #orbitals: ",attype%orbitals
 end subroutine
 
 subroutine atom_set_attype(this,attype)
@@ -163,5 +166,6 @@ subroutine atom_set_attype(this,attype)
     this%charge=attype%charge
     this%mass=attype%mass
     this%use_ph=attype%use_ph
+    this%orbitals=attype%orbitals
 end subroutine
 end module m_basic_types

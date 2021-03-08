@@ -3,7 +3,7 @@ use m_derived_types
 use m_H_public, only : t_H
 implicit none
 private
-public get_eff_field,get_eff_field_single
+public :: get_eff_field,get_eff_field_single
 
 
 contains

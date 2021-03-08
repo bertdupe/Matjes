@@ -55,7 +55,7 @@ end type
 private
 public t_H
 
-interface
+abstract interface
     subroutine int_mult(this,lat,res)
         import t_H,lattice
         class(t_H),intent(in)     :: this
@@ -198,7 +198,6 @@ contains
     subroutine mult_r_red(this,lat,res,op_keep)
         !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        use m_derived_types, only: lattice
         class(t_H),intent(in)           :: this
         type(lattice), intent(in)       :: lat
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
@@ -220,7 +219,6 @@ contains
     subroutine mult_l_red(this,lat,res,op_keep)
         !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        use m_derived_types, only: lattice
         class(t_H),intent(in)           :: this
         type(lattice), intent(in)       :: lat
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
@@ -241,7 +239,6 @@ contains
     subroutine mult_r_red_single(this,i_site,lat,res,op_keep)
         !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        use m_derived_types, only: lattice
         class(t_H),intent(in)           :: this
         type(lattice), intent(in)       :: lat
         integer,intent(in)              :: i_site
@@ -264,7 +261,6 @@ contains
     subroutine mult_l_red_single(this,i_site,lat,res,op_keep)
         !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        use m_derived_types, only: lattice
         class(t_H),intent(in)           :: this
         integer,intent(in)              :: i_site
         type(lattice), intent(in)       :: lat
@@ -429,7 +425,6 @@ contains
 !!!!!!!!!!!!!!        ROUTINES THAT SHOULD BE IMPLEMENTED MORE EFFICIENTLY    !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine mult_l_single(this,i_site,lat,res)
-    use m_derived_types, only: lattice
     class(t_H),intent(in)        :: this
     integer,intent(in)           :: i_site
     type(lattice),intent(in)     :: lat
@@ -443,7 +438,6 @@ subroutine mult_l_single(this,i_site,lat,res)
 end subroutine
 
 subroutine mult_r_single(this,i_site,lat,res)
-    use m_derived_types, only: lattice
     class(t_H),intent(in)        :: this
     integer,intent(in)           :: i_site
     type(lattice),intent(in)     :: lat

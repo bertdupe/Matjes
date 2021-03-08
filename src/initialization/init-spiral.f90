@@ -1,5 +1,6 @@
 module m_init_spiral
 use m_derived_types
+use, intrinsic :: iso_fortran_env, only : error_unit
 implicit none
 
 private
@@ -39,10 +40,20 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
 
     call get_parameter(io,fname,'Rq_'//ordname,3,Rq,1.0d0)
     Rq=matmul(Rq,lat%areal)
+    if(norm2(Rq)==0.0d0)then
+        write(error_unit,'(3/A)') "Error, spin spiral initialization vector Rq vanishes after transforming to real space"
+        write(error_unit,'(2A)') "Check lattice parameters and Rq_"//ordname
+        STOP
+    endif
     Rq=Rq/norm2(Rq)
     
     call get_parameter(io,fname,'Iq_'//ordname,3,Iq,1.0d0)
     Iq=matmul(Iq,lat%areal)
+    if(norm2(Iq)==0.0d0)then
+        write(error_unit,'(3/A)') "Error, spin spiral initialization vector Iq vanishes after transforming to real space"
+        write(error_unit,'(2A)') "Check lattice parameters and Iq_"//ordname
+        STOP
+    endif
     Iq=Iq/norm2(Iq)
 
     call get_parameter(io,fname,'q_norm_'//ordname,3,qnorm)

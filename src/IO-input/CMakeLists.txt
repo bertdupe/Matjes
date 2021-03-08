@@ -15,6 +15,5 @@ src/IO-input/rw_minimize.f90
 src/IO-input/rw_motif.f90
 src/IO-input/rw_TB.f90
 src/IO-input/rw_zdir.f90
-#src/IO-input/write_EM.f90 #requires m_mpi_prop
 src/IO-input/write_tableNN.f90
 )

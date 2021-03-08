@@ -167,7 +167,6 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     real(8),allocatable     :: val(:)
     integer,allocatable     :: rowind(:),colind(:)
 
-    Call this%init_otherH(H_coo)
     Call H_coo%pop_par(this%dimH,nnz,val,rowind,colind)
     colind=colind-1;rowind=rowind-1
     Call eigen_H_init(nnz,this%dimH,rowind,colind,val,this%H)

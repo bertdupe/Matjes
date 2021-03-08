@@ -2,7 +2,7 @@ module m_setup_simu
 implicit none
 
 contains
-subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
+subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
     !main setup routine (right now should only be called from one MPI-thread, bcast afterwards)
     use m_derived_types, only: io_parameter,t_cell,simulation_parameters
     use m_fftw, only: set_k_mesh
@@ -15,7 +15,6 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     use m_get_position
     use m_io_files_utils, only: open_file_write, close_file
     use m_io_utils, only: dump_config
-    use m_rw_TB, only : rw_TB, check_activate_TB, get_nb_orbitals
     use m_set_Hamiltonians,only: set_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
     use m_orders_initialize, only: orders_initialize 
@@ -30,10 +29,10 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
     ! this order aims at not taking care of too many neigbours if the Jij are set to 0
     type(io_parameter), intent(out) :: io_simu
     type(lattice), intent(inout) :: my_lattice
-    type(t_cell), intent(out) :: my_motif
     type(simulation_parameters),intent (inout) :: ext_param
     class(t_H),intent(inout),allocatable      ::  Ham_res(:), Ham_comb(:)
     ! variable of the system
+    type(t_cell)        :: my_motif
     real(8),allocatable :: pos(:)
     integer             :: io
     real(8)             :: time
@@ -62,9 +61,6 @@ subroutine setup_simu(io_simu,my_lattice,my_motif,ext_param,Ham_res,Ham_comb)
 
     !read the Hamiltonian parameters
     Call rw_H(H_io)
-    
-    ! read the TB parameters
-    call rw_TB('input')
     
     ! find the symmetry of the lattice here
     call user_info(6,time,'reading the input file',.false.)

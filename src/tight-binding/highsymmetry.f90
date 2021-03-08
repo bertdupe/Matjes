@@ -1,9 +1,6 @@
 module m_highsym
-    use m_basic_types, only : vec_point
-    use m_io_utils, only: get_parameter
-    use m_io_files_utils, only: close_file,open_file_write
     use m_derived_types, only : lattice
-    use m_energy_k,only : get_energy_kpts
+    use m_init_Hk
     use m_tb_types
     implicit none
     private 
@@ -17,36 +14,27 @@ module m_highsym
     contains
 
 
-    subroutine plot_highsym_kpts(h_par,pos,mode_mag,E_F)
-        type(parameters_TB_Hsolve),intent(in)     ::  h_par
-        real(8),intent(in)          :: pos(:,:)
-        type(vec_point),intent(in)  :: mode_mag(h_par%dimH)
-        real(8),intent(in)          :: E_F !fermi energy
+    subroutine plot_highsym_kpts(Hk_inp,h_io)
+        type(Hk_inp_t),intent(in)               :: Hk_inp
+        type(parameters_TB_IO_H),intent(in)     :: h_io
 
-        real(8),allocatable :: eigval(:,:)
+        real(8),allocatable :: eval(:)
+        character(len=*),parameter  ::  fname="highs_plot"
+        integer             ::  io,i,j
 
         if(.not. allocated(kpts)) return
         write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
-        Call get_energy_kpts(kpts,h_par,pos,mode_mag,eigval)
-        !eigval=eigval-E_F !adjust by calculated fermi energy only confuses comparison with analytic calculations
-        Call print_highsym('highs_plot',eigval)
-        Call highsym_clear_path()
-
-    end subroutine
-
-
-    subroutine print_highsym(fname,eigval)
-        !TODO: set in some labels...
-        character(len=*), intent(in) :: fname
-        real(8),intent(in)      ::  eigval(:,:)
-
-        integer                 ::  i,j,io
-        io=open_file_write(fname//".dat")
+        !get and print data
+        open(newunit=io,file=fname//'.dat')
         do i=1,N_kpts
-           write(io,'(2E16.8)') (kpts_dist(i),eigval(j,i),j=1,size(eigval,1))
+            Call Hk_eval(Hk_inp,kpts(:,i),h_io,eval) 
+            write(io,'(2E16.8)') (kpts_dist(i),eval(j),j=1,size(eval))
+            deallocate(eval)   !allocate at beginning
         enddo
-        call close_file(fname//".dat",io)
-        io=open_file_write(fname//".gnu")
+        close(io)
+
+        !write help function
+        open(newunit=io,file=fname//'.gnu')
         write(io,'(A)') 'set xtics( \'
         do i=1,size(highs_dist,1)-1
             write(io,"(A,E16.8,A)") '"label"',highs_dist(i),', \'
@@ -58,8 +46,8 @@ module m_highsym
         write(io,'(A)') 'set nokey'
         write(io,'(A)') "plot 'highs_plot.dat'"
         write(io,'(A)') 'pause -1 "Hit any key to continue"'
-        !should somehow also add labels
-        call close_file(fname//".gnu",io)
+        close(io)
+        Call highsym_clear_path()
 
     end subroutine
 
@@ -69,8 +57,9 @@ module m_highsym
         deallocate(highs_dist)
     end subroutine 
 
-    subroutine set_highs_path(my_lattice,highs)
-        type(lattice), intent(in)                   :: my_lattice
+    subroutine set_highs_path(lat,highs)
+        use m_constants, only : pi
+        type(lattice), intent(in)                   :: lat
         type(parameters_TB_IO_highs),intent(in)     :: highs
 
         integer                 ::  N_highsym
@@ -92,14 +81,19 @@ module m_highsym
         do i=1,N_highsym
             k_highs(:,i)=k_highs(:,i)/highs%k_highs_frac(i)
         enddo
+
+        !do i=1,N_highsym
+        !    k_highs(:,i)=matmul(k_highs(:,i),lat%astar)
+        !enddo
+        !!adjust with dimension of real-space cell decreasing BZ
+        !!might only works for rectangular lattice?
+        !do i=1,N_highsym
+        !    k_highs(:,i)=k_highs(:,i)/real(lat%dim_lat,8)
+        !enddo
         do i=1,N_highsym
-            k_highs(:,i)=matmul(k_highs(:,i),my_lattice%astar)
+            k_highs(:,i)=matmul(k_highs(:,i),lat%a_sc_inv)
         enddo
-        !adjust with dimension of real-space cell decreasing BZ
-        !might only works for rectangular lattice?
-        do i=1,N_highsym
-            k_highs(:,i)=k_highs(:,i)/real(my_lattice%dim_lat,8)
-        enddo
+        k_highs=k_highs*2.0d0*pi    !no 2*pi factor in a_sc_inv
 
         !set kpts array with all kpoints along the path
         allocate(Npath_k(N_highsym-1),source=1)

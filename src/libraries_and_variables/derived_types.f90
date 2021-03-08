@@ -1,6 +1,7 @@
 module m_derived_types
 use m_basic_types
 use m_type_lattice
+use m_kgrid
 
 ! parameters for printing in and out
 type io_parameter

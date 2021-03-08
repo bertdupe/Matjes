@@ -59,6 +59,7 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,kt,Hams,Q_neigh)
     
     ! Write the Equilibrium files
         if (io_MC%print_relax) then
+            STOP "THIS HAS TO BE UPDATED"
          ! calculate the topocharge
              dumy=get_charge(lat,Q_neigh)
              qeulerp=dumy(1)

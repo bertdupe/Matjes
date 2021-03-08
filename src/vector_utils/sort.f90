@@ -2,6 +2,7 @@ module m_sort
 
 interface sort
   module procedure hpsort_eps_epw
+  module procedure hpsort_int
 end interface
 
 private
@@ -148,6 +149,105 @@ end subroutine hpsort_eps_epw
       hslt = ( a < b )
     end if
   end function hslt
+
+subroutine hpsort_int (n, ra, ind)
+  !algorithm above modified for integers
+  implicit none
+  !-input/output variables
+  integer, intent(in)   :: n
+  integer :: ind (n)
+  integer :: ra (n)
+  !-local variables
+  integer :: i, ir, j, l, iind
+  integer :: rra
+!
+  ! initialize index array
+  IF (ind (1) .eq.0) then
+     DO i = 1, n
+        ind (i) = i
+     ENDDO
+  ENDIF
+  ! nothing to order
+  IF (n.lt.2) return
+  ! initialize indices for hiring and retirement-promotion phase
+  l = n / 2 + 1
+
+  ir = n
+
+  sorting: do
+
+    ! still in hiring phase
+    IF ( l .gt. 1 ) then
+       l    = l - 1
+       rra  = ra (l)
+       iind = ind (l)
+       ! in retirement-promotion phase.
+    ELSE
+       ! clear a space at the end of the array
+       rra  = ra (ir)
+       !
+       iind = ind (ir)
+       ! retire the top of the heap into it
+       ra (ir) = ra (1)
+       !
+       ind (ir) = ind (1)
+       ! decrease the size of the corporation
+       ir = ir - 1
+       ! done with the last promotion
+       IF ( ir .eq. 1 ) then
+          ! the least competent worker at all !
+          ra (1)  = rra
+          !
+          ind (1) = iind
+          exit sorting
+       ENDIF
+    ENDIF
+    ! whether in hiring or promotion phase, we
+    i = l
+    ! set up to place rra in its proper level
+    j = l + l
+    !
+    DO while ( j .le. ir )
+       IF ( j .lt. ir ) then
+          ! compare to better underling
+          IF ( ra (j)< ra (j + 1) ) then
+             j = j + 1
+          !else if ( .not. hslt( ra (j+1),  ra (j) ) ) then
+             ! this means ra(j) == ra(j+1) within tolerance
+           !  if (ind (j) .lt.ind (j + 1) ) j = j + 1
+          ENDIF
+       ENDIF
+       ! demote rra
+       IF ( rra < ra (j) ) then
+          ra (i) = ra (j)
+          ind (i) = ind (j)
+          i = j
+          j = j + j
+       !else if ( .not. hslt ( ra(j) , rra ) ) then
+          !this means rra == ra(j) within tolerance
+          ! demote rra
+         ! if (iind.lt.ind (j) ) then
+         !    ra (i) = ra (j)
+         !    ind (i) = ind (j)
+         !    i = j
+         !    j = j + j
+         ! else
+             ! set j to terminate do-while loop
+         !    j = ir + 1
+         ! endif
+          ! this is the right place for rra
+       ELSE
+          ! set j to terminate do-while loop
+          j = ir + 1
+       ENDIF
+    ENDDO
+    ra (i) = rra
+    ind (i) = iind
+
+  END DO sorting
+
+end subroutine 
+
 
 
 end module m_sort

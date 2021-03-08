@@ -23,6 +23,8 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     use m_average_MC, only: get_neighbours
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_MC_io
+    use m_mc_therm_val
+    use m_get_table_nn,only :get_table_nn
 
     type(lattice), intent(inout)            :: lat
     type(io_parameter), intent(in)          :: io_simu
@@ -38,11 +40,11 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     integer                     :: N_spin       !number of spins in the unit-cell
     integer                     :: NT_global    !global number of temperatures calculated
     integer                     :: NT_local     !local(on mpi-thread) number of temperatures calculated
-    ! variable for the temperature
-!    real(8)                     :: qeulerp,qeulerm,dumy(5)
-    type(track_val)             :: state_prop
-    ! contribution of the different energy parts
-    type(exp_val),allocatable   :: measure(:)   !type to keep track of temperature & all thermodynamic properties for each temperature
+    integer                     :: size_collect !required local size for parameters that are collected through mpi
+
+    type(track_val)             :: state_prop   !type which saves the current state of the system (
+    type(exp_val),allocatable   :: measure(:)   !type to keep track of temperature & all expectation values for each temperature
+    type(therm_val),allocatable :: thermo(:)    !type to store  thermodynamic properties for each temperature
     type(MC_input)              :: io_MC        !input parameters from MonteCarlo calculation
     integer,allocatable         :: Q_neigh(:,:)
     type(fluct_parameters)      :: fluct_val    !parameters for fluctuation calculation    
@@ -55,24 +57,12 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     integer,parameter           :: io_status=output_unit
     integer                     :: filen_kt_acc(2)  !some control about file-output name
 
-    
     ! initialize the variables
     N_spin=lat%Ncell*lat%nmag
     if(com_all%ismas)then
         call rw_MC(io_MC)
         NT_global=io_MC%n_Tsteps
         write(io_status,'(/,a,I6,a,/)') "you are calculating",NT_global," temperatures"
-
-        !get all temperatures (kt_all)
-        call ini_temp(kt_all,ext_param%ktfin,ext_param%ktini,NT_global,io_simu%io_warning)
-        filen_kt_acc=5
-        filen_kt_acc(1)=max(int(log10(maxval(kt_all))),1)
-        !initialize measure-array
-        allocate(measure(NT_global))
-        measure(:)%kt=kt_all(:)
-        deallocate(kt_all)
-        !get neighbors to topological charge calculation
-        Call neighbor_Q(lat,Q_neigh)
     endif
 
     !find out how to parallelize
@@ -80,25 +70,51 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
     Call get_two_level_comm(com_all,NT_global,com_outer,com_inner)
     NT_local=com_outer%cnt(com_outer%id+1)
 
-    !distribute to all threads
+    !initialize all values that exist on all threads, but need to be gathered at on master occationally
+    size_collect=NT_local
+    if(com_all%isMas) size_collect=NT_global
+    allocate(measure(size_collect))
+    if(com_inner%ismas)then
+        allocate(thermo(size_collect))
+    endif
+
+
+    !initialize necessary things on the master thread (temperatures,Q_neighbors)
+    if(com_all%ismas)then
+        if(io_MC%expval_read)then
+            Call measure_read(measure)
+        else
+            call ini_temp(kt_all,ext_param%ktfin,ext_param%ktini,NT_global,io_simu%io_warning)
+            measure%kt=kt_all
+            deallocate(kt_all)
+        endif
+        filen_kt_acc=[max(int(log10(maxval(measure%kt))),1),5]
+        Call neighbor_Q(lat,Q_neigh)!get neighbors to topological charge calculation
+    endif
+
+    !bcast parameters to all threads
     Call bcast(io_MC,com_all)
     Call bcast(filen_kt_acc,com_all)
     Call bcast_alloc(Q_neigh,com_all)
     Call init_fluct_parameter(fluct_val,lat,io_MC%do_fluct)  !check if this can be bcasted as well
 
-    !Scatter the measure-tasks to all treads    
-    if(.not.allocated(measure)) allocate(measure(NT_local))
-    Call scatterv(measure,com_outer)
-    
+    !Scatter the measure-tasks to all inner master threads (this distributes the temperatures) 
+    if(com_inner%ismas)  Call scatterv(measure,com_outer) 
+
     !intialize tracking variables (total energy, magnetization sum)
-    Call state_prop%init(lat,Hams,io_MC%cone)
+    Call state_prop%init(lat,Hams,io_MC) 
     
     Do i_kT=1,NT_local
+        Call measure_bcast(measure(i_kt),com_inner)
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
+
+        if(fluct_val%l_use)then
+		    allocate(measure(i_kt)%MjpMim_ij(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
+        endif
 
         call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,hams,Q_neigh)
         !Monte Carlo steps, calculate the values
-        do i_MC=1+io_MC%restart_MC_steps,io_MC%Total_MC_Steps+io_MC%restart_MC_steps
+        do i_MC=1,io_MC%Total_MC_Steps
             !Monte Carlo steps for independency
             Do i_relax=1,io_MC%T_auto*N_spin
                 Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,Hams)
@@ -106,17 +122,28 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
             Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,Hams) ! at least one step
             Call measure_add(measure(i_kt),lat,state_prop,Q_neigh,fluct_val) 
         end do ! over i_MC
-   
-        Call measure_eval(measure(i_kt),io_MC%Cor_log,N_spin)
-        if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)
-        Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', size(measure),' steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
+
+        Call measure_reduce(measure(i_kt),com_inner)
+        if(com_inner%ismas)then
+            Call therm_set(thermo(i_kt),measure(i_kt),io_MC%Cor_log,N_spin)
+            if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)
+            Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', NT_local,' local steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
 #ifdef CPP_DEBUG
-        write(*,*) 'energy internal:', state_prop%E_total,' energy total:', energy_all(Hams,lat)
-#endif        
+            write(*,*) 'energy internal:', state_prop%E_total,' energy total:', energy_all(Hams,lat)
+#endif      
+        endif
+		if(fluct_val%l_use) call print_spatial_fluct(measure(i_kt),com_all) !write spatial distribution of fluctuations
+		deallocate(measure(i_kt)%MjpMim_ij)
     end do !over i_kT
 
-    Call gatherv(measure,com_outer)
-    if (io_simu%io_spstmL) call spstm  ! The program of Tobias is used only at last iteration
-    Call measure_print_thermo(measure,com_all) ! write EM.dat output
+    if(com_inner%ismas)then
+        if(io_MC%expval_save)then
+            Call gatherv(measure,com_outer)
+            if(com_all%ismas) Call measure_save(measure)
+        endif
+        Call gatherv(thermo,com_outer)
+        if(io_simu%io_spstmL) call spstm  ! The program of Tobias is used only at last iteration (probably not working at all after all these changes)
+        if(com_outer%ismas) Call thermo_print(thermo) ! write EM.dat output
+    endif
 end subroutine montecarlo
 end module
