@@ -76,6 +76,10 @@ type,extends(io_H_base) :: io_U_ASR
     real(8)     :: c_ASR=-1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
 
+type,extends(io_H_base) :: io_H_Mag_Biq
+    type(Hr_pair),allocatable   :: pair(:)
+end type
+
 type :: io_H
     type(io_H_aniso)    :: aniso
     type(io_H_zeeman)   :: zeeman
@@ -87,6 +91,7 @@ type :: io_H
     type(io_H_Ph)       :: F
     type(io_H_stark)    :: stark
     type(io_U_ASR)      :: ASR_Ph
+    type(io_H_Mag_Biq)  :: M_biq
 end type
 
 contains

@@ -53,7 +53,7 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
    integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,tag,i
    real(8) :: timestep_int,h_int(3),E_int(3),dt
    real(8) :: real_time,Eold,security,Einitial
-   real(8) :: kt,ktini,ktfin,Pdy(3)
+   real(8) :: kt,ktini,ktfin,Pdy(3),temperature
    logical :: said_it_once,gra_log,io_stochafield,gra_topo
    integer :: dim_mode !dim_mode of the iterated order parameter
    character(len=100) :: file
@@ -150,54 +150,34 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
         call truncate(lat_1,used)
         dt=timestep_int
 
-        !
-        ! version 1 of the integration
-        !
+        !!!!!!!!!!!!!!!!!!!
+        ! Verlet algorithm
+        !!!!!!!!!!!!!!!!!!!
 
-        !get forces on the phonon lattice
-        Call get_eff_field(Hams,lat_1,Feff,5)
+           !get forces on the phonon lattice
+           Call get_eff_field(Hams,lat_1,Feff,5)
+           acceleration=(Feff_3-damp_F*V_1)/masses
 
-        acceleration=(Feff_3-damp_F*V_1)/masses
+           V_2=acceleration*dt/2.0d0+V_1      ! ( v of t+dt/2  )
+           lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )
 
-        V_2=acceleration*dt+V_1
+           !get forces on the phonon lattice
+           Call get_eff_field(Hams,lat_2,Feff,5)
+           acceleration=(Feff_3-damp_F*V_2)/masses
 
-        lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3
+           V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )
 
+        !!!!!!!!!!!!!!!!!!!
+        ! end Verlet algorithm
+        !!!!!!!!!!!!!!!!!!!
 
-
-
-
-
-
-
-!        !
-!        ! loop over the integration order
-!        !
-!        do i_loop=1,N_loop
-!          !get actual dt from butchers table
-!          dt=get_dt_mode(timestep_int,i_loop)
-!
-!        !update phonon
-!          !get effective field on magnetic lattice
-!          Call get_eff_field(Hams,lat_1,Feff,5)
-!          !do integration
-!          Du_3(:,:,i_loop)=Feff_3/1.0d0
-!          pause
-!          Call get_Dmode_int(Du,i_loop,N_loop,Du_int)
-!          lat_2%u%modes_3=get_integrator_field(my_lattice%u%modes_3,Du_int_3,dt)
-!        !copy phonon
-!          Call lat_2%u%copy_val(lat_1%u)
-!        enddo
-        !!!!!!!!!!!!!!! copy the final configuration in my_lattice
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        V_1=V_2
         Call lat_2%u%copy_val(my_lattice%u)
         call truncate(my_lattice,used)
 
         E_potential=energy_all(Hams,my_lattice)/real(N_cell,8)
-        E_kinetic=0.5d0*sum(masses*V_2**2)/real(N_cell,8)
+        E_kinetic=0.5d0*sum(masses*V_1**2)/real(N_cell,8)
         E_total=E_potential+E_kinetic
+        temperature=2.0d0*E_kinetic/3.0d0/real(N_cell,8)/k_b
 
         !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
@@ -233,7 +213,7 @@ subroutine molecular_dynamics(my_lattice,motif,io_simu,ext_param,Hams)
         !!!!!!!!!!!!!!! end of a timestep
         real_time=real_time+timestep_int !increment time counter
 
-        write(6,'(a,3(2x,E20.12E3))') 'Potential, kinetic and Total Energy (eV)',E_potential,E_kinetic,E_total
+        write(6,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
    enddo
    ! end of the simulation

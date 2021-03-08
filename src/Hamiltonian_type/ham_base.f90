@@ -10,6 +10,7 @@ type,abstract :: t_H
     logical,private         :: set=.false. !has this object been set?
     character(len=100)      :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
     integer                 :: mult_M_single=0 !factor necessary to calculate energy change correctly when only evaluating single sites
+    class
 contains
 
     !Hamiltonian initialization routines
@@ -37,7 +38,7 @@ contains
     procedure,NON_OVERRIDABLE               :: init_base
     procedure,NON_OVERRIDABLE               :: init_otherH
 
-    procedure(int_add_H),deferred           :: add_child
+    procedure(int_add_H),deferred           :: add_child     ! destroys the memory allocation
     procedure(int_destroy),deferred         :: destroy_child
     procedure(int_copy),deferred            :: copy_child
     procedure(int_bcast),deferred           :: bcast_child
