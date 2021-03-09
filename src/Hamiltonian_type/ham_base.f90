@@ -314,6 +314,8 @@ contains
         Call MPI_Bcast(this%op_l,N(1), MPI_INTEGER, comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%op_r,N(2), MPI_INTEGER, comm%mas, comm%com,ierr)
         Call this%bcast_child(comm)
+
+        STOP "IMPLEMENT BCAST OF MODE_L.MODE_R" !somehow one has to allocated the correct type for the servers...
 #else
         continue
 #endif
@@ -336,6 +338,8 @@ contains
             Call Hout%set_prepared(.true.)
             Hout%desc=this%desc
             Hout%mult_M_single=this%mult_M_single
+            if(allocated(this%mode_l)) Call this%mode_l%copy(Hout%mode_l)
+            if(allocated(this%mode_r)) Call this%mode_r%copy(Hout%mode_r)
         else
             STOP "cannot copy H since source is not set"
         endif
@@ -348,11 +352,15 @@ contains
         class(t_H),intent(in)       :: H_in
 
         if(this%is_set())then
+            !check that it is possible to add Hamiltonians
             if(.not.allocated(H_in%op_l).or..not.allocated(H_in%op_r)) &
                 & STOP "cannot add H and its op_l/op_r-arguments are not allocated"
             if(.not.all(this%op_l==H_in%op_l)) ERROR STOP "CANNOT ADD hamiltonians with different op_l"
             if(.not.all(this%op_r==H_in%op_r)) ERROR STOP "CANNOT ADD hamiltonians with different op_r"
             if(any(this%dimH/=H_in%dimH)) ERROR STOP "Trying to add Hamiltonians with different Hamiltonian dimensions"
+            Call check_mode_same(this%mode_l,H_in%mode_l)
+            Call check_mode_same(this%mode_r,H_in%mode_r)
+
             Call this%add_child(H_in)
             this%desc="sum in "//trim(op_int_to_abbrev(this%op_l))//trim(op_int_to_abbrev(this%op_r))//"-space"
             if(this%mult_M_single/=H_in%mult_M_single) this%mult_M_single=0 !set single multiply prefactor to 0 in order to notice if this is evaluated incorrectly
@@ -373,6 +381,14 @@ contains
         Call this%set_prepared(.false.)
         this%desc=""
         this%mult_M_single=0
+        if(allocated(this%mode_l))then
+            Call this%mode_l%destroy()
+            deallocate(this%mode_l)
+        endif
+        if(allocated(this%mode_r))then
+            Call this%mode_r%destroy()
+            deallocate(this%mode_r)
+        endif
     end subroutine
 
     subroutine init_base(this,lat,op_l,op_r)
@@ -405,8 +421,9 @@ contains
         this%mult_M_single=H_in%mult_M_single
         this%desc=H_in%desc
         this%set=.true.
+        if(allocated(H_in%mode_l)) Call H_in%mode_l%copy(this%mode_l)
+        if(allocated(H_in%mode_r)) Call H_in%mode_r%copy(this%mode_r)
     end subroutine
-
 
     function is_set(this) result(l)
         class(t_H),intent(in)       ::  this
@@ -436,7 +453,6 @@ subroutine mult_l_single(this,i_site,lat,res)
 
     Call this%mult_l(lat,tmp)
     res=tmp((i_site-1)*this%dim_mode(1)+1:i_site*this%dim_mode(1))
-
 end subroutine
 
 subroutine mult_r_single(this,i_site,lat,res)
@@ -450,6 +466,20 @@ subroutine mult_r_single(this,i_site,lat,res)
     Call this%mult_r(lat,tmp)
     res=tmp((i_site-1)*this%dim_mode(2)+1:i_site*this%dim_mode(2))
 end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!          HELPER ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine check_mode_same(mode1,mode2)
+        class(F_mode),intent(in),allocatable    ::  mode1,mode2
+            if(allocated(mode1))then
+                if(allocated(mode2))then
+                    if(.not.mode1%is_same(mode2)) ERROR STOP "Hamiltonian mode1 and mode2 differ"
+                else
+                    ERROR STOP "mode1 allocated but mode2 not allocated, not sure if addition is in correct space"
+                endif
+            endif
+    end subroutine
 
 
 end module

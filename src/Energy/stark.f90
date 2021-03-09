@@ -30,6 +30,7 @@ subroutine get_stark_E(Ham,io,lat)
     use m_setH_util,only: get_coo
     use m_input_H_types, only: io_H_stark
     use m_constants, only : mu_B,epsilon_0
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_stark),intent(in) :: io
@@ -45,7 +46,7 @@ subroutine get_stark_E(Ham,io,lat)
     integer,allocatable     :: connect(:,:)
 
     if(io%is_set)then
-        allocate(Htmp(3,lat%u%dim_mode),source=0.d0) !assume shape of B-field has to be 3
+        allocate(Htmp(3,lat%u%dim_mode),source=0.d0) !assume shape of E-field has to be 3
         Call lat%cell%get_Z_phonon(phonon)
         do i=1,size(phonon)
             Htmp(1,(i-1)*3+1)=phonon(i)
@@ -61,8 +62,11 @@ subroutine get_stark_E(Ham,io,lat)
         do i=1,lat%Ncell
             connect(:,i)=i
         enddo
-        Call Ham%init_connect(connect,val_tmp,ind_tmp,"Eu",lat,1)
+        Call Ham%init_connect(connect,val_tmp,ind_tmp,"EU",lat,1)
         Ham%desc="Stark energy"
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,"E")
+        Call mode_set_rank1(Ham%mode_r,"U")
     endif
 end subroutine
 

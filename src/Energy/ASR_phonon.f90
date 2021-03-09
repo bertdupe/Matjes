@@ -25,6 +25,7 @@ subroutine get_ASR_Ph(Ham,io,lat)
     use m_derived_types, only: lattice
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_U_ASR),intent(in)   :: io
@@ -113,6 +114,9 @@ subroutine get_ASR_Ph(Ham,io,lat)
             enddo
         enddo
         Ham%desc="ASR phonon"
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,"U")
+        Call mode_set_rank1(Ham%mode_r,"U")
     endif
 
 end subroutine

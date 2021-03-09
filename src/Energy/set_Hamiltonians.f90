@@ -46,7 +46,6 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
-
     i_H=1 
     !exchange_J (without DMI)
     if(use_ham(1))then
