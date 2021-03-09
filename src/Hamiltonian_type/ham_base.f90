@@ -1,15 +1,18 @@
 module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H
 use m_derived_types, only : lattice,number_different_order_parameters
+use m_mode_construction, only: F_mode
 implicit none
 
 type,abstract :: t_H
-    integer                 :: dimH(2)=0 !dimension of Hamiltonian
-    integer,allocatable     :: op_l(:),op_r(:)  !operator indices which have to be combined to get the space of the left/right side of the Hamiltonian
-    integer                 :: dim_mode(2)=0     !size of left/right mode after multiplying out order parameters (size per lattice point)
-    logical,private         :: set=.false. !has this object been set?
-    character(len=100)      :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
-    integer                 :: mult_M_single=0 !factor necessary to calculate energy change correctly when only evaluating single sites
+    integer                     :: dimH(2)=0        !dimension of Hamiltonian
+    integer,allocatable         :: op_l(:),op_r(:)  !operator indices which have to be combined to get the space of the left/right side of the Hamiltonian
+    integer                     :: dim_mode(2)=0    !size of left/right mode after multiplying out order parameters (size per lattice point)
+    class(F_mode),allocatable   :: mode_l,mode_r    !class to get the left/right mode on which the Hamiltonian acts
+    logical,private             :: set=.false.      !has this object been set?
+    character(len=100)          :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
+    integer                     :: mult_M_single=0  !factor necessary to calculate energy change correctly when only evaluating single sites
+
 contains
 
     !Hamiltonian initialization routines

@@ -30,6 +30,7 @@ subroutine get_zeeman_H(Ham,io,lat)
     use m_setH_util,only: get_coo
     use m_input_H_types, only: io_H_zeeman
     use m_constants, only : mu_B,mu_0
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_zeeman),intent(in):: io
@@ -63,6 +64,9 @@ subroutine get_zeeman_H(Ham,io,lat)
         enddo
         Call Ham%init_connect(connect,val_tmp,ind_tmp,"BM",lat,1)
         Ham%desc="Zeeman energy"
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,"B")
+        Call mode_set_rank1(Ham%mode_r,"M")
     endif
 end subroutine
 
