@@ -40,7 +40,7 @@ contains
     procedure,NON_OVERRIDABLE               :: init_base
     procedure,NON_OVERRIDABLE               :: init_otherH
 
-    procedure(int_add_H),deferred           :: add_child
+    procedure(int_add_H),deferred           :: add_child     ! destroys the memory allocation
     procedure(int_destroy),deferred         :: destroy_child
     procedure(int_copy),deferred            :: copy_child
     procedure(int_bcast),deferred           :: bcast_child

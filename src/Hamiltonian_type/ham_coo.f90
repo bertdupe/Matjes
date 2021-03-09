@@ -236,7 +236,7 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     real(kind=8), intent(out)       :: E
 
     STOP "CANNOT EVALUATE t_H_coo"
-    !alternatively add some evaluation without an library
+    !alternatively add some evaluation without a library
 
 end subroutine 
 

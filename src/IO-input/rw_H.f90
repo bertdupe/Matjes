@@ -13,6 +13,9 @@ module m_rw_H
         use m_coupling_ME_J, only: read_ME_J_input
         use m_coupling_ME_D, only: read_ME_D_input
         use m_harmonic_phonon, only : read_F_input
+        use m_ASR_phonon, only : read_ASR_Ph_input
+        use m_stark, only : read_stark_input
+        use m_Mag_Biq, only : read_Mag_Biq_input
         
         type(io_H),intent(out)      :: H_io
         character(*),parameter      :: fname='input'
@@ -28,6 +31,9 @@ module m_rw_H
         Call read_ME_J_input(io_param,fname,H_io%ME_J)
         Call read_ME_D_input(io_param,fname,H_io%ME_D)
         Call read_F_input(io_param,fname,H_io%F)
+        Call read_ASR_Ph_input(io_param,fname,H_io%ASR_Ph)
+        Call read_stark_input(io_param,fname,H_io%stark)
+        call read_Mag_Biq_input(io_param,fname,H_io%M_biq)
 
         call close_file(fname,io_param)
 

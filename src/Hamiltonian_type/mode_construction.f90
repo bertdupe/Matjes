@@ -82,4 +82,3 @@ subroutine mode_set_rank1(mode,abbrev_in)
     end select
 end subroutine
 end module
-
