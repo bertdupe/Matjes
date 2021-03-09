@@ -129,7 +129,7 @@ subroutine get_H_delta_onsite(lat,h_io,H,del)
     integer         :: i_del,i_cell, i_nnz
 
     type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
-    integer         :: orb              !orbital offset in basic unit-cell
+    integer         :: orb(2)           !orbital offset in basic unit-cell
     integer         :: nBdG             !length to next BdG sector
     integer         :: ndim             !length to next unit-cell
     integer         :: add_row(4),add_col(4)
@@ -145,12 +145,12 @@ subroutine get_H_delta_onsite(lat,h_io,H,del)
     !order of entries 
     add_row=[1     , 2     , nBdG+1, nBdG+2]
     add_col=[nBdG+2, nBdG+1, 2     , 1     ]
-    do i_del=1,size(del%orb)
-        orb=(del%orb(i_del)-1)*hinit%nspin
+    do i_del=1,size(del%orb,2)
+        orb=(del%orb(:,i_del)-1)*hinit%nspin
         i_nnz=0
         do i_cell=1,lat%ncell
-            row(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb+add_row
-            col(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb+add_col
+            row(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb(1)+add_row
+            col(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb(2)+add_col
             val(i_nnz+1:i_nnz+4)=del%delta(i_cell,i_del)
             val(i_nnz+3:i_nnz+4)=conjg(val(i_nnz+3:i_nnz+4))
             i_nnz=i_nnz+4
