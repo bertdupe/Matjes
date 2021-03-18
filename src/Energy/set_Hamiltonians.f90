@@ -149,8 +149,10 @@ subroutine combine_Hamiltonians(keep_in,H_in,H_comb)
     outer:do j=1,N_in
         do i=1,j-1
             if(all(space(:,:,j)==space(:,:,i)))then
-                i_unique(j)=i_unique(i)
-                cycle outer
+                if(H_in(j)%same_space(H_in(i)))then
+                    i_unique(j)=i_unique(i)
+                    cycle outer
+                endif
             endif
         enddo
         N_out=N_out+1
