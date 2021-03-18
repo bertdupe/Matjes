@@ -22,22 +22,21 @@ subroutine get_pair_dat(lat,at_type,neigh_in,pair_dat)
     use m_neighbor_type, only: get_neigh_distances
     use, intrinsic :: iso_fortran_env, only : error_unit
     type(lattice),intent(in)                    :: lat
-    integer,intent(in)                          :: neigh_in(:)
+    integer,intent(in)                          :: neigh_in(:)  !wanted neighbors (1=nearest, 2=next nearest,etc...)
     integer,intent(in)                          :: at_type(:)   !atom type indices for which the same-type interaction is to be found
-    type(pair_dat_t),allocatable,intent(inout)  :: pair_dat(:)
+    type(pair_dat_t),allocatable,intent(inout)  :: pair_dat(:)  !output information
 
     real(8),allocatable     :: atpos1(:,:),atpos2(:,:)
 
     integer,allocatable     :: Nat_type(:)     !number of atoms per considered type
     integer,allocatable     :: atid(:)         !atom indices of all atoms considered
     integer,allocatable     :: atid_local(:)   !local atom indices 
-    integer,allocatable     :: tmp(:)
 
     integer     :: i_neigh, N_neigh
     integer     :: neigh(size(neigh_in))
     integer     :: iat,Nat    
     integer     :: i_attype, N_attype
-    integer     :: ii,i
+    integer     :: i
     integer     :: bnd(2)
 
     !neighbor parameters
@@ -60,6 +59,7 @@ subroutine get_pair_dat(lat,at_type,neigh_in,pair_dat)
         if(any(at_type(i_attype)==at_type(:i_attype-1)).or.any(at_type(i_attype)==at_type(i_attype+1:))) ERROR STOP "EVERY ATOM-TYPE SHALL ONLY APPEAR ONCE in the 4-spin input"
     enddo
     !get atom indices for each atom type
+    allocate(Nat_type(N_attype))
     Nat_type=[(count(lat%cell%atomic(:)%type_id==at_type(i_attype)),i_attype=1,N_attype)]
     allocate(atid(sum(Nat_type)),source=0)
     do i_attype=1,N_attype
@@ -109,31 +109,26 @@ subroutine sort_pairs(N,Nat,pairs,diff_vec,Npair_at)
     real(8),intent(inout)               :: diff_vec(3,N)
     integer,intent(out)                 :: Npair_at(Nat)
 
-    integer     :: tmp(N)
     integer     :: ind(N)
+    integer     :: tmp(N)
     integer     :: iat
     integer     :: bnd(2)
-
     real(8)     :: tmp_vec(3,N)
-
-    integer     :: i
     real(8)     :: angle(N)
-    real(8)     :: diff_tmp(3)
-    integer     :: pair_tmp(5)
 
     do iat=1,Nat
        Npair_at(iat)=count(pairs(1,:)==iat)
     enddo
-    
     tmp=pairs(1,:)
     ind=0
-    Call sort(N,tmp,ind)
+    Call sort(N,tmp,ind)    !sort by first atom index
     do iat=1,Nat
         bnd=[sum(Npair_at(:iat-1))+1,sum(Npair_at(:iat))]
         tmp_vec(:,1:Npair_at(iat))=diff_vec(:,ind(bnd(1):bnd(2)))
         angle(1:Npair_at(iat))=atan2(tmp_vec(2,1:Npair_at(iat)),tmp_vec(1,1:Npair_at(iat)))
-        Call sort(Npair_at(iat),angle,ind(bnd(1):bnd(2)),1.0d-6)
+        Call sort(Npair_at(iat),angle,ind(bnd(1):bnd(2)),1.0d-6)    !sort by angle where first atom index is the same
     enddo
+    !apply permutations
     pairs=pairs(:,ind)
     diff_vec=diff_vec(:,ind)
 end subroutine

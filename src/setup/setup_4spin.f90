@@ -3,24 +3,12 @@ use m_derived_types, only: lattice
 use m_neighbor_pair, only: pair_dat_t
 implicit none
 private
-!public :: plaq_t
-
-public :: get_new
-
-!type :: plaq_t
-!    integer,allocatable     :: sites(:,:)   !(4,N_total_plaques) lattice indices of the sites for each plaque entry
-!    integer,allocatable     :: at_id(:,:)   !(1:Nplaq) atom-ids for each equivalent set of plaques
-!    integer,allocatable     :: N_entry(:)   !(1:Nplaq) how many entries for each set of unique plaq
-!contains
-!    procedure   :: get => get_4spin_plaques
-!    procedure   :: delete
-!end type
+public :: get_4spin_dat
 contains
 
-
-subroutine get_new(lat,pair_dat,con_unfold,N_entry,connect_neigh)
+subroutine get_4spin_dat(lat,pair_dat,con_unfold,N_entry,connect_neigh)
+    !subroutine that gives the information about the connections of all plaques in the supercell 
     use m_neighbor_type
-!    class(plaq_t),intent(inout)         :: plaq
     type(lattice),intent(in)            :: lat
     type(pair_dat_t),intent(in)         :: pair_dat
     integer,intent(inout),allocatable   :: con_unfold(:,:)     !all sites of the base-points of the connections
@@ -32,18 +20,23 @@ subroutine get_new(lat,pair_dat,con_unfold,N_entry,connect_neigh)
     integer,allocatable :: connect_base(:,:,:)  !site (at,pos) of base point of connection
     integer :: Nplaq_base
 
+    !delete possible previous data
     if(allocated(con_unfold))       deallocate(con_unfold)
     if(allocated(N_entry))          deallocate(N_entry)
     if(allocated(connect_neigh))    deallocate(connect_neigh)
-
+    
+    !find out which plaques have one edge in the basic unit-cell
     Call get_plaq_base(pair_dat,plaq_base,used_con)
 
+    !get all connections required for each basic plaque
     Call get_plaq_base_connect(pair_dat,plaq_base,used_con,connect_base,connect_neigh)
+    deallocate(used_con)
 
+    !unfold the plaques (i.e. connections) to the entire supercell obeying the periodicity
     Nplaq_base=size(connect_neigh,2)
     allocate(N_entry(Nplaq_base),source=0)
     Call unfold_plaq_connect(lat,Nplaq_base,plaq_base,connect_base,con_unfold,N_entry)
-
+    deallocate(plaq_base,connect_base)
 end subroutine
 
 subroutine unfold_plaq_connect(lat,Nplaq,plaq_base,base,con_unfold,N_entry)
@@ -187,6 +180,7 @@ subroutine get_plaq_base_connect(pair_dat,plaq_base,used_con,connect_base,connec
 end subroutine                                                
 
 subroutine get_plaq_base(pair_dat,plaq_base,used_con)
+    !gets all infomation about which plaques have a site in the basic unit-cell
     type(pair_dat_t),intent(in)         :: pair_dat          !necessary information about neighbors
     integer,intent(inout),allocatable   :: plaq_base(:,:,:)  !encodes atom sites which contintute plaques(4,4,N_plaq)
                                                              !(x,:,:) gives [atom_id,site_x,site_y,site_z] (with sites relative to origin)
@@ -246,6 +240,7 @@ subroutine get_plaq_base(pair_dat,plaq_base,used_con)
 end subroutine
 
 subroutine check_pair(pair_dat,Nat,Ncon,Nbase)
+    !some checks to make sure that the neighboring infomation is supplied as it should be (later asumptions of setup)
     type(pair_dat_t),intent(in) :: pair_dat
     integer,intent(in)      ::  Nat,Ncon,Nbase
     integer ::  iat,ibase, icon,i1,i2
@@ -269,12 +264,9 @@ subroutine check_pair(pair_dat,Nat,Ncon,Nbase)
     enddo
 end subroutine
 
-
-
-
 subroutine get_neigh_arr_nn(N1,pairs1,mat)
-    !super inefficient implementation which will scale terribly with the number of atoms in the unit-cell, but it is not called very often...
     !get matrix which contains index of nearest neighbor interaction by combining 2 nearest neighbor interactions according to their indices
+    !super inefficient implementation which will scale terribly with the number of atoms in the unit-cell, but it is not called very often...
     integer,intent(in)      :: N1
     integer,intent(in)      :: pairs1(5,N1)
     integer,intent(out)     :: mat(N1,N1) 
@@ -298,8 +290,8 @@ subroutine get_neigh_arr_nn(N1,pairs1,mat)
 end subroutine
 
 subroutine get_neigh_arr_nnn(N1,N2,pairs1,pairs2,mat)
-    !super inefficient implementation which will scale terribly with the number of atoms in the unit-cell, but it is not called very often...
     !get matrix which contains index of next nearest neighbor interaction by combining 2 nearest neighbor interactions according to their indices
+    !super inefficient implementation which will scale terribly with the number of atoms in the unit-cell, but it is not called very often...
     integer,intent(in)      :: N1,N2
     integer,intent(in)      :: pairs1(5,N1)
     integer,intent(in)      :: pairs2(5,N2)
@@ -322,196 +314,4 @@ subroutine get_neigh_arr_nnn(N1,N2,pairs1,pairs2,mat)
         enddo
     enddo
 end subroutine
-
-
-
-!subroutine delete(this)
-!    class(plaq_t),intent(inout)     :: this
-!
-!    if(allocated(this%sites  )) deallocate(this%sites)
-!    if(allocated(this%at_id  )) deallocate(this%at_id)
-!    if(allocated(this%N_entry)) deallocate(this%N_entry)
-!end subroutine
-!
-!subroutine get_4spin_plaques(plaq,lat,at_type)
-!    use m_neighbor_type
-!    class(plaq_t),intent(inout)     :: plaq
-!    type(lattice),intent(in)        :: lat
-!    integer,intent(in)              :: at_type
-!
-!    integer,allocatable     :: id(:)    !atom id's considered
-!    integer                 :: Nat
-!
-!    real(8),allocatable     :: atpos1(:,:),atpos2(:,:)
-!    real(8)                 :: distance(1)
-!    integer,allocatable     :: pairs(:,:)
-!    integer,allocatable     :: Nshell(:)
-!    real(8),allocatable     :: diff_vec(:,:) !difference vector between each shell (3,1:number shells) 
-!
-!    integer,allocatable :: plaq_base(:,:,:) !plaque information without superlattice consideration
-!
-!    integer ::  i
-!
-!    Call plaq%delete()
-!    Call lat%cell%ind_attype(at_type,id)
-!    Nat=size(id)
-!    if(Nat>1) ERROR STOP "IMPLEMENT FOR MORE THAN ONE MAGNETIC ATOM"
-!    allocate(atpos1(3,Nat),atpos2(3,Nat),source=0.0d0)
-!    do i=1,Nat
-!        atpos1(:,i)=lat%cell%atomic(id(i))%position
-!    enddo
-!    atpos2=atpos1
-!    !get all neighbor connections(pair_ind,Nshell) and the distances
-!    Call get_neigh_distances(atpos1, atpos2, [2], lat, pairs, Nshell, distance, diff_vec) ![2] because onsite would be [1]
-!    !get 4-spin plaqs for origin site
-!    Call get_plaq(pairs,diff_vec,plaq_base)
-!    !unfold to entire lattice
-!    Call unfold_plaq(plaq_base,lat,plaq)
-!    STOP "FINISH get_4spin_plaques"
-!end subroutine
-
-
-!subroutine unfold_plaq(plaq_base,lat,plaq)
-!    integer,intent(in)                  ::  plaq_base(:,:,:)
-!    type(lattice),intent(in)            ::  lat
-!    type(plaq_t),intent(inout)          ::  plaq
-!
-!    integer,allocatable     :: plaq_tmp(:,:)
-!    integer                 :: Nplaq, Ncell
-!    integer                 :: ii, i_plaq
-!    integer                 :: ext_diff(3,2)   !get extremal indices considered in each plaq (1:3,1:2) (xyz direction of lattice, (minimal maximal))
-!    integer                 :: imax(2,3)
-!    integer                 :: i1,i2,i3
-!    integer,dimension(3)    :: i3_1,i3_2,i3_3,i3_4  !lattice sites in ([1,dimlat(1)],[1,dimlat(2)],[1,dimlat(3)])-basis
-!
-!    Nplaq=size(plaq_base,3)
-!    Ncell=lat%ncell
-!    allocate(plaq_tmp(4,Nplaq*Ncell),source=0)
-!    allocate(plaq%N_entry(Nplaq),source=0)
-!    allocate(plaq%at_id(4,Nplaq),source=0)
-!    ii=0
-!    do i_plaq=1,Nplaq
-!        !get boundaries for included plaques in superlattice
-!        ext_diff(:,1)=minval(plaq_base(2:4,:,i_plaq),2)
-!        ext_diff(:,2)=maxval(plaq_base(2:4,:,i_plaq),2)
-!        imax=reshape([1,lat%dim_lat(1),1,lat%dim_lat(2),1,lat%dim_lat(3)],[2,3])
-!        if(.not.lat%periodic(1)) imax(:,1)=[1-ext_diff(1,1), lat%dim_lat(1)-ext_diff(1,2)]
-!        if(.not.lat%periodic(2)) imax(:,2)=[1-ext_diff(2,1), lat%dim_lat(2)-ext_diff(2,2)]
-!        if(.not.lat%periodic(3)) imax(:,3)=[1-ext_diff(3,1), lat%dim_lat(3)-ext_diff(3,2)]
-!
-!        plaq%at_id(:,i_plaq)=plaq_base(1,:,i_plaq)
-!
-!        do i3=imax(1,3),imax(2,3)
-!            i3_1(3)=i3
-!            do i2=imax(1,2),imax(2,2)
-!                i3_1(2)=i2
-!                do i1=imax(1,1),imax(2,1)
-!                    i3_1(1)=i1
-!                    i3_2=modulo(i3_1+plaq_base(2:4,2,i_plaq)-1,lat%dim_lat)+1
-!                    i3_3=modulo(i3_1+plaq_base(2:4,3,i_plaq)-1,lat%dim_lat)+1
-!                    i3_4=modulo(i3_1+plaq_base(2:4,4,i_plaq)-1,lat%dim_lat)+1
-!                    ii=ii+1
-!                    plaq_tmp(1,ii)=lat%index_m_1(i3_1)
-!                    plaq_tmp(2,ii)=lat%index_m_1(i3_2)
-!                    plaq_tmp(3,ii)=lat%index_m_1(i3_3)
-!                    plaq_tmp(4,ii)=lat%index_m_1(i3_4)
-!                enddo
-!            enddo
-!        enddo
-!        plaq%N_entry(i_plaq)=ii
-!    enddo
-!
-!    allocate(plaq%sites,source=plaq_tmp(:,:ii))
-!    deallocate(plaq_tmp)
-!end subroutine
-
-!subroutine get_plaq(pairs,diff_vec,plaq)
-!    !get plaq, which encodes the 4 lattice sites which constitute 
-!    integer,intent(in)      ::  pairs(:,: )     !integer array containing the information how which atoms are corrected for the nearest neighbor distance([[ia1,ia2,ix,iy,iz],[:]])
-!                                                !(output from get_neigh_distances for nearest neighbors)
-!    real(8),intent(in)      ::  diff_vec(:,:)   !distance vectors corresponding to the connections encoded by pairs (output from get_neigh_distances for nearest neighbors)
-!    integer,allocatable     ::  plaq(:,:,:) !encodes atom sites which contintute plaques(4,4,N_plaq)
-!                                            !(:,.,.) gives [atom_id,site_x,site_y,site_z] (with sites relative to origin)
-!                                            !(.,:,.) gives the 4 different sites constituting the plaque
-!                                            !(.,.,:) gives the different plaques that can be constructed from the origin
-!
-!    integer     :: N_connection    !number of different nearest neighbor connections
-!    integer     :: N_base
-!    logical,allocatable     :: is_set(:)
-!    integer,allocatable     :: pair(:,:)    !base vector pairs index  (2,N_base) !
-!    integer     :: i,j
-!    real(8)     :: len_dist
-!
-!    integer     ::  N_plaq, i_plaq
-!    integer     :: vec1(3),vec2(3),src(3)
-!
-!
-!    N_connection=size(pairs,2)
-!    N_base=N_connection/2
-!    len_dist=sum(norm2(diff_vec,dim=2))/N_connection
-!    allocate(is_set(N_connection),source=.false.)
-!    allocate(pair(2,N_base),source=0)
-!    !THIS WILL NOT WORK FOR SEVERAL MAGNETIC ATOMS PER UNIT-CELL
-!    do i=1,N_base
-!        do j=1,N_connection
-!            if(.not.is_set(j)) exit
-!        enddo
-!        pair(1,i)=j
-!        do j=pair(1,i)+1,N_connection
-!            if(norm2(diff_vec(:,j)+diff_vec(:,pair(1,i)))<len_dist*1.0d-6) exit
-!        enddo
-!        pair(2,i)=j
-!        is_set(pair(:,i))=.true.
-!    enddo
-!    do i=1,N_base
-!        if(diff_vec(1,pair(1,i))<diff_vec(1,pair(2,i)))then
-!            j=pair(1,i)
-!            pair(1,i)=pair(2,i)
-!            pair(2,i)=j
-!        endif
-!    enddo
-!
-!    N_plaq=N_base*(N_base-1)*2
-!    i_plaq=0
-!    allocate(plaq(4,4,N_plaq),source=0)
-!    src=0
-!    plaq(1,:,:)=pairs(1,1)   !so far always on the same atom
-!    do i=1,N_base-1
-!        do j=i+1,N_base
-!            vec1=pairs(3:5,pair(1,i))
-!            vec2=pairs(3:5,pair(1,j))
-!            i_plaq=i_plaq+1
-!            plaq(2:4,1,i_plaq)=src
-!            plaq(2:4,2,i_plaq)=src+vec1
-!            plaq(2:4,3,i_plaq)=src+vec1+vec2
-!            plaq(2:4,4,i_plaq)=src+vec2
-!
-!            i_plaq=i_plaq+1
-!            vec1=pairs(3:5,pair(2,i))
-!            vec2=pairs(3:5,pair(1,j))
-!            plaq(2:4,1,i_plaq)=src
-!            plaq(2:4,2,i_plaq)=src+vec1
-!            plaq(2:4,3,i_plaq)=src+vec1+vec2
-!            plaq(2:4,4,i_plaq)=src+vec2
-!
-!            vec1=pairs(3:5,pair(1,i))
-!            vec2=pairs(3:5,pair(2,j))
-!            i_plaq=i_plaq+1
-!            plaq(2:4,1,i_plaq)=src
-!            plaq(2:4,2,i_plaq)=src+vec1
-!            plaq(2:4,3,i_plaq)=src+vec1+vec2
-!            plaq(2:4,4,i_plaq)=src+vec2
-!
-!            i_plaq=i_plaq+1
-!            vec1=pairs(3:5,pair(2,i))
-!            vec2=pairs(3:5,pair(2,j))
-!            plaq(2:4,1,i_plaq)=src
-!            plaq(2:4,2,i_plaq)=src+vec1
-!            plaq(2:4,3,i_plaq)=src+vec1+vec2
-!            plaq(2:4,4,i_plaq)=src+vec2
-!        enddo
-!    enddo
-!end subroutine
-
-
 end module

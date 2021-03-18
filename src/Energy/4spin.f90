@@ -54,7 +54,7 @@ subroutine read_sp4_input(io_param,fname,io)
 end subroutine
 
 subroutine get_4spin(Ham,io,lat)
-    !get anisotropy in t_H Hamiltonian format
+    !get 4-spin interaction in t_H Hamiltonian format
     use m_H_public, only: t_H, get_Htype
     use m_mode_public
     use m_setup_4spin 
@@ -65,17 +65,32 @@ subroutine get_4spin(Ham,io,lat)
     type(lattice),intent(in)    :: lat
 
     type(pair_dat_t),allocatable    :: pair_dat(:)
-    !local 
-    class(t_H),allocatable    :: Ham_tmp    !temporary Hamiltonian type used to add up Ham
 
-    integer     ::  N4spin, i_4spin
 
-    integer     :: i,ii,j
+    integer         ::  N4spin, i_4spin
+    integer         :: i
+    integer         :: N_con    !number of different connections per unit-cell combined in modes
+    integer         :: Nplaq_base, iplaq_base
+
+    !infomation for about 4-spin
+    integer,allocatable     :: con_unfold(:,:)     !all sites of the base-points of the connections
+    integer,allocatable     :: N_entry(:)          !number of unfolded plaques per base-plaque
+    integer,allocatable     :: connect_neigh(:,:)  !index of neighbor step
+
+    !variables to construct Hamiltonian
+    integer                 :: dim_mode(2)
+    integer                 :: neigh(6) !local neighbor indices
+    real(8)                 :: K
+    integer,allocatable     :: connect(:,:)
+    class(t_H),allocatable  :: Ham_tmp    !temporary Hamiltonian type used to add up Ham
+    real(8)                 :: val_tmp(9)
+    integer                 :: ind_tmp(2,9)
+        !helper to get all neighbor indices of the (xx,yx,zx,yx,yy,yz,zx,zy,zz)-combinations
+    integer,parameter   :: ii_jj_comb(2,9)=reshape([1,1, 2,1, 3,1,  1,2, 2,2, 3,2,  1,3, 2,3, 3,3],[2,9])
 
     !parameter to construct the modes
-    integer         :: i_con, N_con !number of different connections per unit-cell combined in modes
-    type(coo_mat)   :: mat(2)       !mode construction matrices of left/right side of Hamiltonian ( first left, reused for right)
-    integer         :: dim_mat(2),nnz
+    type(coo_mat)       :: mat(2)       !mode construction matrices of left/right side of Hamiltonian ( first left, reused for right)
+    integer             :: dim_mat(2),nnz
     integer,allocatable :: row(:,:),col(:,:)
     real(8),allocatable :: val(:,:)
     integer             :: bnd(2)
@@ -83,27 +98,7 @@ subroutine get_4spin(Ham,io,lat)
     integer,allocatable :: at_mag(:)
     integer,allocatable :: pos_offset(:,:)
 
-    integer,allocatable   :: con_unfold(:,:)     !all sites of the base-points of the connections
-    integer,allocatable   :: N_entry(:)            !number of unfolded plaques per base-plaque
-    integer,allocatable   :: connect_neigh(:,:)   !index of neighbor step
 
-    integer             :: Nplaq_base, iplaq_base
-    integer             :: ind
-    integer             :: dim_mode(2)
-
-    integer             :: neigh(6) !local neighbor indices
-
-    real(8),allocatable :: Htmp(:,:)
-    real(8)             :: K
-
-    integer,allocatable :: connect(:,:)
-
-    !local Hamiltonian in coo format
-    real(8)             :: val_tmp(9)
-    integer             :: ind_tmp(2,9)
-    integer             :: i1,i2
-
-    integer             :: ii_jj_comb(2,9)  !helper to get all neighbor indices of the (xx,yx,zx,yx,yy,yz,zx,zy,zz)-combinations
 
 
     if(io%is_set)then
@@ -112,13 +107,9 @@ subroutine get_4spin(Ham,io,lat)
         Call get_pair_dat(lat,io%at_type,[1,2],pair_dat)    !get all pairs of same atom type for nearest and next-nearest neighbor
         N_con=sum(pair_dat%Npair)
         dim_mode=[3*N_con,3*N_con]
-        allocate(Htmp(3*N_con,3*N_con)) !local Hamiltonian modified for each shell/neighbor
-        ii_jj_comb(1,:)=[(mod(i-1,3)+1,i=1,9)]
-        ii_jj_comb(2,:)=[((i-1)/3+1,i=1,9)]
-
         do i_4spin=1,N4spin
             K=io%val(i_4spin)
-            Call get_new(lat,pair_dat(i_4spin),con_unfold,N_entry,connect_neigh)
+            Call get_4spin_dat(lat,pair_dat(i_4spin),con_unfold,N_entry,connect_neigh)
             connect_neigh=connect_neigh+sum(pair_dat(:i_4spin-1)%Npair) !adjust to mode considering other 4-spin interactions
             Nplaq_base=size(N_entry)
             do iplaq_base=1,Nplaq_base
@@ -128,7 +119,7 @@ subroutine get_4spin(Ham,io,lat)
                 neigh=(connect_neigh(:,iplaq_base)-1)*3 !+1->x +2->y +3->z
                  !12 34 connection
                  connect(:,:)=con_unfold(1:2,bnd(1):bnd(2))
-                 val_tmp=K
+                 val_tmp=-K
                  ind_tmp=spread(neigh(1:2),2,9)+ii_jj_comb
                  Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,2,dim_mode_in=dim_mode)   !not sure about 2
                  Call Ham%add(Ham_tmp)
@@ -136,7 +127,7 @@ subroutine get_4spin(Ham,io,lat)
  
                  !14 23 connection
                  connect(:,:)=con_unfold(3:4,bnd(1):bnd(2))
-                 val_tmp=K
+                 val_tmp=-K
                  ind_tmp=spread(neigh(3:4),2,9)+ii_jj_comb
                  Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,2,dim_mode_in=dim_mode)   !not sure about 2
                  Call Ham%add(Ham_tmp)
@@ -144,7 +135,7 @@ subroutine get_4spin(Ham,io,lat)
 
                  !13 24 connection
                  connect(:,:)=con_unfold(5:6,bnd(1):bnd(2))
-                 val_tmp=-K
+                 val_tmp=K
                  ind_tmp=spread(neigh(5:6),2,9)+ii_jj_comb
                  Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,2,dim_mode_in=dim_mode)   !not sure about 2
                  Call Ham%add(Ham_tmp)
@@ -162,7 +153,6 @@ subroutine get_4spin(Ham,io,lat)
             pairs(:,bnd(1):bnd(2))=pair_dat(i_4spin)%pairs
             pairs(1,bnd(1):bnd(2))=pair_dat(i_4spin)%ind_mag(pairs(1,bnd(1):bnd(2)))
             pairs(2,bnd(1):bnd(2))=pair_dat(i_4spin)%ind_mag(pairs(2,bnd(1):bnd(2)))
-!            write(*,'(5I5)') pairs(:,bnd(1):bnd(2))
         enddo
         !set sizes, allocate coo-matrix variables, and set trivial values
         dim_mat=[3*N_con*lat%Ncell,lat%M%dim_mode*lat%Ncell]
@@ -174,20 +164,10 @@ subroutine get_4spin(Ham,io,lat)
         allocate(at_mag(N_con),source=0)
         allocate(pos_offset(3,N_con),source=0)
 
-        !term at the origin site
-        !do i_con=1,N_con
-        !    bnd=[1+(i_con-1)*3*lat%Ncell,i_con*3*lat%Ncell]
-        !    Call set_const_mode_pair(lat%Ncell,lat,pairs(1,i_con),[0,0,0],col(bnd(1):bnd(2),1))
-        !enddo
         at_mag=pairs(1,:)
         pos_offset=spread([0,0,0],2,N_con)
         Call set_mode_pair(lat%Ncell,N_con,lat,at_mag,pos_offset,col(:,1))
 
-        !term at the neighboring site
-        !do i_con=1,N_con
-        !    bnd=[1+(i_con-1)*3*lat%Ncell,i_con*3*lat%Ncell]
-        !    Call set_const_mode_pair(lat%Ncell,lat,pairs(2,i_con),pairs(3:5,i_con),col(bnd(1):bnd(2),2))
-        !enddo
         at_mag=pairs(2,:)
         pos_offset=pairs(3:5,:)
         Call set_mode_pair(lat%Ncell,N_con,lat,at_mag,pos_offset,col(:,2))
@@ -221,8 +201,7 @@ subroutine set_mode_pair(Ncell,Ncon,lat,at_mag,pos_offset,col)
     integer     :: ind3_unfold(3,Ncon,Ncell)
     integer     :: ind1_unfold(Ncon,Ncell)
     integer     :: dim_lat(3)
-    integer     :: i1,i2,i3, ind3(3),ii,i
-    integer     :: mult(3)
+    integer     :: i1,i2,i3, ind3(3),ii
 
     integer     :: dim_lat_spread(3,Ncell)
 
@@ -257,55 +236,4 @@ subroutine set_mode_pair(Ncell,Ncon,lat,at_mag,pos_offset,col)
         enddo
     enddo
 end subroutine
-
-
-!subroutine set_const_mode_pair(N,lat,at_mag,pos_offset,col)
-!    !sets the column indices for a mode array by unfolding the supercell of the atom with the at_mag magnetic index
-!    !and assuming an position offset of pos_offset
-!    integer,intent(in)              :: N    !number of entries to be filled
-!    type(lattice),intent(in)        :: lat
-!    integer,intent(in)              :: at_mag
-!    integer,intent(in)              :: pos_offset(3)
-!    integer,intent(out)             :: col(3*N)
-!
-!    integer     :: ind3_unfold(3,N)
-!    integer     :: dim_lat(3)
-!    integer     :: i1,i2,i3, ind3(3),ii,i
-!    integer     :: mult(3)
-!
-!    integer     :: ind1_unfold(N)
-!    integer     :: dim_lat_spread(3,N)
-!
-!    dim_lat=lat%dim_lat
-!    dim_lat_spread=spread(dim_lat,2,N)
-!
-!    ii=0    !unfold full lattice
-!    do i3=1,dim_lat(3)
-!        ind3(3)=i3+pos_offset(3)
-!        do i2=1,dim_lat(2)
-!            ind3(2)=i2+pos_offset(2)
-!            do i1=1,dim_lat(1)
-!                ind3(1)=i1+pos_offset(1)
-!                ii=ii+1
-!                ind3_unfold(:,ii)=ind3
-!            enddo
-!        enddo
-!    enddo
-!!    ind3_unfold=ind3_unfold+spread(pos_offset,2,N)
-!
-!    !fold back to unit_cell
-!    Call lat%fold_3_arr(N,ind3_unfold)
-!
-!    Call lat%index_3_1_arr(N,ind3_unfold,ind1_unfold)     !get 1d lattice sites
-!    ind1_unfold=(ind1_unfold-1)*lat%nmag+at_mag           !get 1d magnetic atom entry
-!
-!    !set mx,my,mz components
-!    do i=1,N
-!        col(i*3-2)=ind1_unfold(i)*3-2
-!        col(i*3-1)=ind1_unfold(i)*3-1
-!        col(i*3  )=ind1_unfold(i)*3  
-!    enddo
-!end subroutine
-
-
 end module 
