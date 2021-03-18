@@ -76,6 +76,9 @@ contains
     procedure :: index_m_1 
     procedure :: index_4_1 
     procedure :: index_1_3 
+    procedure :: index_3_1_arr
+    procedure :: index_4_1_arr 
+    procedure :: fold_3_arr ! fold index 3 back to supercell
     !misc
     procedure :: used_order => lattice_used_order
     procedure :: get_order_dim 
@@ -310,6 +313,21 @@ subroutine lattice_used_order(this,used)
     used=this%order_set
 end subroutine
 
+subroutine index_3_1_arr(this,N,ind3,ind1)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: N
+    integer,intent(inout)       :: ind3(3,N) !doesn't actually change, but gets used in between
+    integer,intent(inout)       :: ind1(N)
+    integer     :: i
+    integer     :: mat(3)
+
+    ind3=ind3-1
+    mat=[1,this%dim_lat(1),this%dim_lat(1)*this%dim_lat(2)]
+    ind1=matmul(mat,ind3)+1
+    ind3=ind3+1
+end subroutine 
+
+
 function index_m_1(this,indm)result(ind1)
     class(lattice),intent(in)   :: this
     integer,intent(in)          :: indm(:) 
@@ -335,6 +353,39 @@ function index_1_3(this,ind1)result(indm)
     indm(2)=(tmp-1)/prod+1
     indm(1)=(tmp-1)-prod*(indm(2)-1)+1
 end function
+
+subroutine index_4_1_arr(this,N,ind4,ind1)
+    !get the correct in index from an (im,ix,iy,iz) array to the (3,Nmag*prod(Nlat)) magnetic array
+    !order
+    !MAKE SURE THAT THE 4-index array is in the correct order
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: N
+    integer,intent(in)          :: ind4(4,N) !(im,ix,iy,iz) 
+    integer,intent(out)         :: ind1(N)
+    integer     :: i
+    integer     :: dim_full(4)
+
+    dim_full(2:4)=this%dim_lat
+    dim_full(1)=this%nmag
+    ind1=ind4(1,:)
+    do i=2,4
+        ind1=ind1+(ind4(i,:)-1)*product(dim_full(1:i-1))
+    enddo
+end subroutine 
+
+subroutine fold_3_arr(this,N,ind_arr)
+    !fold the lattice indices back, assuming the periodicity exists...
+    class(lattice),intent(in)   ::  this
+    integer,intent(in)          ::  N
+    integer,intent(inout)       ::  ind_arr(3,N)
+    integer                     ::  dim_lat_spread(3,N)
+
+    dim_lat_spread=spread(this%dim_lat,2,N)
+
+    ind_arr=ind_arr-((ind_arr-dim_lat_spread)/dim_lat_spread)*dim_lat_spread   !return periodically to positive entries
+    ind_arr=ind_arr-((ind_arr-1)/dim_lat_spread)*dim_lat_spread                !return periodically to (1:dim_lat)
+end subroutine
+
 
 function index_4_1(this,ind4)result(ind1)
     !get the correct in index from an (im,ix,iy,iz) array to the (3,Nmag*prod(Nlat)) magnetic array
@@ -452,7 +503,7 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
     dim_mode_keep=dim_modes(ind_keep)
     ind_div=product(dim_modes(:ind_keep-1))
 
-    if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"
+!    if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"   !will only consider first entry, which is expected behavior
     if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
     if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
 

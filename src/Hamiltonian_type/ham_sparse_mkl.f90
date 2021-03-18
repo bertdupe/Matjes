@@ -53,8 +53,7 @@ subroutine mult_r(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
 
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
-
+    Call this%mode_r%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     res=0.0d0
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
@@ -73,8 +72,7 @@ subroutine mult_l(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
-
+    Call this%mode_l%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
     res=0.0d0
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
@@ -225,6 +223,7 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     type(SPARSE_MATRIX_T) :: vec
     real(8),external      :: ddot !blas routine
 
+    ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 

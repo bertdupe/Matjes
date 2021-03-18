@@ -151,7 +151,7 @@ subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
     Call check_H(this)
 end subroutine 
 
-subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
+subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
     !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
     !(example: ME-coupling M_i*E_i*M_j
     use m_derived_types, only: lattice,op_abbrev_to_int
@@ -165,6 +165,7 @@ subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_s
     character(len=*),intent(in)     :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
     integer,intent(in)              :: connect(:,:) !lattice sites to be connected (2,Nconnections)
     integer,intent(in)              :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
+    integer,intent(in),optional     :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
 
     integer,allocatable :: order_l(:),order_r(:)
     integer             :: dim_mode(2)
@@ -185,13 +186,17 @@ subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_s
     this%mult_M_single=mult_M_single
 
     !fill temporary coordinate format spare matrix
-    dim_mode=1
-    do i=1,size(order_l)
-        dim_mode(1)=dim_mode(1)*lat%get_order_dim(order_l(i))
-    enddo
-    do i=1,size(order_r)
-        dim_mode(2)=dim_mode(2)*lat%get_order_dim(order_r(i))
-    enddo
+    if(present(dim_mode_in))then
+        dim_mode=dim_mode_in
+    else
+        dim_mode=1
+        do i=1,size(order_l)
+            dim_mode(1)=dim_mode(1)*lat%get_order_dim(order_l(i))
+        enddo
+        do i=1,size(order_r)
+            dim_mode(2)=dim_mode(2)*lat%get_order_dim(order_r(i))
+        enddo
+    endif
 
     !set local H
     allocate(this%val(nnz),source=0.0d0)

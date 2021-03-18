@@ -103,7 +103,7 @@ abstract interface
         real(8),intent(out)         ::  E       !energy caused by considered site
     end subroutine
 
-    subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
+    subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
         import t_h,lattice
         class(t_H),intent(inout)    :: this
         type(lattice),intent(in)    :: lat
@@ -113,6 +113,7 @@ abstract interface
         integer,intent(in)          :: Hval_ind(:,:)
         integer,intent(in)          :: connect(:,:)
         integer,intent(in)          :: mult_M_single
+        integer,intent(in),optional :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
     end subroutine
 
     subroutine int_init_H_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
@@ -155,6 +156,7 @@ contains
 
     subroutine eval_all(this,E,lat)
         USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE
+        use, intrinsic :: iso_fortran_env, only : error_unit
         !evaluates the energie summed for all sites
         class(t_H),intent(in)       :: this
         type(lattice), intent(in)   :: lat
@@ -167,7 +169,12 @@ contains
         real(8),external            :: ddot !blas routine
 #endif
     
-        Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
+        if(.not.allocated(this%mode_l).or..not.allocated(this%mode_r))then
+            write(error_unit,'(2/2A)') "Failed to evaluate Hamiltonian: ", this%desc
+            ERROR STOP "IMPLEMENT mode_l/mode_r for all Hamiltonians"
+        endif
+
+        Call this%mode_l%get_mode(lat,modes_l,vec_l)
     
         Call this%mult_r(lat,tmp)
 #ifdef CPP_BLAS
@@ -175,7 +182,6 @@ contains
 #else
         E=dot_product(modes_l,tmp)
 #endif
-    
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 
@@ -190,6 +196,7 @@ contains
         real(8),allocatable,target  :: vec_l(:)
         real(8)                     :: tmp(this%dimH(1))
 
+        ERROR STOP "THIS HAS TO BE UPDATED TO NEW MODES"
         Call this%mult_r(lat,tmp)
         Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
         tmp=modes_l*tmp
@@ -212,10 +219,20 @@ contains
         allocate(tmp(this%dimH(1)))
         Call this%mult_r(lat,tmp)
         allocate(vec(this%dimH(1)),source=0.0d0)
-        Call lat%set_order_comb_exc(this%op_l,vec,this%op_l==op_keep)
+        Call this%mode_l%get_mode_exc(lat,op_keep,vec)
         tmp=tmp*vec
-        Call lat%reduce(tmp,this%op_l,op_keep,res)
+        Call this%mode_l%mode_reduce(lat,tmp,op_keep,res)
         deallocate(tmp,vec)
+
+        !OLD IMPLEMENTATION
+        !allocate(tmp(this%dimH(1)))
+        !Call this%mult_r(lat,tmp)
+        !allocate(vec(this%dimH(1)),source=0.0d0)
+        !Call lat%set_order_comb_exc(this%op_l,vec,this%op_l==op_keep)
+        !tmp=tmp*vec
+        !Call lat%reduce(tmp,this%op_l,op_keep,res)
+        !deallocate(tmp,vec)
+
     end subroutine 
     
     subroutine mult_l_red(this,lat,res,op_keep)
@@ -232,9 +249,9 @@ contains
         allocate(tmp(this%dimH(2)))
         Call this%mult_l(lat,tmp)
         allocate(vec(this%dimH(2)),source=0.0d0)
-        Call lat%set_order_comb_exc(this%op_r,vec,this%op_r==op_keep)
+        Call this%mode_r%get_mode_exc(lat,op_keep,vec)
         tmp=tmp*vec
-        Call lat%reduce(tmp,this%op_r,op_keep,res)
+        Call this%mode_r%mode_reduce(lat,tmp,op_keep,res)
         deallocate(tmp,vec)
     end subroutine 
 
@@ -250,6 +267,8 @@ contains
         real(8),allocatable             :: tmp(:)   !multipied, but not reduced
         real(8),pointer                 :: modes(:)
         real(8),allocatable,target      :: vec(:)
+
+        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
     
         allocate(tmp(this%dim_mode(1)))
         Call this%mult_r_single(i_site,lat,tmp)
@@ -272,6 +291,8 @@ contains
         real(8),allocatable             :: tmp(:)   !multipied, but not reduced
         real(8),allocatable,target      :: vec(:)
     
+        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
+
         allocate(tmp(this%dim_mode(2)))
         Call this%mult_l_single(i_site,lat,tmp)
         allocate(vec(this%dim_mode(2)),source=0.0d0)

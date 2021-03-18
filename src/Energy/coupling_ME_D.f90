@@ -22,6 +22,7 @@ subroutine get_coupling_ME_D(Ham,io,lat)
     use m_derived_types
     use m_setH_util,only: get_coo,ind
     use m_neighbor_type, only: neighbors
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_ME_D),intent(in)  :: io
@@ -114,6 +115,8 @@ subroutine get_coupling_ME_D(Ham,io,lat)
             enddo
         enddo
         Ham%desc="antisymmetric magnetoelectric coupling"
+        Call mode_set_rank1(Ham%mode_l,"M")
+        Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
     endif
 end subroutine 
 end module 

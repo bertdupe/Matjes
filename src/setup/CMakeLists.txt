@@ -7,6 +7,8 @@ src/setup/order_lattice.f90
 #src/setup/setup_dipole.f90  #requires fftw and is not used?
 src/setup/setup_DM.f90
 src/setup/setup-simu.f90
+src/setup/setup_4spin.f90
+src/setup/setup_neighbor_pair.f90
 src/setup/set_table_NN.f90
 src/setup/sym_utils.f90
 src/setup/neighbor_type.f90

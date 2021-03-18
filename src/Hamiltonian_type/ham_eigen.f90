@@ -48,7 +48,7 @@ subroutine mult_r(this,lat,res)
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
 
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
+    Call this%mode_r%get_mode(lat,modes,vec)
     Call eigen_H_mult_mat_vec(this%H,modes,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
@@ -66,7 +66,7 @@ subroutine mult_r_single(this,i_site,lat,res)
     real(8),allocatable,target :: vec(:)
     integer                    :: bnd(2)
 
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
+    Call this%mode_r%get_mode(lat,modes,vec)
     bnd(1)=this%dim_mode(1)*(i_site-1)
     bnd(2)=this%dim_mode(1)*(i_site)-1
     Call eigen_H_mult_mat_vec_single(this%H,bnd(1),bnd(2),modes,res)
@@ -86,7 +86,7 @@ subroutine mult_l_single(this,i_site,lat,res)
     real(8),allocatable,target :: vec(:)
     integer                    :: bnd(2)
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
+    Call this%mode_l%get_mode(lat,modes,vec)
     bnd(1)=this%dim_mode(2)*(i_site-1)
     bnd(2)=this%dim_mode(2)*(i_site)-1
     Call eigen_H_mult_vec_mat_single(this%H,bnd(1),bnd(2),modes,res)
@@ -103,7 +103,7 @@ subroutine mult_l(this,lat,res)
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
+    Call this%mode_l%get_mode(lat,modes,vec)
     Call eigen_H_mult_vec_mat(this%H,modes,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
@@ -187,6 +187,7 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     integer                         :: bnd(2)
     integer                         :: size_vec_r
 
+    ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
 

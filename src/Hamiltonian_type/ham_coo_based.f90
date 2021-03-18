@@ -40,7 +40,7 @@ subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
     Call this%set_from_Hcoo(H_coo,lat)
 end subroutine 
 
-subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
+subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
     !Constructs a Hamiltonian that depends on more than 2 order parameters but only at 2 sites (i.e. some terms are onsite)
     !(example: ME-coupling M_i*E_i*M_j
     use m_derived_types, only: lattice,op_abbrev_to_int
@@ -53,10 +53,11 @@ subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_s
     character(len=*),intent(in)         :: op_r             !which order parameters are used at right side of local Hamiltonian-matrix
     integer,intent(in)                  :: connect(:,:)     !lattice sites to be connected (2,Nconnections)
     integer,intent(in)                  :: mult_M_single
+    integer,intent(in),optional         :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
     !local
     type(t_H_coo)           :: H_coo
 
-    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single)
+    Call H_coo%init_mult_connect_2(connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
     Call this%init_otherH(H_coo)
     Call this%set_from_Hcoo(H_coo,lat)
 end subroutine

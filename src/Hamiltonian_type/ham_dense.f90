@@ -35,10 +35,9 @@ subroutine mult_r(this,lat,res)
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
 
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
+    Call this%mode_r%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     res=matmul(this%H,modes)
-
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
@@ -52,12 +51,10 @@ subroutine mult_l(this,lat,res)
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
-
+    Call this%mode_l%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
     res=matmul(modes,this%H)
     if(allocated(vec)) deallocate(vec)
-    
 end subroutine 
 
 
@@ -73,7 +70,7 @@ subroutine mult_r_single(this,i_site,lat,res)
     real(8),pointer             :: modes(:)
     real(8),allocatable,target  :: vec(:)
 
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
+    Call this%mode_r%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     bnd(1)=this%dim_mode(1)*(i_site-1)+1
     bnd(2)=this%dim_mode(1)*(i_site)
@@ -95,17 +92,14 @@ subroutine mult_l_single(this,i_site,lat,res)
     real(8),pointer             :: modes(:)
     real(8),allocatable,target  :: vec(:)
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
+    Call this%mode_l%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     bnd(1)=this%dim_mode(2)*(i_site-1)+1
     bnd(2)=this%dim_mode(2)*(i_site)
-    !terrible implementation striding-wise
     res=matmul(modes,this%H(:,bnd(1):bnd(2)))
 
     if(allocated(vec)) deallocate(vec)
 end subroutine 
-
-
 
 subroutine optimize(this)
     class(t_h_dense),intent(inout)   :: this
@@ -201,6 +195,7 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     real(8)                         :: tmp(this%dimH(2))
     integer                         :: bnd(2)
 
+    ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
 

@@ -87,7 +87,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     ! prepare the matrices for integration
     
     call rw_dyna(timestep_int,damping,Efreq,duration)
-    N_cell=product(mag_lattice%dim_lat)
+    N_cell=mag_lattice%Ncell
     Call mag_lattice%used_order(used)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! Select the propagators and the integrators
@@ -149,7 +149,6 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     Call mag_lattice%copy_val_to(lat_1)
     
     Edy=energy_all(Hams,mag_lattice)
-    
     write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell,8)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -177,7 +176,6 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     do j=1,duration
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
        !   call init_temp_measure(check,check1,check2,check3)
-        
         call truncate(lat_1,used)
         Edy=0.0d0
         ave_torque=0.0d0
@@ -306,7 +304,8 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     close(7)
     close(8)
     if(io_simu%io_energy_cont) close(io_Eout_contrib)
-    
+
+    write(6,'(a,2x,E20.12E3)') 'Final Total Energy (eV)',Edy
     if ((dabs(check(2)).gt.1.0d-8).and.(kt/k_B.gt.1.0d-5)) then
         write(6,'(a,2x,f16.6)') 'Final Temp (K)', check(1)/check(2)/2.0d0/k_B
         write(6,'(a,2x,f14.7)') 'Kinetic energy (meV)', (check(1)/check(2)/2.0d0-kT)/k_B*1000.0d0
