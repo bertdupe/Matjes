@@ -40,11 +40,9 @@ subroutine get_mode_exc(this,lat,op_exc,vec)
     endif
     exclude(i)=.true.
 
-    tmp_internal=0.d0
+    tmp_internal=1.d0
     do i=1,size(this%mat)
-        if(exclude(i))then
-            tmp_internal(:,i)=1.0d0
-        else
+        if(.not.exclude(i))then
             Call lat%set_order_point(this%order(i),mode_base)
             tmp_internal(:,i)=mode_base(this%mat(i)%col)
         endif
@@ -72,7 +70,6 @@ end subroutine
 
 
 subroutine get_mode(this,lat,mode,tmp)
-    !bad implementation not intended for production
     class(F_mode_rankN_sparse_coo_red),intent(in)   :: this
     type(lattice),intent(in)                        :: lat       !lattice type which knows about all states
     real(8),intent(out),pointer                     :: mode(:)   !pointer to required mode

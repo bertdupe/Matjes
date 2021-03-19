@@ -3,6 +3,7 @@ use m_derived_types,only: lattice
 use m_mode_construction, only: F_mode
 use m_mode_construction_rank1_point, only: F_mode_rank1_point
 use m_mode_construction_rankN_full_manual, only: F_mode_rankN_full_manual
+use m_mode_construction_rankN_sparse_col, only: F_mode_rankN_sparse_col
 use m_mode_construction_rankN_sparse_coo, only: F_mode_rankN_sparse_coo
 use m_mode_construction_rankN_sparse_coo_red, only: F_mode_rankN_sparse_coo_red
 public
@@ -69,12 +70,18 @@ subroutine mode_set_rankN_sparse(mode,abbrev_in,lat,mat,implementation)
         ERROR STOP
     endif
     if(implementation==1)then
+        allocate(F_mode_rankN_sparse_col::mode)
+        select type(mode)
+        type is(F_mode_rankN_sparse_col)
+            Call mode%init_order(lat,abbrev_in,mat)
+        end select
+    elseif(implementation==2)then
         allocate(F_mode_rankN_sparse_coo_red::mode)
         select type(mode)
         type is(F_mode_rankN_sparse_coo_red)
             Call mode%init_order(lat,abbrev_in,mat)
         end select
-    elseif(implementation==2)then
+    elseif(implementation==3)then
         allocate(F_mode_rankN_sparse_coo::mode)
         select type(mode)
         type is(F_mode_rankN_sparse_coo)
