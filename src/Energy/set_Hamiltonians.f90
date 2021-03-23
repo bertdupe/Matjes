@@ -24,6 +24,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_ASR_phonon, only: get_ASR_Ph
     use m_Mag_Biq, only: get_Mag_Biq
     use m_4spin, only: get_4spin
+    use m_deriv_set, only: set_deriv
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -114,6 +115,8 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     do i_H=1,size(Ham_comb)
         Call Ham_comb(i_h)%optimize()
     enddo
+    Call set_deriv(Ham_comb)
+    if(keep_res) Call set_deriv(Ham_res)
 end subroutine
 
 subroutine combine_Hamiltonians(keep_in,H_in,H_comb)

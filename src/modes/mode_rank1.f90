@@ -13,15 +13,35 @@ type, extends(F_mode) :: F_mode_rank1_point
     procedure   :: get_mode_exc
     procedure   :: mode_reduce
 
+    procedure   :: get_mode_single_cont
+
     procedure   :: copy
     procedure   :: bcast
     procedure   :: destroy
     procedure   :: is_same
+
     !local construction routine
     procedure   :: init_order
 end type
 
 contains
+
+subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
+    class(F_mode_rank1_point),intent(in)        :: this
+    type(lattice),intent(in)                    :: lat
+    integer,intent(in)                          :: order
+    integer,intent(in)                          :: i
+    real(8),pointer,intent(out)                 :: modes(:)
+    integer,intent(out)                         :: bnd(2)
+    real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
+
+#ifdef CPP_DEBUG
+    if(order/=this%order)then
+        ERROR STOP "trying to get single mode of order which is not the order of the F_mode"
+    endif
+#endif
+    Call lat%set_order_point_single_inner(order,i,modes,bnd)
+end subroutine
 
 subroutine get_mode(this,lat,mode,tmp)
     class(F_mode_rank1_point),intent(in)       :: this

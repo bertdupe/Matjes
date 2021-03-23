@@ -4,7 +4,30 @@ use m_derived_types, only : lattice,number_different_order_parameters
 use m_mode_construction, only: F_mode
 implicit none
 
+private
+public t_H
+public t_deriv_base, t_deriv_l, t_deriv_r
+
+type,abstract    ::  t_deriv_l
+contains
+    procedure(int_deriv_l_get),deferred :: get
+end type
+
+type,abstract    ::  t_deriv_r
+contains
+    procedure(int_deriv_r_get),deferred :: get
+end type
+
+
+type    :: t_deriv_base
+    class(t_deriv_l),allocatable  :: l
+    class(t_deriv_r),allocatable  :: r
+contains
+    procedure :: get => get_deriv
+end type
+
 type,abstract :: t_H
+    !abstrace base class for the Hamiltonian 
     integer                     :: dimH(2)=0        !dimension of Hamiltonian
     integer,allocatable         :: op_l(:),op_r(:)  !operator indices which have to be combined to get the space of the left/right side of the Hamiltonian
     integer                     :: dim_mode(2)=0    !size of left/right mode after multiplying out order parameters (size per lattice point)
@@ -12,6 +35,8 @@ type,abstract :: t_H
     logical,private             :: set=.false.      !has this object been set?
     character(len=100)          :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
     integer                     :: mult_M_single=0  !factor necessary to calculate energy change correctly when only evaluating single sites
+
+    type(t_deriv_base)          :: deriv(number_different_order_parameters)
 
 contains
 
@@ -55,8 +80,25 @@ contains
 
     !finalize routine? (might be risky with Hamiltonian references that have been passed around)
 end type
-private
-public t_H
+
+
+abstract interface
+    subroutine int_deriv_l_get(this,H,lat,vec)
+        import t_deriv_l, t_H, lattice
+        class(t_deriv_l),intent(in) :: this
+        class(t_H),intent(in)       :: H
+        type(lattice),intent(in)    :: lat
+        real(8),intent(inout)       :: vec(:)
+    end subroutine
+    subroutine int_deriv_r_get(this,H,lat,vec)
+        import t_deriv_r, t_H, lattice
+        class(t_deriv_r),intent(in) :: this
+        class(t_H),intent(in)       :: H
+        type(lattice),intent(in)    :: lat
+        real(8),intent(inout)       :: vec(:)
+    end subroutine
+end interface
+
 
 abstract interface
     subroutine int_mult(this,lat,res)
@@ -502,6 +544,25 @@ end subroutine
                 endif
             endif
     end subroutine
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!          DERIV ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine get_deriv(this,H,lat,vec,tmp)
+        class(t_deriv_base),intent(in)  :: this
+        class(t_H),intent(in)           :: H
+        type(lattice),intent(in)        :: lat
+        real(8),intent(inout)           :: vec(:)
+        real(8),intent(inout)           :: tmp(size(vec))
+
+        Call this%l%get(H,lat,tmp)
+        vec=vec+tmp
+        Call this%r%get(H,lat,tmp)
+        vec=vec+tmp
+    end subroutine
+
+
 
 
 end module

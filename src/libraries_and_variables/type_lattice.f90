@@ -12,6 +12,7 @@ character(len=*),parameter :: order_parameter_name(number_different_order_parame
                                 &   'Bfield     ',&
                                 &   'temperature',&
                                 &   'phonon     ']
+integer,parameter           :: dim_modes_inner(number_different_order_parameters)=[3,3,3,1,3]   !rank of single mode entry (don't confuse with dim_modes which is super-cell resolved)
 
 ! variable that defines the lattice
 type lattice
@@ -23,6 +24,8 @@ type lattice
      real(8)        :: a_sc(3,3) !real space lattice vectors of supercell
      real(8)        :: a_sc_inv(3,3) !inverse of real space lattice vectors of supercell (can be used to get back into supercell)
      integer        :: dim_modes(number_different_order_parameters)=0 !saves the dimension of the set order_parameters
+
+
      integer        :: n_system !no clue what this does
      integer, allocatable :: world(:)
      logical        :: periodic(3) !lattice periodic in direction
@@ -60,6 +63,7 @@ contains
     procedure :: set_order_comb_exc_single
     procedure :: point_order => point_order_onsite
     procedure :: point_order_single => point_order_onsite_single
+    procedure :: set_order_point_single_inner
     !!reduce that order parameter again
     procedure :: reduce
     procedure :: reduce_single
@@ -205,11 +209,11 @@ subroutine init_order(this,cell,extpar_io)
     this%order_set=this%dim_modes>0
 
     !new orderparameter format
-    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1),3)
-    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2),3)
-    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3),3)
-    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4),1)
-    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5),3)
+    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1),dim_modes_inner(1))
+    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2),dim_modes_inner(2))
+    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3),dim_modes_inner(3))
+    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4),dim_modes_inner(4))
+    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5),dim_modes_inner(5))
 end subroutine
 
 subroutine read_order(this,suffix_in,isinit_opt)
@@ -421,6 +425,32 @@ subroutine set_order_point(this,order,point)
         point=>this%T%all_modes
     case(5)
         point=>this%u%all_modes
+    case default
+        write(*,*) 'order:',order
+        STOP 'failed to associate pointer in set_order_point'
+    end select
+end subroutine
+
+subroutine set_order_point_single_inner(this,order,i_inner,point,bnd)
+    !sets the pointer point to the 
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: order,i_inner
+    real(8),pointer,intent(out) :: point(:)
+    integer,intent(out)         :: bnd(2)
+
+    bnd=[1+(i_inner-1)*dim_modes_inner(order),i_inner*dim_modes_inner(order)]
+
+    select case(order)
+    case(1)
+        point=>this%M%all_modes(bnd(1):bnd(2))
+    case(2)
+        point=>this%E%all_modes(bnd(1):bnd(2))
+    case(3)
+        point=>this%B%all_modes(bnd(1):bnd(2))
+    case(4)
+        point=>this%T%all_modes(bnd(1):bnd(2))
+    case(5)
+        point=>this%u%all_modes(bnd(1):bnd(2))
     case default
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'

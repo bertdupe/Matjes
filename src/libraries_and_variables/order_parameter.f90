@@ -16,6 +16,7 @@ type order_par
     real(8),pointer,contiguous              :: all_modes(:)   => null()
     real(8),pointer,contiguous              :: modes_v(:,:)   => null() !(1:dimmode,:) shape
     real(8),pointer,contiguous              :: modes_3(:,:)   => null() !(1:3,:) shape, only associated if it makes sense (help accessing vector in 3-dimensional space)
+    real(8),pointer,contiguous              :: modes_in(:,:)  => null() !(1:dim_mode_innder,:) inner modes
 
     integer                                 :: dim_mode=0
     integer                                 :: dim_mode_inner=0
@@ -144,6 +145,7 @@ subroutine init_order_par(self,dim_lat,dim_mode,dim_mode_inner,vec_val,val)
     self%all_modes(1:N)=>self%data_real
     self%modes(1:dim_mode,1:dim_lat(1),1:dim_lat(2),1:dim_lat(3))=>self%data_real
     self%modes_v(1:dim_mode,1:Ncell)=>self%data_real
+    self%modes_in(1:dim_mode_inner,1:Ncell*(dim_mode/dim_mode_inner))=>self%data_real
     if(dim_mode_inner==3) self%modes_3(1:3,1:Ncell*(dim_mode/3))=>self%data_real
 
     if(present(vec_val)) self%modes_v=spread(vec_val,2,Ncell)
@@ -159,7 +161,7 @@ end subroutine
 subroutine delete_order_par(self)
     class(order_par),intent(inout) :: self
 
-    nullify(self%all_modes,self%modes,self%modes_v,self%modes_3)
+    nullify(self%all_modes,self%modes,self%modes_v,self%modes_3,self%modes_in)
     if(associated(self%data_real)) deallocate(self%data_real)
 end subroutine
 

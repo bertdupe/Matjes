@@ -14,9 +14,7 @@ type, abstract :: F_mode
     procedure(int_get_mode_exc),deferred    :: get_mode_exc   !subroutine which returns the mode excluding one order parameter 
     procedure(int_mode_reduce),deferred     :: mode_reduce    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
 
-    !procedure(int_get_mode_single),deferred :: get_mode_single       !subroutine which returns the mode 
-    !procedure(int_get_mode_exc),deferred    :: get_mode_exc   !subroutine which returns the mode excluding one order parameter 
-    !procedure(int_mode_reduce),deferred     :: mode_reduce    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
+    procedure(int_get_mode_single_cont),deferred :: get_mode_single_cont       !subroutine which returns the mode 
 
     procedure(int_is_same),deferred         :: is_same
     procedure(int_destroy),deferred         :: destroy
@@ -30,6 +28,17 @@ type, abstract :: F_mode
 end type
 
 abstract interface
+    subroutine int_get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
+        import F_mode,lattice
+        class(F_mode),intent(in)                    :: this
+        type(lattice),intent(in)                    :: lat
+        integer,intent(in)                          :: order
+        integer,intent(in)                          :: i
+        real(8),pointer,intent(out)                 :: modes(:)
+        integer,intent(out)                         :: bnd(2)
+        real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
+    end subroutine
+
     subroutine int_get_mode(this,lat,mode,tmp)
         !subroutine which return a pointer to the mode, either saved in the tmp array or at some other independent array (depending on the implementation)
         import F_mode,lattice

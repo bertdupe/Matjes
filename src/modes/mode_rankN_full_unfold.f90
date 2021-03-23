@@ -14,6 +14,8 @@ type, extends(F_mode) :: F_mode_rankN_full_manual  !contains all entries
     procedure   :: get_mode_exc
     procedure   :: mode_reduce  
 
+    procedure   :: get_mode_single_cont  !
+
     procedure   :: copy
     procedure   :: bcast
     procedure   :: destroy
@@ -23,6 +25,19 @@ type, extends(F_mode) :: F_mode_rankN_full_manual  !contains all entries
 end type
 
 contains
+
+subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
+    class(F_mode_rankN_full_manual),intent(in)  :: this
+    type(lattice),intent(in)                    :: lat
+    integer,intent(in)                          :: order
+    integer,intent(in)                          :: i
+    real(8),pointer,intent(out)                 :: modes(:)
+    integer,intent(out)                         :: bnd(2)
+    real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
+
+    ERROR STOP "IMPLEMENT"
+end subroutine
+
 
 subroutine get_mode_exc(this,lat,op_exc,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
