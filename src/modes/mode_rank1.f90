@@ -6,7 +6,7 @@ private
 public F_mode_rank1_point
 
 type, extends(F_mode) :: F_mode_rank1_point
-    integer,private     ::  order=0
+    integer,private     :: order=0
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
@@ -75,9 +75,9 @@ subroutine copy(this,F_out)
     class(F_mode_rank1_point),intent(in)    :: this
     class(F_mode),allocatable,intent(inout) :: F_out
 
-    if(.not.allocated(F_out)) allocate(F_mode_rank1_point::F_out)
+    Call this%copy_base(F_out)
     select type(F_out)
-    type is(F_mode_rank1_point)
+    class is(F_mode_rank1_point)
         F_out%order=this%order
     class default
         ERROR STOP "FAILED TO COPY F_mode_rank1_pointer mode to F_out"
@@ -105,8 +105,12 @@ subroutine init_order(this,abbrev_in)
     class(F_mode_rank1_point),intent(inout) :: this
     character(len=1), intent(in)            :: abbrev_in
     integer                                 :: order(1)
+    integer                                 :: order_occ(number_different_order_parameters)
 
     order=op_abbrev_to_int(abbrev_in)
     this%order=order(1)
+    order_occ=0
+    order_occ(order)=1
+    Call this%init_base(order_occ)
 end subroutine
 end module

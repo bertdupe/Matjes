@@ -96,48 +96,8 @@ subroutine get_coupling_ME_J(Ham,io,lat)
         Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
 #else
         Call coo_full_unfold(2,lat%Ncell,dim_modes_r,mat)
-        Call mode_set_rankN_sparse(Ham%mode_r,"ME",lat,mat,2)
+        Call mode_set_rankN_sparse(Ham%mode_r,"ME",lat,mat,1)
 #endif
     endif
 end subroutine 
-
-subroutine coo_full_unfold(rank,Ncell,dim_mode,mat)
-    integer,intent(in)              :: rank
-    integer,intent(in)              :: Ncell
-    integer,intent(in)              :: dim_mode(rank)
-    type(coo_mat),intent(out)       :: mat(rank)
-
-    real(8),allocatable     :: val(:)
-    integer,allocatable     :: row(:),col(:)
-    integer     :: div
-    integer     :: Nmode
-    integer     :: dim_mode_full
-
-    integer     :: i_site,i,i_mode,ind_site
-    integer     :: ind,ii
-
-
-    dim_mode_full=product(dim_mode)
-    Nmode=dim_mode_full*Ncell
-
-    allocate(val(Nmode),source=1.0d0)
-    allocate(row(Nmode),col(Nmode))
-    row=[(i,i=1,Nmode)]
-    do i_mode=1,rank
-        ii=0
-        div=product(dim_mode(:i_mode-1))
-        do i_site=1,Ncell
-            ind_site=(i_site-1)*dim_mode(i_mode)
-            do i=1,dim_mode_full
-                ind=(i-1)/div
-                ind=modulo(ind,dim_mode(i_mode))+1+ind_site
-                ii=ii+1
-                col(ii)=ind
-            enddo
-        enddo
-        Call mat(i_mode)%init([Nmode,dim_mode(i_mode)],Nmode,row,col,val)
-    enddo
-    deallocate(val,row,col)
-
-end subroutine
 end module 

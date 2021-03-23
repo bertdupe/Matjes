@@ -205,11 +205,11 @@ subroutine init_order(this,cell,extpar_io)
     this%order_set=this%dim_modes>0
 
     !new orderparameter format
-    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1))
-    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2))
-    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3))
-    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4))
-    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5))
+    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1),3)
+    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2),3)
+    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3),3)
+    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4),1)
+    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5),3)
 end subroutine
 
 subroutine read_order(this,suffix_in,isinit_opt)

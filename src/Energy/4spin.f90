@@ -66,7 +66,6 @@ subroutine get_4spin(Ham,io,lat)
 
     type(pair_dat_t),allocatable    :: pair_dat(:)
 
-
     integer         ::  N4spin, i_4spin
     integer         :: i
     integer         :: N_con    !number of different connections per unit-cell combined in modes
@@ -97,9 +96,6 @@ subroutine get_4spin(Ham,io,lat)
     integer,allocatable :: pairs(:,:)
     integer,allocatable :: at_mag(:)
     integer,allocatable :: pos_offset(:,:)
-
-
-
 
     if(io%is_set)then
         Call get_Htype(Ham_tmp)

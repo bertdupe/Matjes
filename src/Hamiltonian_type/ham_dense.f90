@@ -163,10 +163,9 @@ subroutine destroy_child(this)
     endif
 end subroutine
 
-subroutine set_from_Hcoo(this,H_coo,lat)
+subroutine set_from_Hcoo(this,H_coo)
     class(t_h_dense),intent(inout)  :: this
     type(t_H_coo),intent(inout)     :: H_coo
-    type(lattice),intent(in)        :: lat
 
     !local
     integer                 :: nnz,i

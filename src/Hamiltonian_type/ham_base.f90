@@ -213,27 +213,10 @@ contains
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
         integer,intent(in)              :: op_keep
         ! internal
-        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-        real(8),pointer                 :: modes(:)
-        real(8),allocatable,target      :: vec(:)
+        real(8)                         :: tmp(this%dimH(1))   !multipied, but not reduced
     
-        allocate(tmp(this%dimH(1)))
         Call this%mult_r(lat,tmp)
-        allocate(vec(this%dimH(1)),source=0.0d0)
-        Call this%mode_l%get_mode_exc(lat,op_keep,vec)
-        tmp=tmp*vec
-        Call this%mode_l%mode_reduce(lat,tmp,op_keep,res)
-        deallocate(tmp,vec)
-
-        !OLD IMPLEMENTATION
-        !allocate(tmp(this%dimH(1)))
-        !Call this%mult_r(lat,tmp)
-        !allocate(vec(this%dimH(1)),source=0.0d0)
-        !Call lat%set_order_comb_exc(this%op_l,vec,this%op_l==op_keep)
-        !tmp=tmp*vec
-        !Call lat%reduce(tmp,this%op_l,op_keep,res)
-        !deallocate(tmp,vec)
-
+        Call this%mode_l%reduce_other_exc(lat,op_keep,tmp,res)
     end subroutine 
     
     subroutine mult_l_red(this,lat,res,op_keep)
@@ -244,16 +227,10 @@ contains
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
         integer,intent(in)              :: op_keep
         ! internal
-        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-        real(8),allocatable,target      :: vec(:)
+        real(8)                         :: tmp(this%dimH(2))   !multipied, but not reduced
     
-        allocate(tmp(this%dimH(2)))
         Call this%mult_l(lat,tmp)
-        allocate(vec(this%dimH(2)),source=0.0d0)
-        Call this%mode_r%get_mode_exc(lat,op_keep,vec)
-        tmp=tmp*vec
-        Call this%mode_r%mode_reduce(lat,tmp,op_keep,res)
-        deallocate(tmp,vec)
+        Call this%mode_r%reduce_other_exc(lat,op_keep,tmp,res)
     end subroutine 
 
     subroutine mult_r_red_single(this,i_site,lat,res,op_keep)

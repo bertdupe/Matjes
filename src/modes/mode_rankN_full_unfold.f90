@@ -92,7 +92,7 @@ subroutine copy(this,F_out)
     class(F_mode_rankN_full_manual),intent(in)    :: this
     class(F_mode),allocatable,intent(inout) :: F_out
 
-    if(.not.allocated(F_out)) allocate(F_mode_rankN_full_manual::F_out)
+    Call this%copy_base(F_out) 
     select type(F_out)
     type is(F_mode_rankN_full_manual)
         if(.not.allocated(F_out%order)) allocate(F_out%order(size(this%order)))
@@ -133,10 +133,17 @@ subroutine init_order(this,lat,abbrev_in)
     class(F_mode_rankN_full_manual),intent(inout) :: this
     type(lattice),intent(in)                :: lat       !lattice type which knows about all states
     character(len=*), intent(in)            :: abbrev_in
-    integer                                 :: order(len(abbrev_in))
+    integer     :: order(len(abbrev_in))
+    integer     :: i
+
+    integer     :: order_occ(number_different_order_parameters)
 
     order=op_abbrev_to_int(abbrev_in)
     allocate(this%order,source=order)
+    do i=1,number_different_order_parameters
+        order_occ(i)=count(order==i)
+    enddo
+    Call this%init_base(order_occ)
     this%N_mode=lat%Ncell*product(lat%dim_modes(this%order))
 end subroutine
 end module

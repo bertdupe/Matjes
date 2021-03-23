@@ -4,6 +4,7 @@ module m_H_eigen
 use m_derived_types, only: lattice, number_different_order_parameters
 use m_eigen_H_interface
 use m_H_coo_based
+use m_mode_construction_rankN_sparse_col
 
 type,extends(t_H_coo_based) :: t_H_eigen
     type(C_PTR)     ::  H=c_null_ptr
@@ -158,10 +159,9 @@ subroutine destroy_child(this)
     endif
 end subroutine
 
-subroutine set_from_Hcoo(this,H_coo,lat)
+subroutine set_from_Hcoo(this,H_coo)
     class(t_H_eigen),intent(inout)  :: this
     type(t_H_coo),intent(inout)     :: H_coo
-    type(lattice),intent(in)        :: lat
     !local
     integer                 :: nnz
     real(8),allocatable     :: val(:)
@@ -187,8 +187,9 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     integer                         :: bnd(2)
     integer                         :: size_vec_r
 
+    Call this%mode_l%get_mode(lat,modes_l,vec_l)
     ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
-    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
+!    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
 
     size_vec_r=bnd(2)-bnd(1)+1

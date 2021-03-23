@@ -62,6 +62,38 @@ subroutine get_mode_exc(this,lat,op_exc,vec)
     nullify(mode_base)
 end subroutine
 
+subroutine get_mode_exc_ind(this,lat,ind,vec)
+    use, intrinsic :: iso_fortran_env, only : error_unit
+    class(F_mode_rankN_sparse_coo),intent(in)   :: this
+    type(lattice),intent(in)                    :: lat      !lattice type which knows about all states
+    integer,intent(in)                          :: ind      !index of this%mat(:), which is kept
+    real(8),intent(inout)                       :: vec(:)
+
+    logical         :: exclude(size(this%order))
+    integer         :: N
+    real(8)         :: tmp_internal(this%N_mode,size(this%mat))
+    real(8),pointer :: mode_base(:)
+    integer         :: i,j
+
+    if(size(vec)/=this%N_mode) STOP "mode exc call has wrong size for vector"
+    if(ind<1.or.ind>size(this%order))then
+        write(error_unit,'(//A,I6)') "Tried to get mode excluding ind.:", ind
+        write(error_unit,*) "But the mode only contains the order:", this%order
+        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
+    endif
+
+    tmp_internal=1.d0
+    do i=1,ind-1
+        Call lat%set_order_point(this%order(i),mode_base)
+        do j=1,this%mat(i)%nnz
+            tmp_internal(this%mat(i)%row(j),i)=tmp_internal(this%mat(i)%row(j),i)+this%mat(i)%val(j)*mode_base(this%mat(i)%col(j))
+        enddo
+    enddo
+    vec=product(tmp_internal,dim=2)
+    nullify(mode_base)
+end subroutine
+
+
 subroutine mode_reduce(this,lat,vec_in,op_keep,vec_out)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_coo),intent(in)  :: this
@@ -136,7 +168,7 @@ subroutine copy(this,F_out)
 
     integer ::  i
 
-    if(.not.allocated(F_out)) allocate(F_mode_rankN_sparse_coo::F_out)
+    Call this%copy_base(F_out)
     select type(F_out)
     class is(F_mode_rankN_sparse_coo)
         if(.not.allocated(F_out%order)) allocate(F_out%order(size(this%order)))
@@ -198,9 +230,14 @@ subroutine init_order(this,lat,abbrev_in,mat)
     type(coo_mat),intent(inout)             :: mat(:)    !input matrices, destroyed when returned
     integer     :: order(len(abbrev_in))
     integer     :: i     
+    integer     :: order_occ(number_different_order_parameters)
 
     order=op_abbrev_to_int(abbrev_in)
     allocate(this%order,source=order)
+    do i=1,number_different_order_parameters
+        order_occ(i)=count(this%order==i)
+    enddo
+    Call this%init_base(order_occ)
     if(size(mat)/=len(abbrev_in)) ERROR STOP "Matrix size has the be the same as the length of abbrev_in"
     allocate(this%mat(size(mat)))
     do i=1,size(mat)

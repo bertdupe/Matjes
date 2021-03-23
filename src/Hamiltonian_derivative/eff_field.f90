@@ -38,7 +38,7 @@ subroutine get_eff_field(Ham,lat,B,Ham_type)
                 B=B-tmp
             elseif(Nl>1)then
                 Call Ham(i)%mult_r_red(lat,tmp,Ham_type) ! reduce everything but ham_type 
-                B=B-tmp*real(Nl_order,8)    !this also requires fully symmetrized Hamiltonians...
+                B=B-tmp
             endif
         endif
 
@@ -48,7 +48,7 @@ subroutine get_eff_field(Ham,lat,B,Ham_type)
                 B=B-tmp
             elseif(Nr>1)then
                 Call Ham(i)%mult_l_red(lat,tmp,Ham_type) ! reduce everything but ham_type 
-                B=B-tmp*real(Nr_order,8)    !this also requires fully symmetrized Hamiltonians...
+                B=B-tmp
             endif
         endif
 

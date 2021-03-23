@@ -4,7 +4,7 @@ use m_derived_types, only : lattice,number_different_order_parameters
 use m_coo_mat
 implicit none
 private
-public F_mode_rankN_sparse_col
+public F_mode_rankN_sparse_col, col_mat
 
 type col_mat
     integer :: dim_mat(2)=0
@@ -19,7 +19,7 @@ type, extends(F_mode) :: F_mode_rankN_sparse_col
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
-    procedure   :: get_mode_exc
+    procedure   :: get_mode_exc => get_mode_exc_col
     procedure   :: mode_reduce  
 
     procedure   :: copy
@@ -32,7 +32,7 @@ end type
 
 contains
 
-subroutine get_mode_exc(this,lat,op_exc,vec)
+subroutine get_mode_exc_col(this,lat,op_exc,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_col),intent(in)   :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
@@ -40,10 +40,9 @@ subroutine get_mode_exc(this,lat,op_exc,vec)
     real(8),intent(inout)                       :: vec(:)
 
     logical         :: exclude(size(this%order))
-    integer         :: N
     real(8)         :: tmp_internal(this%N_mode,size(this%dat))
     real(8),pointer :: mode_base(:)
-    integer         :: i,j
+    integer         :: i
 
     if(size(vec)/=this%N_mode) STOP "mode exc call has wrong size for vector"
     exclude=.false.
@@ -90,11 +89,10 @@ subroutine get_mode(this,lat,mode,tmp)
     real(8),intent(out),pointer                 :: mode(:)   !pointer to required mode
     real(8),allocatable,target,intent(inout)    :: tmp(:)
 
-    integer         :: N
     real(8)         :: tmp_internal(this%N_mode,size(this%dat))
     real(8),pointer :: mode_base(:)
 
-    integer         :: i,j
+    integer         :: i
 
     allocate(tmp(this%N_mode),source=0.0d0)
     mode=>tmp
@@ -109,22 +107,18 @@ subroutine get_mode(this,lat,mode,tmp)
 end subroutine
 
 function is_same(this,comp)result(same)
-    class(F_mode_rankN_sparse_col),intent(in)       :: this
+    class(F_mode_rankN_sparse_col),intent(in)  :: this
     class(F_mode),intent(in)                   :: comp
     logical                                    :: same
 
     ERROR STOP "IMPLEMENT"
-    !same=.false.
-    !select type(comp) 
-    !type is(F_mode_rankN_sparse_col)
-    !    same=all(this%order==comp%order)
-    !end select
 end function
 
 subroutine destroy(this)
     class(F_mode_rankN_sparse_col),intent(inout) ::  this
     integer ::  i
     this%N_mode=-1
+    this%order_occ=0
     do i=1,size(this%dat)
         deallocate(this%dat(i)%col)
     enddo
@@ -134,11 +128,11 @@ end subroutine
 
 subroutine copy(this,F_out)
     class(F_mode_rankN_sparse_col),intent(in)    :: this
-    class(F_mode),allocatable,intent(inout) :: F_out
+    class(F_mode),allocatable,intent(inout)     :: F_out
 
     integer ::  i
 
-    if(.not.allocated(F_out)) allocate(F_mode_rankN_sparse_col::F_out)
+    Call this%copy_base(F_out)
     select type(F_out)
     class is(F_mode_rankN_sparse_col)
         if(.not.allocated(F_out%order)) allocate(F_out%order(size(this%order)))
@@ -174,6 +168,7 @@ subroutine bcast(this,comm)
     if(.not.allocated(this%order)) allocate(this%order(N))
     Call MPI_Bcast(this%order,N, MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%N_mode,1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%order_occ,number_different_order_parameters, MPI_INTEGER, comm%mas, comm%com,ierr)
 
     ERROR STOP "ALSO TOTALLY UNTESTED"
     !bcast mat
@@ -198,9 +193,14 @@ subroutine init_order(this,lat,abbrev_in,mat)
     type(coo_mat),intent(inout)             :: mat(:)    !input matrices, destroyed when returned
     integer     :: order(len(abbrev_in))
     integer     :: i     
+    integer     :: order_occ(number_different_order_parameters)
 
     order=op_abbrev_to_int(abbrev_in)
     allocate(this%order,source=order)
+    do i=1,number_different_order_parameters
+        order_occ(i)=count(this%order==i)
+    enddo
+    Call this%init_base(order_occ)
     if(size(mat)/=len(abbrev_in)) ERROR STOP "Matrix size has the be the same as the length of abbrev_in"
     allocate(this%dat(size(mat)))
     do i=1,size(mat)

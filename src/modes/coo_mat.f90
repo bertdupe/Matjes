@@ -1,7 +1,7 @@
 module m_coo_mat
 implicit none
 private
-public :: coo_mat
+public :: coo_mat, coo_full_unfold
 type coo_mat
     integer :: dim_mat(2)=0
     integer :: nnz=0
@@ -14,6 +14,47 @@ contains
     procedure   :: mv
 end type
 contains
+
+subroutine coo_full_unfold(rank,Ncell,dim_mode,mat)
+    integer,intent(in)              :: rank
+    integer,intent(in)              :: Ncell
+    integer,intent(in)              :: dim_mode(rank)
+    type(coo_mat),intent(out)       :: mat(rank)
+
+    real(8),allocatable     :: val(:)
+    integer,allocatable     :: row(:),col(:)
+    integer     :: div
+    integer     :: Nmode
+    integer     :: dim_mode_full
+
+    integer     :: i_site,i,i_mode,ind_site
+    integer     :: ind,ii
+
+
+    dim_mode_full=product(dim_mode)
+    Nmode=dim_mode_full*Ncell
+
+    allocate(val(Nmode),source=1.0d0)
+    allocate(row(Nmode),col(Nmode))
+    row=[(i,i=1,Nmode)]
+    do i_mode=1,rank
+        ii=0
+        div=product(dim_mode(:i_mode-1))
+        do i_site=1,Ncell
+            ind_site=(i_site-1)*dim_mode(i_mode)
+            do i=1,dim_mode_full
+                ind=(i-1)/div
+                ind=modulo(ind,dim_mode(i_mode))+1+ind_site
+                ii=ii+1
+                col(ii)=ind
+            enddo
+        enddo
+        Call mat(i_mode)%init([Nmode,dim_mode(i_mode)],Nmode,row,col,val)
+    enddo
+    deallocate(val,row,col)
+
+end subroutine
+
 
 subroutine init(this,dim_mat,nnz,row,col,val)
     class(coo_mat),intent(inout)    :: this

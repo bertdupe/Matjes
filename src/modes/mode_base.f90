@@ -1,22 +1,32 @@
 module m_mode_construction
 ! module that contains functions which combines the different sites on the left and the right of the Hamiltonians
 ! to transform Hamiltonians of ranks >2 to Hamiltonians of rank 2
-use m_derived_types, only : lattice
+use m_derived_types, only : lattice, number_different_order_parameters
 implicit none
 
 private
 public F_mode
 
 type, abstract :: F_mode
+    integer             :: order_occ(number_different_order_parameters)=0
     contains
     procedure(int_get_mode),deferred        :: get_mode       !subroutine which returns the mode 
     procedure(int_get_mode_exc),deferred    :: get_mode_exc   !subroutine which returns the mode excluding one order parameter 
     procedure(int_mode_reduce),deferred     :: mode_reduce    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
 
+    !procedure(int_get_mode_single),deferred :: get_mode_single       !subroutine which returns the mode 
+    !procedure(int_get_mode_exc),deferred    :: get_mode_exc   !subroutine which returns the mode excluding one order parameter 
+    !procedure(int_mode_reduce),deferred     :: mode_reduce    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
+
     procedure(int_is_same),deferred         :: is_same
     procedure(int_destroy),deferred         :: destroy
     procedure(int_copy),deferred            :: copy
     procedure(int_bcast),deferred           :: bcast
+
+    procedure                               :: init_base
+    procedure                               :: copy_base
+
+    procedure                               :: reduce_other_exc => reduce_other_exc_default
 end type
 
 abstract interface
@@ -74,4 +84,38 @@ abstract interface
         class(F_mode),intent(inout) ::  this
     end subroutine
 end interface
+
+contains
+
+
+subroutine init_base(this,order_occ)
+        class(F_mode),intent(inout) :: this
+        integer,intent(in)          :: order_occ(number_different_order_parameters)
+        this%order_occ=order_occ
+end subroutine
+
+subroutine copy_base(this,F_out)
+        class(F_mode),intent(in)                :: this
+        class(F_mode),intent(inout),allocatable :: F_out
+        if(.not.allocated(F_out)) allocate(F_out,mold=this)
+        F_out%order_occ=this%order_occ
+end subroutine
+
+subroutine reduce_other_exc_default(this,lat,op_keep,vec_other,res)
+    !subroutine to get the derivative, may be overwritten
+    class(F_mode),intent(in)        :: this
+    type(lattice),intent(in)        :: lat       !lattice type which knows about all states
+    integer,intent(in)              :: op_keep  !operator index which is to be kept (1,number_different_order_parameters)
+    real(8),intent(in)              :: vec_other(:) !other vector to which the Hamiltonian has been multiplied
+    real(8),intent(inout)           :: res(:)
+
+    real(8)         :: tmp(size(vec_other))
+    integer         :: i
+
+    Call this%get_mode_exc(lat,op_keep,tmp)
+    tmp=vec_other*tmp
+    Call this%mode_reduce(lat,tmp,op_keep,res)
+    tmp=tmp*real(this%order_occ(op_keep),8)
+end subroutine
+
 end module 
