@@ -18,6 +18,8 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
+    procedure :: mult_l_cont,mult_r_cont
+    procedure :: mult_l_disc,mult_r_disc
     procedure :: mult_r_single,mult_l_single
 end type
 
@@ -56,6 +58,45 @@ subroutine mult_l(this,lat,res)
     res=matmul(modes,this%H)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
+
+subroutine mult_r_cont(this,bnd,vec,res)
+    class(t_H_dense),intent(in)    :: this
+    integer,intent(in)           :: bnd(2)
+    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
+subroutine mult_l_cont(this,bnd,vec,res)
+    class(t_H_dense),intent(in)    :: this
+    integer,intent(in)           :: bnd(2)
+    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
+subroutine mult_r_disc(this,N,ind,vec,res)
+    class(t_H_dense),intent(in)    :: this
+    integer,intent(in)           :: N
+    integer,intent(in)           :: ind(N)
+    real(8),intent(in)           :: vec(N)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
+subroutine mult_l_disc(this,N,ind,vec,res)
+    class(t_H_dense),intent(in)    :: this
+    integer,intent(in)           :: N
+    integer,intent(in)           :: ind(N)
+    real(8),intent(in)           :: vec(N)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
 
 
 subroutine mult_r_single(this,i_site,lat,res)

@@ -17,7 +17,7 @@ subroutine Eout_contrib_init(Hams,io)
     !write output file
     io=open_file_write('EM_energy_cont.dat')
     !!write header with information
-    write(io,'(A)',advance="no") "# 1: step     2: time     3: Energy average     "
+    write(io,'(A)',advance="no") "# 1: step     2: time     3: total Energy     "
     do i=1,size(Hams)
         write(io,'(I4,A,A,5X)',advance="no") i+3,': ', trim(adjustl(Hams(i)%desc))
     enddo

@@ -21,6 +21,8 @@ contains
 
     procedure :: optimize
     procedure :: mult_l,mult_r
+    procedure :: mult_l_cont,mult_r_cont
+    procedure :: mult_l_disc,mult_r_disc
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -29,6 +31,46 @@ end type
 private
 public t_H,t_H_coo
 contains 
+
+
+subroutine mult_r_cont(this,bnd,vec,res)
+    class(t_H_coo),intent(in)    :: this
+    integer,intent(in)           :: bnd(2)
+    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
+subroutine mult_l_cont(this,bnd,vec,res)
+    class(t_H_coo),intent(in)    :: this
+    integer,intent(in)           :: bnd(2)
+    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
+subroutine mult_r_disc(this,N,ind,vec,res)
+    class(t_H_coo),intent(in)    :: this
+    integer,intent(in)           :: N
+    integer,intent(in)           :: ind(N)
+    real(8),intent(in)           :: vec(N)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
+subroutine mult_l_disc(this,N,ind,vec,res)
+    class(t_H_coo),intent(in)    :: this
+    integer,intent(in)           :: N
+    integer,intent(in)           :: ind(N)
+    real(8),intent(in)           :: vec(N)
+    real(8),intent(inout)        :: res(:)   !result matrix-vector product
+
+    STOP "IMPLEMENT if necessary"
+end subroutine 
+
 
 subroutine mult_r(this,lat,res)
     use m_derived_types, only: lattice

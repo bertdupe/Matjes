@@ -10,14 +10,13 @@ public F_mode_rankN_sparse_col_sepdiff
 
 type, extends(F_mode_rankN_sparse_col) :: F_mode_rankN_sparse_col_sepdiff
     contains
-    procedure  :: reduce_other_exc => reduce_other_exc_nosym
-    procedure  :: get_mode_exc_ind
+    procedure  :: reduce_other_exc
     procedure  :: mode_reduce_ind_sum
 end type
 
 contains
 
-subroutine reduce_other_exc_nosym(this,lat,op_keep,vec_other,res)
+subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
     class(F_mode_rankN_sparse_col_sepdiff),intent(in)   :: this
     type(lattice),intent(in)                            :: lat       !lattice type which knows about all states
     integer,intent(in)                                  :: op_keep
@@ -25,7 +24,7 @@ subroutine reduce_other_exc_nosym(this,lat,op_keep,vec_other,res)
     real(8),intent(inout)                               :: res(:)
 
     real(8)         :: tmp(size(vec_other))   !multipied, but not reduced
-    logical         :: reduce(size(this%order))
+    logical         :: reduce(this%N_mode)
     integer         :: i
 
     reduce=this%order==op_keep
@@ -34,52 +33,19 @@ subroutine reduce_other_exc_nosym(this,lat,op_keep,vec_other,res)
         if(.not.reduce(i)) cycle
         Call this%get_mode_exc_ind(lat,i,tmp)
         tmp=vec_other*tmp
-        Call this%mode_reduce_ind_sum(lat,tmp,i,op_keep,res)
+        Call this%mode_reduce_ind_sum(lat,tmp,i,res)
     enddo
 end subroutine
 
-subroutine get_mode_exc_ind(this,lat,ind,vec)
+subroutine mode_reduce_ind_sum(this,lat,vec_in,ind,vec_out)
+    !like mode_reduce_ind, but sums vec_out up
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_col_sepdiff),intent(in)   :: this
-    type(lattice),intent(in)                            :: lat       !lattice type which knows about all states
-    integer,intent(in)                                  :: ind
-    real(8),intent(inout)                               :: vec(:)
-
-    real(8)         :: tmp_internal(this%N_mode,size(this%dat))
-    real(8),pointer :: mode_base(:)
-    integer         :: i
-
-    if(size(vec)/=this%N_mode) STOP "mode exc call has wrong size for vector"
-    if(ind<1.or.ind>size(this%order))then
-        write(error_unit,'(//A,I6)') "Tried to get mode excluding index no.:", ind
-        write(error_unit,*) "But the mode only contains the order:", this%order
-        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
-    endif
-
-    tmp_internal=1.d0
-    do i=1,ind-1
-        Call lat%set_order_point(this%order(i),mode_base)
-        tmp_internal(:,i)=mode_base(this%dat(i)%col)
-    enddo
-    do i=ind+1,size(this%dat)
-        Call lat%set_order_point(this%order(i),mode_base)
-        tmp_internal(:,i)=mode_base(this%dat(i)%col)
-    enddo
-    vec=product(tmp_internal,dim=2)
-    nullify(mode_base)
-end subroutine
-
-subroutine mode_reduce_ind_sum(this,lat,vec_in,ind,opind,vec_out)
-    use, intrinsic :: iso_fortran_env, only : error_unit
-    class(F_mode_rankN_sparse_col_sepdiff),intent(in)   :: this
-    real(8),intent(in)                          :: vec_in(:)
-    type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
-    integer,intent(in)                          :: ind
-    integer,intent(in)                          :: opind
-    real(8),intent(inout)                       :: vec_out(lat%dim_modes(opind)*lat%Ncell)
-
+    real(8),intent(in)          :: vec_in(:)
+    type(lattice),intent(in)    :: lat       !lattice type which knows about all states
+    integer,intent(in)          :: ind
+    real(8),intent(inout)       :: vec_out(lat%dim_modes(this%order(ind))*lat%Ncell)
     integer     ::  i
-
     do i=1,this%dat(ind)%nnz
         vec_out(this%dat(ind)%col(i))=vec_out(this%dat(ind)%col(i))+vec_in(i)
     enddo

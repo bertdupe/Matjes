@@ -8,13 +8,12 @@ public F_mode_rankN_sparse_coo
 
 type, extends(F_mode) :: F_mode_rankN_sparse_coo !contains all entries
     type(coo_mat),allocatable       :: mat(:)
-    integer,allocatable             :: order(:)
-    integer                         :: N_mode=-1
+    integer                         :: mode_size=-1
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
-    procedure   :: get_mode_exc
-    procedure   :: mode_reduce  
+    procedure   :: get_mode_exc_ind
+    procedure   :: mode_reduce_ind
     procedure   :: get_mode_single_cont
 
     procedure   :: copy
@@ -39,64 +38,25 @@ subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
     ERROR STOP "IMPLEMENT"
 end subroutine
 
-subroutine get_mode_exc(this,lat,op_exc,vec)
+subroutine get_mode_exc_ind(this,lat,ind,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_coo),intent(in)  :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
-    integer,intent(in)                          :: op_exc !of which operator the first entry is kept
+    integer,intent(in)                          :: ind
     real(8),intent(inout)                       :: vec(:)
 
-    logical         :: exclude(size(this%order))
-    integer         :: N
-    real(8)         :: tmp_internal(this%N_mode,size(this%mat))
+    real(8)         :: tmp_internal(this%mode_size,this%N_mode)
     real(8),pointer :: mode_base(:)
     integer         :: i,j
-
-    if(size(vec)/=this%N_mode) STOP "mode exc call has wrong size for vector"
-    exclude=.false.
-    i=findloc(this%order,op_exc,dim=1)
-    if(i<1.or.i>size(this%order))then
-        write(error_unit,'(//A,I6)') "Tried to get mode excluding order no.:", op_exc
-        write(error_unit,*) "But the mode only contains the order:", this%order
-        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
-    endif
-    exclude(i)=.true.
-
-    tmp_internal=1.d0
-    do i=1,size(this%mat)
-        if(.not.exclude(i))then
-            Call lat%set_order_point(this%order(i),mode_base)
-            do j=1,this%mat(i)%nnz
-                tmp_internal(this%mat(i)%row(j),i)=tmp_internal(this%mat(i)%row(j),i)+this%mat(i)%val(j)*mode_base(this%mat(i)%col(j))
-            enddo
-        endif
-    enddo
-    vec=product(tmp_internal,dim=2)
-    nullify(mode_base)
-end subroutine
-
-subroutine get_mode_exc_ind(this,lat,ind,vec)
-    use, intrinsic :: iso_fortran_env, only : error_unit
-    class(F_mode_rankN_sparse_coo),intent(in)   :: this
-    type(lattice),intent(in)                    :: lat      !lattice type which knows about all states
-    integer,intent(in)                          :: ind      !index of this%mat(:), which is kept
-    real(8),intent(inout)                       :: vec(:)
-
-    logical         :: exclude(size(this%order))
-    integer         :: N
-    real(8)         :: tmp_internal(this%N_mode,size(this%mat))
-    real(8),pointer :: mode_base(:)
-    integer         :: i,j
-
-    if(size(vec)/=this%N_mode) STOP "mode exc call has wrong size for vector"
-    if(ind<1.or.ind>size(this%order))then
-        write(error_unit,'(//A,I6)') "Tried to get mode excluding ind.:", ind
-        write(error_unit,*) "But the mode only contains the order:", this%order
-        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
-    endif
 
     tmp_internal=1.d0
     do i=1,ind-1
+        Call lat%set_order_point(this%order(i),mode_base)
+        do j=1,this%mat(i)%nnz
+            tmp_internal(this%mat(i)%row(j),i)=tmp_internal(this%mat(i)%row(j),i)+this%mat(i)%val(j)*mode_base(this%mat(i)%col(j))
+        enddo
+    enddo
+    do i=ind+1,this%N_mode
         Call lat%set_order_point(this%order(i),mode_base)
         do j=1,this%mat(i)%nnz
             tmp_internal(this%mat(i)%row(j),i)=tmp_internal(this%mat(i)%row(j),i)+this%mat(i)%val(j)*mode_base(this%mat(i)%col(j))
@@ -106,21 +66,19 @@ subroutine get_mode_exc_ind(this,lat,ind,vec)
     nullify(mode_base)
 end subroutine
 
-
-subroutine mode_reduce(this,lat,vec_in,op_keep,vec_out)
+subroutine mode_reduce_ind(this,lat,vec_in,ind,vec_out)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_coo),intent(in)  :: this
     real(8),intent(in)                          :: vec_in(:)
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
-    integer,intent(in)                          :: op_keep   !of which operator the first entry is kept
-    real(8),intent(out)                         :: vec_out(lat%dim_modes(op_keep)*lat%Ncell)
+    integer,intent(in)                          :: ind
+    real(8),intent(out)                         :: vec_out(lat%dim_modes(this%order(ind))*lat%Ncell)
 
-    integer     ::  i_order,i
+    integer     ::  i
 
-    i_order=findloc(this%order,op_keep,dim=1)
     vec_out=0.0d0
-    do i=1,this%mat(i_order)%nnz
-        vec_out(this%mat(i_order)%col(i))=vec_out(this%mat(i_order)%col(i))+vec_in(this%mat(i_order)%row(i))
+    do i=1,this%mat(ind)%nnz
+        vec_out(this%mat(ind)%col(i))=vec_out(this%mat(ind)%col(i))+vec_in(this%mat(ind)%row(i))
     enddo
 end subroutine
 
@@ -132,12 +90,12 @@ subroutine get_mode(this,lat,mode,tmp)
     real(8),allocatable,target,intent(inout)    :: tmp(:)
 
     integer         :: N
-    real(8)         :: tmp_internal(this%N_mode,size(this%mat))
+    real(8)         :: tmp_internal(this%mode_size,size(this%mat))
     real(8),pointer :: mode_base(:)
 
     integer         :: i,j
 
-    allocate(tmp(this%N_mode),source=0.0d0)
+    allocate(tmp(this%mode_size),source=0.0d0)
     mode=>tmp
 
     tmp_internal=0.d0
@@ -167,7 +125,7 @@ end function
 subroutine destroy(this)
     class(F_mode_rankN_sparse_coo),intent(inout) ::  this
     integer ::  i
-    this%N_mode=-1
+    this%mode_size=-1
     do i=1,size(this%mat)
         Call this%mat(i)%destroy()
     enddo
@@ -184,10 +142,7 @@ subroutine copy(this,F_out)
     Call this%copy_base(F_out)
     select type(F_out)
     class is(F_mode_rankN_sparse_coo)
-        if(.not.allocated(F_out%order)) allocate(F_out%order(size(this%order)))
-        if(size(F_out%order)/=size(this%order)) ERROR STOP "CANNOT COPY ORDER AS RANKS DIFFER"
-        F_out%order=this%order
-        F_out%N_mode=this%N_mode
+        F_out%mode_size=this%mode_size
         allocate(F_out%mat(size(this%mat)))
         do i=1,size(this%mat)
             Call this%mat(i)%copy(F_out%mat(i))
@@ -203,18 +158,11 @@ subroutine bcast(this,comm)
     type(mpi_type),intent(in)               ::  comm
 #ifdef CPP_MPI
     integer     :: ierr
-    integer     ::  N
   
     !THIS MIGHT BE INSUFFICIENT, MAYBE ONE HAS TO CHECK IF THE F_MODE IS ALREADY ALLOCATED TO THE F_mode_rankN_sparse_coo type
     STOP "CHECK IF THIS WORKS WITHOUT PREVIOUS ALLOCATION./type stuff/, on non-master threads"
-    if(comm%ismas)then
-        if(.not.allocated(this%order)) ERROR STOP "CANNOT BCAST SINCE MASTER ORDER IS NOT ALLOCATED"
-        N=size(this%order)
-    endif
-    Call MPI_Bcast(N,1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    if(.not.allocated(this%order)) allocate(this%order(N))
-    Call MPI_Bcast(this%order,N, MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%N_mode,1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call bcast_base(this,comm)
+    Call MPI_Bcast(this%mode_size,1, MPI_INTEGER, comm%mas, comm%com,ierr)
 
     ERROR STOP "ALSO TOTALLY UNTESTED"
     !bcast mat
@@ -246,16 +194,12 @@ subroutine init_order(this,lat,abbrev_in,mat)
     integer     :: order_occ(number_different_order_parameters)
 
     order=op_abbrev_to_int(abbrev_in)
-    allocate(this%order,source=order)
-    do i=1,number_different_order_parameters
-        order_occ(i)=count(this%order==i)
-    enddo
-    Call this%init_base(order_occ)
+    Call this%init_base(order)
     if(size(mat)/=len(abbrev_in)) ERROR STOP "Matrix size has the be the same as the length of abbrev_in"
     allocate(this%mat(size(mat)))
     do i=1,size(mat)
         Call mat(i)%mv(this%mat(i))
     enddo
-    this%N_mode=this%mat(1)%dim_mat(1)
+    this%mode_size=this%mat(1)%dim_mat(1)
 end subroutine
 end module

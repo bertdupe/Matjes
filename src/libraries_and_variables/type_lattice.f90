@@ -4,6 +4,11 @@ use m_order_parameter
 use m_cell,only : t_cell
 implicit none
 
+private
+public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, op_abbrev_to_int,t_cell, order_par, order_parameter_name
+public :: dim_modes_inner
+
+
 integer,parameter :: number_different_order_parameters=5    !m,E,B,T,u
 character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T","U"]
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
@@ -66,7 +71,7 @@ contains
     procedure :: set_order_point_single_inner
     !!reduce that order parameter again
     procedure :: reduce
-    procedure :: reduce_single
+!    procedure :: reduce_single
     !!reduce vector in order parameter space to the site(e.g. energy Ncell resolution )
     procedure :: reduce_cell
     !real space position functions
@@ -93,8 +98,6 @@ type point_arr
     real(8),pointer     ::  v(:)
 end type
 
-private
-public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, op_abbrev_to_int,t_cell, order_par, order_parameter_name
 
 contains 
 
@@ -505,35 +508,26 @@ subroutine reduce_cell(this,vec_in,order,vec_out)
     enddo
 end subroutine
 
-subroutine reduce(this,vec_in,order,order_keep,vec_out)
-    class(lattice),intent(in)       ::  this
-    real(8),intent(in)              ::  vec_in(:)
-    integer,intent(in)              ::  order(:)
-    integer,intent(in)              ::  order_keep
-    real(8),intent(inout)           ::  vec_out(:)
+subroutine reduce(this,vec_in,order,ind_keep,vec_out)
+    class(lattice),intent(in)       :: this
+    real(8),intent(in)              :: vec_in(:)
+    integer,intent(in)              :: order(:)
+    integer,intent(in)              :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+    real(8),intent(inout)           :: vec_out(:)
 
     integer                 :: dim_mode_sum,dim_mode_keep
-    integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
     integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
 
     integer                 :: ind_div
-
     integer                 :: i
     integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
     integer                 :: dir
 
-    do i=1,size(order)
-        if(order(i)==order_keep)then
-            ind_keep=i
-            exit
-        endif
-    enddo
     dim_modes=this%dim_modes(order)
     dim_mode_sum=product(dim_modes)
     dim_mode_keep=dim_modes(ind_keep)
     ind_div=product(dim_modes(:ind_keep-1))
 
-!    if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"   !will only consider first entry, which is expected behavior
     if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
     if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
 
@@ -546,46 +540,46 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
     enddo
 end subroutine
 
-subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
-    class(lattice),intent(in)       :: this
-    integer,intent(in)              :: i_site
-    real(8),intent(in)              :: vec_in(:)
-    integer,intent(in)              :: order(:)
-    integer,intent(in)              :: order_keep
-    real(8),intent(inout)           :: vec_out(:)
-
-    integer                 :: dim_mode_sum,dim_mode_keep
-    integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
-    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
-
-    integer                 :: ind_div
-
-    integer                 :: i
-    integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
-    integer                 :: dir
-
-!   ind_keep=findloc(order,order_keep,dim=1)
-    do i=1,size(order)
-        if(order(i)==order_keep)then
-            ind_keep=i
-            exit
-        endif
-    enddo
-    dim_modes=this%dim_modes(order)
-    dim_mode_sum=product(dim_modes)
-    dim_mode_keep=dim_modes(ind_keep)
-    ind_div=product(dim_modes(:ind_keep-1))
-
-    if(count(order==order_keep)/=1) ERROR STOP "implement reduce also for multiple entries of order_keep in order"
-    if(size(vec_in)/=dim_mode_sum) Error STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=dim_modes(ind_keep)) ERROR STOP "vec_out of reduce has wrong dimension"
-
-    vec_out=0.0d0
-    do i=1,size(vec_in)
-        dir=modulo((i-1)/ind_div,dim_mode_keep)+1
-        vec_out(dir)=vec_out(dir)+vec_in(i)
-    enddo
-end subroutine
+!subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
+!    class(lattice),intent(in)       :: this
+!    integer,intent(in)              :: i_site
+!    real(8),intent(in)              :: vec_in(:)
+!    integer,intent(in)              :: order(:)
+!    integer,intent(in)              :: order_keep
+!    real(8),intent(inout)           :: vec_out(:)
+!
+!    integer                 :: dim_mode_sum,dim_mode_keep
+!    integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+!    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
+!
+!    integer                 :: ind_div
+!
+!    integer                 :: i
+!    integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
+!    integer                 :: dir
+!
+!!   ind_keep=findloc(order,order_keep,dim=1)
+!    do i=1,size(order)
+!        if(order(i)==order_keep)then
+!            ind_keep=i
+!            exit
+!        endif
+!    enddo
+!    dim_modes=this%dim_modes(order)
+!    dim_mode_sum=product(dim_modes)
+!    dim_mode_keep=dim_modes(ind_keep)
+!    ind_div=product(dim_modes(:ind_keep-1))
+!
+!    if(count(order==order_keep)/=1) ERROR STOP "implement reduce also for multiple entries of order_keep in order"
+!    if(size(vec_in)/=dim_mode_sum) Error STOP "vec_in of reduce has wrong dimension"
+!    if(size(vec_out)/=dim_modes(ind_keep)) ERROR STOP "vec_out of reduce has wrong dimension"
+!
+!    vec_out=0.0d0
+!    do i=1,size(vec_in)
+!        dir=modulo((i-1)/ind_div,dim_mode_keep)+1
+!        vec_out(dir)=vec_out(dir)+vec_in(i)
+!    enddo
+!end subroutine
 
 subroutine set_order_comb_single(this,order,i_site,dim_bnd_in,vec,bnd)
     !fills the combination of several order parameters according to order

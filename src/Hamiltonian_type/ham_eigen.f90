@@ -8,6 +8,7 @@ use m_mode_construction_rankN_sparse_col
 
 type,extends(t_H_coo_based) :: t_H_eigen
     type(C_PTR)     ::  H=c_null_ptr
+
 !some pointer to Hamiltonian
 contains
     !necessary t_H routines
@@ -22,6 +23,8 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
+    procedure :: mult_l_cont,mult_r_cont
+    procedure :: mult_l_disc,mult_r_disc
     !overriding mult_l/r_single for better efficiency
     procedure :: mult_r_single,mult_l_single
 end type
@@ -41,7 +44,6 @@ end function
 
 subroutine mult_r(this,lat,res)
     !mult
-    use m_derived_types, only: lattice
     class(t_H_eigen),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
@@ -54,6 +56,47 @@ subroutine mult_r(this,lat,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
+subroutine mult_l_cont(this,bnd,vec,res)
+    !multiply to the right with a continuous section of the right vector
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: bnd(2)
+    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    Call eigen_H_mult_vec_mat_cont(this%H,bnd(1),bnd(2),vec,res)
+end subroutine 
+
+subroutine mult_r_cont(this,bnd,vec,res)
+    !multiply to the right with a continuous section of the right vector
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: bnd(2)
+    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    Call eigen_H_mult_mat_vec_cont(this%H,bnd(1),bnd(2),vec,res)
+end subroutine 
+
+subroutine mult_l_disc(this,N,ind,vec,res)
+    !multiply to the right with a discontinuous section of the right vector
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind(N)
+    real(8),intent(in)              :: vec(N)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    Call eigen_H_mult_vec_mat_disc(this%H,N,ind,vec,res)
+end subroutine 
+
+subroutine mult_r_disc(this,N,ind,vec,res)
+    !multiply to the right with a discontinuous section of the right vector
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind(N)
+    real(8),intent(in)              :: vec(N)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    Call eigen_H_mult_mat_vec_disc(this%H,N,ind,vec,res)
+end subroutine 
 
 subroutine mult_r_single(this,i_site,lat,res)
     !mult

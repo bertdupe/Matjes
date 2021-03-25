@@ -46,6 +46,8 @@ contains
 
     procedure(int_destroy),deferred         :: optimize  !calls possible optimization routines rearanging internal Hamiltonian layout
     procedure(int_mult),deferred            :: mult_r,mult_l !multipy out with left/right side
+    procedure(int_mult_cont),deferred       :: mult_l_cont,mult_r_cont
+    procedure(int_mult_disc),deferred       :: mult_l_disc,mult_r_disc
 
     !evaluation routines
         !actually these could be overridable, but so far used to check no old implementation still has these wrongly
@@ -53,6 +55,7 @@ contains
     procedure ,NON_OVERRIDABLE              :: mult_r_red,mult_l_red !multiplied out left/right and reduces result to only one order-parameter
     procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single
     procedure                               :: energy_dist
+
 
         !should be implemented more efficiently, where possible
     procedure                               :: mult_r_single,mult_l_single !multipy out with left/right side
@@ -124,6 +127,25 @@ abstract interface
         real(8),intent(inout)     :: res(:)
         integer,intent(in)        :: op_keep
     end subroutine
+
+    subroutine int_mult_cont(this,bnd,vec,res)
+        !multiply to the either side with a continuous section of the applied vector
+        import t_H
+        class(t_H),intent(in)       :: this
+        integer,intent(in)          :: bnd(2)
+        real(8),intent(in)          :: vec(bnd(2)-bnd(1)+1)
+        real(8),intent(inout)       :: res(:)   !result matrix-vector product
+    end subroutine 
+    
+    subroutine int_mult_disc(this,N,ind,vec,res)
+        !multiply to the either side with a discontinuous section of the applied vector
+        import t_H
+        class(t_H),intent(in)       :: this
+        integer,intent(in)          :: N
+        integer,intent(in)          :: ind(N)
+        real(8),intent(in)          :: vec(N)
+        real(8),intent(inout)       :: res(:)   !result matrix-vector product
+    end subroutine 
 
     subroutine int_destroy(this)
         import t_H
@@ -239,11 +261,11 @@ contains
         real(8),allocatable,target  :: vec_l(:)
         real(8)                     :: tmp(this%dimH(1))
 
-        ERROR STOP "THIS HAS TO BE UPDATED TO NEW MODES"
         Call this%mult_r(lat,tmp)
-        Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
+        ERROR STOP "THIS HAS TO BE UPDATED TO NEW MODES"
+!        Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
         tmp=modes_l*tmp
-        Call lat%reduce_cell(tmp,this%op_l,E)
+ !       Call lat%reduce_cell(tmp,this%op_l,E)
         if(allocated(vec_l)) deallocate(vec_l)
     end subroutine
 
@@ -295,7 +317,7 @@ contains
         allocate(vec(this%dim_mode(1)),source=0.0d0)
         Call lat%set_order_comb_exc_single(i_site,this%op_l,vec,this%op_l==op_keep)
         tmp=tmp*vec
-        Call lat%reduce_single(i_site,tmp,this%op_l,op_keep,res)
+!        Call lat%reduce_single(i_site,tmp,this%op_l,op_keep,res)   !op_keep changed to ind_keep
         deallocate(tmp,vec)
     end subroutine 
     
@@ -318,7 +340,7 @@ contains
         allocate(vec(this%dim_mode(2)),source=0.0d0)
         Call lat%set_order_comb_exc_single(i_site,this%op_r,vec,this%op_r==op_keep)
         tmp=tmp*vec
-        Call lat%reduce_single(i_site,tmp,this%op_r,op_keep,res)
+!        Call lat%reduce_single(i_site,tmp,this%op_r,op_keep,res)   !op_keep changed to ind_keep
         deallocate(tmp,vec)
     end subroutine 
 
@@ -531,6 +553,7 @@ subroutine mult_r_single(this,i_site,lat,res)
     res=tmp((i_site-1)*this%dim_mode(2)+1:i_site*this%dim_mode(2))
 end subroutine
 
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!          HELPER ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -550,19 +573,16 @@ end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!          DERIV ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     subroutine get_deriv(this,H,lat,vec,tmp)
-        class(t_deriv_base),intent(in)  :: this
-        class(t_H),intent(in)           :: H
+        class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
+        class(t_H),intent(in)           :: H                !Hamiltonian that is derivated
         type(lattice),intent(in)        :: lat
-        real(8),intent(inout)           :: vec(:)
-        real(8),intent(inout)           :: tmp(size(vec))
+        real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
+        real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
 
         Call this%l%get(H,lat,tmp)
         vec=vec+tmp
         Call this%r%get(H,lat,tmp)
         vec=vec+tmp
     end subroutine
-
-
-
 
 end module

@@ -92,6 +92,81 @@ void eigen_H_mult_mat_vec_single(
     res = ((*mat)->block(bnd_min,0,size_out,cols) * vec);
 }
 
+void eigen_H_mult_mat_vec_cont(
+    SpMat **mat,
+    int bnd_min,
+    int bnd_max,
+    double vec_in[],
+    double vec_out[]){
+
+    int rows =(*mat)->rows();
+    int size_in = bnd_max-bnd_min+1;
+    Map<VectorXd> res(vec_out,rows);
+
+    Eigen::SparseVector<double> vec(size_in);
+    for(int i=0; i < size_in; i++ ){
+        vec.coeffRef(bnd_min+i)=vec_in[i];   
+    }
+
+    res = **mat * vec;
+}
+
+void eigen_H_mult_vec_mat_cont(
+    SpMat **mat,
+    int bnd_min,
+    int bnd_max,
+    double vec_in[],
+    double vec_out[]){
+
+    int rows =(*mat)->rows();
+    int size_in = bnd_max-bnd_min+1;
+    Map<VectorXd> res(vec_out,rows);
+
+    Eigen::SparseVector<double> vec(size_in);
+    for(int i=0; i < size_in; i++ ){
+        vec.coeffRef(bnd_min+i)=vec_in[i];   
+    }
+
+    res= (*mat)->transpose() * vec ;
+}
+
+
+void eigen_H_mult_mat_vec_disc(
+    SpMat **mat,
+    int N,
+    int ind[0],
+    double val[],
+    double vec_out[]){
+
+    int rows =(*mat)->rows();
+    Map<VectorXd> res(vec_out,rows);
+
+    Eigen::SparseVector<double> vec(N);
+    for(int i=0; i < N ; i++ ){
+        vec.coeffRef(ind[i]-1)=val[i];   
+    }
+
+    res = **mat * vec;
+}
+
+void eigen_H_mult_vec_mat_disc(
+    SpMat **mat,
+    int N,
+    int ind[0],
+    double val[],
+    double vec_out[]){
+
+    int rows =(*mat)->rows();
+    Map<VectorXd> res(vec_out,rows);
+
+    Eigen::SparseVector<double> vec(N);
+    for(int i=0; i < N ; i++ ){
+        vec.coeffRef(ind[i]-1)=val[i];   
+    }
+
+    res= (*mat)->transpose() * vec ;
+}
+
 
 void eigen_H_mult_vec_mat_single(
     SpMat **mat,
@@ -150,6 +225,6 @@ void eigen_H_destroy(
     SpMat **Ham){
 
     delete *Ham;
-    *Ham=NULL;
+    Ham=NULL;
 }
 }

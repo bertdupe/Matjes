@@ -8,6 +8,7 @@ use m_mode_construction_rankN_sparse_col_sepdiff, only: F_mode_rankN_sparse_col_
 
 use m_mode_construction_rankN_sparse_coo, only: F_mode_rankN_sparse_coo
 use m_mode_construction_rankN_sparse_coo_red, only: F_mode_rankN_sparse_coo_red
+use m_mode_construction_rankN_eigen, only: F_mode_rankN_eigen
 public
 
 contains 
@@ -71,28 +72,44 @@ subroutine mode_set_rankN_sparse(mode,abbrev_in,lat,mat,implementation)
         write(error_unit,*) "Cannot allocate mode to '",abbrev_in,"' since it is already allocated"
         ERROR STOP
     endif
-    if(implementation==4)then
+    if(implementation==1)then
+        !save the mode construction procedure only by column array( assume val=1 & rows consecutive)
+        allocate(F_mode_rankN_sparse_col::mode)
+        select type(mode)
+        type is(F_mode_rankN_sparse_col)
+            Call mode%init_order(lat,abbrev_in,mat)
+        end select
+    elseif(implementation==2)then
+        !save the mode construction procedure only by column array( assume val=1 & rows consecutive)
+        !does the derivative operation for each mode with the operator separately 
         allocate(F_mode_rankN_sparse_col_sepdiff::mode)
         select type(mode)
         type is(F_mode_rankN_sparse_col_sepdiff)
             Call mode%init_order(lat,abbrev_in,mat)
         end select
-    elseif(implementation==2)then
-        allocate(F_mode_rankN_sparse_coo_red::mode)
+    elseif(implementation==3)then
+        !slower than using *_col type
+        !saves the construction procedure in a eigen sparse matrix 
+        allocate(F_mode_rankN_eigen::mode)
         select type(mode)
-        type is(F_mode_rankN_sparse_coo_red)
+        type is(F_mode_rankN_eigen)
             Call mode%init_order(lat,abbrev_in,mat)
         end select
-    elseif(implementation==3)then
+    elseif(implementation==98)then
+        !rather obsolete, unless *_col does not work
+        !save the mode construction procedure as coo_mat type with col,row, val
         allocate(F_mode_rankN_sparse_coo::mode)
         select type(mode)
         type is(F_mode_rankN_sparse_coo)
             Call mode%init_order(lat,abbrev_in,mat)
         end select
-    elseif(implementation==1)then
-        allocate(F_mode_rankN_sparse_col::mode)
+    elseif(implementation==99)then
+        !rather obsolete, unless *_col does not work
+        !save the mode construction procedure as coo_mat type with col,row, val
+        !uses only col for construction (assume val=1 & rows consecutive)
+        allocate(F_mode_rankN_sparse_coo_red::mode)
         select type(mode)
-        type is(F_mode_rankN_sparse_col)
+        type is(F_mode_rankN_sparse_coo_red)
             Call mode%init_order(lat,abbrev_in,mat)
         end select
     else

@@ -3,9 +3,12 @@ src/modes/coo_mat.f90
 src/modes/mode_base.f90
 src/modes/mode_public.f90
 src/modes/mode_rank1.f90
+src/modes/mode_rankN_eigen.f90
 src/modes/mode_rankN_full_unfold.f90
 src/modes/mode_rankN_sparse_col.f90
 src/modes/mode_rankN_sparse_col_sepdiff.f90
 src/modes/mode_rankN_sparse_coo.f90
 src/modes/mode_rankN_sparse_coo_red.f90
+src/modes/eigen_mode_interface.f90
+src/modes/eigen_mode.cpp
 )
