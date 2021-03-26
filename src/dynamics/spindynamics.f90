@@ -259,9 +259,9 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
         
             if (io_simu%io_Energy_Distrib)then
                 if(io_simu%io_Energy_detail)then
-                    Call write_energy_field(tag,hams_res,mag_lattice)
+                    Call write_energy_field(tag,hams_res,mag_lattice,1) !1 for magnetic field
                 else
-                    Call write_energy_field(tag,hams    ,mag_lattice)
+                    Call write_energy_field(tag,hams    ,mag_lattice,1) !1 for magnetic field
                 endif
             endif
 

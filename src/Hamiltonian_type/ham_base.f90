@@ -250,23 +250,54 @@ contains
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 
-    subroutine energy_dist(this,lat,E)
-        !get the energy values per computational cell
-        !this only works for Hamiltonians located on 2 sites only
+    subroutine energy_dist(this,lat,order,E)
+        use m_type_lattice, only: dim_modes_inner
+        !get the energy values per site for a given order
+        !might be wrong for non-symmetrical Hamiltonians
         class(t_H),intent(in)       :: this
         type(lattice), intent(in)   :: lat
-        real(8),intent(out)         :: E(lat%Ncell)
+        integer,intent(in)          :: order
+        real(8),intent(out)         :: E(lat%Ncell*lat%site_per_cell(order))
         ! internal
-        real(8),pointer             :: modes_l(:)
-        real(8),allocatable,target  :: vec_l(:)
-        real(8)                     :: tmp(this%dimH(1))
+        real(8),pointer             :: modes(:)
+        real(8),allocatable,target  :: vec(:)
+        real(8),allocatable         :: tmp(:)
+        real(8),allocatable         :: red(:)
 
-        Call this%mult_r(lat,tmp)
-        ERROR STOP "THIS HAS TO BE UPDATED TO NEW MODES"
-!        Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-        tmp=modes_l*tmp
- !       Call lat%reduce_cell(tmp,this%op_l,E)
-        if(allocated(vec_l)) deallocate(vec_l)
+        if(any(this%op_l==order))then
+            allocate(tmp(this%dimH(1)))
+            Call this%mult_r(lat,tmp)
+            Call this%mode_l%get_mode(lat,modes,vec)
+            tmp=modes*tmp
+            nullify(modes)
+            if(size(this%op_l)>1)then
+                allocate(red(lat%Ncell*lat%dim_modes(order)))
+                Call this%mode_l%mode_reduce(lat,tmp,order,red)
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),red,E)
+                deallocate(red)
+            else
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),tmp,E)
+            endif
+            deallocate(tmp)
+        elseif(any(this%op_r==order))then
+            allocate(tmp(this%dimH(2)))
+            Call this%mult_l(lat,tmp)
+            Call this%mode_r%get_mode(lat,modes,vec)
+            tmp=modes*tmp
+            nullify(modes)
+            if(size(this%op_r)>1)then
+                allocate(red(lat%Ncell*lat%dim_modes(order)))
+                Call this%mode_r%mode_reduce(lat,tmp,order,red)
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),red,E)
+                deallocate(red)
+            else
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),tmp,E)
+            endif
+            deallocate(tmp)
+        else
+            E=0.0d0
+        endif
+        if(allocated(vec)) deallocate(vec)
     end subroutine
 
     subroutine mult_r_red(this,lat,res,op_keep)
@@ -566,6 +597,14 @@ end subroutine
                     ERROR STOP "mode1 allocated but mode2 not allocated, not sure if addition is in correct space"
                 endif
             endif
+    end subroutine
+
+    subroutine get_sum(N1,N2,vec_in,vec_out)
+        integer,intent(in)  ::  N1,N2
+        real(8),intent(in)  :: vec_in(N1,N2)
+        real(8),intent(out) :: vec_out(N2)
+        
+        vec_out=sum(vec_in,1)
     end subroutine
 
 

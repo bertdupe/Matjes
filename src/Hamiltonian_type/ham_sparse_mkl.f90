@@ -26,6 +26,8 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
+    procedure :: mult_l_cont,mult_r_cont
+    procedure :: mult_l_disc,mult_r_disc
 end type
 
 interface t_H_mkl_csr
@@ -79,6 +81,50 @@ subroutine mult_l(this,lat,res)
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl"
     if(allocated(vec)) deallocate(vec)
 end subroutine 
+
+
+subroutine mult_l_cont(this,bnd,vec,res)
+    !multiply to the right with a continuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: bnd(2)
+    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
+subroutine mult_r_cont(this,bnd,vec,res)
+    !multiply to the right with a continuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: bnd(2)
+    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
+subroutine mult_l_disc(this,N,ind,vec,res)
+    !multiply to the right with a discontinuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind(N)
+    real(8),intent(in)              :: vec(N)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
+subroutine mult_r_disc(this,N,ind,vec,res)
+    !multiply to the right with a discontinuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind(N)
+    real(8),intent(in)              :: vec(N)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
 
 subroutine optimize(this)
     class(t_H_mkl_csr),intent(inout)   :: this
@@ -177,10 +223,9 @@ subroutine destroy_child(this)
     endif
 end subroutine
 
-subroutine set_from_Hcoo(this,H_coo,lat)
+subroutine set_from_Hcoo(this,H_coo)
     class(t_H_mkl_csr),intent(inout)    :: this
     type(t_H_coo),intent(inout)         :: H_coo
-    type(lattice),intent(in)            :: lat
 
     !local
     integer                 :: nnz
