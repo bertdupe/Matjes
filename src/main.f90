@@ -10,6 +10,7 @@ use m_setup_simu
 use m_write_spin
 use m_createspinfile
 use m_minimize
+use m_llg_diag
 use m_user_info
 use m_H_public
 use m_parallel_tempering
@@ -157,6 +158,9 @@ Implicit None
                      call tightbinding(all_lattices,io_simu)
         endif
         
+        !---------------------------------
+        !  minimizations
+        !---------------------------------
         if (my_simu%name == 'minimization')then
             Call rw_minimize(io_min)
             call minimize(all_lattices,io_simu,io_min,Ham_comb)
@@ -167,10 +171,14 @@ Implicit None
             call minimize_infdamp(all_lattices,io_simu,io_min,Ham_comb)
         endif
         
-        if (my_simu%name == 'diag_lgg')then
+        !---------------------------------
+        !  diag llg
+        !---------------------------------
+        if (my_simu%name == 'llg_diag')then
             !Call rw_minimize(io_min)
-            call build_transmat(all_lattices,io_simu,io_min,Ham_comb)
+            call diag_llg(all_lattices,io_simu,Ham_comb)
         endif
+        
         !---------------------------------
         !  Part which does the molecular dynamics
         !---------------------------------
