@@ -166,6 +166,11 @@ Implicit None
             Call rw_minimize(io_min)
             call minimize_infdamp(all_lattices,io_simu,io_min,Ham_comb)
         endif
+        
+        if (my_simu%name == 'diag_lgg')then
+            !Call rw_minimize(io_min)
+            call build_transmat(all_lattices,io_simu,io_min,Ham_comb)
+        endif
         !---------------------------------
         !  Part which does the molecular dynamics
         !---------------------------------
