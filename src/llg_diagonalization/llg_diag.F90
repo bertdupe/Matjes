@@ -1,6 +1,9 @@
 module m_llg_diag
 use m_H_public
 use m_input_types,only : min_input
+use m_constants,  only : hbar, mu_B
+use m_io_files_utils
+use m_io_utils
 implicit none
 
 private :: cart_to_sph, sph_to_cart, build_num_hess
@@ -24,9 +27,10 @@ subroutine build_transmat(lat,io_simu,Hams)
 	real(8),allocatable				:: Tr_theta(:,:), Tr_phi(:,:), Tr_thetaphi(:,:), Tr_phitheta(:,:), Tr(:,:)
 	real(8),allocatable			 	:: Hess_theta(:,:), Hess_phi(:,:), Hess_thetaphi(:,:), Hess_phitheta(:,:)
 	integer                     	:: N_cell,N_dim,N_mag
-	integer							:: i,j
-	real(8)							:: gp, hp
-	   
+	integer							:: i,j,io
+	real(8)							:: gp, hp, damping , gyro,mu_s  	
+	logical 						:: print_tr,save_tr
+	    
 	! initialize
     N_cell=lat%Ncell
     N_dim=lat%M%dim_mode
@@ -36,8 +40,14 @@ subroutine build_transmat(lat,io_simu,Hams)
     allocate(Hess_theta(N_mag,N_mag),Hess_phi(N_mag,N_mag),Hess_thetaphi(N_mag,N_mag),Hess_phitheta(N_mag,N_mag) ,source=0.0d0) 
 	allocate(M0(2,N_mag),source=0.0d0) !sph
    
-   	gp=1.0d0
-   	hp=1.0d0 !not actual values
+   	call get_parameter(io,'input','damping',damping)
+   	gyro=1.0d0/hbar !1/(eV.s) 
+   	!mu_s=2.7*mu_B !
+   	gp=gyro/(1+damping**2) 
+   	hp=damping*gp 
+   	
+   	print_tr=.false.
+   	save_tr=.false.
    	   	
    	write(6,'(/,a,/)') 'Starting computation of the transition matrix of LLG. Warning: only for energy extrema.'
     
@@ -57,22 +67,38 @@ subroutine build_transmat(lat,io_simu,Hams)
        	enddo
     enddo
     
-    	write(*,*)'Tr_theta='
-	do j=1,N_mag  
-	 	write(*,*)Tr_theta(:,j)
-	 enddo
-   	 write(*,*)'Tr_phi='
-   	 do j=1,N_mag  
-   	 	write(*,*)Tr_phi(:,j)
-   	 enddo
-   	 write(*,*)'Tr_thetaphi='
-   	 do j=1,N_mag  
-   	 	write(*,*) Tr_thetaphi(:,j)
-   	 enddo
-   	 write(*,*)'Tr_phitheta='
-   	 do j=1,N_mag  
-   	 	write(*,*) Tr_phitheta(:,j)
-	enddo
+    if(print_tr) then
+			write(*,*)'Tr_theta='
+		do j=1,N_mag  
+		 	write(*,*)Tr_theta(:,j)
+		 enddo
+	   	 write(*,*)'Tr_phi='
+	   	 do j=1,N_mag  
+	   	 	write(*,*)Tr_phi(:,j)
+	   	 enddo
+	   	 write(*,*)'Tr_thetaphi='
+	   	 do j=1,N_mag  
+	   	 	write(*,*) Tr_thetaphi(:,j)
+	   	 enddo
+	   	 write(*,*)'Tr_phitheta='
+	   	 do j=1,N_mag  
+	   	 	write(*,*) Tr_phitheta(:,j)
+		enddo
+	end if
+	
+	if(save_tr) then
+		!write to file
+		open (1,file='trans_mat.dat')
+		rewind 1
+		do j=1,N_mag
+	   		write(1,*) Hess_theta(:,j), Hess_thetaphi(:,j)
+	   	enddo
+		do j=1,N_mag
+	   		write(1,*) Hess_phitheta(:,j), Hess_phi(:,j)
+	   	enddo
+	   	close(1)
+	end if
+	
     
 	write(6,'(/a,2x,E20.12E3/)') 'Done.'
 	
@@ -82,6 +108,7 @@ end subroutine
 ! 					Build numerical Hessian matrix    
 subroutine build_num_hess(lat,io_simu,Hams,M0,Hess_theta,Hess_phi,Hess_thetaphi,Hess_phitheta)
 use m_derived_types, only : io_parameter,lattice
+	use m_io_files_utils, only: open_file_write,close_file
     type(io_parameter), intent(in)  :: io_simu
    ! type(min_input), intent(in)     :: io_min
     type(lattice),intent(inout)     :: lat
@@ -94,9 +121,11 @@ use m_derived_types, only : io_parameter,lattice
     real(8), allocatable	 		:: M0_cart(:,:),Mp_cart(:,:), Mm_cart(:,:), Mpm_cart(:,:), Mmp_cart(:,:) !cartesian coord
     real(8)							:: E0, Ep, Em, Epm, Emp !total energy
     integer                     	:: N_cell,N_dim,N_mag
-    integer                     	:: i,j
+    integer                     	:: i,j,io_file(2)
     real(8),pointer             	:: M3(:,:)
-    	
+    character(len=50)   :: file_name(2),form
+    logical :: print_hess,save_hess
+    
     !initialization 
     
     write(6,'(/,a,/)') 'Building the numerical Hessian...'
@@ -118,6 +147,9 @@ use m_derived_types, only : io_parameter,lattice
     
     dphi=0.001d0
     dtheta=0.001d0
+    
+    print_hess=.false. 
+    print_hess=.true. 
     
     E0=energy_all(Hams,lat)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',E0/real(N_cell,8)
@@ -164,7 +196,7 @@ use m_derived_types, only : io_parameter,lattice
 			if(i.ne.j) then !off-diagonal term
 				Hess_theta(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0*dtheta**2)
 			else !diagonal term
-				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / dtheta**2
+				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / (dtheta**2)
 			endif	
 
 			!revert to initial state
@@ -207,7 +239,7 @@ use m_derived_types, only : io_parameter,lattice
 			if(i.ne.j) then !off-diagonal term
 				Hess_phi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0 * dphi**2 *sin(M0(1,i))*sin(M0(1,j)) )
 			else
-				Hess_phi(i,j)= (  Ep - 2.0d0*E0 + Em ) / ( (dphi*sin(M0(1,i)))**2)
+				Hess_phi(i,j)= (  Ep - 2.0d0*E0 + Em ) / ( dphi**2 *sin(M0(1,i))*sin(M0(1,i)) )
 			endif	
 			
 			!revert to initial state
@@ -299,22 +331,43 @@ use m_derived_types, only : io_parameter,lattice
 	M3=M0_cart
 	
 	write(6,'(/a,2x,E20.12E3/)') 'Done.'
-	write(*,*)'Hess_theta='
-	do j=1,N_mag  
-	 	write(*,*)Hess_theta(:,j)
-	 enddo
-   	 write(*,*)'Hess_phi='
-   	 do j=1,N_mag  
-   	 	write(*,*)Hess_phi(:,j)
-   	 enddo
-   	 write(*,*)'Hess_thetaphi='
-   	 do j=1,N_mag  
-   	 	write(*,*) Hess_thetaphi(:,j)
-   	 enddo
-   	 write(*,*)'Hess_phitheta='
-   	 do j=1,N_mag  
-   	 	write(*,*) Hess_phitheta(:,j)
-	enddo
+	
+	if(print_hess) then
+		!print to console
+		write(*,*)'Hess_theta='
+		do i=1,N_mag  
+		 	write(*,*)Hess_theta(i,:)
+		 enddo
+	   	 write(*,*)'Hess_phi='
+	   	 do i=1,N_mag  
+	   	 	write(*,*)Hess_phi(i,:)
+	   	 enddo
+	   	 write(*,*)'Hess_thetaphi='
+	   	 do i=1,N_mag  
+	   	 	write(*,*) Hess_thetaphi(i,:)
+	   	 enddo
+	   	 write(*,*)'Hess_phitheta='
+	   	 do i=1,N_mag  
+	   	 	write(*,*) Hess_phitheta(i,:)
+	   	 enddo	
+   	 endif	
+   	 
+   	if(save_hess) then
+	   	!write to file
+	   	!file_name(1)='Hessian_mat.dat'
+		!open(io_file(1), file=file_name(1))!open_file_write(file_name(1)) !crashes idk why
+		open (1,file='Hessian_mat.dat')
+		rewind 1
+		do i=1,N_mag
+	   		write(1,*) Hess_theta(:,i), Hess_thetaphi(:,i)
+	   	enddo
+		do j=i,N_mag
+	   		write(1,*) Hess_phitheta(:,i), Hess_phi(:,i)
+	   	enddo
+	   	close(1)
+	!	call close_file(file_name(1),io_file(1))
+	end if
+	
 end subroutine
 
 
@@ -334,19 +387,13 @@ use m_derived_types, only : lattice
     N_mag=(N_dim/3)*N_cell
     
     !theta
-    !do iomp=1,N_mag !avoid crashing is  acos gets >1 value
-    	!if(M3(3,iomp).ge.1.0d0) then
-			!M_sph(1,iomp) = 0.0d0 
-		!else
-			M_sph(1,:)=acos(M3(3,:)) 
-		!endif
-    !enddo
+    if(any(M3(3,:).gt.1.0d0)) stop 'some cart. components are >1, fix the cart_to_sph routine'
+	M_sph(1,:)=acos(M3(3,:)) 
     
  	!phi 
 	M_sph(2,:)=atan2(M3(2,:),M3(1,:)) 
 		
 end subroutine
-
 
 
 !		Converts magnetization sph into cart
