@@ -84,8 +84,8 @@ subroutine get_exchange_J(Ham,io,lat)
         enddo
         Ham%desc="symmetric magnetic exchange"
         !set modes
-        Call mode_set_rank1(Ham%mode_l,"M")
-        Call mode_set_rank1(Ham%mode_r,"M")
+        Call mode_set_rank1(Ham%mode_l,lat,"M")
+        Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
 end subroutine 
 

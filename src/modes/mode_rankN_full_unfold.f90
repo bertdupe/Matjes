@@ -6,14 +6,15 @@ private
 public F_mode_rankN_full_manual
 
 type, extends(F_mode) :: F_mode_rankN_full_manual  !contains all entries
-    integer                         :: mode_size=-1
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
-    procedure   :: get_mode_exc_ind
-    procedure   :: mode_reduce_ind
+    procedure   :: get_mode_exc
+    procedure   :: mode_reduce_comp
+    procedure   :: get_ind_site
 
     procedure   :: get_mode_single_cont  !
+    procedure   :: get_mode_single_disc
 
     procedure   :: copy
     procedure   :: bcast
@@ -24,6 +25,28 @@ type, extends(F_mode) :: F_mode_rankN_full_manual  !contains all entries
 end type
 
 contains
+
+subroutine get_ind_site(this,comp,site,ind)
+    class(F_mode_rankN_full_manual),intent(in)  :: this
+    integer,intent(in)                          :: comp  !mode index
+    integer,intent(in)                          :: site    !entry
+    integer,intent(inout),allocatable           :: ind(:)
+
+    integer         :: inner_dim_mode, i
+
+    ERROR STOP "IMPLEMENT"
+end subroutine
+
+subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
+    class(F_mode_rankN_full_manual),intent(in)   :: this
+    type(lattice),intent(in)                    :: lat
+    integer,intent(in)                          :: comp  !mode index
+    integer,intent(in)                          :: site    !entry
+    integer,intent(inout),allocatable           :: ind(:)
+    real(8),intent(inout),allocatable           :: vec(:)
+
+    ERROR STOP "IMPLEMENT"
+end subroutine
 
 subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
     class(F_mode_rankN_full_manual),intent(in)  :: this
@@ -38,29 +61,29 @@ subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
 end subroutine
 
 
-subroutine get_mode_exc_ind(this,lat,ind,vec)
+subroutine get_mode_exc(this,lat,comp,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_full_manual),intent(in)  :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
-    integer,intent(in)                          :: ind       !which mode is kept
+    integer,intent(in)                          :: comp       !which mode is kept
     real(8),intent(inout)                       :: vec(:)
 
     logical                                     :: exclude(this%N_mode)
     integer                                     :: i
 
     exclude=.false.
-    exclude(ind)=.true.
+    exclude(comp)=.true.
     Call lat%set_order_comb_exc(this%order,vec,exclude)
 end subroutine
 
-subroutine mode_reduce_ind(this,lat,vec_in,ind,vec_out)
+subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
     class(F_mode_rankN_full_manual),intent(in)  :: this
     real(8),intent(in)                          :: vec_in(:)
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
-    integer,intent(in)                          :: ind !of which operator the first entry is kept
-    real(8),intent(out)                         :: vec_out(lat%dim_modes(this%order(ind))*lat%Ncell)
+    integer,intent(in)                          :: comp !of which operator the first entry is kept
+    real(8),intent(out)                         :: vec_out(lat%dim_modes(this%order(comp))*lat%Ncell)
 
-    Call lat%reduce(vec_in,this%order,ind,vec_out)
+    Call lat%reduce(vec_in,this%order,comp,vec_out)
 end subroutine
 
 
@@ -90,7 +113,6 @@ end function
 
 subroutine destroy(this)
     class(F_mode_rankN_full_manual),intent(inout) ::  this
-    this%mode_size=-1
     deallocate(this%order)
 end subroutine
 
@@ -101,7 +123,7 @@ subroutine copy(this,F_out)
     Call this%copy_base(F_out) 
     select type(F_out)
     type is(F_mode_rankN_full_manual)
-        F_out%mode_size=this%mode_size
+        continue
     class default
         ERROR STOP "FAILED TO COPY F_mode_rankN_full_manualer mode to F_out"
     end select
@@ -131,7 +153,6 @@ subroutine init_order(this,lat,abbrev_in)
     integer     :: i
 
     order=op_abbrev_to_int(abbrev_in)
-    Call this%init_base(order)
-    this%mode_size=lat%Ncell*product(lat%dim_modes(this%order))
+    Call this%init_base(order,lat%Ncell*product(lat%dim_modes(this%order)))
 end subroutine
 end module

@@ -85,7 +85,7 @@ subroutine get_exchange_TJ(Ham,io,lat)
             enddo
         enddo
         Ham%desc="T^2 M^2 exchange"
-        Call mode_set_rank1(Ham%mode_l,"M")
+        Call mode_set_rank1(Ham%mode_l,lat,"M")
         Call mode_set_rankN(Ham%mode_r,"MTT",lat,1)
     endif
 end subroutine 

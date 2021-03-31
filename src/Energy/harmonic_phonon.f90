@@ -85,8 +85,8 @@ subroutine get_Forces_F(Ham,io,lat)
         enddo
         Ham%desc="harmonic phonon"
         !set modes
-        Call mode_set_rank1(Ham%mode_l,"U")
-        Call mode_set_rank1(Ham%mode_r,"U")
+        Call mode_set_rank1(Ham%mode_l,lat,"U")
+        Call mode_set_rank1(Ham%mode_r,lat,"U")
     endif
 
 end subroutine

@@ -65,8 +65,8 @@ subroutine get_stark_E(Ham,io,lat)
         Call Ham%init_connect(connect,val_tmp,ind_tmp,"EU",lat,1)
         Ham%desc="Stark energy"
         !set modes
-        Call mode_set_rank1(Ham%mode_l,"E")
-        Call mode_set_rank1(Ham%mode_r,"U")
+        Call mode_set_rank1(Ham%mode_l,lat,"E")
+        Call mode_set_rank1(Ham%mode_r,lat,"U")
     endif
 end subroutine
 

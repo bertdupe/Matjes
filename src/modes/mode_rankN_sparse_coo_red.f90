@@ -1,4 +1,5 @@
 module m_mode_construction_rankN_sparse_coo_red
+#if 0
 !assume all values are 1 and row is just [(i,i=1,Nmode)]
 use m_mode_construction
 use m_derived_types, only : lattice,number_different_order_parameters
@@ -12,13 +13,13 @@ type, extends(F_mode_rankN_sparse_coo) :: F_mode_rankN_sparse_coo_red !contains 
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
-    procedure   :: get_mode_exc_ind
+    procedure   :: get_mode_exc
     procedure   :: mode_reduce_ind 
 end type
 
 contains
 
-subroutine get_mode_exc_ind(this,lat,ind,vec)
+subroutine get_mode_exc(this,lat,ind,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_coo_red),intent(in)   :: this
     type(lattice),intent(in)                        :: lat       !lattice type which knows about all states
@@ -81,4 +82,5 @@ subroutine get_mode(this,lat,mode,tmp)
     mode=product(tmp_internal,dim=2)
     nullify(mode_base)
 end subroutine
+#endif
 end module

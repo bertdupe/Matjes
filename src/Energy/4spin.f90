@@ -117,7 +117,7 @@ subroutine get_4spin(Ham,io,lat)
                  connect(:,:)=con_unfold(1:2,bnd(1):bnd(2))
                  val_tmp=-K
                  ind_tmp=spread(neigh(1:2),2,9)+ii_jj_comb
-                 Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,2,dim_mode_in=dim_mode)   !not sure about 2
+                 Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,4,dim_mode_in=dim_mode)
                  Call Ham%add(Ham_tmp)
                  Call Ham_tmp%destroy()
  
@@ -125,7 +125,7 @@ subroutine get_4spin(Ham,io,lat)
                  connect(:,:)=con_unfold(3:4,bnd(1):bnd(2))
                  val_tmp=-K
                  ind_tmp=spread(neigh(3:4),2,9)+ii_jj_comb
-                 Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,2,dim_mode_in=dim_mode)   !not sure about 2
+                 Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,4,dim_mode_in=dim_mode)
                  Call Ham%add(Ham_tmp)
                  Call Ham_tmp%destroy()
 
@@ -133,7 +133,7 @@ subroutine get_4spin(Ham,io,lat)
                  connect(:,:)=con_unfold(5:6,bnd(1):bnd(2))
                  val_tmp=K
                  ind_tmp=spread(neigh(5:6),2,9)+ii_jj_comb
-                 Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,2,dim_mode_in=dim_mode)   !not sure about 2
+                 Call Ham_tmp%init_mult_connect_2(connect,val_tmp,ind_tmp,"MM","MM",lat,4,dim_mode_in=dim_mode)
                  Call Ham%add(Ham_tmp)
                  Call Ham_tmp%destroy()
                 deallocate(connect)

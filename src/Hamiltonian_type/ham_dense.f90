@@ -43,7 +43,6 @@ subroutine mult_r(this,lat,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-
 subroutine mult_l(this,lat,res)
     use m_derived_types, only: lattice
     class(t_h_dense),intent(in)   :: this
