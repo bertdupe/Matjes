@@ -148,8 +148,8 @@ use m_derived_types, only : io_parameter,lattice
     dphi=0.001d0
     dtheta=0.001d0
     
-    print_hess=.false. 
     print_hess=.true. 
+    save_hess=.true. 
     
     E0=energy_all(Hams,lat)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',E0/real(N_cell,8)
@@ -181,22 +181,34 @@ use m_derived_types, only : io_parameter,lattice
 			call sph_to_cart(Mm,Mm_cart)
 			call sph_to_cart(Mpm,Mpm_cart)	
 			call sph_to_cart(Mmp,Mmp_cart)
-
+	
 			!compute energies
 			M3=Mp_cart
 			Ep=energy_all(Hams,lat)
+			
 			M3=Mm_cart
 			Em=energy_all(Hams,lat)
+			
 			M3=Mmp_cart
 			Emp=energy_all(Hams,lat)
+			
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
+			
+			M3=M0
 
 			!Hess_theta entry
 			if(i.ne.j) then !off-diagonal term
-				Hess_theta(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0*dtheta**2)
+				Hess_theta(i,j)=(  Ep - Epm - Emp + Em ) / (4.0d0*dtheta*dtheta)
+				!write(*,*) 'i, j=',i,j,' Hess_theta(i,j)= ',Hess_theta(i,j),' where the num = ',(  Ep - Epm - Emp + Em ),' and the denom= ',(4.0d0*dtheta*dtheta)
+				!write(*,*)'Ep= ', Ep, ' Em= ', Em, ' Epm= ',Epm !, ' Emp= ',Emp
+				!write(*,*) 'for Mmp, theta_i,phi_i =', Mmp(1,i), Mmp(2,i), ' theta_j,phi_j= ',Mmp(1,j), Mmp(2,j)
+				!write(*,*) 'Mmp_cart_i= ',Mmp_cart(:,i),'Mmp_cart_j=',Mmp_cart(:,j) 
+
+				!write(*,*)' Emp= ',Emp  
 			else !diagonal term
-				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / (dtheta**2)
+				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / (dtheta*dtheta)
+				!write(*,*) 'i=j = ',i,j,' Hess_theta(i,j)= ',Hess_theta(i,j)
 			endif	
 
 			!revert to initial state
@@ -234,7 +246,8 @@ use m_derived_types, only : io_parameter,lattice
 			Emp=energy_all(Hams,lat)
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
-				
+			M3=M0
+			
 			!Hess_phi entry
 			if(i.ne.j) then !off-diagonal term
 				Hess_phi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0 * dphi**2 *sin(M0(1,i))*sin(M0(1,j)) )
@@ -277,9 +290,10 @@ use m_derived_types, only : io_parameter,lattice
 			Emp=energy_all(Hams,lat)
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
+			M3=M0
 				
 			!Hess_thetaphi entry
-			Hess_thetaphi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0*dphi*dtheta *sin(M0(1,j)) );
+			Hess_thetaphi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0*dphi*dtheta*sin(M0(1,j)) )
 			
 			!revert to initial state
 			Mp(:,:)=M0(:,:)
@@ -316,9 +330,10 @@ use m_derived_types, only : io_parameter,lattice
 			Emp=energy_all(Hams,lat)
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
-				
+			M3=M0	
+		
 			!Hess_thetaphi entry
-			Hess_phitheta(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0*dphi*dtheta *sin(M0(1,i)) );
+			Hess_phitheta(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0*dphi*dtheta *sin(M0(1,i)) )
 			
 			!revert to initial state
 			Mp(:,:)=M0(:,:)
@@ -335,20 +350,20 @@ use m_derived_types, only : io_parameter,lattice
 	if(print_hess) then
 		!print to console
 		write(*,*)'Hess_theta='
-		do i=1,N_mag  
-		 	write(*,*)Hess_theta(i,:)
+		do j=1,N_mag  
+		 	write(*,*)Hess_theta(j,:)
 		 enddo
 	   	 write(*,*)'Hess_phi='
-	   	 do i=1,N_mag  
-	   	 	write(*,*)Hess_phi(i,:)
+	   	 do j=1,N_mag  
+	   	 	write(*,*)Hess_phi(j,:)
 	   	 enddo
 	   	 write(*,*)'Hess_thetaphi='
-	   	 do i=1,N_mag  
-	   	 	write(*,*) Hess_thetaphi(i,:)
+	   	 do j=1,N_mag  
+	   	 	write(*,*) Hess_thetaphi(j,:)
 	   	 enddo
 	   	 write(*,*)'Hess_phitheta='
-	   	 do i=1,N_mag  
-	   	 	write(*,*) Hess_phitheta(i,:)
+	   	 do j=1,N_mag  
+	   	 	write(*,*) Hess_phitheta(j,:)
 	   	 enddo	
    	 endif	
    	 
@@ -359,10 +374,10 @@ use m_derived_types, only : io_parameter,lattice
 		open (1,file='Hessian_mat.dat')
 		rewind 1
 		do i=1,N_mag
-	   		write(1,*) Hess_theta(:,i), Hess_thetaphi(:,i)
+	   		write(1,*) Hess_theta(i,:), Hess_thetaphi(i,:)
 	   	enddo
-		do j=i,N_mag
-	   		write(1,*) Hess_phitheta(:,i), Hess_phi(:,i)
+		do i=1,N_mag
+	   		write(1,*) Hess_phitheta(i,:),Hess_phi(i,:)
 	   	enddo
 	   	close(1)
 	!	call close_file(file_name(1),io_file(1))
