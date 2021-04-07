@@ -41,13 +41,12 @@ subroutine build_transmat(lat,io_simu,Hams)
 	allocate(M0(2,N_mag),source=0.0d0) !sph
    
    	call get_parameter(io,'input','damping',damping)
-   	gyro=1.0d0/hbar !1/(eV.s) 
-   	!mu_s=2.7*mu_B !
+   	gyro=1.0d0/hbar !=g*mu_s/(hbar*mu_s) in 1/(eV.s) 
    	gp=gyro/(1+damping**2) 
    	hp=damping*gp 
    	
-   	print_tr=.false.
-   	save_tr=.false.
+   	print_tr=.true.
+   	save_tr=.true.
    	   	
    	write(6,'(/,a,/)') 'Starting computation of the transition matrix of LLG. Warning: only for energy extrema.'
     
@@ -70,19 +69,19 @@ subroutine build_transmat(lat,io_simu,Hams)
     if(print_tr) then
 			write(*,*)'Tr_theta='
 		do j=1,N_mag  
-		 	write(*,*)Tr_theta(:,j)
+		 	write(*,*)Tr_theta(j,:)
 		 enddo
 	   	 write(*,*)'Tr_phi='
 	   	 do j=1,N_mag  
-	   	 	write(*,*)Tr_phi(:,j)
+	   	 	write(*,*)Tr_phi(j,:)
 	   	 enddo
 	   	 write(*,*)'Tr_thetaphi='
 	   	 do j=1,N_mag  
-	   	 	write(*,*) Tr_thetaphi(:,j)
+	   	 	write(*,*) Tr_thetaphi(j,:)
 	   	 enddo
 	   	 write(*,*)'Tr_phitheta='
 	   	 do j=1,N_mag  
-	   	 	write(*,*) Tr_phitheta(:,j)
+	   	 	write(*,*) Tr_phitheta(j,:)
 		enddo
 	end if
 	
@@ -91,10 +90,10 @@ subroutine build_transmat(lat,io_simu,Hams)
 		open (1,file='trans_mat.dat')
 		rewind 1
 		do j=1,N_mag
-	   		write(1,*) Hess_theta(:,j), Hess_thetaphi(:,j)
+	   		write(1,*) Tr_theta(j,:), Tr_thetaphi(j,:)
 	   	enddo
 		do j=1,N_mag
-	   		write(1,*) Hess_phitheta(:,j), Hess_phi(:,j)
+	   		write(1,*) Tr_phitheta(j,:), Tr_phi(j,:)
 	   	enddo
 	   	close(1)
 	end if
