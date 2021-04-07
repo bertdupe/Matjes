@@ -40,15 +40,19 @@ subroutine build_transmat(lat,io_simu,Hams)
     allocate(Hess_theta(N_mag,N_mag),Hess_phi(N_mag,N_mag),Hess_thetaphi(N_mag,N_mag),Hess_phitheta(N_mag,N_mag) ,source=0.0d0) 
 	allocate(M0(2,N_mag),source=0.0d0) !sph
    
+	io=open_file_read('input')
    	call get_parameter(io,'input','damping',damping)
-   	gyro=1.0d0/hbar !=g*mu_s/(hbar*mu_s) in 1/(eV.s) 
+   	write(*,*) 'hbar=',hbar
+   	gyro=1.0d0/(hbar*1e-15) !=g*mu_s/(hbar*mu_s) in 1/(eV.s), using seconds to get frequencies in Hz
    	gp=gyro/(1+damping**2) 
    	hp=damping*gp 
-   	
+ 
    	print_tr=.true.
    	save_tr=.true.
    	   	
    	write(6,'(/,a,/)') 'Starting computation of the transition matrix of LLG. Warning: only for energy extrema.'
+   	write(*,*) 'damping=', damping,' damping**2=' ,damping**2, 'gyro= ',gyro,'1/(eV.s)'
+    write(*,*) 'gp=', gp, ' 1/(eV.s), hp= ', hp, '1/(eV.s)' 
     
     call cart_to_sph(lat,M0) !convert stable state to sph
    
@@ -147,7 +151,7 @@ use m_derived_types, only : io_parameter,lattice
     dphi=0.001d0
     dtheta=0.001d0
     
-    print_hess=.true. 
+    print_hess=.false. 
     save_hess=.true. 
     
     E0=energy_all(Hams,lat)
