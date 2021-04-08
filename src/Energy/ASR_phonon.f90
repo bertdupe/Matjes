@@ -1,7 +1,11 @@
 module m_ASR_phonon
 use m_input_H_types, only: io_U_ASR
+use m_forces_from_file, only: get_ASR_file
+
 implicit none
-private
+logical :: read_from_file = .False.
+
+private :: read_from_file
 public :: get_ASR_Ph,read_ASR_Ph_input
 
 contains
@@ -15,7 +19,13 @@ subroutine read_ASR_Ph_input(io_param,fname,io)
 
     cancel_ASR=.False.
     Call get_parameter(io_param,fname,'cancel_ASR',cancel_ASR)
-    if (.not.cancel_ASR) Call get_parameter(io_param,fname,'phonon_harmonic',io%pair,io%is_set)
+    if (.not.cancel_ASR) then
+      Call get_parameter(io_param,fname,'phonon_harmonic',io%pair,io%is_set)
+
+      inquire(file='phonon_harmonic.in',exist=read_from_file)
+      if (read_from_file) write(6,'(a)') 'reading ASR from phonon_harmonic.in'
+
+    endif
 
 end subroutine
 
@@ -43,6 +53,10 @@ subroutine get_ASR_Ph(Ham,io,lat)
     integer             :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
     integer             :: atind_ph(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer,allocatable :: all_pairs(:,:)
+    integer             :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
+
+    ! conversion factor Ha/Bohr2 to eV/nm2
+    real(8), parameter  :: HaBohrsq_to_Evnmsq = 9717.38d0
 
 
     if(io%is_set)then
@@ -50,7 +64,36 @@ subroutine get_ASR_Ph(Ham,io,lat)
         N_atpair=size(io%pair)
         !set local Hamiltonian
         allocate(Htmp(lat%u%dim_mode,lat%u%dim_mode),source=0.d0)
-        do i_atpair=1,N_atpair
+
+        if (read_from_file) then
+
+            do i_atpair=1,N_atpair
+                !loop over different connected atom types
+                Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+                N_dist=size(io%pair(i_atpair)%dist)
+                connect_bnd=1 !initialization for lower bound
+                connect_bnd(2)=neigh%ishell(i_pair)
+
+                !set local Hamiltonian in basis of magnetic orderparameter
+                atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_atpair))
+                atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_atpair))
+                offset_ph=(atind_ph-1)*3
+
+                allocate( all_pairs,source=neigh%pairs(:,connect_bnd(1):connect_bnd(2)) )
+                Htmp=0.0d0
+
+                call get_ASR_file(Htmp,'phonon_harmonic.in',offset_ph)
+                Call get_coo(Htmp,val_tmp,ind_tmp)
+
+                !fill Hamiltonian type
+                Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,2)
+                deallocate(val_tmp,ind_tmp)
+                Call Ham%add(Ham_tmp)
+                Call Ham_tmp%destroy()
+            enddo
+
+        else
+          do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
             N_dist=size(io%pair(i_atpair)%dist)
@@ -59,7 +102,7 @@ subroutine get_ASR_Ph(Ham,io,lat)
 
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor) also called shell
-                F=io%pair(i_atpair)%val(i_dist)
+                F=io%pair(i_atpair)%val(i_dist)*HaBohrsq_to_Evnmsq
 
                 do i_shell=1,neigh%Nshell(i_dist)
                     write(*,*) 'i_shell',i_shell
@@ -74,9 +117,9 @@ subroutine get_ASR_Ph(Ham,io,lat)
                     allocate( all_pairs,source=neigh%pairs(:,connect_bnd(1):connect_bnd(2)) )
                     Htmp=0.0d0
 
-                    Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=-F/2.0d0
-                    Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=-F/2.0d0
-                    Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=-F/2.0d0
+                    Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F/2.0d0
+                    Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F/2.0d0
+                    Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F/2.0d0
 
                     all_pairs(2,:)=neigh%pairs(1,connect_bnd(1):connect_bnd(2))
 
@@ -94,9 +137,9 @@ subroutine get_ASR_Ph(Ham,io,lat)
 
                     Htmp=0.0d0
 
-                    Htmp(atind_ph(2)*3-2,atind_ph(2)*3-2)=-F/2.0d0
-                    Htmp(atind_ph(2)*3-1,atind_ph(2)*3-1)=-F/2.0d0
-                    Htmp(atind_ph(2)*3  ,atind_ph(2)*3  )=-F/2.0d0
+                    Htmp(atind_ph(2)*3-2,atind_ph(2)*3-2)=io%c_ASR*F/2.0d0
+                    Htmp(atind_ph(2)*3-1,atind_ph(2)*3-1)=io%c_ASR*F/2.0d0
+                    Htmp(atind_ph(2)*3  ,atind_ph(2)*3  )=io%c_ASR*F/2.0d0
 
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
@@ -111,7 +154,8 @@ subroutine get_ASR_Ph(Ham,io,lat)
 
                 enddo
             enddo
-        enddo
+          enddo
+        endif
         Ham%desc="ASR phonon"
     endif
 

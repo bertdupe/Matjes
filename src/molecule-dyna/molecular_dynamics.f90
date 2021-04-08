@@ -48,6 +48,10 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    real(8),pointer,contiguous       :: Feff_v(:,:),Feff_3(:,:)
    real(8),pointer,contiguous       :: Du_3(:,:,:),Du_int_3(:,:)
 
+   ! conversion factor to go from uam.nm/fs^2 to eV/nm
+   real(8), parameter :: uamnmfs_to_eVnm = 2.66048E-16
+
+
    ! dummys
    integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,tag,i
    real(8) :: timestep_int,h_int(3),E_int(3),dt
@@ -155,7 +159,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
 
            !get forces on the phonon lattice
            Call get_eff_field(Hams,lat_1,Feff,5)
-           acceleration=(Feff_3-damp_F*V_1)/masses
+           acceleration=uamnmfs_to_eVnm*(Feff_3-damp_F*V_1)/masses
 
            V_2=acceleration*dt/2.0d0+V_1      ! ( v of t+dt/2  )
            lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )

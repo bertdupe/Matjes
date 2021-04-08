@@ -10,7 +10,7 @@ type,abstract :: t_H
     logical,private         :: set=.false. !has this object been set?
     character(len=100)      :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
     integer                 :: mult_M_single=0 !factor necessary to calculate energy change correctly when only evaluating single sites
-    class
+
 contains
 
     !Hamiltonian initialization routines

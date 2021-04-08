@@ -79,38 +79,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
     time=0.0d0
     
     Call my_lattice%init_order(my_motif,extpar_io)
-
-!OLD NEIGHBOR PART WHICH NOW IS CALCULATED AT EACH HAMILTONIAN AGAIN (remove at some point)
-    ! get the table of neighbors and the numbers of atom per shell
-!    N_Nneigh=H_io%get_shell_number()
-!    if(N_Nneigh>0)then
-!        !mapping of the neighbours
-!        call user_info(6,time,'Calculating the table of neighbors (this can take time)',.true.)
-!        allocate(tabledist(N_Nneigh,1),stat=alloc_check)
-!        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate table of distance'
-!        tabledist=0.0d0
-!        allocate(indexNN(N_Nneigh,1),stat=alloc_check)
-!        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate indexNN'
-!        indexNN=0
-!        call get_table_of_distance(my_lattice%areal,N_Nneigh,my_lattice%world,my_motif,tabledist)
-!        call get_num_neighbors(N_Nneigh,tabledist,my_lattice%areal,my_lattice%world,my_motif,indexNN)
-!
-!        ! allocate table of neighbors and masque
-!        tot_N_Nneigh=sum(indexNN(1:N_Nneigh,1),1)
-!        allocate(tableNN(5,tot_N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),n_motif),stat=alloc_check)
-!        if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate tableNN'
-!        tableNN=0
-!    
-!        ! get table of neighbors
-!        call mapping(tabledist,N_Nneigh,my_motif,indexNN,tableNN,my_lattice)
-!        call user_info(6,time,'done',.true.)
-!    else
-!        write(6,'(a)') "No neighbors requested, skipping the neighbor table calculation"
-!        !nonsense allocations for better trackable boundary violations
-!        allocate(tableNN(1,1,1,1,1,1),source=0)
-!        allocate(tabledist(1,1),source=0.0d0)
-!        allocate(indexNN(1,1),source=0)
-!    endif
     
     !-------------------------------------------------
     
@@ -131,29 +99,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
     deallocate(pos)
     call close_file('positions.dat',io)
     
-!OLD DMI PART WHICH HAS TO BE SOMEHOW UPDATED TO NEW LATTICE INPUT (but not here)
-    ! setup the different parameters for the interaction DM, 4-spin... 
-    ! hard part: setup DM interaction
-    ! I send an example neighbor table to setup the DM
-!    call user_info(6,time,'Calculating the DM vectors for each shells',.false.)
-!    n_DMI=count(H_io%D%val/=0.0d0)
-!
-!    if (n_DMI.ne.0) then
-!        write(6,'(I4,a)') n_DMI,' DMI found'
-!        write(*,*) 'number of first nearest neighbor', sum(indexNN(1:n_DMI,1))
-!        allocate(DM_vector(sum(indexNN(1:n_DMI,1)),3,1))
-!        DM_vector=0.0d0
-!        call setup_DM_vector(indexNN,n_DMI,my_lattice,my_motif,DM_vector,tabledist)
-!        call user_info(6,time,'done',.true.)
-!    ! the DM and the neighbors have to turn in the same direction. therefore the matrix of the neighbors
-!    ! have to be rearranged
-!        call user_info(6,time,'Re-aranging the position of the DM vectors',.false.)
-!        call arrange_DM(DM_vector,n_DMI)
-!        call user_info(6,time,'done',.true.)
-!    else
-!        allocate(DM_vector(1,1,1))
-!        DM_vector=0.0d0
-!    endif
     
     ! Check the presence of the dipole dipole
     !call get_ham_dipole('input',my_lattice,my_motif) !DIPOLE HAS THE BE REIMPLEMENTED
