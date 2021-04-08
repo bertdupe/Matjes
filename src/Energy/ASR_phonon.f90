@@ -81,8 +81,10 @@ subroutine get_ASR_Ph(Ham,io,lat)
 
                 allocate( all_pairs,source=neigh%pairs(:,connect_bnd(1):connect_bnd(2)) )
                 Htmp=0.0d0
+                all_pairs(2,:)=neigh%pairs(1,connect_bnd(1):connect_bnd(2))
 
                 call get_ASR_file(Htmp,'phonon_harmonic.in',offset_ph)
+                Htmp=Htmp*HaBohrsq_to_Evnmsq*io%c_ASR
                 Call get_coo(Htmp,val_tmp,ind_tmp)
 
                 !fill Hamiltonian type
@@ -90,6 +92,8 @@ subroutine get_ASR_Ph(Ham,io,lat)
                 deallocate(val_tmp,ind_tmp)
                 Call Ham%add(Ham_tmp)
                 Call Ham_tmp%destroy()
+
+                deallocate( all_pairs )
             enddo
 
         else

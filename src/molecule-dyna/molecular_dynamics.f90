@@ -14,7 +14,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    use m_solver_order
    use m_H_public
    use m_solver_commun
-   use m_eff_field, only: get_eff_field
+   use m_eff_field, only : get_eff_field
    use m_createspinfile
    use m_update_time
    use m_write_config
@@ -22,6 +22,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    use m_forces
    use m_velocities
    use m_cell
+   use m_vector, only : norm
 
    !!!!!!!!!!!!!!!!!!!!!!!
    ! arguments
@@ -159,14 +160,14 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
 
            !get forces on the phonon lattice
            Call get_eff_field(Hams,lat_1,Feff,5)
-           acceleration=uamnmfs_to_eVnm*(Feff_3-damp_F*V_1)/masses
+           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_1)/masses
 
            V_2=acceleration*dt/2.0d0+V_1      ! ( v of t+dt/2  )
            lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )
 
            !get forces on the phonon lattice
            Call get_eff_field(Hams,lat_2,Feff,5)
-           acceleration=(Feff_3-damp_F*V_2)/masses
+           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses
 
            V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )
 
@@ -184,9 +185,8 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
 
         !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
 
-        if (mod(j-1,Efreq).eq.0) then
-            Pdy=sum(my_lattice%u%modes_3,2)/real(N_cell,8) !sums over all atoms in unit cell
-        endif
+        Pdy=sum(my_lattice%u%modes_3,2)/real(N_cell,8) !sums of the displacements over all atoms in unit cell
+
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!!!!!!!!!!!!! plotting with graphical frequency
@@ -216,7 +216,12 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         !!!!!!!!!!!!!!! end of a timestep
         real_time=real_time+timestep_int !increment time counter
 
-        write(6,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
+        if(mod(j-1,gra_freq)==0)then
+            write(6,'(a,4(2x,E20.12E3))') 'average force (in eV)',norm(sum(Feff_3,2)/real(N_cell,8)),sum(Feff_3,2)/real(N_cell,8)
+            write(6,'(a,(2x,E20.12E3))') 'average displacement (in nm)',norm(Pdy)
+            write(6,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
+        endif
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
    enddo
    ! end of the simulation

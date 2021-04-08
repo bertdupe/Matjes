@@ -64,6 +64,7 @@ end type
 
 type,extends(io_H_base) :: io_H_Ph
     type(Hr_pair),allocatable   :: pair(:) 
+    real(8)     :: c_ph=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_stark

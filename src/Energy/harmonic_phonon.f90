@@ -84,6 +84,7 @@ subroutine get_Forces_F(Ham,io,lat)
                     if (read_from_file) then
                        ! (Ha,niltonian , name of the file , relative position of the neighbor , offset)
                        call get_forces_file(Htmp,fname_phonon,neigh%diff_vec(:,i_pair),offset_ph)
+                       Htmp=Htmp*HaBohrsq_to_Evnmsq*io%c_ph
                     else
                        Htmp(offset_ph(1)+1,offset_ph(2)+1)=F
                        Htmp(offset_ph(1)+2,offset_ph(2)+2)=F
