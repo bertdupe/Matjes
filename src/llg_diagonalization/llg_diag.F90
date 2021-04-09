@@ -42,16 +42,15 @@ subroutine build_transmat(lat,io_simu,Hams)
    
 	io=open_file_read('input')
    	call get_parameter(io,'input','damping',damping)
-   	write(*,*) 'hbar=',hbar
-   	gyro=1.0d0/(hbar*1e-15) !=g*mu_s/(hbar*mu_s) in 1/(eV.s), using seconds to get frequencies in Hz
-   	gp=gyro/(1+damping**2) 
-   	hp=damping*gp 
+   	gyro=1.0d0/(hbar*1e-15) !=gamma/mu_s = mu_s/(hbar*mu_s)=1/hbar in 1/(eV.s), using seconds to get frequencies in Hz
+   	gp=gyro/(1+damping**2) !precession term
+   	hp=damping*gp !alignment term
  
-   	print_tr=.true.
+   	print_tr=.false.
    	save_tr=.true.
    	   	
    	write(6,'(/,a,/)') 'Starting computation of the transition matrix of LLG. Warning: only for energy extrema.'
-   	write(*,*) 'damping=', damping,' damping**2=' ,damping**2, 'gyro= ',gyro,'1/(eV.s)'
+   	write(*,*) 'damping=', damping, ' gamma/mu_s= ',gyro,'1/(eV.s)'
     write(*,*) 'gp=', gp, ' 1/(eV.s), hp= ', hp, '1/(eV.s)' 
     
     call cart_to_sph(lat,M0) !convert stable state to sph
@@ -65,8 +64,8 @@ subroutine build_transmat(lat,io_simu,Hams)
 	do i=1,N_mag 
         do j=1,N_mag
     		Tr_phi(i,j)=- gp* sin(M0(1,j))/sin(M0(1,i)) * Hess_thetaphi(i,j) - hp* sin(M0(1,j))/sin(M0(1,i))  * Hess_phi(i,j)
-    		Tr_thetaphi(i,j)= gp*sin(M0(1,j)) * Hess_phi(i,j) - hp *sin(M0(1,j))* Hess_thetaphi(i,j);
-    		Tr_phitheta(i,j)= - gp/sin(M0(1,i)) * Hess_theta(i,j) - hp/sin(M0(1,i))* Hess_phitheta(i,j);
+    		Tr_thetaphi(i,j)= gp*sin(M0(1,j)) * Hess_phi(i,j) - hp *sin(M0(1,j))* Hess_thetaphi(i,j)
+    		Tr_phitheta(i,j)= - gp/sin(M0(1,i)) * Hess_theta(i,j) - hp/sin(M0(1,i))* Hess_phitheta(i,j)
        	enddo
     enddo
     
@@ -142,14 +141,14 @@ use m_derived_types, only : io_parameter,lattice
 
     M3(1:3,1:N_mag)=>lat%M%all_modes
     M0_cart=M3
-    
+
     Ep=0.0d0
     Em=0.0d0
     Epm=0.0d0
     Emp=0.0d0 
     
-    dphi=0.001d0
-    dtheta=0.001d0
+    dphi=0.01d0
+    dtheta=0.01d0
     
     print_hess=.false. 
     save_hess=.true. 
@@ -188,17 +187,12 @@ use m_derived_types, only : io_parameter,lattice
 			!compute energies
 			M3=Mp_cart
 			Ep=energy_all(Hams,lat)
-			
 			M3=Mm_cart
 			Em=energy_all(Hams,lat)
-			
 			M3=Mmp_cart
 			Emp=energy_all(Hams,lat)
-			
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
-			
-			M3=M0
 
 			!Hess_theta entry
 			if(i.ne.j) then !off-diagonal term
@@ -212,6 +206,9 @@ use m_derived_types, only : io_parameter,lattice
 			else !diagonal term
 				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / (dtheta*dtheta)
 				!write(*,*) 'i=j = ',i,j,' Hess_theta(i,j)= ',Hess_theta(i,j)
+				!write(*,*)'Ep= ', Ep, ' Em= ', Em, ' E0 = ',E0
+				!write(*,*) 'Mp_cart_i= ',Mp_cart(:,i),'Mm_cart_j=',Mm_cart(:,j) 
+				!write(*,*) 'Mp_cart= ',Mp_cart(:,:),'Mm_cart=',Mm_cart(:,:) 
 			endif	
 
 			!revert to initial state
@@ -249,7 +246,6 @@ use m_derived_types, only : io_parameter,lattice
 			Emp=energy_all(Hams,lat)
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
-			M3=M0
 			
 			!Hess_phi entry
 			if(i.ne.j) then !off-diagonal term
@@ -293,7 +289,6 @@ use m_derived_types, only : io_parameter,lattice
 			Emp=energy_all(Hams,lat)
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
-			M3=M0
 				
 			!Hess_thetaphi entry
 			Hess_thetaphi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0*dphi*dtheta*sin(M0(1,j)) )
@@ -333,8 +328,7 @@ use m_derived_types, only : io_parameter,lattice
 			Emp=energy_all(Hams,lat)
 			M3=Mpm_cart
 			Epm=energy_all(Hams,lat)
-			M3=M0	
-		
+					
 			!Hess_thetaphi entry
 			Hess_phitheta(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0*dphi*dtheta *sin(M0(1,i)) )
 			
@@ -399,10 +393,11 @@ use m_derived_types, only : lattice
     integer                     		:: iomp
     real(8),pointer             		:: M3(:,:)
     
-    M3(1:3,1:N_mag)=>lat%M%all_modes
+   
     N_cell=lat%Ncell
     N_dim=lat%M%dim_mode
     N_mag=(N_dim/3)*N_cell
+    M3(1:3,1:N_mag)=>lat%M%all_modes
     
     !theta
     if(any(M3(3,:).gt.1.0d0)) stop 'some cart. components are >1, fix the cart_to_sph routine'
