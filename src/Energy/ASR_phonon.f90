@@ -72,7 +72,7 @@ subroutine get_ASR_Ph(Ham,io,lat)
                 Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
                 N_dist=size(io%pair(i_atpair)%dist)
                 connect_bnd=1 !initialization for lower bound
-                connect_bnd(2)=neigh%ishell(i_pair)
+                connect_bnd(2)=neigh%ishell(i_atpair)
 
                 !set local Hamiltonian in basis of magnetic orderparameter
                 atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_atpair))
@@ -84,7 +84,7 @@ subroutine get_ASR_Ph(Ham,io,lat)
                 all_pairs(2,:)=neigh%pairs(1,connect_bnd(1):connect_bnd(2))
 
                 call get_ASR_file(Htmp,'phonon_harmonic.in',offset_ph)
-                Htmp=Htmp*HaBohrsq_to_Evnmsq*io%c_ASR
+                Htmp=Htmp*HaBohrsq_to_Evnmsq
                 Call get_coo(Htmp,val_tmp,ind_tmp)
 
                 !fill Hamiltonian type

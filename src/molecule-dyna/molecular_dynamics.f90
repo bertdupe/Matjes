@@ -53,7 +53,8 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    real(8),pointer,contiguous       :: Du_3(:,:,:),Du_int_3(:,:)
 
    ! conversion factor to go from uam.nm/fs^2 to eV/nm
-   real(8), parameter :: uamnmfs_to_eVnm = 2.66048E-16
+!   real(8), parameter :: uamnmfs_to_eVnm = 2.66048E-16
+   real(8), parameter :: uamnmfs_to_eVnm = 1.0d-3
 
    ! IOs
    integer :: io_results
@@ -68,7 +69,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    character(len=100) :: file
    real(8) :: dumy(5),q_plus,q_moins,vortex(3)
    integer,allocatable ::  Q_neigh(:,:)
-   real(8) :: time
+   real(8) :: time = 0.0d0
 
    ! prepare the matrices for integration
    call rw_dyna_MD(timestep_int,Efreq,duration,file,damp_S,damp_F)
@@ -205,8 +206,8 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         ! end Verlet algorithm
         !!!!!!!!!!!!!!!!!!!
 
-        Call lat_2%u%copy_val(my_lattice%u)
-        call truncate(my_lattice,used)
+        Call lat_2%u%copy_val(lat_1%u)
+        call truncate(lat_1,used)
 
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -215,12 +216,12 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         if(mod(j-1,gra_freq)==0)then
             tag=j/gra_freq
 
-            E_potential=energy_all(Hams,my_lattice)/real(N_cell,8)
+            E_potential=energy_all(Hams,lat_1)/real(N_cell,8)
             E_kinetic=0.5d0*sum(masses*V_1**2)/real(N_cell,8)
             E_total=E_potential+E_kinetic
             temperature=2.0d0*E_kinetic/3.0d0/real(N_cell,8)/k_b
 
-            Pdy=sum(my_lattice%u%modes_3,2)/real(N_cell,8) !sums of the displacements over all atoms in unit cell
+            Pdy=sum(lat_1%u%modes_3,2)/real(N_cell,8) !sums of the displacements over all atoms in unit cell
 
             dumy=get_charge(lat_1,Q_neigh)
             q_plus=dumy(1)/pi/4.0d0
@@ -228,8 +229,8 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
             vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
 
             if(gra_log) then
-                call CreateSpinFile(tag,my_lattice%u)
-                Call write_config(tag,my_lattice)
+                call CreateSpinFile(tag,lat_1%u)
+                Call write_config(tag,lat_1)
                 write(6,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
                 write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
             endif
@@ -260,6 +261,8 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call close_file('EM.dat',io_results)
+
+Call lat_1%copy_val_to(my_lattice)
 
 end subroutine
 
