@@ -1,11 +1,13 @@
 module m_tightbinding_k
 use m_tb_types
 use m_derived_types, only : lattice
-use m_highsym, only: plot_highsym_kpts,set_highs_path
+use m_highsym, only: plot_highsym_kpts,set_highs_path, plot_highsym_kpts_sc, highsym_clear_path, plot_highsym_kpts_proj
 use m_TB_types
-use m_fermi_dos, only: fermi_dos_nc , fermi_dos_proj_nc
+use m_fermi_dos, only: fermi_dos_nc , fermi_dos_proj_nc, fermi_dos_projall_nc
+use m_kgrid_int, only: k_mesh_int, kmesh_t, get_kmesh
 use, intrinsic :: iso_fortran_env, only : output_unit
 
+use m_Hk
 use m_init_Hk
 implicit none
 private
@@ -27,6 +29,10 @@ subroutine tightbinding_k(lat,tb_par)
 
     Call get_Hk_inp(lat,tb_par%io_H,Hk_inp)
 
+    if(product(tb_par%io_kmesh%grid)/=0)then
+        Call print_reduced_kmesh(Hk_inp,tb_par%io_H,tb_par%io_kmesh,lat)
+    endif
+
     if(tb_par%flow%dos_k)then
         if(tb_par%is_sc)then
             Call write_dos_sc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
@@ -35,14 +41,21 @@ subroutine tightbinding_k(lat,tb_par)
         endif
     endif
 
-    if(tb_par%flow%fermi_dos_k)then
-        Call fermi_dos_nc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
+    if(tb_par%flow%fermi_dos_k)then !make some more sensible input logicals...
+        if(.not.tb_par%io_dos%fermi_proj_all) Call fermi_dos_nc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
         if(allocated(tb_par%io_dos%fermi_orb)) Call fermi_dos_proj_nc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
+        if(tb_par%io_dos%fermi_proj_all) Call fermi_dos_projall_nc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
     endif
 
     if(tb_par%flow%highs_k)then
         Call set_highs_path(lat,tb_par%io_highs)
-        Call plot_highsym_kpts(Hk_inp,tb_par%io_H) 
+        if(tb_par%is_sc)then
+            Call plot_highsym_kpts_sc(Hk_inp,tb_par%io_H) 
+        else
+            Call plot_highsym_kpts(Hk_inp,tb_par%io_H) 
+            Call plot_highsym_kpts_proj(Hk_inp,tb_par%io_H) 
+        endif
+        Call highsym_clear_path()
     endif
 end subroutine 
 
@@ -60,7 +73,7 @@ subroutine write_dos_nc(Hk_inp,h_io,lat,io_dos)
     complex(8),allocatable                  :: evec(:,:)
 
     !parameters to describe integration k-grid
-    type(k_grid_t)                          :: k_grid
+    class(kmesh_t),allocatable              :: k_grid 
     integer                                 :: ik,Nk
     real(8)                                 :: k(3)
 
@@ -74,9 +87,8 @@ subroutine write_dos_nc(Hk_inp,h_io,lat,io_dos)
     logical                                 :: use_orb
     integer                                 :: Ndos_orb
 
-
     Call dos%init(io_dos)
-    Call k_grid%set(lat%a_sc_inv,io_dos%kgrid)
+    Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh)
     Nk=k_grid%get_NK()
 
     Ndos_bnd=0
@@ -145,7 +157,8 @@ subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
     complex(8),allocatable                  :: evec(:,:)
 
     !parameters to describe integration k-grid
-    type(k_grid_t)                          :: k_grid
+!    type(k_grid_t)                          :: k_grid
+    class(kmesh_t),allocatable              :: k_grid 
     integer                                 :: ik,Nk
     real(8)                                 :: k(3)
 
@@ -159,8 +172,10 @@ subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
     type(dos_orb_sc),allocatable            :: dos_orb(:)
     integer                                 :: Ndos_orb
     logical                                 :: use_orb
+
     Call dos%init(io_dos)
-    Call k_grid%set(lat%a_sc_inv,io_dos%kgrid)
+    Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh)
+
     Nk=k_grid%get_NK()
 
     Ndos_bnd=0
@@ -207,6 +222,24 @@ subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
         write(dos_id,'(I0.3)') io_dos%orb(idos)
         Call dos_orb(idos)%print("dos_k_sc_orb_"//dos_id//".dat")
     enddo
+end subroutine
+
+subroutine print_reduced_kmesh(Hk_inp,h_io,kmesh_io,lat)
+    use m_derived_types, only: k_grid_t
+    type(Hk_inp_t),intent(in)               :: Hk_inp
+    type(lattice), intent(in)               :: lat
+    type(parameters_TB_IO_H),intent(in)     :: h_io
+    type(parameters_TB_IO_kint),intent(in)  :: kmesh_io
+
+    type(k_grid_t)                          :: k_grid
+    type(k_mesh_int)                        :: kmesh_int
+    integer         ::  io
+
+    Call k_grid%set(lat%a_sc_inv,kmesh_io%grid)
+    Call kmesh_int%set(k_grid,Hk_inp,h_io,kmesh_io%Ecut)
+    open(newunit=io,file='kmesh_int.dat')
+    write(io,*) kmesh_int
+    close(io)
 end subroutine
 
 end module

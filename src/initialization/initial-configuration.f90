@@ -50,6 +50,7 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
 end subroutine
 
 subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
+    use m_init_2Q
     use m_init_DW
     use m_init_heavyside
     use m_init_Sk
@@ -75,6 +76,8 @@ subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
     select case (adjustl(configuration))
         case('spiral')
             call init_spiral(io,fname,lat,ordname,dim_mode,state)
+        case('2Q')
+            call init_2Q(io,fname,lat,ordname,dim_mode,state)
         case('domainwall')
             call init_DW(io,fname,lat,ordname,dim_mode,state)
         case('heavyside')

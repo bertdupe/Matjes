@@ -31,6 +31,7 @@ subroutine get_Forces_F(Ham,io,lat)
     use m_setH_util,only: get_coo
     use m_neighbor_type, only: neighbors
     use m_forces_from_file, only: get_forces_file
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_Ph),intent(in)     :: io
@@ -104,6 +105,9 @@ subroutine get_Forces_F(Ham,io,lat)
             enddo
         enddo
         Ham%desc="harmonic phonon"
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,lat,"U")
+        Call mode_set_rank1(Ham%mode_r,lat,"U")
     endif
 
 end subroutine

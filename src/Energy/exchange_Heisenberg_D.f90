@@ -20,6 +20,7 @@ subroutine get_exchange_D(Ham,io,lat)
     use m_derived_types
     use m_setH_util,only: get_coo
     use m_neighbor_type, only: neighbors
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_D),intent(in)     :: io
@@ -99,6 +100,9 @@ subroutine get_exchange_D(Ham,io,lat)
             !continuing will give problems since the t_H-type Ham is not set but most probably will be assumed to be set in routine calling this subroutine
             STOP "CHECK INPUT"
         endif
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,lat,"M")
+        Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
 end subroutine 
 

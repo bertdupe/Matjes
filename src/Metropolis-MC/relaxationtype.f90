@@ -25,16 +25,16 @@ module m_relaxtyp
         real(kind=8) :: norm_local,dumy(3)
     
         if(lat%M%dim_mode>3) ERROR STOP "THIS WILL FAIL FOR MORE THAN 1 MAGNETIC MOMENT IN UNITCELL"
-        Call get_eff_field_single(Hams,iomp,lat,S_int,1)
+        Call get_eff_field_single(Hams,iomp,lat,S_int,1) !1 for magnetism (order_parameter_abbrev)
         norm_local=norm2(S_int)
         
         if (norm_local.gt.1.0d-8) then
-           dumy=cross(lat%M%modes_v(:,iomp),S_int,1,3)
-           S_int=lat%M%modes_v(:,iomp)-cross(lat%M%modes_v(:,iomp),dumy,1,3)
+           dumy=cross(lat%M%modes_in(:,iomp),S_int,1,3)
+           S_int=lat%M%modes_v(:,iomp)-cross(lat%M%modes_in(:,iomp),dumy,1,3)
            norm_local=norm2(S_int)
            underrelax=S_int/norm_local
         else
-           underrelax=lat%M%modes_v(:,iomp)
+           underrelax=lat%M%modes_in(:,iomp)
         endif
         
     end function underrelax

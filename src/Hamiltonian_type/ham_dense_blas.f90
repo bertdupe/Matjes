@@ -27,12 +27,9 @@ subroutine mult_r(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(8),parameter          :: alpha=1.0d0,beta=0.0d0
     
-
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
+    Call this%mode_r%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-
     Call dgemm('n','n',this%dimH(1),1,this%dimH(2),alpha,this%H,this%dimH(1),modes,this%dimH(2),beta,res,this%dimH(1))
-
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
@@ -47,13 +44,10 @@ subroutine mult_l(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(8),parameter          :: alpha=1.0d0,beta=0.0d0
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
-
+    Call this%mode_l%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
-
     Call dgemm('t','n',1,this%dimH(2),this%dimH(1),alpha,modes,this%dimh(1),this%H,this%dimH(1),beta,res,1)
     if(allocated(vec)) deallocate(vec)
-    
 end subroutine 
 
 
@@ -75,6 +69,7 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     real(8),external            :: ddot !blas routine
     real(8),parameter           :: alpha=1.0d0,beta=0.0d0
 
+    ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
 

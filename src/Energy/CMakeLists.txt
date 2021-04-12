@@ -16,5 +16,6 @@ src/Energy/stark.f90
 src/Energy/ASR_phonon.f90
 src/Energy/mag_biquadratic.f90
 src/Energy/forces_from_file.f90
+src/Energy/4spin.f90
 #src/Energy/demag-matrix.f90   #requires m_fft (not used?)
 )

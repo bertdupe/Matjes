@@ -26,6 +26,8 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
+    procedure :: mult_l_cont,mult_r_cont
+    procedure :: mult_l_disc,mult_r_disc
 end type
 
 interface t_H_mkl_csr
@@ -53,8 +55,7 @@ subroutine mult_r(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
 
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
-
+    Call this%mode_r%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     res=0.0d0
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
@@ -73,14 +74,57 @@ subroutine mult_l(this,lat,res)
     real(8),allocatable,target :: vec(:)
     real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
-
+    Call this%mode_l%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
     res=0.0d0
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl"
     if(allocated(vec)) deallocate(vec)
 end subroutine 
+
+
+subroutine mult_l_cont(this,bnd,vec,res)
+    !multiply to the right with a continuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: bnd(2)
+    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
+subroutine mult_r_cont(this,bnd,vec,res)
+    !multiply to the right with a continuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: bnd(2)
+    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
+subroutine mult_l_disc(this,N,ind,vec,res)
+    !multiply to the right with a discontinuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind(N)
+    real(8),intent(in)              :: vec(N)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
+subroutine mult_r_disc(this,N,ind,vec,res)
+    !multiply to the right with a discontinuous section of the right vector
+    class(t_H_mkl_csr),intent(in)     :: this
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind(N)
+    real(8),intent(in)              :: vec(N)
+    real(8),intent(inout)           :: res(:)   !result matrix-vector product
+
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
 
 subroutine optimize(this)
     class(t_H_mkl_csr),intent(inout)   :: this
@@ -179,10 +223,9 @@ subroutine destroy_child(this)
     endif
 end subroutine
 
-subroutine set_from_Hcoo(this,H_coo,lat)
+subroutine set_from_Hcoo(this,H_coo)
     class(t_H_mkl_csr),intent(inout)    :: this
     type(t_H_coo),intent(inout)         :: H_coo
-    type(lattice),intent(in)            :: lat
 
     !local
     integer                 :: nnz
@@ -225,6 +268,7 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     type(SPARSE_MATRIX_T) :: vec
     real(8),external      :: ddot !blas routine
 
+    ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
     Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
     Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
 

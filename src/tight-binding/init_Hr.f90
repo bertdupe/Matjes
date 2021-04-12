@@ -131,7 +131,7 @@ subroutine get_delta_scf(H_in,emax,del)
     complex(8),allocatable      :: evec(:,:)
     real(8),allocatable         :: eval(:)
     integer                     :: ndim,nspin, nBdG
-    integer                     :: orb
+    integer                     :: orb(2)
     integer                     :: i_cell
     integer :: j,iE
     real(8)                     :: temp !temperature
@@ -150,22 +150,23 @@ subroutine get_delta_scf(H_in,emax,del)
         eval=tanh(eval*0.5d0/temp)
     endif
 
-    del%delta=(0.0d0,0.0d0)
-    do j=1,size(del%delta,2)
-        orb=(del%orb(j)-1)*nspin
-        do i_cell=1,size(del%delta,1)
-            do iE=1,size(eval)
-                Associate (u_up=>evec((i_cell-1)*ndim+orb+1     ,iE)&
-                        & ,u_dn=>evec((i_cell-1)*ndim+orb+2     ,iE)&
-                        & ,v_up=>evec((i_cell-1)*ndim+orb+1+nBdG,iE)&
-                        & ,v_dn=>evec((i_cell-1)*ndim+orb+2+nBdG,iE))
-                    !make this more efficient with vector operations, blas
-                    del%delta(i_cell,j)=del%delta(i_cell,j)+(u_up*conjg(v_dn)+u_dn*conjg(v_up))*eval(ie) !(eq. 2.43 Jian-Xin Zhu book, DOI: 10.1007/978-3-319-31314-6 )
-                end associate
-            enddo
-        enddo
-        del%delta(:,j)=del%delta(:,j)*del%V(j)*0.5d0
-    enddo
+    ERROR STOP "UPDATE TO DIFFERENT ORBITALS"
+    !del%delta=(0.0d0,0.0d0)
+    !do j=1,size(del%delta,2)
+    !    orb=(del%orb(:,j)-1)*nspin
+    !    do i_cell=1,size(del%delta,1)
+    !        do iE=1,size(eval)
+    !            Associate (u_up=>evec((i_cell-1)*ndim+orb+1     ,iE)&
+    !                    & ,u_dn=>evec((i_cell-1)*ndim+orb+2     ,iE)&
+    !                    & ,v_up=>evec((i_cell-1)*ndim+orb+1+nBdG,iE)&
+    !                    & ,v_dn=>evec((i_cell-1)*ndim+orb+2+nBdG,iE))
+    !                !make this more efficient with vector operations, blas
+    !                del%delta(i_cell,j)=del%delta(i_cell,j)+(u_up*conjg(v_dn)+u_dn*conjg(v_up))*eval(ie) !(eq. 2.43 Jian-Xin Zhu book, DOI: 10.1007/978-3-319-31314-6 )
+    !            end associate
+    !        enddo
+    !    enddo
+    !    del%delta(:,j)=del%delta(:,j)*del%V(j)*0.5d0
+    !enddo
 end subroutine
 
 end module

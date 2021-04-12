@@ -1,6 +1,7 @@
 module m_coupling_ME_J
 use m_input_H_types, only: io_H_ME_J
 use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
+use m_coo_mat
 implicit none
 private
 public :: get_coupling_ME_J, read_ME_J_input
@@ -20,6 +21,7 @@ subroutine get_coupling_ME_J(Ham,io,lat)
     use m_derived_types
     use m_setH_util,only: get_coo,ind
     use m_neighbor_type, only: neighbors
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_ME_J),intent(in)  :: io
@@ -44,6 +46,9 @@ subroutine get_coupling_ME_J(Ham,io,lat)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
 
     integer         :: dim_modes_r(2)   !mode dimension on the right side (M,E)
+
+    type(coo_mat)   :: mat(2)       !mode construction matrices for rank2 part of Hamiltonian
+
 
     if(io%is_set)then
         if(lat%E%dim_mode==0) STOP "E-field has to be set when using coupling_ME"
@@ -86,6 +91,13 @@ subroutine get_coupling_ME_J(Ham,io,lat)
             enddo
         enddo
         Ham%desc="symmetric magnetoelectric coupling"
+        Call mode_set_rank1(Ham%mode_l,lat,"M")
+#if 0
+        Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
+#else
+        Call coo_full_unfold(2,lat%Ncell,dim_modes_r,mat)
+        Call mode_set_rankN_sparse(Ham%mode_r,"ME",lat,mat,1)
+#endif
     endif
 end subroutine 
 end module 

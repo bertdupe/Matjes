@@ -116,7 +116,7 @@ subroutine add_dos_nc(this,eigval)
     dos_loc=0.0d0
     do i=1,size(eigval)
         Call get_ibnd (eigval(i),this,bnd)
-        Call add_gauss(eigval(i),1.0d0,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),1.0d0,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
     this%dos=this%dos+dos_loc/real(size(eigval))
     this%N_entry=this%N_entry+1
@@ -136,7 +136,7 @@ subroutine add_dos_bnd_nc(this,eigval,eigvec)
     do i=1,size(eigval)
         pref=real(dot_product(eigvec(this%bnd(1):this%bnd(2),i),eigvec(this%bnd(1):this%bnd(2),i)),8)
         Call get_ibnd (eigval(i),this,bnd)
-        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
     this%dos=this%dos+dos_loc/real(size(eigval))
     this%N_entry=this%N_entry+1
@@ -156,7 +156,7 @@ subroutine add_dos_orb_nc(this,eigval,eigvec)
     do i=1,size(eigval)
         pref=real(dot_product(eigvec(this%orb::this%freq,i),eigvec(this%orb::this%freq,i)),8)
         Call get_ibnd (eigval(i),this,bnd)
-        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
     this%dos=this%dos+dos_loc/real(size(eigval))
     this%N_entry=this%N_entry+1
@@ -225,11 +225,11 @@ subroutine add_dos_bnd_sc(this,eigval,eigvec)
         !u-part of BdG
         pref=real(dot_product(eigvec(this%bnd(1):this%bnd(2),i),eigvec(this%bnd(1):this%bnd(2),i)),8)
         Call get_ibnd (eigval(i),this,bnd)
-        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
         !v-part of BdG
         pref=real(dot_product(eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i),eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i)),8)
         Call get_ibnd (-eigval(i),this,bnd)
-        Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
     this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
     this%N_entry=this%N_entry+1
@@ -261,11 +261,11 @@ subroutine add_dos_orb_sc(this,eigval,eigvec)
         !u-part of BdG
         pref=real(dot_product(eigvec(this%orb:dimH/2:this%freq,i),eigvec(this%orb:dimH/2:this%freq,i)),8)
         Call get_ibnd (eigval(i),this,bnd)
-        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
         !v-part of BdG
         pref=real(dot_product(eigvec(this%orb+dimH/2::this%freq,i),eigvec(this%orb+dimH/2::this%freq,i)),8)
         Call get_ibnd (-eigval(i),this,bnd)
-        Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
     this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
     this%N_entry=this%N_entry+1
@@ -312,7 +312,8 @@ subroutine print_dos(this,fname)
     close(io)
 end subroutine
 
-pure subroutine get_ibnd(val,dos,bnd)
+!pure subroutine get_ibnd(val,dos,bnd)
+subroutine get_ibnd(val,dos,bnd)
     !get the minimal-maximal index dist_inc*sigma around the considered energy eigenvalue needed for adding up the gauss distributions
     class(dos_t),intent(in) ::  dos
     real(8),intent(in)      ::  val

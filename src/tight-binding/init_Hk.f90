@@ -6,19 +6,13 @@ use m_types_tb_h_inp
 use m_neighbor_type, only: neighbors
 use m_init_H
 use m_delta_onsite
+use m_Hk
+use m_kgrid_int, only: get_kmesh, kmesh_t 
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 
 private
-public get_Hk_inp, Hk_inp_t, Hk_evec, HK_eval
-
-type Hk_inp_t
-    type(H_tb_coo),allocatable  :: H(:)
-    real(8),allocatable         :: diffR(:,:)
-contains
-    procedure :: combine => Hk_inp_combine  !combine 2 Hk_inp_t by copying
-    procedure :: destroy => Hk_inp_destroy
-end type
+public get_Hk_inp
 
 contains
 
@@ -55,7 +49,7 @@ subroutine get_Hk_inp_conv(lat,h_io,H_inp,del)
     type(Hk_inp_t)                          :: H_inp_nc
     type(Hk_inp_t)                          :: H_inp_sc
 
-    type(k_grid_t)                          :: k_grid
+    class(kmesh_t),allocatable              :: k_grid
 
     character(len=3)    :: i_str
     complex(8)          :: delta_sum(2)
@@ -67,7 +61,7 @@ subroutine get_Hk_inp_conv(lat,h_io,H_inp,del)
     !get initial superconducting term
     Call get_H_sc(lat,h_io,H_inp_sc%H,del,diffR=H_inp_sc%diffR)
     !set self-consistent k-grid
-    Call k_grid%set(lat%a_sc_inv,h_io%scf_kgrid)
+    Call get_kmesh(k_grid,lat,h_io%scf_kgrid,h_io%fname_kmesh)
 
     !self-consistent loop
     delta_sum=(0.0d0,0.0d0)
@@ -104,12 +98,13 @@ end subroutine
 
 subroutine get_delta_scf(H_inp,k_grid,h_io,del)
     class(Hk_inp_T)             :: H_inp
-    type(k_grid_t),intent(in)   :: k_grid
+    class(kmesh_t),intent(in)   :: k_grid
     type(parameters_TB_IO_H),intent(in)     :: h_io 
     type(Hdelta),intent(inout)  :: del
 
     integer         ::  ik,Nk
     real(8)         ::  k(3)
+    real(8)         ::  normalize
 
     del%delta=(0.0d0,0.0d0)
     Nk=k_grid%get_Nk()
@@ -117,7 +112,7 @@ subroutine get_delta_scf(H_inp,k_grid,h_io,del)
         k=k_grid%get_k(ik)
         Call add_delta_k_scf(H_inp,k,h_io,del)
     enddo
-    del%delta=del%delta/real(Nk,8)
+    del%delta=del%delta*k_grid%get_normalize()
 end subroutine
 
 
@@ -130,7 +125,7 @@ subroutine add_delta_k_scf(H_inp,k,h_io,del)
     type(Hdelta),intent(inout)  :: del
 
     integer                     :: ndim,nspin, nBdG, ncell
-    integer                     :: orb
+    integer                     :: orb(2)
     integer                     :: i_cell
     real(8),allocatable         :: eval(:)
     complex(8),allocatable      :: evec(:,:)
@@ -151,24 +146,30 @@ subroutine add_delta_k_scf(H_inp,k,h_io,del)
     if(vanish) return !no energy value in considered energy-range
 
     !modify eval array to contain tanh(E_i/(2*k_b*T)) instead of E_i
-    temp=0.0d0
-    if(temp<1.0d-5)then
+    !temp=0.0d0
+    !if(temp<1.0d-5)then
         eval=1.0d0
-    else
-        eval=tanh(eval*0.5d0/temp)
-    endif
+    !else
+    !    eval=tanh(eval*0.5d0/temp)
+    !endif
+
     do j=1,size(del%delta,2)
-        orb=(del%orb(j)-1)*nspin
-#if 0
+        orb=(del%orb(:,j)-1)*nspin
+#if 1
         do i_cell=1,ncell
             do iE=1,size(eval)
-                Associate (u_up=>evec((i_cell-1)*ndim+orb+1     ,iE)&
-                        & ,u_dn=>evec((i_cell-1)*ndim+orb+2     ,iE)&
-                        & ,v_up=>evec((i_cell-1)*ndim+orb+1+nBdG,iE)&
-                        & ,v_dn=>evec((i_cell-1)*ndim+orb+2+nBdG,iE))
+                Associate (u1_up=>evec((i_cell-1)*ndim+orb(1)+1     ,iE)&
+                        & ,u1_dn=>evec((i_cell-1)*ndim+orb(1)+2     ,iE)&
+                        & ,v1_up=>evec((i_cell-1)*ndim+orb(1)+1+nBdG,iE)&
+                        & ,v1_dn=>evec((i_cell-1)*ndim+orb(1)+2+nBdG,iE)&
+                        & ,u2_up=>evec((i_cell-1)*ndim+orb(2)+1     ,iE)&
+                        & ,u2_dn=>evec((i_cell-1)*ndim+orb(2)+2     ,iE)&
+                        & ,v2_up=>evec((i_cell-1)*ndim+orb(2)+1+nBdG,iE)&
+                        & ,v2_dn=>evec((i_cell-1)*ndim+orb(2)+2+nBdG,iE))
                     !make this more efficient with vector operations, blas
-                    del%delta(i_cell,j)=del%delta(i_cell,j)+(u_up*conjg(v_dn)+u_dn*conjg(v_up))*eval(ie)*del%V(j)*0.5d0 
+                    del%delta(i_cell,j)=del%delta(i_cell,j)+(u1_up*conjg(v2_dn)+u2_dn*conjg(v1_up)+u1_dn*conjg(v2_up)+u2_up*conjg(v1_dn))*eval(ie)*del%V(j)*0.25d0  !(Eq.2.26)
                 end associate
+                !test using different symmetries
             enddo
         enddo
 #else   
@@ -181,94 +182,6 @@ subroutine add_delta_k_scf(H_inp,k,h_io,del)
 #endif
     enddo
 end subroutine
-
-subroutine Hk_eval(Hk_inp,k,h_io,eval)
-    type(Hk_inp_t),intent(in)               :: Hk_inp
-    real(8),intent(in)                      :: k(3)
-    type(parameters_TB_IO_H),intent(in)     :: h_io
-    real(8),intent(out),allocatable         :: eval(:)
-    class(H_tb),allocatable                 :: H
-
-    Call get_Hk(Hk_inp,k,h_io,H)
-    Call H%get_eval(eval)
-    Call H%destroy
-end subroutine
-
-subroutine Hk_evec(Hk_inp,k,h_io,eval,evec)
-    type(Hk_inp_t),intent(in)               :: Hk_inp
-    real(8),intent(in)                      :: k(3)
-    type(parameters_TB_IO_H),intent(in)     :: h_io
-    real(8),allocatable,intent(out)         :: eval(:)
-    complex(8),allocatable,intent(out)      :: evec(:,:)
-    class(H_tb),allocatable                 :: H
-
-    Call get_Hk(Hk_inp,k,h_io,H)
-    Call H%get_evec(eval,evec)
-    Call H%destroy
-end subroutine
-
-subroutine get_Hk(Hk_inp,k,h_io,H)
-    !unfolds the Hk_inp data to and Hamiltonian (H) at a k-point (k)
-    type(Hk_inp_t),intent(in)   :: Hk_inp
-    real(8),intent(in)          :: k(3)
-    type(parameters_TB_IO_H),intent(in)     :: h_io
-    class(H_tb),allocatable,intent(out)     :: H
-    class(H_tb),allocatable                 :: Htmp
-
-    type(parameters_ham_init)   :: hinit
-    integer     :: i_ham,N_ham
-    complex(8),allocatable  ::  val(:)
-    integer,allocatable     ::  row(:),col(:)
-
-    real(8)  :: phase
-
-    Call set_H(H,h_io)
-    allocate(Htmp,mold=H)
-    N_ham=size(HK_inp%H)
-    do i_ham=1,N_ham
-        phase=dot_product(HK_inp%diffR(:,i_ham),k)
-        Call Hk_inp%H(i_ham)%get_hinit(hinit)
-        Call Hk_inp%H(i_ham)%get_par(val,row,col)
-        val=val*cmplx(cos(phase),sin(phase),8)
-        Call Htmp%init_coo(val,row,col,hinit)
-        Call H%add(Htmp)
-        Call Htmp%destroy()
-        deallocate(val,row,col)
-    enddo
-end subroutine
-
-subroutine Hk_inp_combine(Hout,H1,H2)
-    class(Hk_inp_t),intent(inout)   ::  Hout
-    type(Hk_inp_t),intent(in)       ::  H1, H2
-
-    integer     :: size_in(2), size_out, i
-
-    size_in=[size(H1%H),size(H2%H)]
-    size_out=sum(size_in)
-    if(allocated(Hout%H)) deallocate(Hout%H)
-    if(allocated(Hout%diffR)) deallocate(Hout%diffR)
-    allocate(Hout%H(size_out),Hout%diffR(3,size_out))
-    do i=1,size_in(1)
-        Call H1%H(i)%copy(Hout%H(i))
-    enddo
-    Hout%diffR(:,1:size_in(1))=H1%diffR
-    do i=1,size_in(2)
-        Call H2%H(i)%copy(Hout%H(i+size_in(1)))
-    enddo
-    Hout%diffR(:,size_in(1)+1:size_out)=H2%diffR
-end subroutine
-
-subroutine Hk_inp_destroy(this)
-    class(Hk_inp_t),intent(inout)   ::  this
-    integer ::  i
-
-    do i=1,size(this%H)
-        Call this%H(i)%destroy()
-    enddo
-    deallocate(this%H)
-    deallocate(this%diffR)
-end subroutine
-
 end module
 
 

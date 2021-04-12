@@ -89,7 +89,7 @@ end type
 
 type,extends(TB_H_par) :: TBio_delta_onsite_scf
     integer     :: attype=0     !atom type
-    integer     :: orbital=0    !orbital of atom-type (excluding spin)
+    integer     :: orbital(2)=0    !orbital of atom-type (excluding spin)
     real(8)     :: val=0.0d0    !attractive potential magnitude
     !add maximal energy?
     contains
@@ -366,7 +366,7 @@ subroutine delta_onsite_scf_check(this,lat)
         Stop "Check input"
     endif
 
-    if(this%orbital<1.or.this%orbital>lat%cell%atomic(this%attype)%orbitals)then
+    if(any(this%orbital<1).or.any(this%orbital>lat%cell%atomic(this%attype)%orbitals))then
         write(error_unit,'(//A/A)') "Orbital in TB-input out of range","Error in entry:" 
         Call this%print_std(error_unit)
         Stop "Check input"
