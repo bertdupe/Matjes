@@ -289,12 +289,12 @@ subroutine bcast(this,comm)
     class(F_mode_rankN_sparse_col),intent(inout) ::  this        !this might fail if the server threads non-allocated class(F_mode), TAKE CARE OF THIS IN HAM_BASE
     type(mpi_type),intent(in)               ::  comm
 #ifdef CPP_MPI
-    integer     :: ierr
-    integer     ::  N
+    integer     :: ierr, i
+    integer     :: N
   
     !THIS MIGHT BE INSUFFICIENT, MAYBE ONE HAS TO CHECK IF THE F_MODE IS ALREADY ALLOCATED TO THE F_mode_rankN_sparse_col type
     STOP "CHECK IF THIS WORKS WITHOUT PREVIOUS ALLOCATION./type stuff/, on non-master threads"
-    Call bcast_base(this,comm)
+    Call this%bcast_base(comm)
     Call MPI_Bcast(this%mode_size,1, MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%ratio,this%N_mode, MPI_INTEGER, comm%mas, comm%com,ierr)
 
@@ -305,8 +305,8 @@ subroutine bcast(this,comm)
         Call MPI_Bcast(this%dat(i)%nnz    ,1, MPI_INTEGER, comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%dat(i)%dim_mat,2, MPI_INTEGER, comm%mas, comm%com,ierr)
         if(.not.comm%ismas)then
-            allocate(this%dat(i)%col(this%mat(i)%nnz))
-            allocate(this%dat(i)%reverse(this%ratio(i),this%mat(i)%dim_mat(2)))
+            allocate(this%dat(i)%col(this%dat(i)%nnz))
+            allocate(this%dat(i)%reverse(this%ratio(i),this%dat(i)%dim_mat(2)))
         endif
         Call MPI_Bcast(this%dat(i)%col,this%dat(i)%nnz, MPI_INTEGER         , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%dat(i)%reverse,this%dat(i)%nnz, MPI_INTEGER         , comm%mas, comm%com,ierr)

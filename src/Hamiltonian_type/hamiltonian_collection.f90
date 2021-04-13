@@ -1,5 +1,5 @@
 module m_hamiltonian_collection
-use m_H_public, only: t_H
+use m_H_public, only: t_H, get_Htype_N
 use m_derived_types, only: lattice
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
 private
@@ -8,6 +8,7 @@ public  ::  hamiltonian
 type    ::  hamiltonian
     logical                     :: is_set=.false.
     class(t_H),allocatable      :: H(:)
+    logical                     :: para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
     integer                     :: NH_total=0  !global size of H
 contains
     procedure   ::  init_H_mv
@@ -22,11 +23,40 @@ contains
     !derivative getting routines
     procedure   :: get_eff_field
 
+    !parallelization routines
+    procedure   :: bcast    !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
+
+    !small access routines
     procedure   :: size_H
     procedure   :: get_desc
 end type
 
 contains
+
+subroutine bcast(this,comm)
+    !bcast assuming Hamiltonian has not been scattered yet 
+    use mpi_basic                
+    class(hamiltonian),intent(inout)    :: this
+    type(mpi_type),intent(in)           :: comm
+#ifdef CPP_MPI
+    integer     ::  i,N
+
+    if(comm%ismas)then
+        if(any(this%para))then
+            write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
+            Error STOP
+        endif
+    endif
+
+    Call MPI_Bcast(this%NH_total,1, MPI_INTEGER, comm%mas, comm%com,i)
+    if(.not.comm%ismas) Call get_Htype_N(this%H,N)
+    do i=1,this%NH_total
+        Call this%H(i)%bcast(comm)
+    enddo
+#else
+    continue
+#endif
+end subroutine
 
 function size_H(this) result(N)
     class(Hamiltonian),intent(in)   :: this

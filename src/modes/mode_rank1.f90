@@ -151,8 +151,8 @@ subroutine bcast(this,comm)
     type(mpi_type),intent(in)               ::  comm
 #ifdef CPP_MPI
     integer     :: ierr
-  
-    Call bcast_base(this,comm)
+
+    Call this%bcast_base(comm)
 #else
     continue
 #endif

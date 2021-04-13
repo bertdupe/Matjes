@@ -126,14 +126,21 @@ Implicit None
         call MonteCarlo(all_lattices,io_simu,ext_param,Ham_res,mpi_world)
     endif
 
+    if (my_simu%name == 'magnet-dynamics')then
+        Call all_lattices%bcast(mpi_world)
+        Call io_simu%bcast(mpi_world)
+        Call ext_param%bcast(mpi_world)
+        Call H_comb%bcast(mpi_world)
+        Call H_res%bcast(mpi_world)
+        call spindynamics(all_lattices,io_simu,ext_param,H_comb,H_res)
+    endif
+
+
     if(mpi_world%ismas)then
         !---------------------------------
         !  Part which does the Spin dynamics
         !    Loop for Spin dynamics
         !---------------------------------
-        if (my_simu%name == 'magnet-dynamics')then
-            call spindynamics(all_lattices,io_simu,ext_param,H_comb,H_res)
-        endif
         !---------------------------------
         !  Part which does Entropic Sampling
         !---------------------------------

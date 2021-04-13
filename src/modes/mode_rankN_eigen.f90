@@ -201,7 +201,7 @@ subroutine bcast(this,comm)
     type(mpi_type),intent(in)               ::  comm
 #ifdef CPP_MPI
 
-    Call bcast_base(this,comm)
+    Call this%bcast_base(comm)
     ERROR STOP "IMPLEMENT"
 #else
     continue

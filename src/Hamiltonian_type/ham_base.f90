@@ -1,7 +1,7 @@
 module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H
 use m_derived_types, only : lattice,number_different_order_parameters
-use m_mode_construction, only: F_mode
+use m_mode_public, only: F_mode, get_mode_ident, set_mode_ident
 implicit none
 
 private
@@ -451,6 +451,7 @@ contains
 #ifdef CPP_MPI
         integer     :: ierr
         integer     :: N(2)
+        integer     :: mode_ident(2)
     
         Call MPI_Bcast(this%dimH         ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%dim_mode     ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
@@ -471,7 +472,24 @@ contains
         Call MPI_Bcast(this%op_r,N(2), MPI_INTEGER, comm%mas, comm%com,ierr)
         Call this%bcast_child(comm)
 
-        STOP "IMPLEMENT BCAST OF MODE_L.MODE_R" !somehow one has to allocated the correct type for the servers...
+        !bcast modes
+        if(comm%ismas)then
+            Call get_mode_ident(this%mode_l,mode_ident(1))
+            Call get_mode_ident(this%mode_r,mode_ident(2))
+        endif
+        Call MPI_Bcast(mode_ident, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
+        if(.not.comm%ismas)then
+            Call set_mode_ident(this%mode_l,mode_ident(1))
+            Call set_mode_ident(this%mode_r,mode_ident(2))
+        endif
+        Call this%mode_l%bcast(comm)
+        Call this%mode_r%bcast(comm)
+        
+        if(.not.comm%ismas)then
+
+        
+        STOP "IMPLEMENT BCAST OF derivative" !somehow one has to allocated the correct type for the slaves...
+        endif
 #else
         continue
 #endif

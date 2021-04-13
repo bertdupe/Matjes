@@ -9,7 +9,7 @@ private
 public set_deriv
 contains
 subroutine set_deriv(Ham)
-    class(t_H)      ::  Ham(:)
+    class(t_H)      :: Ham(:)
     integer         :: NH, iH
     integer         :: i_mode
 

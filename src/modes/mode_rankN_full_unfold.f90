@@ -136,7 +136,7 @@ subroutine bcast(this,comm)
 #ifdef CPP_MPI
     integer     :: ierr
   
-    Call bcast_base(this,comm)
+    Call this%bcast_base(comm)
     Call MPI_Bcast(this%mode_size,1, MPI_INTEGER, comm%mas, comm%com,ierr)
     if(ierr/=0) ERROR STOP "MPI BCAST FAILED"
 #else

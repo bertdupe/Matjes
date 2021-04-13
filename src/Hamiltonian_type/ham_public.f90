@@ -66,7 +66,7 @@ contains
         Call MPI_Bcast(N,1, MPI_INTEGER, comm%mas, comm%com,i)
         if(.not.comm%ismas) Call get_Htype_N(ham,N)
         do i=1,size(ham)
-            Call Ham(i)%bcast(mpi_world)
+            Call Ham(i)%bcast(comm)
         enddo
 #else
         continue
