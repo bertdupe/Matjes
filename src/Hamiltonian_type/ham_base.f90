@@ -5,8 +5,11 @@ use m_mode_construction, only: F_mode
 implicit none
 
 private
-public t_H
-public t_deriv_base, t_deriv_l, t_deriv_r
+public :: t_H
+public :: t_deriv_base, t_deriv_l, t_deriv_r
+public :: len_desc
+
+integer,parameter       ::  len_desc=100    !length of the character describing the Hamiltonian
 
 type,abstract    ::  t_deriv_l
 contains
@@ -36,7 +39,7 @@ type,abstract :: t_H
     integer                     :: dim_mode(2)=0    !size of left/right mode after multiplying out order parameters (size per lattice point)
     class(F_mode),allocatable   :: mode_l,mode_r    !class to get the left/right mode on which the Hamiltonian acts
     logical,private             :: set=.false.      !has this object been set?
-    character(len=100)          :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
+    character(len=len_desc)     :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
     integer                     :: mult_M_single=0  !factor necessary to calculate energy change correctly when only evaluating single sites
 
     type(t_deriv_base)          :: deriv(number_different_order_parameters)

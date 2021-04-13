@@ -8,6 +8,7 @@ src/Hamiltonian_type/ham_dense_blas.f90
 src/Hamiltonian_type/ham_eigen.f90
 src/Hamiltonian_type/ham_eigen_mem.f90
 src/Hamiltonian_type/ham_sparse_mkl.f90
+src/Hamiltonian_type/hamiltonian_collection.f90
 )
 
 set(eigen_H ${eigen_H}

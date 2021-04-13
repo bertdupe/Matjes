@@ -1,7 +1,8 @@
 module m_spindynamics
 implicit none
 contains
-subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
+subroutine spindynamics(mag_lattice,io_simu,ext_param,H,H_res)
+    use m_hamiltonian_collection, only: hamiltonian
     use m_derived_types, only : t_cell,io_parameter,simulation_parameters
     use m_derived_types, only : lattice,number_different_order_parameters
     use m_topo_commons, only: get_charge, neighbor_Q
@@ -22,15 +23,13 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     use m_solver_order,only : get_Dmode_int
-!    use m_forces
-!    use m_plot_FFT
-!$omp     use omp_lib
+!$  use omp_lib
     
     ! input
     type(lattice), intent(inout) :: mag_lattice
     type(io_parameter), intent(in) :: io_simu
     type(simulation_parameters), intent(in) :: ext_param
-    class(t_H), intent(in) :: Hams(:),Hams_res(:)
+    type(hamiltonian),intent(inout)     ::  H,H_res
     ! internal
     logical :: gra_log,io_stochafield
     integer :: i,j,gra_freq,i_loop,input_excitations
@@ -78,9 +77,9 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
 
     if(io_simu%io_energy_cont)then
         if(io_simu%io_energy_detail)then
-            Call Eout_contrib_init(hams_res,io_Eout_contrib)
+            Call Eout_contrib_init(H_res,io_Eout_contrib)
         else
-            Call Eout_contrib_init(hams,io_Eout_contrib)
+            Call Eout_contrib_init(H,io_Eout_contrib)
         endif
     endif
     
@@ -148,7 +147,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     Call mag_lattice%copy_val_to(lat_1)
     
-    Edy=energy_all(Hams,mag_lattice)
+    Edy=H%energy(mag_lattice)
     write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell,8)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -201,7 +200,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
             endif
        
             !get effective field on magnetic lattice
-            Call get_eff_field(Hams,lat_1,Beff,1)
+            Call H%get_eff_field(lat_1,Beff,1)
             !do integration
             ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
             Call get_propagator_field(Beff_3,damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop))
@@ -216,7 +215,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
         Call lat_2%M%copy_val(mag_lattice%M)
         call truncate(mag_lattice,used)
         
-        Edy=energy_all(Hams,mag_lattice)/real(N_cell,8)
+        Edy=H%energy(mag_lattice)/real(N_cell,8)
         
         !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
         
@@ -235,9 +234,9 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
             write(8,'(I10,3x,3(E20.12E3,3x))') j,Edy,test_torque,ave_torque
             if(io_simu%io_energy_cont)then
                 if(io_simu%io_energy_detail)then
-                    Call Eout_contrib_write(j,real_time,hams_res,mag_lattice,io_Eout_contrib)
+                    Call Eout_contrib_write(H_res,j,real_time,mag_lattice,io_Eout_contrib)
                 else
-                    Call Eout_contrib_write(j,real_time,hams,mag_lattice,io_Eout_contrib)
+                    Call Eout_contrib_write(H,j,real_time,mag_lattice,io_Eout_contrib)
                 endif
             endif
         endif
@@ -259,13 +258,16 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
         
             if (io_simu%io_Energy_Distrib)then
                 if(io_simu%io_Energy_detail)then
-                    Call write_energy_field(tag,hams_res,mag_lattice,1) !1 for magnetic field
+                    Call write_energy_field(tag,H_res,mag_lattice,1) !1 for magnetic field
                 else
-                    Call write_energy_field(tag,hams    ,mag_lattice,1) !1 for magnetic field
+                    Call write_energy_field(tag,H    ,mag_lattice,1) !1 for magnetic field
                 endif
             endif
 
-            if (io_simu%io_tracker) call plot_tracking(j/gra_freq,lat_1,Hams)
+            if (io_simu%io_tracker)then
+                ERROR STOP "plot_tracking is not implemented with the new lattce and Hamiltonian"
+                !call plot_tracking(j/gra_freq,lat_1,Hams)
+            endif
 
             if(gra_log) then
                 call CreateSpinFile(tag,mag_lattice%M)
