@@ -1,6 +1,7 @@
 module m_deriv_rankN
 use m_derived_types,only : lattice, dim_modes_inner
-use m_H_type
+use m_deriv_base
+use m_H_type, only: t_H_base
 
 private
 public :: t_deriv_l_N, t_deriv_r_N
@@ -22,7 +23,7 @@ end type
 contains
     subroutine get_lN(this,H,lat,vec)
         class(t_deriv_l_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+        class(t_H_base),intent(in)           :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
 
@@ -31,7 +32,7 @@ contains
 
     subroutine get_rN(this,H,lat,vec)
         class(t_deriv_r_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+        class(t_H_base),intent(in)           :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
 
@@ -40,7 +41,7 @@ contains
 
     subroutine get_lN_single(this,H,lat,site,vec)
         class(t_deriv_l_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+        class(t_H_base),intent(in)           :: H
         type(lattice),intent(in)        :: lat
         integer,intent(in)              :: site
         real(8),intent(inout)           :: vec(:)
@@ -80,7 +81,7 @@ contains
 
     subroutine get_rN_single(this,H,lat,site,vec)
         class(t_deriv_r_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+        class(t_H_base),intent(in)           :: H
         type(lattice),intent(in)        :: lat
         integer,intent(in)              :: site
         real(8),intent(inout)           :: vec(:)

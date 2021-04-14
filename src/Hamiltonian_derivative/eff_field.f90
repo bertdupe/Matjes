@@ -1,4 +1,5 @@
 module m_eff_field
+!shall be replaced everywhere by get_eff_field from m_hamiltonian_collection's hamiltonian 
 use m_derived_types
 use m_H_public, only : t_H
 implicit none

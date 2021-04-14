@@ -24,7 +24,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_ASR_phonon, only: get_ASR_Ph
     use m_Mag_Biq, only: get_Mag_Biq
     use m_4spin, only: get_4spin
-    use m_deriv_set, only: set_deriv
+    use m_deriv_public, only: set_deriv
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated

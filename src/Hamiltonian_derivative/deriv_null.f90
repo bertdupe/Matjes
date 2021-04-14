@@ -1,6 +1,7 @@
 module m_deriv_null
+use m_deriv_base
 use m_derived_types,only : lattice
-use m_H_type
+use m_H_type,only:  t_H_base
 private
 public :: t_deriv_l_null, t_deriv_r_null
 
@@ -19,7 +20,7 @@ end type
 contains
     subroutine get_l_null(this,H,lat,vec)
         class(t_deriv_l_null),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+        class(t_H_base),intent(in)           :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
         
@@ -28,7 +29,7 @@ contains
 
     subroutine get_r_null(this,H,lat,vec)
         class(t_deriv_r_null),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+        class(t_H_base),intent(in)           :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
 
@@ -37,7 +38,7 @@ contains
 
     subroutine get_l_null_single(this,H,lat,site,vec)
         class(t_deriv_l_null),intent(in)    :: this
-        class(t_H),intent(in)               :: H
+        class(t_H_base),intent(in)               :: H
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: site
         real(8),intent(inout)               :: vec(:)
@@ -47,7 +48,7 @@ contains
 
     subroutine get_r_null_single(this,H,lat,site,vec)
         class(t_deriv_r_null),intent(in)    :: this
-        class(t_H),intent(in)               :: H
+        class(t_H_base),intent(in)               :: H
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: site
         real(8),intent(inout)               :: vec(:)

@@ -238,11 +238,12 @@ end subroutine
 
 subroutine copy_child(this,Hout)
     class(t_H_eigen),intent(in)     :: this
-    class(t_H),intent(inout)        :: Hout
+    class(t_H_base),intent(inout)        :: Hout
     
     select type(Hout)
     class is(t_H_eigen)
         Call eigen_H_copy(this%H,Hout%H) 
+        Call this%copy_deriv(Hout)
     class default
         STOP "Cannot copy t_H_eigen type with Hamiltonian that is not a class of t_H_eigen"
     end select
@@ -250,7 +251,7 @@ end subroutine
 
 subroutine add_child(this,H_in)
     class(t_H_eigen),intent(inout)    :: this
-    class(t_H),intent(in)             :: H_in
+    class(t_H_base),intent(in)             :: H_in
 
     select type(H_in)
     class is(t_H_eigen)

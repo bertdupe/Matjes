@@ -145,6 +145,7 @@ subroutine copy_child(this,Hout)
         stat=mkl_sparse_copy(this%H,this%descr,Hout%H )
         Hout%descr=this%descr
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to copy Sparse_Matrix_T in m_H_sparse_mkl'
+        Call this%copy_deriv(Hout)
     class default
         STOP "Cannot copy t_h_mkl_csr type with Hamiltonian that is not a class of t_h_mkl_csr"
     end select

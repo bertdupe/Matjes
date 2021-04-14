@@ -1,7 +1,8 @@
 module m_H_coo
 !Hamiltonian type only for calculating coo parameters without external library
 !hence evaluation does not work <- don't use in ham_type_gen 
-use m_H_type
+use m_H_deriv, only: t_H
+use m_H_type, only: t_H_base
 
 type,extends(t_H) :: t_H_coo
     private
@@ -115,7 +116,7 @@ end subroutine
 
 subroutine copy_child(this,Hout)
     class(t_H_coo),intent(in)    :: this
-    class(t_H),intent(inout)     :: Hout
+    class(t_H_base),intent(inout)     :: Hout
 
     STOP "IMPLEMENT copy FOR t_H_coo in m_H_coo if really necessary"
 
@@ -123,7 +124,7 @@ end subroutine
 
 subroutine add_child(this,H_in)
     class(t_H_coo),intent(inout)    :: this
-    class(t_H),intent(in)           :: H_in
+    class(t_H_base),intent(in)           :: H_in
 
     STOP "IMPLEMENT ADDIND FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 

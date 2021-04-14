@@ -1,5 +1,6 @@
 module m_H_coo_based
-use m_H_type, only: t_H
+use m_H_deriv, only: t_H
+use m_H_type, only: t_H_base
 use m_derived_types, only: lattice
 use m_H_coo, only: t_H_coo
 

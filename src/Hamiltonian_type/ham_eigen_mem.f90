@@ -126,7 +126,7 @@ end subroutine
 
 subroutine copy_child(this,Hout)
     class(t_H_eigen_mem),intent(in)     :: this
-    class(t_H),intent(inout)        :: Hout
+    class(t_H_base),intent(inout)        :: Hout
     
     Call this%t_H_eigen%copy_child(Hout)
     select type(Hout)
@@ -139,7 +139,7 @@ end subroutine
 
 subroutine add_child(this,H_in)
     class(t_H_eigen_mem),intent(inout)    :: this
-    class(t_H),intent(in)             :: H_in
+    class(t_H_base),intent(in)             :: H_in
 
     Call this%t_H_eigen%add_child(H_in)
 
