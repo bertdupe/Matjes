@@ -58,7 +58,15 @@ contains
     procedure(int_add_H),deferred           :: add_child     ! destroys the memory allocation
     procedure(int_destroy),deferred         :: destroy_child
     procedure(int_copy),deferred            :: copy_child
-    procedure(int_bcast),deferred           :: bcast_child
+
+    !MPI-stuff
+    procedure(int_send),deferred            :: send
+    procedure(int_recv),deferred            :: recv
+
+    procedure(int_bcast),deferred   :: bcast_child
+    procedure,NON_OVERRIDABLE       :: send_base
+    procedure,NON_OVERRIDABLE       :: recv_base
+
 
     !misc.
     procedure,NON_OVERRIDABLE  :: is_set
@@ -79,7 +87,6 @@ abstract interface
         type(lattice),intent(in)  :: lat
         real(8),intent(inout)     :: res(:)
     end subroutine
-
 
     subroutine int_mult_single(this,i_site,lat,res)
         import t_H_base,lattice
@@ -186,8 +193,24 @@ abstract interface
     subroutine int_bcast(this,comm)
         use mpi_basic                
         import t_H_base
-        class(t_H_base),intent(inout)        ::  this
+        class(t_H_base),intent(inout)   ::  this
         type(mpi_type),intent(in)       ::  comm
+    end subroutine
+
+    subroutine int_send(this,ithread,tag,com)
+        import t_H_base
+        class(t_H_base),intent(in)  :: this
+        integer,intent(in)          :: ithread
+        integer,intent(in)          :: tag
+        integer,intent(in)          :: com
+    end subroutine
+
+    subroutine int_recv(this,ithread,tag,com)
+        import t_H_base
+        class(t_H_base),intent(inout)   :: this
+        integer,intent(in)              :: ithread
+        integer,intent(in)              :: tag
+        integer,intent(in)              :: com
     end subroutine
 
 end interface
@@ -647,6 +670,79 @@ end subroutine
 
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine send_base(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_base),intent(in)      :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N(2),ident(2)
+
+    if(.not.this%is_set()) ERROR STOP "CANNOT SEND HAMILTONIAN WHEN THE ORIGIN IS NOT SET"
+
+
+    N=[size(this%op_l), size(this%op_r)]
+    Call MPI_SEND(this%dimH,          size(this%dimH), MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(N,                  2,               MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%op_l,          N(1),            MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%op_r,          N(2),            MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_mode,      2,               MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%set,           1,               MPI_LOGICAL,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%desc,          len_desc,        MPI_CHARACTER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%mult_M_single, 1,               MPI_INTEGER,   ithread, tag, com, ierr)
+
+    Call get_mode_ident(this%mode_l,ident(1))
+    Call get_mode_ident(this%mode_r,ident(2))
+    Call MPI_SEND(ident, 2, MPI_INTEGER, ithread, tag, com, ierr)
+
+    Call this%mode_l%send(ithread,tag,com)
+    Call this%mode_r%send(ithread,tag,com)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv_base(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_base),intent(inout)   :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N(2),ident(2)
+    integer     :: stat(MPI_STATUS_SIZE) 
+
+    if(this%is_set()) ERROR STOP "CANNOT RECV HAMILTONIAN WHEN THE ORIGIN IS ALREADY SET"
+
+    Call MPI_RECV(this%dimH,          size(this%dimH), MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(N,                  2,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    allocate(this%op_l(N(1)),this%op_r(N(2)))
+    Call MPI_RECV(this%op_l,          N(1),            MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%op_r,          N(2),            MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%dim_mode,      2,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%set,           1,               MPI_LOGICAL,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%desc,          len_desc,        MPI_CHARACTER, ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%mult_M_single, 1,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+
+    Call MPI_RECV(ident, 2, MPI_INTEGER, ithread, tag, com, stat, ierr)
+    Call set_mode_ident(this%mode_l,ident(1))
+    Call set_mode_ident(this%mode_r,ident(2))
+
+    Call this%mode_l%recv(ithread,tag,com)
+    Call this%mode_r%recv(ithread,tag,com)
+#else
+    continue
+#endif
+end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!          HELPER ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!

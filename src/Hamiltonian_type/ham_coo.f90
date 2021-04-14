@@ -15,7 +15,6 @@ contains
     procedure :: init_connect
     procedure :: init_mult_connect_2
 
-    procedure :: bcast_child
     procedure :: destroy_child
     procedure :: copy_child
     procedure :: add_child
@@ -24,6 +23,11 @@ contains
     procedure :: mult_l,mult_r
     procedure :: mult_l_cont,mult_r_cont
     procedure :: mult_l_disc,mult_r_disc
+
+    !MPI
+    procedure :: send
+    procedure :: recv
+    procedure :: bcast_child
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -95,14 +99,6 @@ subroutine optimize(this)
     class(t_H_coo),intent(inout)    :: this
 
     STOP "IMPLEMENT optimize FOR t_H_coo in m_H_coo if really necessary"
-end subroutine 
-
-subroutine bcast_child(this,comm)
-    use mpi_basic                
-    class(t_H_coo),intent(inout)        ::  this
-    type(mpi_type),intent(in)       ::  comm
-
-    STOP "IMPLEMENT bcast_child FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
 
@@ -286,6 +282,48 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     STOP "CANNOT EVALUATE t_H_coo"
     !alternatively add some evaluation without a library
 
+end subroutine 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine send(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_coo),intent(in)      :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    Call this%send_base(ithread,tag,com)
+    ERROR STOP "IMPLEMENT if really necessary"
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_coo),intent(inout)   :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    Call this%recv_base(ithread,tag,com)
+    ERROR STOP "IMPLEMENT if really necessary"
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_child(this,comm)
+    use mpi_basic                
+    class(t_H_coo),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    STOP "IMPLEMENT bcast_child FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
 end module

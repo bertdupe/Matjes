@@ -1,6 +1,7 @@
 module m_hamiltonian_collection
 use m_H_public, only: t_H, get_Htype_N
 use m_derived_types, only: lattice
+use mpi_basic
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
 private
 public  ::  hamiltonian
@@ -8,8 +9,10 @@ public  ::  hamiltonian
 type    ::  hamiltonian
     logical                     :: is_set=.false.
     class(t_H),allocatable      :: H(:)
-    logical                     :: para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
+    logical                     :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
+    type(mpi_type)              :: para(2)
     integer                     :: NH_total=0  !global size of H
+    integer                     :: NH_local=0  !local size of H (relevant with parallelization)
 contains
     procedure   ::  init_H_mv
     procedure   ::  init_H_cp
@@ -24,7 +27,8 @@ contains
     procedure   :: get_eff_field
 
     !parallelization routines
-    procedure   :: bcast    !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
+    procedure   :: bcast        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
+    procedure   :: distribute   !distributes the different Hamiltonian entries to separate threads
 
     !small access routines
     procedure   :: size_H
@@ -33,16 +37,86 @@ end type
 
 contains
 
+subroutine distribute(this,com_in)
+    use mpi_util
+    use mpi_distrib_v
+    !subroutine which distributes the H-Hamiltonians from the master of comm to have as few as possible H per thread
+    !expects the hamiltonian of the comm-master to be initialized correctly
+    class(hamiltonian),intent(inout)    :: this
+    type(mpi_type),intent(in)           :: com_in
+#ifdef CPP_MPI
+
+    !integer         :: div, color
+    integer         :: ierr
+
+    integer         :: iH,ithread,i
+
+    type(mpi_distv)             :: com_outer
+    type(mpi_type)              :: com_inner
+
+    class(t_H),allocatable      :: H_tmp(:)
+
+
+
+    if(com_in%ismas)then
+        if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
+    endif
+    Call bcast(this%NH_total,com_in)
+    
+    !decide how to parallelize Hamiltonian
+    Call get_two_level_comm(com_in,this%NH_total,com_outer,com_inner)
+
+    !distribute the Hamiltonian to the masters of the inner parallelization
+    if(com_inner%ismas)then
+        if(com_outer%ismas)then
+            !send Hamiltonians
+            do ithread=2,com_outer%Np
+                do i=1,com_outer%cnt(ithread)
+                    iH=com_outer%displ(ithread)+i
+                    Call this%H(iH)%send(ithread-1,i,com_outer%com)
+                enddo
+            enddo
+            !keep own ham entry
+            this%NH_local=com_outer%cnt(1)
+            Call get_Htype_N(H_tmp,this%NH_local)
+            do i=1,this%NH_local
+                Call this%H(i)%copy(H_tmp(i))    !moving would be much smarter, but has to be implemented
+            enddo
+            do i=1,size(this%H)
+                Call this%H(i)%destroy()
+            enddo
+            deallocate(this%H)
+            Call move_alloc(H_tmp,this%H)
+        else
+            this%NH_local=com_outer%cnt(com_outer%id+1)
+            Call get_Htype_N(this%H,this%NH_local)
+            do i=1,this%NH_local
+                Call this%H(i)%recv(0,i,com_outer%com)
+            enddo
+        endif
+        this%is_set=.true.
+
+    endif
+    this%is_para(1)=.true.
+    Call this%para(1)%set_from_distv(com_outer)
+
+    write(error_unit,*) "IMPLEMENT FURTHER PARALLELIZATION LEVEL WITHIN THE HAMILTONIAN" !only called if Nproc> NH_total
+#else
+    continue
+#endif
+
+end subroutine
+
+
 subroutine bcast(this,comm)
     !bcast assuming Hamiltonian has not been scattered yet 
-    use mpi_basic                
     class(hamiltonian),intent(inout)    :: this
     type(mpi_type),intent(in)           :: comm
 #ifdef CPP_MPI
     integer     ::  i,N
 
     if(comm%ismas)then
-        if(any(this%para))then
+        if(any(this%is_para))then
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif

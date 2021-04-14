@@ -8,6 +8,7 @@ interface scatter
 end interface
 
 interface bcast_alloc
+    module procedure bcast_alloc_int
     module procedure bcast_alloc_int2
 end interface
 
@@ -52,6 +53,26 @@ subroutine bcast_alloc_int2(arr,com)
     continue
 #endif
 end subroutine
+
+subroutine bcast_alloc_int(arr,com)
+    use mpi_basic
+    integer,intent(inout),allocatable   :: arr(:)
+    class(mpi_type),intent(in)          :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+    integer     :: shp
+
+    if(com%ismas.and..not.allocated(arr)) ERROR STOP "FAILED TO BCAST SINCE INITIAL ARRAY IS NOT ALLOCATED"
+    if(com%ismas) shp=size(arr)
+    Call bcast(shp,com)
+    if(.not.allocated(arr)) allocate(arr(shp))
+
+    Call MPI_BCAST(arr(1),shp,MPI_INTEGER,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
 
 
 subroutine bcast_int(val,com)

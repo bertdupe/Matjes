@@ -17,7 +17,6 @@ contains
     procedure :: set_from_Hcoo
 
     procedure :: add_child 
-    procedure :: bcast_child 
     procedure :: destroy_child    
     procedure :: copy_child 
     procedure :: optimize
@@ -29,6 +28,10 @@ contains
     procedure :: mult_l_ind,       mult_r_ind
     procedure :: mult_l_disc_disc, mult_r_disc_disc
     procedure :: get_ind_mult_l,   get_ind_mult_r
+    !MPI
+    procedure :: send
+    procedure :: recv
+    procedure :: bcast_child
 end type
 
 interface t_H_mkl_csr
@@ -261,17 +264,6 @@ subroutine add_child(this,H_in)
     end select
 end subroutine 
 
-subroutine bcast_child(this,comm)
-    use mpi_basic                
-    class(t_H_eigen),intent(inout)  ::  this
-    type(mpi_type),intent(in)       ::  comm
-#ifdef CPP_MPI
-    Call eigen_H_bcast(comm%id,comm%mas,comm%ismas,this%H,comm%com) 
-#else
-    continue
-#endif
-end subroutine 
-
 subroutine destroy_child(this)
     class(t_H_eigen),intent(inout)    :: this
 
@@ -318,5 +310,52 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)
     E=DOT_PRODUCT(vec_l(:N_out),vec_out(:N_out))
 end subroutine 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine send(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    Call this%send_base(ithread,tag,com)
+    Call eigen_H_send(ithread,tag,this%H,com) 
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_eigen),intent(inout)   :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    Call this%recv_base(ithread,tag,com)
+    Call eigen_H_recv(ithread,tag,this%H,com) 
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_child(this,comm)
+    use mpi_basic                
+    class(t_H_eigen),intent(inout)  ::  this
+    type(mpi_type),intent(in)       ::  comm
+#ifdef CPP_MPI
+    Call eigen_H_bcast(comm%id,comm%mas,comm%ismas,this%H,comm%com) 
+#else
+    continue
+#endif
+end subroutine 
+
+
 #endif 
 end module

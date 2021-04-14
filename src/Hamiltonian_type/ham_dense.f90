@@ -12,7 +12,6 @@ contains
     procedure :: set_from_Hcoo 
 
     procedure :: add_child 
-    procedure :: bcast_child 
     procedure :: destroy_child    
     procedure :: copy_child 
 
@@ -21,6 +20,10 @@ contains
     procedure :: mult_l_cont,mult_r_cont
     procedure :: mult_l_disc,mult_r_disc
     procedure :: mult_r_single,mult_l_single
+    !MPI
+    procedure :: send
+    procedure :: recv
+    procedure :: bcast_child
 end type
 
 private
@@ -162,26 +165,6 @@ subroutine copy_child(this,Hout)
     end select
 end subroutine
 
-subroutine bcast_child(this,comm)
-    use mpi_basic                
-    class(t_H_dense),intent(inout)        ::  this
-    type(mpi_type),intent(in)       ::  comm
-#ifdef CPP_MPI
-    integer     :: ierr
-    integer     :: N(2)
-    
-    if(comm%ismas)then
-        N=shape(this%H)
-    endif
-    Call MPI_Bcast(N, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
-    if(.not.comm%ismas)then
-        allocate(this%H(N(1),N(2)))
-    endif
-    Call MPI_Bcast(this%H,size(this%H), MPI_REAL8, comm%mas, comm%com,ierr)
-#else
-    continue
-#endif
-end subroutine 
 
 subroutine add_child(this,H_in)
     class(t_h_dense),intent(inout)    :: this
@@ -245,6 +228,67 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     if(allocated(vec_l)) deallocate(vec_l)
     if(allocated(vec_r)) deallocate(vec_r)
 end subroutine 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine send(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_dense),intent(in)     :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    Call this%send_base(ithread,tag,com)
+    Call MPI_Send(this%H, size(this%H), MPI_DOUBLE_PRECISION, ithread, tag, com, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_dense),intent(inout)  :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: stat(MPI_STATUS_SIZE) 
+    integer     :: ierr
+    
+    Call this%recv_base(ithread,tag,com)
+    allocate(this%H(this%dimH(1),this%dimH(2)))
+    Call MPI_RECV(this%H, size(this%H), MPI_DOUBLE_PRECISION, ithread, tag, com, stat, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_child(this,comm)
+    use mpi_basic                
+    class(t_H_dense),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N(2)
+    
+    if(comm%ismas)then
+        N=shape(this%H)
+    endif
+    Call MPI_Bcast(N, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas)then
+        allocate(this%H(N(1),N(2)))
+    endif
+    Call MPI_Bcast(this%H,size(this%H), MPI_REAL8, comm%mas, comm%com,ierr)
+#else
+    continue
+#endif
+end subroutine 
+
 
 
 end module

@@ -130,8 +130,10 @@ Implicit None
         Call all_lattices%bcast(mpi_world)
         Call io_simu%bcast(mpi_world)
         Call ext_param%bcast(mpi_world)
-        Call H_comb%bcast(mpi_world)
-        Call H_res%bcast(mpi_world)
+        Call H_comb%distribute(mpi_world)
+        Call H_res%distribute(mpi_world)
+        !Call H_comb%bcast(mpi_world)
+        !Call H_res%bcast(mpi_world)
         call spindynamics(all_lattices,io_simu,ext_param,H_comb,H_res)
     endif
 

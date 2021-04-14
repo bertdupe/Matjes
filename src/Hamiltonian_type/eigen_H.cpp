@@ -150,6 +150,52 @@ void eigen_mult_l_disc_disc(
 
 
 #ifdef CPP_MPI
+
+
+void eigen_H_send(
+    const int& id,
+    const int& tag,
+    SpMat **Ham,
+    MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    long shape[3], rows, cols, nnz;
+    (**Ham).makeCompressed();
+    rows=(**Ham).rows();
+    cols=(**Ham).cols();
+    nnz=(**Ham).nonZeros();
+    shape[0]=rows, shape[1]=cols, shape[2]=nnz;
+
+    int ierr;
+    ierr=MPI_Send(shape, 3, MPI_LONG, id, tag,  comm);
+    ierr=MPI_Send((**Ham).valuePtr(),      nnz,  MPI_DOUBLE, id, tag, comm);
+    ierr=MPI_Send((**Ham).innerIndexPtr(), nnz,  MPI_INT,    id, tag, comm);
+    ierr=MPI_Send((**Ham).outerIndexPtr(), cols, MPI_INT,    id, tag, comm);
+}
+
+void eigen_H_recv(
+    const int& id,
+    const int& tag,
+    SpMat **Ham,
+    MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    MPI_Status status;
+    int ierr;
+    long shape[3], rows, cols, nnz;
+
+    
+    ierr=MPI_Recv(shape, 3, MPI_LONG, id, tag,  comm, &status);
+    rows=shape[0], cols=shape[1], nnz=shape[2];
+    *Ham =new SpMat{rows,cols};
+    (*Ham)->reserve(nnz);
+    ierr=MPI_Recv((**Ham).valuePtr(),      nnz,  MPI_DOUBLE, id, tag, comm, &status);
+    ierr=MPI_Recv((**Ham).innerIndexPtr(), nnz,  MPI_INT,    id, tag, comm, &status);
+    ierr=MPI_Recv((**Ham).outerIndexPtr(), cols, MPI_INT,    id, tag, comm, &status);
+    (**Ham).outerIndexPtr()[cols] = nnz;
+}
+
+
 void eigen_H_bcast(
     int id,
     int mas,

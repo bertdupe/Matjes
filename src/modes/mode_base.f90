@@ -42,7 +42,14 @@ type, abstract :: F_mode
     procedure(int_bcast),deferred           :: bcast
     procedure                               :: init_base
     procedure                               :: copy_base
+
+
+!MPI
+    procedure(int_send),deferred            :: send
+    procedure(int_recv),deferred            :: recv
     procedure                               :: bcast_base
+    procedure                               :: send_base
+    procedure                               :: recv_base
 end type
 
 abstract interface
@@ -129,6 +136,23 @@ abstract interface
         import F_mode
         class(F_mode),intent(inout) ::  this
     end subroutine
+
+    subroutine int_send(this,ithread,tag,com)
+        import F_mode
+        class(F_mode),intent(in)    :: this
+        integer,intent(in)          :: ithread
+        integer,intent(in)          :: tag
+        integer,intent(in)          :: com
+    end subroutine
+
+    subroutine int_recv(this,ithread,tag,com)
+        import F_mode
+        class(F_mode),intent(inout) :: this
+        integer,intent(in)          :: ithread
+        integer,intent(in)          :: tag
+        integer,intent(in)          :: com
+    end subroutine
+
 end interface
 
 contains
@@ -349,4 +373,55 @@ function get_comp(this,op_keep)result(comp)
     endif
 #endif
 end function 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine send_base(this,ithread,tag,com)
+    use mpi_basic                
+    class(F_mode),intent(in)    :: this
+    integer,intent(in)          :: ithread
+    integer,intent(in)          :: tag
+    integer,intent(in)          :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N
+
+    N=size(this%order)
+    Call MPI_SEND(this%order_occ,     number_different_order_parameters, MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%N_mode,        1, MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%mode_size,     1, MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(N,                  1, MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%order,         N, MPI_INTEGER,   ithread, tag, com, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv_base(this,ithread,tag,com)
+    use mpi_basic                
+    class(F_mode),intent(inout) :: this
+    integer,intent(in)          :: ithread
+    integer,intent(in)          :: tag
+    integer,intent(in)          :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N
+    integer     :: stat(MPI_STATUS_SIZE) 
+
+    Call MPI_RECV(this%order_occ,     number_different_order_parameters, MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%N_mode,        1, MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%mode_size,     1, MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(N,                  1, MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    allocate(this%order(N))
+    Call MPI_RECV(this%order,         N, MPI_INTEGER,   ithread, tag, com, stat, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+
 end module 
