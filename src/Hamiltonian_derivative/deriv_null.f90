@@ -19,26 +19,26 @@ end type
 
 contains
     subroutine get_l_null(this,H,lat,vec)
-        class(t_deriv_l_null),intent(in)   :: this
-        class(t_H_base),intent(in)           :: H
-        type(lattice),intent(in)        :: lat
-        real(8),intent(inout)           :: vec(:)
+        class(t_deriv_l_null),intent(in)    :: this
+        class(t_H_base),intent(in)          :: H
+        type(lattice),intent(in)            :: lat
+        real(8),intent(inout)               :: vec(:)
         
         vec=0.0d0
     end subroutine
 
     subroutine get_r_null(this,H,lat,vec)
-        class(t_deriv_r_null),intent(in)   :: this
-        class(t_H_base),intent(in)           :: H
-        type(lattice),intent(in)        :: lat
-        real(8),intent(inout)           :: vec(:)
+        class(t_deriv_r_null),intent(in)    :: this
+        class(t_H_base),intent(in)          :: H
+        type(lattice),intent(in)            :: lat
+        real(8),intent(inout)               :: vec(:)
 
         vec=0.0d0
     end subroutine
 
     subroutine get_l_null_single(this,H,lat,site,vec)
         class(t_deriv_l_null),intent(in)    :: this
-        class(t_H_base),intent(in)               :: H
+        class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: site
         real(8),intent(inout)               :: vec(:)
@@ -48,7 +48,7 @@ contains
 
     subroutine get_r_null_single(this,H,lat,site,vec)
         class(t_deriv_r_null),intent(in)    :: this
-        class(t_H_base),intent(in)               :: H
+        class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: site
         real(8),intent(inout)               :: vec(:)

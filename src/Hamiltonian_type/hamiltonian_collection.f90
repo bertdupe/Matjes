@@ -1,5 +1,6 @@
 module m_hamiltonian_collection
 use m_H_public, only: t_H, get_Htype_N
+use m_H_type,only : len_desc
 use m_derived_types, only: lattice
 use mpi_basic
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
@@ -10,9 +11,13 @@ type    ::  hamiltonian
     logical                     :: is_set=.false.
     class(t_H),allocatable      :: H(:)
     logical                     :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
-    type(mpi_type)              :: para(2)
+    type(mpi_type)              :: com_global
+    type(mpi_distv)             :: com_outer
+    type(mpi_type)              :: com_inner
     integer                     :: NH_total=0  !global size of H
     integer                     :: NH_local=0  !local size of H (relevant with parallelization)
+
+    character(len=len_desc),allocatable ::  desc_master(:)
 contains
     procedure   ::  init_H_mv
     procedure   ::  init_H_cp
@@ -27,6 +32,7 @@ contains
     procedure   :: get_eff_field
 
     !parallelization routines
+    procedure   :: is_master
     procedure   :: bcast        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
     procedure   :: distribute   !distributes the different Hamiltonian entries to separate threads
 
@@ -36,6 +42,7 @@ contains
 end type
 
 contains
+
 
 subroutine distribute(this,com_in)
     use mpi_util
@@ -56,19 +63,25 @@ subroutine distribute(this,com_in)
 
     class(t_H),allocatable      :: H_tmp(:)
 
-
-
     if(com_in%ismas)then
         if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
     endif
     Call bcast(this%NH_total,com_in)
-    
+    this%NH_local=this%NH_total
+    if(com_in%Np==1) return
     !decide how to parallelize Hamiltonian
     Call get_two_level_comm(com_in,this%NH_total,com_outer,com_inner)
+
+    if(com_outer%Np>1.and.com_inner%ismas) this%is_para(1)=.true.
+    Call reduce_lor(this%is_para(1),com_in)
 
     !distribute the Hamiltonian to the masters of the inner parallelization
     if(com_inner%ismas)then
         if(com_outer%ismas)then
+            !save descriptions for later easier io-access
+            allocate(this%desc_master(this%NH_total))
+            this%desc_master=this%H(:)%desc
+
             !send Hamiltonians
             do ithread=2,com_outer%Np
                 do i=1,com_outer%cnt(ithread)
@@ -95,12 +108,21 @@ subroutine distribute(this,com_in)
             enddo
         endif
         this%is_set=.true.
-
     endif
-    this%is_para(1)=.true.
-    Call this%para(1)%set_from_distv(com_outer)
 
-    write(error_unit,*) "IMPLEMENT FURTHER PARALLELIZATION LEVEL WITHIN THE HAMILTONIAN" !only called if Nproc> NH_total
+    if(com_inner%Np>1)then
+        this%is_para(2)=.true.
+        Call bcast(this%NH_local,com_inner)
+        if(.not.com_inner%ismas) Call get_Htype_N(this%H,this%NH_local)
+        do i=1,this%NH_local
+            Call this%H(i)%distribute(com_inner)
+        enddo
+        this%is_set=.true.
+    endif
+
+    this%com_outer=com_outer
+    this%com_inner=com_inner
+    this%com_global=com_in
 #else
     continue
 #endif
@@ -144,13 +166,22 @@ function get_desc(this,i) result(desc)
     class(Hamiltonian),intent(in)       :: this
     integer,intent(in)                  :: i
     character(len=len_desc)             :: desc
+
     if(i<1.or.i>this%NH_total)then
         write(error_unit,'(3/A)') "Cannot get desciption of Hamiltonian, as the index is not with the bounds of the H-array"
         write(error_unit,'(A,I6)')  "Wanted index: ", i
         write(error_unit,'(A,I6)')  "H-arr size  : ", this%NH_total
         ERROR STOP
     endif
-    desc=this%H(i)%desc
+    if(this%is_para(1))then
+        if(this%com_outer%ismas)then
+            desc=this%desc_master(i)
+        else
+            ERROR STOP "CAN ONLY USE GET_DESC FROM MASTER THREAD"
+        endif
+    else
+        desc=this%H(i)%desc
+    endif
 end function
 
 subroutine init_H_mv(this,Harr)
@@ -194,6 +225,8 @@ subroutine energy_distrib(this,lat,order,Edist)
     real(8),allocatable,intent(inout)   :: Edist(:,:)
 
     integer     ::  i
+
+    if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     
     if(allocated(Edist))then
         if(size(Edist,1)/=lat%Ncell*lat%site_per_cell(order).and.size(Edist,2)==this%NH_total) deallocate(Edist)
@@ -205,26 +238,32 @@ subroutine energy_distrib(this,lat,order,Edist)
 end subroutine
 
 subroutine energy_resolved(this,lat,E)
+    use mpi_distrib_v, only: gatherv
+    use mpi_util
     !get contribution-resolved energies
+    !only correct on outer master thread
     class(hamiltonian),intent(in)   :: this
-    type (lattice),intent(in)       :: lat
+    type (lattice),intent(inout)    :: lat
     real(8),intent(out)             :: E(this%NH_total)
 
     integer     ::  i
 
     E=0.0d0
-    do i=1,this%NH_total
+    if(any(this%is_para)) Call lat%bcast_val(this%com_global)
+    do i=1,this%NH_local
         Call this%H(i)%eval_all(E(i),lat)
     enddo
+    if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
+    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
 end subroutine
 
 function energy(this,lat)result(E)
     !returns the total energy of the Hamiltonian array
     class(hamiltonian),intent(in)   ::  this
-    class(lattice),intent(in)       ::  lat
+    type(lattice),intent(inout)     ::  lat
     real(8)                         ::  E
 
-    real(8)     ::  tmp_E(size(this%H))
+    real(8)     ::  tmp_E(this%NH_total)
     
     Call this%energy_resolved(lat,tmp_E)
     E=sum(tmp_E)
@@ -242,6 +281,7 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     real(8)     ::  tmp_E(this%NH_total)
     integer     ::  i
 
+    if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     E=0.0d0
     do i=1,this%NH_total
         Call this%H(i)%eval_single(tmp_E(i),i_m,dim_bnd,lat)
@@ -252,20 +292,41 @@ end function
 
 subroutine get_eff_field(this,lat,B,Ham_type)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
+    use mpi_basic
+    use mpi_util
     class(hamiltonian),intent(inout)    :: this
-    type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
+    type (lattice),intent(inout)        :: lat    !lattice containing current order-parameters 
     real(8),intent(inout)               :: B(:)
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
 
-    integer     :: iH
+    integer     :: iH, ierr
     real(8)     :: tmp(size(B))
 
-    B=0.d0
-    do iH=1,this%NH_total
+    B=0.0d0
+    if(any(this%is_para)) Call lat%bcast_val(this%com_global)
+    do iH=1,this%NH_local
         Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B,tmp)
     enddo
+    if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 end subroutine
 
+function is_master(this)result(master)
+    use mpi_basic
+    class(hamiltonian),intent(in)       :: this
+    logical                             :: master
+
+    integer :: ierr
+
+    if(this%is_para(1))then
+        master=this%com_outer%ismas
+    else
+        if(this%is_para(2))then
+            master=this%com_inner%ismas
+        else
+            master=.true.
+        endif
+    endif
+end function
 
 end module

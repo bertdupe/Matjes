@@ -1,6 +1,8 @@
 #include <iostream>
 #include <Eigen/Sparse>
 #include <vector>
+#include <numeric>
+
 #ifdef CPP_MPI
 #include <mpi.h>
 #endif
@@ -224,6 +226,68 @@ void eigen_H_bcast(
     ierr=MPI_Bcast((**Ham).outerIndexPtr(),cols ,MPI_INT,mas, comm);
     (**Ham).outerIndexPtr()[cols] = nnz;
 }
+
+void eigen_H_distribute(
+    const int& id,
+    const int& mas,
+    const bool& ismas,
+    SpMat **Ham,
+    MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    long shape[3], rows, cols, nnz;
+    int ierr;
+    if(ismas){
+        (**Ham).makeCompressed();
+        rows=(**Ham).rows();
+        cols=(**Ham).cols();
+        nnz=(**Ham).nonZeros();
+        shape[0]=rows, shape[1]=cols, shape[2]=nnz;
+    }
+    MPI_Bcast(shape, 3, MPI_LONG,mas, comm);
+    rows=shape[0], cols=shape[1], nnz=shape[2];
+    int Np;
+    MPI_Comm_size(comm, &Np);
+
+    //get array with aim number of entries per matrix
+    std::vector<int> nnz_count;
+    nnz_count.resize(Np);
+    std::fill(nnz_count.begin(), nnz_count.end(), nnz/Np);
+    for( int i = 0; i<nnz%Np; i++) nnz_count[i]++;
+    std::vector<int> displ;
+    displ.resize(Np);
+    std::partial_sum(nnz_count.begin(), nnz_count.end()-1, displ.begin()+1);
+
+
+    if(not ismas){
+        *Ham =new SpMat{rows,cols};
+        (*Ham)->reserve(nnz_count[id]);
+    }
+    ierr=MPI_Bcast((**Ham).outerIndexPtr(),cols ,MPI_INT,mas, comm);
+    auto point=(**Ham).outerIndexPtr();
+    for(int i=0;i<cols; i++){
+        point[i]=point[i]-displ[id];
+        point[i]=std::max(point[i],0);
+        point[i]=std::min(point[i],nnz_count[id]);
+    }
+
+    if(ismas){
+        SpMat* tmp =new SpMat{rows,cols};
+        (tmp)->reserve(nnz_count[id]);
+        ierr=MPI_Scatterv((**Ham).innerIndexPtr(), nnz_count.data(), displ.data(), MPI_INT,    (*tmp).innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        ierr=MPI_Scatterv((**Ham).valuePtr(),      nnz_count.data(), displ.data(), MPI_DOUBLE, (*tmp).valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+        std::memcpy((*tmp).outerIndexPtr(),(**Ham).outerIndexPtr(),cols*sizeof(Eigen::SparseMatrix<double>::StorageIndex));
+        delete *Ham;
+        *Ham=tmp;
+    }
+    else{
+        ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_INT,    (**Ham).innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_DOUBLE, (**Ham).valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+    }
+    (**Ham).outerIndexPtr()[cols] = nnz_count[id];
+    (**Ham).makeCompressed();
+}
+
 #endif
 
 void eigen_H_add(
@@ -374,7 +438,7 @@ void eigen_H_mult_mat_disc_disc(
     }
     SpVec res(rows);
     res= (**mat) * vec ;
-    if(res.nonZeros()<(std::vector<int>::size_type) N_out){
+    if(res.nonZeros()<(Eigen::Index) N_out){
         N_out=res.nonZeros();
         std::memcpy(vec_out,res.valuePtr(),N_out*sizeof(double));
         std::memcpy(ind_out,res.innerIndexPtr(),N_out*sizeof(int));

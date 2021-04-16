@@ -27,7 +27,8 @@ contains
     !MPI
     procedure :: send
     procedure :: recv
-    procedure :: bcast_child
+    procedure :: distribute
+    procedure :: bcast
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -318,12 +319,21 @@ subroutine recv(this,ithread,tag,com)
 #endif
 end subroutine
 
-subroutine bcast_child(this,comm)
+subroutine bcast(this,comm)
     use mpi_basic                
     class(t_H_coo),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm
 
-    STOP "IMPLEMENT bcast_child FOR t_H_coo in m_H_coo if really necessary"
+    STOP "IMPLEMENT bcast FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
+
+subroutine distribute(this,comm)
+    use mpi_basic                
+    class(t_H_coo),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    STOP "IMPLEMENT disbribute FOR t_H_coo in m_H_coo if really necessary"
+end subroutine 
+
 
 end module

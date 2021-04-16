@@ -31,7 +31,8 @@ contains
     !MPI
     procedure :: send
     procedure :: recv
-    procedure :: bcast_child
+    procedure :: distribute
+    procedure :: bcast
 end type
 
 interface t_H_mkl_csr
@@ -340,20 +341,33 @@ subroutine recv(this,ithread,tag,com)
 #ifdef CPP_MPI
     Call this%recv_base(ithread,tag,com)
     Call eigen_H_recv(ithread,tag,this%H,com) 
+    Call this%set_deriv()
 #else
     continue
 #endif
 end subroutine
 
-subroutine bcast_child(this,comm)
+subroutine bcast(this,comm)
     use mpi_basic                
     class(t_H_eigen),intent(inout)  ::  this
     type(mpi_type),intent(in)       ::  comm
 #ifdef CPP_MPI
+    Call this%bcast_base(comm)
     Call eigen_H_bcast(comm%id,comm%mas,comm%ismas,this%H,comm%com) 
+    if(.not.comm%ismas) Call this%set_deriv()
 #else
     continue
 #endif
+end subroutine 
+
+subroutine distribute(this,comm)
+    use mpi_basic                
+    class(t_H_eigen),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    Call this%bcast_base(comm)
+    Call eigen_H_distribute(comm%id,comm%mas,comm%ismas,this%H,comm%com)
+    if(.not.comm%ismas) Call this%set_deriv()
 end subroutine 
 
 

@@ -40,7 +40,6 @@ Implicit None
 ! external parameter
     type(simulation_parameters) :: ext_param
 ! Hamiltonian used (extend to array with different basis + higher ranks)
-    type(hamiltonian)           :: H_res,H_comb
     class(t_H),allocatable      :: Ham_res(:), Ham_comb(:)
 ! tag that defines the system
     integer :: n_system
@@ -72,8 +71,6 @@ Implicit None
         
         ! read the input and prepare the lattices, the Hamitlonian and all this mess
         call setup_simu(io_simu,all_lattices,ext_param,Ham_res,Ham_comb)
-        Call H_comb%init_H_cp(Ham_comb)   !later change to move, as certain the result is the same (do it even in setup_simu?)
-        if(allocated(Ham_res))  Call H_res%init_H_cp(Ham_res)
         
         ! number of cell in the simulation
         N_cell=product(all_lattices%dim_lat)
@@ -127,14 +124,7 @@ Implicit None
     endif
 
     if (my_simu%name == 'magnet-dynamics')then
-        Call all_lattices%bcast(mpi_world)
-        Call io_simu%bcast(mpi_world)
-        Call ext_param%bcast(mpi_world)
-        Call H_comb%distribute(mpi_world)
-        Call H_res%distribute(mpi_world)
-        !Call H_comb%bcast(mpi_world)
-        !Call H_res%bcast(mpi_world)
-        call spindynamics(all_lattices,io_simu,ext_param,H_comb,H_res)
+        call spindynamics(all_lattices,io_simu,ext_param,Ham_comb,Ham_res,mpi_world)
     endif
 
 

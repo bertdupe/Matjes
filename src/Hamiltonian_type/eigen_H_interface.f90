@@ -201,6 +201,16 @@ module m_eigen_H_interface
            type(C_PTR),intent(inout)                :: mat   !matrix to broadcast
            integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator  the processor
         end subroutine
+
+        subroutine eigen_H_distribute(id,mas,ismas,mat,comm) bind( c, name="eigen_H_distribute" )
+           use, intrinsic :: iso_c_binding
+           integer( kind = c_int ),intent(in)       :: id    !MPI-rank of the processor
+           integer( kind = c_int ),intent(in)       :: mas   !MPI-rank of the master
+           logical( kind = c_bool ),intent(in)      :: ismas !is master to bcast from
+           type(C_PTR),intent(inout)                :: mat   !matrix to broadcast
+           integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator  the processor
+        end subroutine
+
 #endif
     end interface
     

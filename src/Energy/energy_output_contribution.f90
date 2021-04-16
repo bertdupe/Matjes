@@ -29,7 +29,7 @@ subroutine Eout_contrib_write(H,step,time,lat,io)
     type(hamiltonian),intent(inout) :: H
     integer,intent(in)              :: step
     real(8),intent(in)              :: time
-    type(lattice),intent(in)        :: lat
+    type(lattice),intent(inout)     :: lat
     integer, intent(in)             :: io
 
     real(8),allocatable :: E(:)

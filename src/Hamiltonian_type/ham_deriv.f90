@@ -25,6 +25,7 @@ subroutine copy_deriv(this,Hout)
         do i=1,number_different_order_parameters
             Call this%deriv(i)%copy(Hout%deriv(i))
         enddo
+        Hout%deriv_set=.true.
     endif
 end subroutine
 

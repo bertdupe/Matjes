@@ -23,7 +23,8 @@ contains
     !MPI
     procedure :: send
     procedure :: recv
-    procedure :: bcast_child
+    procedure :: distribute
+    procedure :: bcast
 end type
 
 private
@@ -268,14 +269,15 @@ subroutine recv(this,ithread,tag,com)
 #endif
 end subroutine
 
-subroutine bcast_child(this,comm)
+subroutine bcast(this,comm)
     use mpi_basic                
     class(t_H_dense),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm
 #ifdef CPP_MPI
     integer     :: ierr
     integer     :: N(2)
-    
+
+    Call this%bcast_base(comm)
     if(comm%ismas)then
         N=shape(this%H)
     endif
@@ -289,6 +291,12 @@ subroutine bcast_child(this,comm)
 #endif
 end subroutine 
 
+subroutine distribute(this,comm)
+    use mpi_basic                
+    class(t_H_dense),intent(inout)  ::  this
+    type(mpi_type),intent(in)       ::  comm
 
+    ERROR STOP "Inner MPI-parallelization of the Hamiltonian is not implemented for dense Hamiltonians"
+end subroutine 
 
 end module

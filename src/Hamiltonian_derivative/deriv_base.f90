@@ -75,7 +75,7 @@ contains
 
     subroutine get_deriv(this,H,lat,vec,tmp)
         class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
-        class(t_H_base),intent(in)           :: H                !Hamiltonian that is derivated
+        class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
         real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
@@ -88,7 +88,7 @@ contains
 
     subroutine get_deriv_single(this,H,lat,site,vec,tmp)
         class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
-        class(t_H_base),intent(in)           :: H                !Hamiltonian that is derivated
+        class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
         type(lattice),intent(in)        :: lat
         integer,intent(in)              :: site
         real(8),intent(inout)           :: vec(:)           !add derivative to this vector (

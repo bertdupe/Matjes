@@ -31,7 +31,8 @@ contains
     !MPI
     procedure :: send
     procedure :: recv
-    procedure :: bcast_child
+    procedure :: bcast
+    procedure :: distribute 
 end type
 
 interface t_H_mkl_csr
@@ -141,7 +142,7 @@ end subroutine
 
 subroutine copy_child(this,Hout)
     class(t_H_mkl_csr),intent(in)   :: this
-    class(t_H),intent(inout)        :: Hout
+    class(t_H_base),intent(inout)   :: Hout
     integer         ::  stat
     
     select type(Hout)
@@ -157,7 +158,7 @@ end subroutine
 
 subroutine add_child(this,H_in)
     class(t_H_mkl_csr),intent(inout)    :: this
-    class(t_H),intent(in)               :: H_in
+    class(t_H_base),intent(in)          :: H_in
     
     type(SPARSE_MATRIX_T)       :: tmp_H
     integer                     :: stat
@@ -289,14 +290,28 @@ end subroutine
 
 subroutine send(this,ithread,tag,com)
     use mpi_basic                
+    use mkl_spblas_util, only: unpack_csr
     class(t_H_mkl_csr),intent(in)   :: this
     integer,intent(in)              :: ithread
     integer,intent(in)              :: tag
     integer,intent(in)              :: com
 
+    integer(C_int),pointer          :: ia(:),ja(:)
+    real(C_DOUBLE),pointer          :: val(:)
+    
+    integer     :: nnz
+    integer     :: ierr
+
 #ifdef CPP_MPI
     Call this%send_base(ithread,tag,com)
-    ERROR STOP "IMPLEMENT"
+
+    Call unpack_csr(this%dimH(2),this%H,nnz,ia,ja,val)
+    Call MPI_Send(nnz, 1, MPI_INT, ithread, tag,  com,  ierr)
+    Call MPI_Send(ia , this%dimH(1)+1, MPI_INT,              ithread, tag,  com, ierr)
+    Call MPI_Send(ja , nnz,            MPI_INT,              ithread, tag,  com, ierr)
+    Call MPI_Send(val, nnz,            MPI_DOUBLE_PRECISION, ithread, tag,  com, ierr)
+
+    nullify(ia,ja,val)
 #else
     continue
 #endif
@@ -310,16 +325,45 @@ subroutine recv(this,ithread,tag,com)
     integer,intent(in)              :: com
 
 #ifdef CPP_MPI
+
+    integer(C_int),allocatable     :: ia(:),ja(:)
+    real(C_DOUBLE),allocatable     :: val(:)
+    
+    integer     :: nnz
+    integer     :: i,ierr
+    type(SPARSE_MATRIX_T) :: H_local
+    type(matrix_descr)    :: descr
+    integer     :: stat(MPI_STATUS_SIZE)
+
     Call this%recv_base(ithread,tag,com)
-    ERROR STOP "IMPLEMENT"
+
+    Call MPI_Recv(nnz, 1, MPI_INT, ithread, tag,  com, stat, ierr)
+    allocate(ia(this%dimH(1)+1),ja(nnz),val(nnz))
+    Call MPI_Recv(ia , this%dimH(1)+1, MPI_INT,              ithread, tag,  com, stat, ierr)
+    Call MPI_Recv(ja , nnz,            MPI_INT,              ithread, tag,  com, stat, ierr)
+    Call MPI_Recv(val, nnz,            MPI_DOUBLE_PRECISION, ithread, tag,  com, stat, ierr)
+    ierr=mkl_sparse_d_create_csr(H_local, SPARSE_INDEX_BASE_ONE , this%dimH(1) , this%dimH(2), ia(1:size(ia)-1), ia(2:size(ia)), ja, val)
+    if(ierr/=SPARSE_STATUS_SUCCESS) ERROR STOP 'failed to create local mkl sparse matrix'
+    descr%type=SPARSE_MATRIX_TYPE_GENERAL 
+    descr%diag=SPARSE_DIAG_NON_UNIT
+    descr%mode=SPARSE_FILL_MODE_LOWER
+
+    ierr= mkl_sparse_copy ( H_local, descr , this%H)
+    if(ierr/=SPARSE_STATUS_SUCCESS) ERROR STOP 'failed to copy mkl sparse Hamiltonian'
+    this%descr%type=SPARSE_MATRIX_TYPE_GENERAL 
+    this%descr%diag=SPARSE_DIAG_NON_UNIT
+    this%descr%mode=SPARSE_FILL_MODE_LOWER
+    Call this%optimize()
+
+    Call this%set_deriv()
 #else
     continue
 #endif
 end subroutine
 
-subroutine bcast_child(this,comm)
+subroutine bcast(this,comm)
     use mpi_basic
-    use mpi_util,only: bcast
+    use mpi_util,only: bcast_util => bcast
     use mkl_spblas_util, only: unpack_csr
     class(t_H_mkl_csr),intent(inout)    ::  this
     type(mpi_type),intent(in)           ::  comm
@@ -330,6 +374,8 @@ subroutine bcast_child(this,comm)
     integer                     :: ierr
     type(SPARSE_MATRIX_T)       :: H_tmp
 
+
+    Call this%bcast_base(comm)
     nullify(acsr,ia,ja)
     if(comm%ismas)then
         Call unpack_csr(this%dimH(1),this%H,nnz,ia,ja,acsr) 
@@ -338,12 +384,12 @@ subroutine bcast_child(this,comm)
     if(.not.comm%ismas)then
         allocate(acsr(nnz),ja(nnz),ia(this%dimH(1)+1)) 
     endif
-    Call bcast(ia,comm)
-    Call bcast(ja,comm)
-    Call bcast(acsr,comm)
-    Call bcast(this%descr%type,comm)
-    Call bcast(this%descr%mode,comm)
-    Call bcast(this%descr%diag,comm)
+    Call bcast_util(ia,comm)
+    Call bcast_util(ja,comm)
+    Call bcast_util(acsr,comm)
+    Call bcast_util(this%descr%type,comm)
+    Call bcast_util(this%descr%mode,comm)
+    Call bcast_util(this%descr%diag,comm)
     if(.not.comm%ismas)then
         ierr = mkl_sparse_d_create_csr( H_tmp, SPARSE_INDEX_BASE_ONE,this%dimH(1), this%dimH(2), ia(1:size(ia)-1), ia(2:size(ia)),ja ,acsr)
         if(ierr /= 0) ERROR STOP "FAILED TO CREATE CHILD MKL SPARSE HAMILTONIAN"
@@ -353,10 +399,82 @@ subroutine bcast_child(this,comm)
         deallocate(acsr,ja,ia)
     endif
     nullify(acsr,ia,ja)
+    if(.not.comm%ismas) Call this%set_deriv()
 #else
     continue
 #endif
 end subroutine 
+
+subroutine distribute(this,comm)
+    use mpi_basic                
+    use mkl_spblas_util, only: unpack_csr
+    use mpi_util!,only: bcast_util => bcast
+    class(t_H_mkl_csr),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+    real(C_DOUBLE),pointer          :: val_base(:)
+    integer(C_INT),pointer          :: ia_base(:),ja_base(:)
+#ifdef CPP_MPI
+    integer                         :: nnz_base
+    integer     ::  cnt(comm%Np),displ(comm%Np)
+
+    integer(C_int),allocatable     :: ia(:),ja(:)
+    real(C_DOUBLE),allocatable     :: val(:)
+
+    integer(C_INT),target  :: tmpi(1)
+    real(C_DOUBLE),target  :: tmpr(1)
+
+    integer     ::  i,ierr
+    type(SPARSE_MATRIX_T) :: H_local
+    type(matrix_descr)    :: descr
+
+    Call this%bcast_base(comm)
+    if(comm%ismas)then
+        Call unpack_csr(this%dimH(2),this%H,nnz_base,ia_base,ja_base,val_base)
+    else
+        val_base=> tmpr; ja_base=> tmpi
+    endif
+    Call bcast(nnz_base,comm)
+    cnt=nnz_base/comm%Np
+    forall(i=1:modulo(nnz_base,comm%Np)) cnt(i)=cnt(i)+1
+    displ=[(sum(cnt(:i-1)),i=1,comm%np)]
+
+    allocate(ia(this%dimH(1)+1),ja(cnt(comm%id+1)),val(cnt(comm%id+1)))
+    if(comm%ismas) ia=ia_base
+    Call bcast(ia,comm)
+    ia=ia-displ(comm%id+1)
+    ia=max(ia,1)
+    ia=min(ia,cnt(comm%id+1)+1)
+
+    if(comm%ismas)then
+        Call MPI_Scatterv(ja_base,  cnt, displ, MPI_INT,              ja,  cnt(comm%id+1), MPI_INT,    comm%mas, comm%com, ierr)
+        Call MPI_Scatterv(val_base, cnt, displ, MPI_DOUBLE_PRECISION, val, cnt(comm%id+1), MPI_DOUBLE, comm%mas, comm%com, ierr)
+    else
+        Call MPI_Scatterv(ja_base,  cnt, displ, MPI_INT,              ja,  cnt(comm%id+1), MPI_INT,    comm%mas, comm%com, ierr)
+        Call MPI_Scatterv(val_base, cnt, displ, MPI_DOUBLE_PRECISION, val, cnt(comm%id+1), MPI_DOUBLE, comm%mas, comm%com, ierr)
+    endif
+    if(comm%ismas)then
+        ierr=mkl_sparse_destroy(this%H)
+        if(ierr/=SPARSE_STATUS_SUCCESS) ERROR STOP 'failed to destroy t_h_mkl_csr type in m_H_sparse_mkl'
+    endif
+    ierr=mkl_sparse_d_create_csr(H_local, SPARSE_INDEX_BASE_ONE , this%dimH(1) , this%dimH(2), ia(1:size(ia)-1), ia(2:size(ia)), ja, val)
+    if(ierr/=SPARSE_STATUS_SUCCESS) ERROR STOP 'failed to create local mkl sparse matrix'
+    descr%type=SPARSE_MATRIX_TYPE_GENERAL 
+    descr%diag=SPARSE_DIAG_NON_UNIT
+    descr%mode=SPARSE_FILL_MODE_LOWER
+
+    ierr= mkl_sparse_copy ( H_local, descr , this%H)
+    if(ierr/=SPARSE_STATUS_SUCCESS) ERROR STOP 'failed to copy mkl sparse Hamiltonian'
+    this%descr%type=SPARSE_MATRIX_TYPE_GENERAL 
+    this%descr%diag=SPARSE_DIAG_NON_UNIT
+    this%descr%mode=SPARSE_FILL_MODE_LOWER
+    Call this%optimize()
+
+    if(.not.comm%ismas) Call this%set_deriv()
+#else
+    continue
+#endif
+end subroutine 
+
 
 
 #endif

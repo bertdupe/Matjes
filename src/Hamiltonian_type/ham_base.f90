@@ -48,7 +48,6 @@ contains
 
 
     !really non_overridable
-    procedure,NON_OVERRIDABLE               :: bcast
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
     procedure,NON_OVERRIDABLE               :: add
@@ -62,10 +61,12 @@ contains
     !MPI-stuff
     procedure(int_send),deferred            :: send
     procedure(int_recv),deferred            :: recv
+    procedure(int_mpicom),deferred          :: distribute
+    procedure(int_mpicom),deferred          :: bcast
 
-    procedure(int_bcast),deferred   :: bcast_child
     procedure,NON_OVERRIDABLE       :: send_base
     procedure,NON_OVERRIDABLE       :: recv_base
+    procedure,NON_OVERRIDABLE       :: bcast_base
 
 
     !misc.
@@ -190,7 +191,7 @@ abstract interface
         class(t_H_base),intent(inout)      :: Hout
     end subroutine
 
-    subroutine int_bcast(this,comm)
+    subroutine int_mpicom(this,comm)
         use mpi_basic                
         import t_H_base
         class(t_H_base),intent(inout)   ::  this
@@ -212,7 +213,6 @@ abstract interface
         integer,intent(in)              :: tag
         integer,intent(in)              :: com
     end subroutine
-
 end interface
 
 contains
@@ -244,11 +244,11 @@ contains
         Call this%mode_l%get_mode(lat,modes_l,vec_l)
     
         Call this%mult_r(lat,tmp)
-#ifdef CPP_BLAS
-        E=ddot(this%dimH(1),modes_l,1,tmp,1)
-#else
+!#ifdef CPP_BLAS    !much slower
+!        E=ddot(this%dimH(1),modes_l,1,tmp,1)
+!#else
         E=dot_product(modes_l,tmp)
-#endif
+!#endif
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 
@@ -410,7 +410,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-    subroutine bcast(this,comm)
+    subroutine bcast_base(this,comm)
         use mpi_basic                
         class(t_H_base),intent(inout)        ::  this
         type(mpi_type),intent(in)       ::  comm
@@ -418,7 +418,7 @@ contains
         integer     :: ierr
         integer     :: N(2)
         integer     :: mode_ident(2)
-    
+
         Call MPI_Bcast(this%dimH         ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%dim_mode     ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%mult_M_single,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
@@ -436,7 +436,6 @@ contains
         endif
         Call MPI_Bcast(this%op_l,N(1), MPI_INTEGER, comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%op_r,N(2), MPI_INTEGER, comm%mas, comm%com,ierr)
-        Call this%bcast_child(comm)
 
         !bcast modes
         if(comm%ismas)then
@@ -450,12 +449,6 @@ contains
         endif
         Call this%mode_l%bcast(comm)
         Call this%mode_r%bcast(comm)
-        
-        if(.not.comm%ismas)then
-
-        
-        STOP "IMPLEMENT BCAST OF derivative" !somehow one has to allocated the correct type for the slaves...
-        endif
 #else
         continue
 #endif
