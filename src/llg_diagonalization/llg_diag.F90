@@ -29,7 +29,7 @@ subroutine build_transmat(lat,io_simu,Hams)
 	integer                     	:: N_cell,N_dim,N_mag
 	integer							:: i,j,io
 	real(8)							:: gp, hp, damping , gyro,mu_s  	
-	logical 						:: print_tr,save_tr
+	logical 						:: print_tr,save_tr,save_tr_submat
 	    
 	! initialize
     N_cell=lat%Ncell
@@ -48,6 +48,7 @@ subroutine build_transmat(lat,io_simu,Hams)
  
    	print_tr=.false.
    	save_tr=.true.
+   	save_tr_submat=.true.
    	   	
    	write(6,'(/,a,/)') 'Starting computation of the transition matrix of LLG. Warning: only for energy extrema.'
    	write(*,*) 'damping=', damping, ' gamma/mu_s= ',gyro,'1/(eV.s)'
@@ -101,6 +102,28 @@ subroutine build_transmat(lat,io_simu,Hams)
 	   	close(1)
 	end if
 	
+	if(save_tr_submat) then
+		!write to file
+		open (1,file='Tr_theta.dat')
+		open (2,file='Tr_thetaphi.dat')
+		open (3,file='Tr_phitheta.dat')
+		open (4,file='Tr_phi.dat')
+		rewind 1
+		rewind 2
+		rewind 3
+		rewind 4
+		do j=1,N_mag
+	   		write(1,*) Tr_theta(j,:)
+	   		write(2,*) Tr_thetaphi(j,:)
+	   		write(3,*) Tr_phitheta(j,:)
+	   		write(4,*) Tr_phi(j,:)
+	   	enddo
+	   	close(1)
+	   	close(2)
+	   	close(3)
+	   	close(4)
+	end if
+	
     
 	write(6,'(/a,2x,E20.12E3/)') 'Done.'
 	
@@ -126,7 +149,7 @@ use m_derived_types, only : io_parameter,lattice
     integer                     	:: i,j,io_file(2)
     real(8),pointer             	:: M3(:,:)
     character(len=50)   :: file_name(2),form
-    logical :: print_hess,save_hess
+    logical :: print_hess,save_hess,save_hess_submat
     
     !initialization 
     
@@ -147,11 +170,12 @@ use m_derived_types, only : io_parameter,lattice
     Epm=0.0d0
     Emp=0.0d0 
     
-    dphi=0.01d0
-    dtheta=0.01d0
+    dphi=0.001d0
+    dtheta=0.001d0
     
     print_hess=.false. 
     save_hess=.true. 
+    save_hess_submat=.true. 
     
     E0=energy_all(Hams,lat)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',E0/real(N_cell,8)
@@ -197,18 +221,8 @@ use m_derived_types, only : io_parameter,lattice
 			!Hess_theta entry
 			if(i.ne.j) then !off-diagonal term
 				Hess_theta(i,j)=(  Ep - Epm - Emp + Em ) / (4.0d0*dtheta*dtheta)
-				!write(*,*) 'i, j=',i,j,' Hess_theta(i,j)= ',Hess_theta(i,j),' where the num = ',(  Ep - Epm - Emp + Em ),' and the denom= ',(4.0d0*dtheta*dtheta)
-				!write(*,*)'Ep= ', Ep, ' Em= ', Em, ' Epm= ',Epm !, ' Emp= ',Emp
-				!write(*,*) 'for Mmp, theta_i,phi_i =', Mmp(1,i), Mmp(2,i), ' theta_j,phi_j= ',Mmp(1,j), Mmp(2,j)
-				!write(*,*) 'Mmp_cart_i= ',Mmp_cart(:,i),'Mmp_cart_j=',Mmp_cart(:,j) 
-
-				!write(*,*)' Emp= ',Emp  
 			else !diagonal term
-				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / (dtheta*dtheta)
-				!write(*,*) 'i=j = ',i,j,' Hess_theta(i,j)= ',Hess_theta(i,j)
-				!write(*,*)'Ep= ', Ep, ' Em= ', Em, ' E0 = ',E0
-				!write(*,*) 'Mp_cart_i= ',Mp_cart(:,i),'Mm_cart_j=',Mm_cart(:,j) 
-				!write(*,*) 'Mp_cart= ',Mp_cart(:,:),'Mm_cart=',Mm_cart(:,:) 
+				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / (dtheta*dtheta) 
 			endif	
 
 			!revert to initial state
@@ -354,6 +368,7 @@ use m_derived_types, only : io_parameter,lattice
 	   	 do j=1,N_mag  
 	   	 	write(*,*)Hess_phi(j,:)
 	   	 enddo
+	   	 
 	   	 write(*,*)'Hess_thetaphi='
 	   	 do j=1,N_mag  
 	   	 	write(*,*) Hess_thetaphi(j,:)
@@ -365,9 +380,6 @@ use m_derived_types, only : io_parameter,lattice
    	 endif	
    	 
    	if(save_hess) then
-	   	!write to file
-	   	!file_name(1)='Hessian_mat.dat'
-		!open(io_file(1), file=file_name(1))!open_file_write(file_name(1)) !crashes idk why
 		open (1,file='Hessian_mat.dat')
 		rewind 1
 		do i=1,N_mag
@@ -377,7 +389,27 @@ use m_derived_types, only : io_parameter,lattice
 	   		write(1,*) Hess_phitheta(i,:),Hess_phi(i,:)
 	   	enddo
 	   	close(1)
-	!	call close_file(file_name(1),io_file(1))
+	end if
+	
+	if(save_hess_submat) then
+		open (1,file='Hess_theta.dat')
+		open (2,file='Hess_thetaphi.dat')
+		open (3,file='Hess_phitheta.dat')
+		open (4,file='Hess_phi.dat')
+		rewind 1
+		rewind 2
+		rewind 3
+		rewind 4
+		do j=1,N_mag
+	   		write(1,*) Hess_theta(j,:)
+	   		write(2,*) Hess_thetaphi(j,:)
+	   		write(3,*) Hess_phitheta(j,:)
+	   		write(4,*) Hess_phi(j,:)
+	   	enddo
+	   	close(1)
+	   	close(2)
+	   	close(3)
+	   	close(4)
 	end if
 	
 end subroutine
