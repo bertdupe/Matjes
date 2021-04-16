@@ -8,6 +8,55 @@ typedef Eigen::SparseMatrix<double> SpMat; // declares a column-major sparse mat
 
 extern "C"{
 
+void get_ind_disc(
+    std::vector<SpMat> **modes,
+    double *states[],
+    int i_mode,
+    int N_in,
+    int ind_in[],
+    int N_out,
+    int ind_out[],
+    double val_out[]
+    ){
+    // get indices of final state that are relevant
+    SparseVector<double> vec_in ((*modes)->at(i_mode).cols());
+    vec_in.reserve(N_in);
+    for(int i=0; i < N_in ; i++ ){
+        vec_in.coeffRef(ind_in[i]-1)=1.0;   
+    }
+    SparseVector<double> vec_out = (*(*modes))[i_mode] * vec_in;
+    std::memcpy(ind_out,vec_out.innerIndexPtr(),N_out*sizeof(int));
+
+    //calculate values of state at relevant indices
+    int cols;
+    for(std::vector<SparseMatrix<double> >::size_type i=0; i < (**modes).size() ; i++ ){
+        cols=(**modes)[i].cols();
+        Map<VectorXd> v(states[i],cols);
+        for(int j=0; j< N_out;j++){
+            val_out[j]*=(**modes)[i].row(ind_out[j]) * v;       // this might be super inefficient
+        }
+    }
+}
+
+void get_disc(
+    std::vector<SpMat> **modes,
+    double *states[],
+    int N_ind,
+    int ind[],
+    double vec[]
+    ){
+    //calculate values of state at relevant indices
+    int cols;
+    for(std::vector<SparseMatrix<double> >::size_type i=0; i < (**modes).size() ; i++ ){
+        cols=(**modes)[i].cols();
+        Map<VectorXd> v(states[i],cols);
+        for(int j=0; j< N_ind;j++){
+            vec[j]*=(**modes)[i].row(ind[j]-1) * v;       // this might be super inefficient
+        }
+    }
+}
+
+
 
 void modes_alloc(
     int N,

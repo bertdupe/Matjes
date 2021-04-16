@@ -11,11 +11,13 @@ public t_deriv_base, t_deriv_l, t_deriv_r
 type,abstract    ::  t_deriv_l
 contains
     procedure(int_deriv_l_get),deferred :: get
+    procedure(int_deriv_l_get_single),deferred :: get_single
 end type
 
 type,abstract    ::  t_deriv_r
 contains
     procedure(int_deriv_r_get),deferred :: get
+    procedure(int_deriv_r_get_single),deferred :: get_single
 end type
 
 
@@ -24,6 +26,7 @@ type    :: t_deriv_base
     class(t_deriv_r),allocatable  :: r
 contains
     procedure :: get => get_deriv
+    procedure :: get_single => get_deriv_single
 end type
 
 type,abstract :: t_H
@@ -56,9 +59,13 @@ contains
     procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single
     procedure                               :: energy_dist
 
+    procedure                               :: get_ind_mult_r, get_ind_mult_l
 
         !should be implemented more efficiently, where possible
-    procedure                               :: mult_r_single,mult_l_single !multipy out with left/right side
+    procedure                               :: mult_l_single,   mult_r_single   !multipy out with left/right side
+    procedure                               :: mult_l_ind,      mult_r_ind 
+    procedure                               :: mult_l_disc_disc,mult_r_disc_disc
+
 
     !really non_overridable
     procedure,NON_OVERRIDABLE               :: bcast
@@ -98,6 +105,22 @@ abstract interface
         class(t_deriv_r),intent(in) :: this
         class(t_H),intent(in)       :: H
         type(lattice),intent(in)    :: lat
+        real(8),intent(inout)       :: vec(:)
+    end subroutine
+    subroutine int_deriv_l_get_single(this,H,lat,site,vec)
+        import t_deriv_l, t_H, lattice
+        class(t_deriv_l),intent(in) :: this
+        class(t_H),intent(in)       :: H
+        type(lattice),intent(in)    :: lat
+        integer,intent(in)          :: site
+        real(8),intent(inout)       :: vec(:)
+    end subroutine
+    subroutine int_deriv_r_get_single(this,H,lat,site,vec)
+        import t_deriv_r, t_H, lattice
+        class(t_deriv_r),intent(in) :: this
+        class(t_H),intent(in)       :: H
+        type(lattice),intent(in)    :: lat
+        integer,intent(in)          :: site
         real(8),intent(inout)       :: vec(:)
     end subroutine
 end interface
@@ -146,6 +169,16 @@ abstract interface
         real(8),intent(in)          :: vec(N)
         real(8),intent(inout)       :: res(:)   !result matrix-vector product
     end subroutine 
+
+    subroutine int_mult_ind(this,vec,N,ind_out,vec_out)
+        import t_H
+        class(t_H),intent(in)       :: this
+        real(8),intent(in)          :: vec(:)
+        integer,intent(in)          :: N
+        integer,intent(in)          :: ind_out(N)
+        real(8),intent(out)         :: vec_out(N)
+    end subroutine 
+
 
     subroutine int_destroy(this)
         import t_H
@@ -250,23 +283,54 @@ contains
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 
-    subroutine energy_dist(this,lat,E)
-        !get the energy values per computational cell
-        !this only works for Hamiltonians located on 2 sites only
+    subroutine energy_dist(this,lat,order,E)
+        use m_type_lattice, only: dim_modes_inner
+        !get the energy values per site for a given order
+        !might be wrong for non-symmetrical Hamiltonians
         class(t_H),intent(in)       :: this
         type(lattice), intent(in)   :: lat
-        real(8),intent(out)         :: E(lat%Ncell)
+        integer,intent(in)          :: order
+        real(8),intent(out)         :: E(lat%Ncell*lat%site_per_cell(order))
         ! internal
-        real(8),pointer             :: modes_l(:)
-        real(8),allocatable,target  :: vec_l(:)
-        real(8)                     :: tmp(this%dimH(1))
+        real(8),pointer             :: modes(:)
+        real(8),allocatable,target  :: vec(:)
+        real(8),allocatable         :: tmp(:)
+        real(8),allocatable         :: red(:)
 
-        Call this%mult_r(lat,tmp)
-        ERROR STOP "THIS HAS TO BE UPDATED TO NEW MODES"
-!        Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-        tmp=modes_l*tmp
- !       Call lat%reduce_cell(tmp,this%op_l,E)
-        if(allocated(vec_l)) deallocate(vec_l)
+        if(any(this%op_l==order))then
+            allocate(tmp(this%dimH(1)))
+            Call this%mult_r(lat,tmp)
+            Call this%mode_l%get_mode(lat,modes,vec)
+            tmp=modes*tmp
+            nullify(modes)
+            if(size(this%op_l)>1)then
+                allocate(red(lat%Ncell*lat%dim_modes(order)))
+                Call this%mode_l%mode_reduce(lat,tmp,order,red)
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),red,E)
+                deallocate(red)
+            else
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),tmp,E)
+            endif
+            deallocate(tmp)
+        elseif(any(this%op_r==order))then
+            allocate(tmp(this%dimH(2)))
+            Call this%mult_l(lat,tmp)
+            Call this%mode_r%get_mode(lat,modes,vec)
+            tmp=modes*tmp
+            nullify(modes)
+            if(size(this%op_r)>1)then
+                allocate(red(lat%Ncell*lat%dim_modes(order)))
+                Call this%mode_r%mode_reduce(lat,tmp,order,red)
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),red,E)
+                deallocate(red)
+            else
+                Call get_sum(dim_modes_inner(order),lat%Ncell*lat%site_per_cell(order),tmp,E)
+            endif
+            deallocate(tmp)
+        else
+            E=0.0d0
+        endif
+        if(allocated(vec)) deallocate(vec)
     end subroutine
 
     subroutine mult_r_red(this,lat,res,op_keep)
@@ -296,6 +360,32 @@ contains
         Call this%mult_l(lat,tmp)
         Call this%mode_r%reduce_other_exc(lat,op_keep,tmp,res)
     end subroutine 
+
+    subroutine mult_l_ind(this,lat,N,ind_out,vec_out)
+        class(t_H),intent(in)       :: this
+        type(lattice),intent(in)    :: lat
+        integer,intent(in)          :: N
+        integer,intent(in)          :: ind_out(N)
+        real(8),intent(out)         :: vec_out(N)
+
+        real(8)                     :: res(this%dimH(2))
+
+        Call this%mult_l(lat,res)
+        vec_out=res(ind_out)
+    end subroutine
+
+    subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
+        class(t_H),intent(in)       :: this
+        type(lattice),intent(in)    :: lat
+        integer,intent(in)          :: N
+        integer,intent(in)          :: ind_out(N)
+        real(8),intent(out)         :: vec_out(N)
+
+        real(8)                     :: res(this%dimH(1))
+
+        Call this%mult_r(lat,res)
+        vec_out=res(ind_out)
+    end subroutine
 
     subroutine mult_r_red_single(this,i_site,lat,res,op_keep)
         !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
@@ -553,6 +643,46 @@ subroutine mult_r_single(this,i_site,lat,res)
     res=tmp((i_site-1)*this%dim_mode(2)+1:i_site*this%dim_mode(2))
 end subroutine
 
+subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
+    class(t_H),intent(in)           :: this
+    integer,intent(in)              :: ind_in(:)
+    integer,intent(out)             :: N_out
+    integer,intent(inout)           :: ind_out(:)
+
+    ERROR STOP "IMPLEMENT LOCALLY"
+end subroutine
+
+subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
+    class(t_H),intent(in)           :: this
+    integer,intent(in)              :: ind_in(:)
+    integer,intent(out)             :: N_out
+    integer,intent(inout)           :: ind_out(:)
+
+    ERROR STOP "IMPLEMENT LOCALLY"
+end subroutine
+
+subroutine mult_r_disc_disc(this,ind_r,vec_r,ind_l,vec_out)
+    class(t_H),intent(in)           :: this
+    integer,intent(in)              :: ind_r(:)
+    real(8),intent(in)              :: vec_r(:)
+    integer,intent(in)              :: ind_l(:)
+    real(8),intent(inout)           :: vec_out(:)
+
+    ERROR STOP "IMPLEMENT LOCALLY"
+end subroutine
+
+subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
+    class(t_H),intent(in)           :: this
+    integer,intent(in)              :: ind_l(:)
+    real(8),intent(in)              :: vec_l(:)
+    integer,intent(in)              :: ind_r(:)
+    real(8),intent(inout)           :: vec_out(:)
+
+    ERROR STOP "IMPLEMENT LOCALLY"
+end subroutine
+
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!          HELPER ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -566,6 +696,14 @@ end subroutine
                     ERROR STOP "mode1 allocated but mode2 not allocated, not sure if addition is in correct space"
                 endif
             endif
+    end subroutine
+
+    subroutine get_sum(N1,N2,vec_in,vec_out)
+        integer,intent(in)  ::  N1,N2
+        real(8),intent(in)  :: vec_in(N1,N2)
+        real(8),intent(out) :: vec_out(N2)
+        
+        vec_out=sum(vec_in,1)
     end subroutine
 
 
@@ -584,5 +722,20 @@ end subroutine
         Call this%r%get(H,lat,tmp)
         vec=vec+tmp
     end subroutine
+
+    subroutine get_deriv_single(this,H,lat,site,vec,tmp)
+        class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
+        class(t_H),intent(in)           :: H                !Hamiltonian that is derivated
+        type(lattice),intent(in)        :: lat
+        integer,intent(in)              :: site
+        real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
+        real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
+
+        Call this%l%get_single(H,lat,site,tmp)
+        vec=vec+tmp
+        Call this%r%get_single(H,lat,site,tmp)
+        vec=vec+tmp
+    end subroutine
+
 
 end module

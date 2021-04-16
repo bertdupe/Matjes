@@ -29,11 +29,12 @@ type lattice
      real(8)        :: a_sc(3,3) !real space lattice vectors of supercell
      real(8)        :: a_sc_inv(3,3) !inverse of real space lattice vectors of supercell (can be used to get back into supercell)
      integer        :: dim_modes(number_different_order_parameters)=0 !saves the dimension of the set order_parameters
+     integer        :: site_per_cell(number_different_order_parameters)=0 !number of sites of order parameter per unit-cell (like nmag, nph)
 
 
-     integer        :: n_system !no clue what this does
-     integer, allocatable :: world(:)
-     logical        :: periodic(3) !lattice periodic in direction
+     integer                :: n_system !no clue what this does
+     integer, allocatable   :: world(:)
+     logical                :: periodic(3) !lattice periodic in direction
      logical,private :: order_set(number_different_order_parameters)=.false. !logical variable which saves which orderparameters has been set
 
      !convenience parameters 
@@ -210,6 +211,11 @@ subroutine init_order(this,cell,extpar_io)
     this%dim_modes(5)=this%nph*3
     !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
     this%order_set=this%dim_modes>0
+    if(this%order_set(1)) this%site_per_cell(1)=this%nmag
+    if(this%order_set(2)) this%site_per_cell(2)=1
+    if(this%order_set(3)) this%site_per_cell(3)=1
+    if(this%order_set(4)) this%site_per_cell(4)=1
+    if(this%order_set(5)) this%site_per_cell(5)=this%nph
 
     !new orderparameter format
     if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1),dim_modes_inner(1))

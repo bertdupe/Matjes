@@ -1,4 +1,5 @@
 module m_mode_construction_rankN_sparse_coo
+#if 0
 use m_mode_construction
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_coo_mat
@@ -12,9 +13,10 @@ type, extends(F_mode) :: F_mode_rankN_sparse_coo !contains all entries
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
-    procedure   :: get_mode_exc_ind
+    procedure   :: get_mode_exc
     procedure   :: mode_reduce_ind
     procedure   :: get_mode_single_cont
+    procedure   :: get_mode_single_disc
 
     procedure   :: copy
     procedure   :: bcast
@@ -25,6 +27,16 @@ type, extends(F_mode) :: F_mode_rankN_sparse_coo !contains all entries
 end type
 
 contains
+subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
+    class(F_mode_rankN_sparse_coo),intent(in)   :: this
+    type(lattice),intent(in)                    :: lat
+    integer,intent(in)                          :: comp  !mode index
+    integer,intent(in)                          :: site    !entry
+    integer,intent(inout),allocatable           :: ind(:)
+    real(8),intent(inout),allocatable           :: vec(:)
+
+    ERROR STOP "IMPLEMENT"
+end subroutine
 
 subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
     class(F_mode_rankN_sparse_coo),intent(in)  :: this
@@ -38,7 +50,7 @@ subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
     ERROR STOP "IMPLEMENT"
 end subroutine
 
-subroutine get_mode_exc_ind(this,lat,ind,vec)
+subroutine get_mode_exc(this,lat,ind,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_coo),intent(in)  :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
@@ -202,4 +214,5 @@ subroutine init_order(this,lat,abbrev_in,mat)
     enddo
     this%mode_size=this%mat(1)%dim_mat(1)
 end subroutine
+#endif
 end module

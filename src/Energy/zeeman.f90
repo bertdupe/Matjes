@@ -65,8 +65,8 @@ subroutine get_zeeman_H(Ham,io,lat)
         Call Ham%init_connect(connect,val_tmp,ind_tmp,"BM",lat,1)
         Ham%desc="Zeeman energy"
         !set modes
-        Call mode_set_rank1(Ham%mode_l,"B")
-        Call mode_set_rank1(Ham%mode_r,"M")
+        Call mode_set_rank1(Ham%mode_l,lat,"B")
+        Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
 end subroutine
 

@@ -1,6 +1,6 @@
 module m_H_eigen
 #ifdef CPP_EIGEN_H
-!Hamiltonian type specifications using dense matrices and no external library
+!Hamiltonian type specifications using Eigen to save and evaluate the Hamiltonian
 use m_derived_types, only: lattice, number_different_order_parameters
 use m_eigen_H_interface
 use m_H_coo_based
@@ -20,13 +20,15 @@ contains
     procedure :: bcast_child 
     procedure :: destroy_child    
     procedure :: copy_child 
-
     procedure :: optimize
-    procedure :: mult_r,mult_l
-    procedure :: mult_l_cont,mult_r_cont
-    procedure :: mult_l_disc,mult_r_disc
-    !overriding mult_l/r_single for better efficiency
-    procedure :: mult_r_single,mult_l_single
+
+    procedure :: mult_l,           mult_r
+    procedure :: mult_l_cont,      mult_r_cont
+    procedure :: mult_l_disc,      mult_r_disc
+    procedure :: mult_r_single,    mult_l_single
+    procedure :: mult_l_ind,       mult_r_ind
+    procedure :: mult_l_disc_disc, mult_r_disc_disc
+    procedure :: get_ind_mult_l,   get_ind_mult_r
 end type
 
 interface t_H_mkl_csr
@@ -41,6 +43,52 @@ type(t_H_eigen) function dummy_constructor()
     !might want some initialization for H and descr, but should work without
     !continue 
 end function 
+
+subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: ind_l(:)
+    real(8),intent(in)              :: vec_l(:)
+    integer,intent(in)              :: ind_r(:)
+    real(8),intent(inout)           :: vec_out(:)
+
+    Call eigen_mult_l_disc_disc(this%H,size(ind_l),ind_l,vec_l,size(ind_r),ind_r,vec_out)
+end subroutine
+
+subroutine mult_r_disc_disc(this,ind_r,vec_r,ind_l,vec_out)
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: ind_r(:)
+    real(8),intent(in)              :: vec_r(:)
+    integer,intent(in)              :: ind_l(:)
+    real(8),intent(inout)           :: vec_out(:)
+
+    Call eigen_mult_r_disc_disc(this%H,size(ind_r),ind_r,vec_r,size(ind_l),ind_l,vec_out)
+end subroutine
+
+subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
+    !get the indicies in ind_out(:N_out) of the right vector which are necessary to 
+    !get all components that 
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: ind_in(:)
+    integer,intent(out)             :: N_out
+    integer,intent(inout)           :: ind_out(:)
+
+    N_out=size(ind_out)
+    Call eigen_H_get_ind_mult_r(this%H,size(ind_in),ind_in,N_out,ind_out)
+    ind_out(1:N_out)=ind_out(1:N_out)+1
+end subroutine 
+
+subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
+    !get the indicies in ind_out(:N_out) of the right vector which are necessary to 
+    !get all components that 
+    class(t_H_eigen),intent(in)     :: this
+    integer,intent(in)              :: ind_in(:)
+    integer,intent(out)             :: N_out
+    integer,intent(inout)           :: ind_out(:)
+
+    N_out=size(ind_out)
+    Call eigen_H_get_ind_mult_l(this%H,size(ind_in),ind_in,N_out,ind_out)
+    ind_out(1:N_out)=ind_out(1:N_out)+1
+end subroutine 
 
 subroutine mult_r(this,lat,res)
     !mult
@@ -97,6 +145,35 @@ subroutine mult_r_disc(this,N,ind,vec,res)
 
     Call eigen_H_mult_mat_vec_disc(this%H,N,ind,vec,res)
 end subroutine 
+
+subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
+    class(t_H_eigen),intent(in)     :: this
+    type(lattice),intent(in)        :: lat
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind_out(N)
+    real(8),intent(out)             :: vec_out(N)
+
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+
+    Call this%mode_r%get_mode(lat,modes,vec)
+    Call eigen_H_mult_r_ind(this%H,modes,N,ind_out,vec_out)
+end subroutine
+
+subroutine mult_l_ind(this,lat,N,ind_out,vec_out)
+    class(t_H_eigen),intent(in)     :: this
+    type(lattice),intent(in)        :: lat
+    integer,intent(in)              :: N
+    integer,intent(in)              :: ind_out(N)
+    real(8),intent(out)             :: vec_out(N)
+
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+
+    Call this%mode_l%get_mode(lat,modes,vec)
+    Call eigen_H_mult_l_ind(this%H,modes,N,ind_out,vec_out)
+end subroutine
+
 
 subroutine mult_r_single(this,i_site,lat,res)
     !mult
@@ -224,23 +301,21 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)
     ! output
     real(8), intent(out)            :: E
-    ! internal
-    real(8),pointer                 :: modes_l(:),modes_r(:)
-    real(8),allocatable,target      :: vec_l(:),vec_r(:)
-    integer                         :: bnd(2)
-    integer                         :: size_vec_r
+    integer,allocatable             :: ind(:)
+    real(8),allocatable             :: vec(:)
 
-    Call this%mode_l%get_mode(lat,modes_l,vec_l)
-    ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
-!    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
+    real(8),allocatable             :: vec_out(:)
+    integer,allocatable             :: ind_out(:)
+    real(8),allocatable             :: vec_l(:)
+    integer                         :: N_out
 
-    size_vec_r=bnd(2)-bnd(1)+1
-    Call eigen_H_eval_single(bnd(1)-1,size_vec_r,modes_l,modes_r,this%H,E)
-    
-    if(allocated(vec_l)) deallocate(vec_l)
-    if(allocated(vec_r)) deallocate(vec_r)
+    !dim_order_bnd...
+    Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
+    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_milt_mat_disc_disc crashes
+    allocate(vec_out(N_out), ind_out(N_out))
+    Call eigen_H_mult_mat_disc_disc(this%H,size(ind),ind,vec,N_out,ind_out,vec_out)
+    Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)
+    E=DOT_PRODUCT(vec_l(:N_out),vec_out(:N_out))
 end subroutine 
-
 #endif 
 end module

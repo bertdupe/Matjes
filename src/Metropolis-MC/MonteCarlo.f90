@@ -109,7 +109,7 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
 
         if(fluct_val%l_use)then
-		    allocate(measure(i_kt)%MjpMim_ij(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
+            allocate(measure(i_kt)%MjpMim_ij(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
         endif
 
         call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,hams,Q_neigh)
@@ -132,8 +132,8 @@ subroutine montecarlo(lat,io_simu,ext_param,Hams,com_all)
             write(*,*) 'energy internal:', state_prop%E_total,' energy total:', energy_all(Hams,lat)
 #endif      
         endif
-		if(fluct_val%l_use) call print_spatial_fluct(measure(i_kt),com_all) !write spatial distribution of fluctuations
-		deallocate(measure(i_kt)%MjpMim_ij)
+        if(fluct_val%l_use) call print_spatial_fluct(measure(i_kt),com_all) !write spatial distribution of fluctuations
+        if(allocated(measure(i_kt)%MjpMim_ij)) deallocate(measure(i_kt)%MjpMim_ij)
     end do !over i_kT
 
     if(com_inner%ismas)then

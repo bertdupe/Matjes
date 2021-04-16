@@ -12,6 +12,13 @@ module m_eigen_H_interface
            type(C_PTR),intent(inout)               :: H
         end subroutine
 
+        subroutine eigen_get_transpose(H,H_T) bind( c, name="eigen_get_transpose")
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: H
+           type(C_PTR),intent(inout)               :: H_T
+       end subroutine
+
+
         subroutine eigen_H_bcast(id,mas,ismas,mat,comm) bind( c, name="eigen_H_bcast" )
            use, intrinsic :: iso_c_binding
            integer( kind = c_int ),value            :: id    !MPI-rank of the processor
@@ -62,6 +69,18 @@ module m_eigen_H_interface
            real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
 
+        subroutine eigen_H_mult_mat_disc_disc(mat,N_in,ind_in,vec_in,N_out,ind_out,vec_out) bind( c, name="eigen_H_mult_mat_disc_disc" )
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: mat
+           integer(c_int),value                    :: N_in
+           integer(c_int),intent(in)               :: ind_in(*)
+           real( kind = c_double ),intent(in)      :: vec_in(*)
+           integer(c_int),intent(out)              :: N_out
+           integer(c_int),intent(inout)            :: ind_out(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
+        end subroutine
+
+
         subroutine eigen_H_mult_mat_vec_single(mat,bnd_min,bnd_max,vec_in,vec_out) bind( c, name="eigen_H_mult_mat_vec_single" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(in)                  :: mat
@@ -82,6 +101,24 @@ module m_eigen_H_interface
            type(C_PTR),intent(in)                  :: mat
            integer(c_int),value                    :: bnd_min,bnd_max               
            real( kind = c_double ),intent(in)      :: vec_in(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
+        end subroutine
+
+        subroutine eigen_H_mult_r_ind(mat,vec,N,ind_out,vec_out) bind(c,name="eigen_H_mult_r_ind")
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: mat
+           real( kind = c_double ),intent(in)      :: vec(*)
+           integer(c_int),intent(in)               :: N
+           integer(c_int),intent(in)               :: ind_out(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
+        end subroutine
+
+        subroutine eigen_H_mult_l_ind(mat,vec,N,ind_out,vec_out) bind(c,name="eigen_H_mult_l_ind")
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: mat
+           real( kind = c_double ),intent(in)      :: vec(*)
+           integer(c_int),intent(in)               :: N
+           integer(c_int),intent(in)               :: ind_out(*)
            real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
 
@@ -108,6 +145,46 @@ module m_eigen_H_interface
         subroutine eigen_H_destroy(H) bind( c, name="eigen_H_destroy" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(inout)         :: H
+        end subroutine
+
+        subroutine eigen_H_get_ind_mult_r(H,N_in,ind_in,N_out,ind_out) bind(c, name="eigen_H_get_ind_mult_r")
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: H
+           integer( kind = c_int ),value           :: N_in
+           integer( kind = c_int ),intent(in)      :: ind_in(*)
+           integer( kind = c_int ),intent(inout)   :: N_out
+           integer( kind = c_int ),intent(inout)   :: ind_out(*)
+        end subroutine
+
+        subroutine eigen_H_get_ind_mult_l(H,N_in,ind_in,N_out,ind_out) bind(c, name="eigen_H_get_ind_mult_l")
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: H
+           integer( kind = c_int ),value           :: N_in
+           integer( kind = c_int ),intent(in)      :: ind_in(*)
+           integer( kind = c_int ),intent(inout)   :: N_out
+           integer( kind = c_int ),intent(inout)   :: ind_out(*)
+        end subroutine
+
+        subroutine eigen_mult_r_disc_disc(H,N_r,ind_r,vec_r,N_l,ind_l,vec_out) bind(c, name="eigen_mult_r_disc_disc")
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: H
+           integer( kind = c_int ),value           :: N_r
+           integer( kind = c_int ),intent(in)      :: ind_r(*)
+           real( kind = c_double ),intent(in)      :: vec_r(*)
+           integer( kind = c_int ),value           :: N_l
+           integer( kind = c_int ),intent(in)      :: ind_l(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
+        end subroutine
+
+        subroutine eigen_mult_l_disc_disc(H,N_l,ind_l,vec_l,N_r,ind_r,vec_out) bind(c, name="eigen_mult_l_disc_disc")
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: H
+           integer( kind = c_int ),value           :: N_l
+           integer( kind = c_int ),intent(in)      :: ind_l(*)
+           real( kind = c_double ),intent(in)      :: vec_l(*)
+           integer( kind = c_int ),value           :: N_r
+           integer( kind = c_int ),intent(in)      :: ind_r(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
     
     end interface

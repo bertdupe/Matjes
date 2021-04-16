@@ -2,6 +2,7 @@ module m_mode_construction
 ! module that contains functions which combines the different sites on the left and the right of the Hamiltonians
 ! to transform Hamiltonians of ranks >2 to Hamiltonians of rank 2
 use m_derived_types, only : lattice, number_different_order_parameters
+use, intrinsic :: iso_fortran_env, only : error_unit
 implicit none
 
 private
@@ -10,29 +11,49 @@ public F_mode
 type, abstract :: F_mode
     integer             :: order_occ(number_different_order_parameters)=0
     integer,allocatable :: order(:) !order parameter indices of respective rank
-    integer             :: N_mode   !size(order) number of order parameters that make up the mode
+    integer             :: N_mode=-1   !size(order) number of order parameters that make up the mode
+    integer             :: mode_size=-1 !overall size of this mode
     contains
     procedure(int_get_mode),deferred            :: get_mode           !subroutine which returns the mode 
-    procedure(int_get_mode_exc_ind),deferred    :: get_mode_exc_ind   !subroutine which returns the mode excluding one order parameter 
-    procedure(int_mode_reduce_ind),deferred     :: mode_reduce_ind    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
+    procedure(int_get_mode_exc),deferred        :: get_mode_exc   !subroutine which returns the mode excluding one order parameter 
+    procedure(int_mode_reduce_comp),deferred    :: mode_reduce_comp    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
+    procedure(int_get_ind_site),deferred        :: get_ind_site 
 
-    procedure(int_get_mode_single_cont),deferred :: get_mode_single_cont       !subroutine which returns the mode 
+    procedure(int_get_mode_single_cont),deferred :: get_mode_single_cont  !subroutine which returns the mode as contiguous array
+    procedure(int_get_mode_single_disc),deferred :: get_mode_single_disc  !subroutine which returns the mode as discontiguous array
 
+!subroutines resolving order to first index
+    procedure,NON_OVERRIDABLE               :: get_mode_exc_op   !subroutine which returns the mode excluding one order parameter 
+    procedure,NON_OVERRIDABLE               :: mode_reduce      !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
+
+    procedure                               :: reduce_other_exc
+!routines, which should be implemented more efficiently locally
+    procedure                               :: get_mode_disc
+    procedure                               :: get_mode_exc_op_disc
+    procedure                               :: get_mode_exc_disc
+    procedure                               :: mode_reduce_comp_disc
+!misc
+    procedure                               :: ind_site
+    procedure                               :: get_comp
+!basic functionalities
     procedure(int_is_same),deferred         :: is_same
     procedure(int_destroy),deferred         :: destroy
     procedure(int_copy),deferred            :: copy
     procedure(int_bcast),deferred           :: bcast
-
-    procedure,NON_OVERRIDABLE               :: get_mode_exc   !subroutine which returns the mode excluding one order parameter 
-    procedure,NON_OVERRIDABLE               :: mode_reduce    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
-
     procedure                               :: init_base
     procedure                               :: copy_base
-
-    procedure                               :: reduce_other_exc
 end type
 
 abstract interface
+
+    subroutine int_get_ind_site(this,comp,site,ind)
+        import F_mode
+        class(F_mode),intent(in)                    :: this
+        integer,intent(in)                          :: comp  !mode component
+        integer,intent(in)                          :: site    !entry
+        integer,intent(inout),allocatable           :: ind(:)
+    end subroutine
+
     subroutine int_get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
         import F_mode,lattice
         class(F_mode),intent(in)                    :: this
@@ -40,8 +61,18 @@ abstract interface
         integer,intent(in)                          :: order
         integer,intent(in)                          :: i
         real(8),pointer,intent(out)                 :: modes(:)
-        integer,intent(out)                         :: bnd(2)
         real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
+        integer,intent(out)                         :: bnd(2)
+    end subroutine
+
+    subroutine int_get_mode_single_disc(this,lat,comp,site,ind,vec)
+        import F_mode, lattice
+        class(F_mode),intent(in)                :: this
+        type(lattice),intent(in)                :: lat
+        integer,intent(in)                      :: comp  !mode index
+        integer,intent(in)                      :: site    !entry
+        integer,intent(inout),allocatable       :: ind(:)
+        real(8),intent(inout),allocatable       :: vec(:)
     end subroutine
 
     subroutine int_get_mode(this,lat,mode,tmp)
@@ -53,24 +84,24 @@ abstract interface
         real(8),allocatable,target,intent(inout)   :: tmp(:)    !possible temporary storage for mode pointer
     end subroutine
 
-    subroutine int_get_mode_exc_ind(this,lat,ind,vec)
+    subroutine int_get_mode_exc(this,lat,comp,vec)
         !subroutine which gets the mode, excluding the first occation of the state indexed by op_exc
         import F_mode,lattice
         class(F_mode),intent(in)                    :: this
         type(lattice),intent(in)                    :: lat    !lattice type which knows about all states
-        integer,intent(in)                          :: ind    !operator index which is not multiplied [1,this%N_mode]
+        integer,intent(in)                          :: comp    !operator index which is not multiplied [1,this%N_mode]
         real(8),intent(inout)                       :: vec(:) !result mode excluding the first state with op_exc
     end subroutine
 
-    subroutine int_mode_reduce_ind(this,lat,vec_in,ind,vec_out)
+    subroutine int_mode_reduce_comp(this,lat,vec_in,comp,vec_out)
         !subroutine which reduces the input mode according to the rules of this F_modes construction rules
-        ! to be in the basis of order index by ind
+        ! to be in the basis of order index by comp
         import F_mode,lattice
         class(F_mode),intent(in)        :: this
         real(8),intent(in)              :: vec_in(:)
         type(lattice),intent(in)        :: lat       !lattice type which knows about all states
-        integer,intent(in)              :: ind
-        real(8),intent(out)             :: vec_out(lat%dim_modes(this%order(ind))*lat%Ncell)
+        integer,intent(in)              :: comp
+        real(8),intent(out)             :: vec_out(lat%dim_modes(this%order(comp))*lat%Ncell)
     end subroutine
 
     function int_is_same(this,comp)result(same)
@@ -127,9 +158,10 @@ subroutine bcast_base(this,comm)
 #endif
 end subroutine 
 
-subroutine init_base(this,order)
+subroutine init_base(this,order,size_in)
     class(F_mode),intent(inout) :: this
     integer,intent(in)          :: order(:)
+    integer,intent(in)          :: size_in
     
     integer ::  i
     allocate(this%order,source=order)
@@ -137,6 +169,7 @@ subroutine init_base(this,order)
         this%order_occ(i)=count(this%order==i)
     enddo
     this%N_mode=size(this%order)
+    this%mode_size=size_in
 end subroutine
 
 subroutine copy_base(this,F_out)
@@ -149,6 +182,7 @@ subroutine copy_base(this,F_out)
     F_out%order=this%order
     F_out%order_occ=this%order_occ
     F_out%N_mode=this%N_mode
+    F_out%mode_size=this%mode_size
 end subroutine
 
 subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
@@ -161,62 +195,157 @@ subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
 
     real(8)         :: tmp(size(vec_other))
     integer         :: i
-    integer         :: ind
+    integer         :: comp
 
-    ind=findloc(this%order,op_keep,dim=1)
+    comp=findloc(this%order,op_keep,dim=1)
 #ifdef CPP_DEBUG
-    if(ind<1.or.ind>size(this%order))then
-        write(error_unit,'(//A,I6)') "Tried to get mode excluding order no.:", op_exc
+    if(comp<1.or.comp>size(this%order))then
+        write(error_unit,'(//A,I6)') "Tried to get mode keeping order no.:", op_keep
         write(error_unit,*) "But the mode only contains the order:", this%order
         ERROR STOP "This makes no sense and should probably prevented earlier in the code"
     endif
 #endif
-    Call this%get_mode_exc_ind(lat,ind,tmp)
+    Call this%get_mode_exc(lat,comp,tmp)
     tmp=vec_other*tmp
-    Call this%mode_reduce_ind(lat,tmp,ind,res)
+    Call this%mode_reduce_comp(lat,tmp,comp,res)
     res=res*real(this%order_occ(op_keep),8)
 end subroutine
 
-subroutine get_mode_exc(this,lat,op_exc,vec)
-    use, intrinsic :: iso_fortran_env, only : error_unit
-    class(F_mode),intent(in)        :: this
-    type(lattice),intent(in)        :: lat       !lattice type which knows about all states
-    integer,intent(in)              :: op_exc !of which operator the first entry is kept
+subroutine get_mode_exc_op(this,lat,op_exc,vec)
+    class(F_mode),intent(in)        :: this     
+    type(lattice),intent(in)        :: lat      !lattice type which knows about all states
+    integer,intent(in)              :: op_exc   !of which operator the first entry is kept
     real(8),intent(inout)           :: vec(:)
 
-    integer         :: ind
+    integer         :: comp
 
-    ind=findloc(this%order,op_exc,dim=1)
+    comp=findloc(this%order,op_exc,dim=1)
 #ifdef CPP_DEBUG
-    if(size(vec)/=this%mode_size) STOP "mode exc call has wrong size for vector"
-    if(ind<1.or.ind>size(this%order))then
+!    if(size(vec)/=this%mode_size) STOP "mode exc call has wrong size for vector"
+    if(comp<1.or.comp>size(this%order))then
         write(error_unit,'(//A,I6)') "Tried to get mode excluding order no.:", op_exc
         write(error_unit,*) "But the mode only contains the order:", this%order
         ERROR STOP "This makes no sense and should probably prevented earlier in the code"
     endif
 #endif
-    Call this%get_mode_exc_ind(lat,ind,vec)
+    Call this%get_mode_exc(lat,comp,vec)
+end subroutine
+
+subroutine get_mode_exc_op_disc(this,lat,op_exc,ind,vec)
+    class(F_mode),intent(in)        :: this     
+    type(lattice),intent(in)        :: lat      !lattice type which knows about all states
+    integer,intent(in)              :: op_exc   !of which operator the first entry is kept
+    integer,intent(in)              :: ind(:)
+    real(8),intent(inout)           :: vec(:)
+
+    real(8)                         :: tmp(this%mode_size)
+    integer         :: comp
+
+    comp=findloc(this%order,op_exc,dim=1)
+#ifdef CPP_DEBUG
+!    if(size(vec)/=this%mode_size) STOP "mode exc call has wrong size for vector"
+    if(comp<1.or.comp>size(this%order))then
+        write(error_unit,'(//A,I6)') "Tried to get mode excluding order no.:", op_exc
+        write(error_unit,*) "But the mode only contains the order:", this%order
+        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
+    endif
+#endif
+    Call this%get_mode_exc(lat,comp,tmp)
+    vec=tmp(ind)
+end subroutine
+
+subroutine get_mode_exc_disc(this,lat,comp,ind,vec)
+    class(F_mode),intent(in)        :: this     
+    type(lattice),intent(in)        :: lat      !lattice type which knows about all states
+    integer,intent(in)              :: comp
+    integer,intent(in)              :: ind(:)
+    real(8),intent(inout)           :: vec(:)
+
+    real(8)                         :: tmp(this%mode_size)
+
+    Call this%get_mode_exc(lat,comp,tmp)
+    vec=tmp(ind)
 end subroutine
 
 subroutine mode_reduce(this,lat,vec_in,op_keep,vec_out)
     !reduce mode by first occurance of operato op_keep in mode
-    use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode),intent(in)        :: this
     real(8),intent(in)              :: vec_in(:)
     type(lattice),intent(in)        :: lat       !lattice type which knows about all states
     integer,intent(in)              :: op_keep   !of which operator the first entry is kept
     real(8),intent(out)             :: vec_out(lat%dim_modes(op_keep)*lat%Ncell)
 
-    integer     ::  ind,i
+    integer     ::  comp,i
 
-    ind=findloc(this%order,op_keep,dim=1)
+    comp=findloc(this%order,op_keep,dim=1)
 #ifdef CPP_DEBUG
-    if(ind<1.or.ind>size(this%order))then
-        write(error_unit,'(//A,I6)') "Tried to reduce mode excluding order no.:", op_exc
+    if(comp<1.or.comp>size(this%order))then
+        write(error_unit,'(//A,I6)') "Tried to reduce mode keeping order no.:", op_keep
         write(error_unit,*) "But the mode only contains the order:", this%order
         ERROR STOP "This makes no sense and should probably prevented earlier in the code"
     endif
 #endif
-    Call this%mode_reduce_ind(lat,vec_in,ind,vec_out)
+    Call this%mode_reduce_comp(lat,vec_in,comp,vec_out)
 end subroutine
+
+subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)
+    class(F_mode),intent(in)    :: this
+    integer,intent(in)          :: ind_in(:)
+    real(8),intent(in)          :: vec_in(:)
+    integer,intent(in)          :: comp 
+    integer,intent(in)          :: ind_out(:)
+    real(8),intent(inout)       :: vec_out(:)
+
+    ERROR STOP "IMPLEMENT LOCALLY"
+
+end subroutine
+
+
+subroutine get_mode_disc(this,lat,ind,vec)
+    !should be implemented more efficiently for relevant derived types
+    class(F_mode),intent(in)                :: this
+    type(lattice),intent(in)                :: lat
+    integer,intent(in)                      :: ind(:)
+    real(8),intent(inout),allocatable       :: vec(:)
+
+    real(8),pointer                         :: mode(:)   !pointer to required mode
+    real(8),allocatable,target              :: tmp(:)    !possible temporary storage for mode pointer
+
+    if(.not.allocated(vec)) allocate(vec(size(ind)))
+    Call this%get_mode(lat,mode,tmp)
+    vec=mode(ind)
+end subroutine
+
+subroutine ind_site(this,op_keep,site,ind)
+    class(F_mode),intent(in)            :: this
+    integer,intent(in)                  :: op_keep  !mode index
+    integer,intent(in)                  :: site    !entry
+    integer,intent(inout),allocatable   :: ind(:)
+    integer     :: comp
+
+    comp=findloc(this%order,op_keep,dim=1)
+#ifdef CPP_DEBUG
+    if(comp<1.or.comp>size(this%order))then
+        write(error_unit,'(//A,I6)') "Tried to reduce mode keeping order no.:", op_keep
+        write(error_unit,*) "But the mode only contains the order:", this%order
+        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
+    endif
+#endif
+    Call this%get_ind_site(comp,site,ind)
+end subroutine
+
+function get_comp(this,op_keep)result(comp)
+    class(F_mode),intent(in)            :: this
+    integer,intent(in)                  :: op_keep  !mode index
+    integer     :: comp
+
+    comp=findloc(this%order,op_keep,dim=1)
+#ifdef CPP_DEBUG
+    if(comp<1.or.comp>size(this%order))then
+        write(error_unit,'(//A,I6)') "Tried to reduce mode keeping order no.:", op_keep
+        write(error_unit,*) "But the mode only contains the order:", this%order
+        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
+    endif
+#endif
+end function 
 end module 

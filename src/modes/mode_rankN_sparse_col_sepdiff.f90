@@ -31,7 +31,7 @@ subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
     res=0.0d0
     do i=1,size(this%dat)
         if(.not.reduce(i)) cycle
-        Call this%get_mode_exc_ind(lat,i,tmp)
+        Call this%get_mode_exc(lat,i,tmp)
         tmp=vec_other*tmp
         Call this%mode_reduce_ind_sum(lat,tmp,i,res)
     enddo

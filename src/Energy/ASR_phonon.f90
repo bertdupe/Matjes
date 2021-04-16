@@ -115,8 +115,8 @@ subroutine get_ASR_Ph(Ham,io,lat)
         enddo
         Ham%desc="ASR phonon"
         !set modes
-        Call mode_set_rank1(Ham%mode_l,"U")
-        Call mode_set_rank1(Ham%mode_r,"U")
+        Call mode_set_rank1(Ham%mode_l,lat,"U")
+        Call mode_set_rank1(Ham%mode_r,lat,"U")
     endif
 
 end subroutine
