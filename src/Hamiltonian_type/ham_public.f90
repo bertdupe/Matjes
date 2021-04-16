@@ -6,6 +6,7 @@ module m_H_public
 use m_H_sparse_mkl
 #elif defined CPP_EIGEN_H
 use m_H_eigen
+use m_H_eigen_mem
 #elif defined CPP_DENSE && defined(CPP_BLAS)
 use m_H_dense_blas
 #elif defined CPP_DENSE
@@ -23,11 +24,11 @@ public
 contains
     subroutine get_Htype(H_out)
         class(t_h),intent(out),allocatable      :: H_out 
-
 #if defined CPP_MKL_SPBLAS
        allocate(t_H_mkl_csr::H_out)
 #elif defined CPP_EIGEN_H
-       allocate(t_H_eigen::H_out)
+       !allocate(t_H_eigen::H_out)
+       allocate(t_H_eigen_mem::H_out)   !mem saves transpose H as well which accelerates some operations, but costs memeory (add option)
 #elif defined CPP_DENSE && defined(CPP_BLAS)
        allocate(t_H_dense_blas::H_out)
 #elif defined CPP_DENSE
@@ -43,7 +44,8 @@ contains
 #if defined CPP_MKL_SPBLAS
        allocate(t_H_mkl_csr::H_out(N))
 #elif defined CPP_EIGEN_H
-       allocate(t_H_eigen::H_out(N))
+       !allocate(t_H_eigen::H_out(N))
+       allocate(t_H_eigen_mem::H_out(N))    !mem saves transpose H as well which accelerates some operations, but costs memeory (add option)
 #elif defined CPP_DENSE && defined(CPP_BLAS)
        allocate(t_H_dense_blas::H_out(N))
 #elif defined CPP_DENSE

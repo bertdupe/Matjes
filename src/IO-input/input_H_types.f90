@@ -46,8 +46,13 @@ type,extends(io_H_base) :: io_H_J
     type(Hr_pair),allocatable   :: pair(:) 
 end type
 
+type,extends(io_H_base) :: io_H_sp4
+    integer,allocatable     :: at_type(:)
+    real(8),allocatable     :: val(:)
+end type
+
 type,extends(io_H_base) :: io_H_D
-    type(Hr_triple),allocatable     :: trip(:) 
+    type(Hr_triple),allocatable :: trip(:) 
 end type
 
 type,extends(io_H_base) :: io_H_TJ
@@ -86,6 +91,7 @@ type :: io_H
     type(io_H_ME_J)     :: ME_J
     type(io_H_ME_D)     :: ME_D
     type(io_H_J)        :: J
+    type(io_H_sp4)      :: sp4
     type(io_H_TJ)       :: TJ
     type(io_H_D)        :: D
     type(io_H_Ph)       :: F

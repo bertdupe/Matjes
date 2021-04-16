@@ -8,19 +8,20 @@ public :: write_energy_field
 
 contains
 
-subroutine write_energy_field(tag,Hams,lat)
+subroutine write_energy_field(tag,Hams,lat,order)
     !write the cell-resolved energy terms of Hams out to external file
     integer, intent(in)             :: tag
     class(t_H), intent(in)          :: Hams(:)
     type(lattice), intent(inout)    :: lat
+    integer,intent(in)              :: order
     !internal
     real(8),allocatable     :: energies(:,:)
     character(len=30)       :: fname,rw_format
     integer                 :: i,io
     !calculate the energy values
-    allocate(energies(lat%Ncell,size(Hams)),source=0.0d0)
+    allocate(energies(lat%Ncell*lat%site_per_cell(order),size(Hams)),source=0.0d0)
     do i=1,size(Hams)
-        Call hams(i)%energy_dist(lat,energies(:,i))
+        Call hams(i)%energy_dist(lat,order,energies(:,i))
     enddo
     !write output file
     write(rw_format,'(a,I4,a)') '(',size(hams),'E16.8)'

@@ -83,7 +83,7 @@ subroutine therm_set(this,measure,Cor_log,N_cell_in)
               &    (measure%Qp_sq*av_Nadd/16.0d0/pi**2-measure%Qp**2))*av_kT!/(measure%qeulerm_av*measure%qeulerp_av)
 
     !fluctuation parameters
-    this%MjpMim=sum(measure%MjpMim_ij)*av_Nadd*av_site  !not entirely sure about this term
+    if(allocated(measure%MjpMim_ij)) this%MjpMim=sum(measure%MjpMim_ij)*av_Nadd*av_site  !not entirely sure about this term
     this%MipMip=measure%MipMip*av_Nadd*av_site
     this%MipMim=measure%MipMim*av_Nadd*av_site
     this%MipMjp=measure%MipMjp*av_Nadd*av_site

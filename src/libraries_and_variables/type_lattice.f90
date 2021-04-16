@@ -4,6 +4,11 @@ use m_order_parameter
 use m_cell,only : t_cell
 implicit none
 
+private
+public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, op_abbrev_to_int,t_cell, order_par, order_parameter_name
+public :: dim_modes_inner
+
+
 integer,parameter :: number_different_order_parameters=5    !m,E,B,T,u
 character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T","U"]
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
@@ -12,6 +17,7 @@ character(len=*),parameter :: order_parameter_name(number_different_order_parame
                                 &   'Bfield     ',&
                                 &   'temperature',&
                                 &   'phonon     ']
+integer,parameter           :: dim_modes_inner(number_different_order_parameters)=[3,3,3,1,3]   !rank of single mode entry (don't confuse with dim_modes which is super-cell resolved)
 
 ! variable that defines the lattice
 type lattice
@@ -23,9 +29,12 @@ type lattice
      real(8)        :: a_sc(3,3) !real space lattice vectors of supercell
      real(8)        :: a_sc_inv(3,3) !inverse of real space lattice vectors of supercell (can be used to get back into supercell)
      integer        :: dim_modes(number_different_order_parameters)=0 !saves the dimension of the set order_parameters
-     integer        :: n_system !no clue what this does
-     integer, allocatable :: world(:)
-     logical        :: periodic(3) !lattice periodic in direction
+     integer        :: site_per_cell(number_different_order_parameters)=0 !number of sites of order parameter per unit-cell (like nmag, nph)
+
+
+     integer                :: n_system !no clue what this does
+     integer, allocatable   :: world(:)
+     logical                :: periodic(3) !lattice periodic in direction
      logical,private :: order_set(number_different_order_parameters)=.false. !logical variable which saves which orderparameters has been set
 
      !convenience parameters 
@@ -60,9 +69,10 @@ contains
     procedure :: set_order_comb_exc_single
     procedure :: point_order => point_order_onsite
     procedure :: point_order_single => point_order_onsite_single
+    procedure :: set_order_point_single_inner
     !!reduce that order parameter again
     procedure :: reduce
-    procedure :: reduce_single
+!    procedure :: reduce_single
     !!reduce vector in order parameter space to the site(e.g. energy Ncell resolution )
     procedure :: reduce_cell
     !real space position functions
@@ -76,6 +86,9 @@ contains
     procedure :: index_m_1 
     procedure :: index_4_1 
     procedure :: index_1_3 
+    procedure :: index_3_1_arr
+    procedure :: index_4_1_arr 
+    procedure :: fold_3_arr ! fold index 3 back to supercell
     !misc
     procedure :: used_order => lattice_used_order
     procedure :: get_order_dim 
@@ -86,8 +99,6 @@ type point_arr
     real(8),pointer     ::  v(:)
 end type
 
-private
-public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbrev, op_abbrev_to_int,t_cell, order_par, order_parameter_name
 
 contains 
 
@@ -200,13 +211,18 @@ subroutine init_order(this,cell,extpar_io)
     this%dim_modes(5)=this%nph*3
     !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
     this%order_set=this%dim_modes>0
+    if(this%order_set(1)) this%site_per_cell(1)=this%nmag
+    if(this%order_set(2)) this%site_per_cell(2)=1
+    if(this%order_set(3)) this%site_per_cell(3)=1
+    if(this%order_set(4)) this%site_per_cell(4)=1
+    if(this%order_set(5)) this%site_per_cell(5)=this%nph
 
     !new orderparameter format
-    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1))
-    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2))
-    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3))
-    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4))
-    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5))
+    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1),dim_modes_inner(1))
+    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2),dim_modes_inner(2))
+    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3),dim_modes_inner(3))
+    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4),dim_modes_inner(4))
+    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5),dim_modes_inner(5))
 end subroutine
 
 subroutine read_order(this,suffix_in,isinit_opt)
@@ -310,6 +326,21 @@ subroutine lattice_used_order(this,used)
     used=this%order_set
 end subroutine
 
+subroutine index_3_1_arr(this,N,ind3,ind1)
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: N
+    integer,intent(inout)       :: ind3(3,N) !doesn't actually change, but gets used in between
+    integer,intent(inout)       :: ind1(N)
+    integer     :: i
+    integer     :: mat(3)
+
+    ind3=ind3-1
+    mat=[1,this%dim_lat(1),this%dim_lat(1)*this%dim_lat(2)]
+    ind1=matmul(mat,ind3)+1
+    ind3=ind3+1
+end subroutine 
+
+
 function index_m_1(this,indm)result(ind1)
     class(lattice),intent(in)   :: this
     integer,intent(in)          :: indm(:) 
@@ -335,6 +366,39 @@ function index_1_3(this,ind1)result(indm)
     indm(2)=(tmp-1)/prod+1
     indm(1)=(tmp-1)-prod*(indm(2)-1)+1
 end function
+
+subroutine index_4_1_arr(this,N,ind4,ind1)
+    !get the correct in index from an (im,ix,iy,iz) array to the (3,Nmag*prod(Nlat)) magnetic array
+    !order
+    !MAKE SURE THAT THE 4-index array is in the correct order
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: N
+    integer,intent(in)          :: ind4(4,N) !(im,ix,iy,iz) 
+    integer,intent(out)         :: ind1(N)
+    integer     :: i
+    integer     :: dim_full(4)
+
+    dim_full(2:4)=this%dim_lat
+    dim_full(1)=this%nmag
+    ind1=ind4(1,:)
+    do i=2,4
+        ind1=ind1+(ind4(i,:)-1)*product(dim_full(1:i-1))
+    enddo
+end subroutine 
+
+subroutine fold_3_arr(this,N,ind_arr)
+    !fold the lattice indices back, assuming the periodicity exists...
+    class(lattice),intent(in)   ::  this
+    integer,intent(in)          ::  N
+    integer,intent(inout)       ::  ind_arr(3,N)
+    integer                     ::  dim_lat_spread(3,N)
+
+    dim_lat_spread=spread(this%dim_lat,2,N)
+
+    ind_arr=ind_arr-((ind_arr-dim_lat_spread)/dim_lat_spread)*dim_lat_spread   !return periodically to positive entries
+    ind_arr=ind_arr-((ind_arr-1)/dim_lat_spread)*dim_lat_spread                !return periodically to (1:dim_lat)
+end subroutine
+
 
 function index_4_1(this,ind4)result(ind1)
     !get the correct in index from an (im,ix,iy,iz) array to the (3,Nmag*prod(Nlat)) magnetic array
@@ -370,6 +434,32 @@ subroutine set_order_point(this,order,point)
         point=>this%T%all_modes
     case(5)
         point=>this%u%all_modes
+    case default
+        write(*,*) 'order:',order
+        STOP 'failed to associate pointer in set_order_point'
+    end select
+end subroutine
+
+subroutine set_order_point_single_inner(this,order,i_inner,point,bnd)
+    !sets the pointer point to the 
+    class(lattice),intent(in)   :: this
+    integer,intent(in)          :: order,i_inner
+    real(8),pointer,intent(out) :: point(:)
+    integer,intent(out)         :: bnd(2)
+
+    bnd=[1+(i_inner-1)*dim_modes_inner(order),i_inner*dim_modes_inner(order)]
+
+    select case(order)
+    case(1)
+        point=>this%M%all_modes(bnd(1):bnd(2))
+    case(2)
+        point=>this%E%all_modes(bnd(1):bnd(2))
+    case(3)
+        point=>this%B%all_modes(bnd(1):bnd(2))
+    case(4)
+        point=>this%T%all_modes(bnd(1):bnd(2))
+    case(5)
+        point=>this%u%all_modes(bnd(1):bnd(2))
     case default
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
@@ -424,35 +514,26 @@ subroutine reduce_cell(this,vec_in,order,vec_out)
     enddo
 end subroutine
 
-subroutine reduce(this,vec_in,order,order_keep,vec_out)
-    class(lattice),intent(in)       ::  this
-    real(8),intent(in)              ::  vec_in(:)
-    integer,intent(in)              ::  order(:)
-    integer,intent(in)              ::  order_keep
-    real(8),intent(inout)           ::  vec_out(:)
+subroutine reduce(this,vec_in,order,ind_keep,vec_out)
+    class(lattice),intent(in)       :: this
+    real(8),intent(in)              :: vec_in(:)
+    integer,intent(in)              :: order(:)
+    integer,intent(in)              :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+    real(8),intent(inout)           :: vec_out(:)
 
     integer                 :: dim_mode_sum,dim_mode_keep
-    integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
     integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
 
     integer                 :: ind_div
-
     integer                 :: i
     integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
     integer                 :: dir
 
-    do i=1,size(order)
-        if(order(i)==order_keep)then
-            ind_keep=i
-            exit
-        endif
-    enddo
     dim_modes=this%dim_modes(order)
     dim_mode_sum=product(dim_modes)
     dim_mode_keep=dim_modes(ind_keep)
     ind_div=product(dim_modes(:ind_keep-1))
 
-    if(count(order==order_keep)/=1) STOP "implement reduce also for multiple entries of order_keep in order"
     if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
     if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
 
@@ -465,46 +546,46 @@ subroutine reduce(this,vec_in,order,order_keep,vec_out)
     enddo
 end subroutine
 
-subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
-    class(lattice),intent(in)       :: this
-    integer,intent(in)              :: i_site
-    real(8),intent(in)              :: vec_in(:)
-    integer,intent(in)              :: order(:)
-    integer,intent(in)              :: order_keep
-    real(8),intent(inout)           :: vec_out(:)
-
-    integer                 :: dim_mode_sum,dim_mode_keep
-    integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
-    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
-
-    integer                 :: ind_div
-
-    integer                 :: i
-    integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
-    integer                 :: dir
-
-!   ind_keep=findloc(order,order_keep,dim=1)
-    do i=1,size(order)
-        if(order(i)==order_keep)then
-            ind_keep=i
-            exit
-        endif
-    enddo
-    dim_modes=this%dim_modes(order)
-    dim_mode_sum=product(dim_modes)
-    dim_mode_keep=dim_modes(ind_keep)
-    ind_div=product(dim_modes(:ind_keep-1))
-
-    if(count(order==order_keep)/=1) ERROR STOP "implement reduce also for multiple entries of order_keep in order"
-    if(size(vec_in)/=dim_mode_sum) Error STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=dim_modes(ind_keep)) ERROR STOP "vec_out of reduce has wrong dimension"
-
-    vec_out=0.0d0
-    do i=1,size(vec_in)
-        dir=modulo((i-1)/ind_div,dim_mode_keep)+1
-        vec_out(dir)=vec_out(dir)+vec_in(i)
-    enddo
-end subroutine
+!subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
+!    class(lattice),intent(in)       :: this
+!    integer,intent(in)              :: i_site
+!    real(8),intent(in)              :: vec_in(:)
+!    integer,intent(in)              :: order(:)
+!    integer,intent(in)              :: order_keep
+!    real(8),intent(inout)           :: vec_out(:)
+!
+!    integer                 :: dim_mode_sum,dim_mode_keep
+!    integer                 :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+!    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
+!
+!    integer                 :: ind_div
+!
+!    integer                 :: i
+!    integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
+!    integer                 :: dir
+!
+!!   ind_keep=findloc(order,order_keep,dim=1)
+!    do i=1,size(order)
+!        if(order(i)==order_keep)then
+!            ind_keep=i
+!            exit
+!        endif
+!    enddo
+!    dim_modes=this%dim_modes(order)
+!    dim_mode_sum=product(dim_modes)
+!    dim_mode_keep=dim_modes(ind_keep)
+!    ind_div=product(dim_modes(:ind_keep-1))
+!
+!    if(count(order==order_keep)/=1) ERROR STOP "implement reduce also for multiple entries of order_keep in order"
+!    if(size(vec_in)/=dim_mode_sum) Error STOP "vec_in of reduce has wrong dimension"
+!    if(size(vec_out)/=dim_modes(ind_keep)) ERROR STOP "vec_out of reduce has wrong dimension"
+!
+!    vec_out=0.0d0
+!    do i=1,size(vec_in)
+!        dir=modulo((i-1)/ind_div,dim_mode_keep)+1
+!        vec_out(dir)=vec_out(dir)+vec_in(i)
+!    enddo
+!end subroutine
 
 subroutine set_order_comb_single(this,order,i_site,dim_bnd_in,vec,bnd)
     !fills the combination of several order parameters according to order

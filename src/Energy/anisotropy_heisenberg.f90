@@ -84,6 +84,7 @@ subroutine get_anisotropy_H(Ham,io,lat)
     use m_derived_types, only: lattice
     use m_setH_util,only: get_coo
     use m_input_H_types, only: io_H_aniso
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_aniso),intent(in) :: io
@@ -118,6 +119,10 @@ subroutine get_anisotropy_H(Ham,io,lat)
         enddo
         Call Ham%init_connect(connect,val_tmp,ind_tmp,"MM",lat,1)
         Ham%desc="magnetic anisotropy"
+        
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,lat,"M")
+        Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
 end subroutine
 

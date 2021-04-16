@@ -20,6 +20,7 @@ subroutine get_exchange_J(Ham,io,lat)
     !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types, only: lattice
+    use m_mode_public
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
 
@@ -82,6 +83,9 @@ subroutine get_exchange_J(Ham,io,lat)
             enddo
         enddo
         Ham%desc="symmetric magnetic exchange"
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,lat,"M")
+        Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
 end subroutine 
 

@@ -23,6 +23,8 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_exchange_TJ,only: get_exchange_TJ
     use m_ASR_phonon, only: get_ASR_Ph
     use m_Mag_Biq, only: get_Mag_Biq
+    use m_4spin, only: get_4spin
+    use m_deriv_set, only: set_deriv
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -30,7 +32,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(inout) :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(10)
+    logical :: use_Ham(11)
 
 
     use_ham(1)=H_io%J%is_set
@@ -43,10 +45,10 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(8)=H_io%TJ%is_set
     use_ham(9)=H_io%ASR_Ph%is_set
     use_ham(10)=H_io%M_biq%is_set
+    use_ham(11)=H_io%sp4%is_set
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
-
     i_H=1 
     !exchange_J (without DMI)
     if(use_ham(1))then
@@ -98,6 +100,11 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_Mag_Biq(Ham_res(i_H),H_io%M_biq,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
+    !4-spin interaction
+    if(use_ham(11))then
+        Call get_4spin(Ham_res(i_H),H_io%sp4,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
 
     do i_H=1,N_ham
         if(.not. Ham_res(i_h)%is_set()) STOP "not all Hamiltonians are set"
@@ -108,6 +115,8 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     do i_H=1,size(Ham_comb)
         Call Ham_comb(i_h)%optimize()
     enddo
+    Call set_deriv(Ham_comb)
+    if(keep_res) Call set_deriv(Ham_res)
 end subroutine
 
 subroutine combine_Hamiltonians(keep_in,H_in,H_comb)
@@ -143,8 +152,10 @@ subroutine combine_Hamiltonians(keep_in,H_in,H_comb)
     outer:do j=1,N_in
         do i=1,j-1
             if(all(space(:,:,j)==space(:,:,i)))then
-                i_unique(j)=i_unique(i)
-                cycle outer
+                if(H_in(j)%same_space(H_in(i)))then
+                    i_unique(j)=i_unique(i)
+                    cycle outer
+                endif
             endif
         enddo
         N_out=N_out+1

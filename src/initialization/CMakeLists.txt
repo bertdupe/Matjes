@@ -1,4 +1,5 @@
 set(main_f90 ${main_f90}
+src/initialization/init-2Q.f90
 src/initialization/init-default.f90
 src/initialization/init-DW.f90
 src/initialization/init-heavyside.f90
