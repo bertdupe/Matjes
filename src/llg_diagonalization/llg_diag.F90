@@ -222,7 +222,14 @@ use m_derived_types, only : io_parameter,lattice
 			if(i.ne.j) then !off-diagonal term
 				Hess_theta(i,j)=(  Ep - Epm - Emp + Em ) / (4.0d0*dtheta*dtheta)
 			else !diagonal term
-				Hess_theta(i,j)= (  Ep - 2.0d0*E0 + Em ) / (dtheta*dtheta) 
+				Hess_theta(i,j)= (  Ep - 2.0d0*E0 +  Em ) / (dtheta*dtheta) 
+				write(*,*) 'i,j =',i,j, ' Hess_theta(i,j)=',Hess_theta(i,j),' with num= ',(  Ep - 2.0d0*E0 + Em ),' and denom = ',(dtheta*dtheta) 
+				write(*,*)'Ep= ',Ep,' Em= ',Em,' E0= ', E0
+				write(*,*)'M0_cart_i= ', M0_cart(:,i)
+				write(*,*)'Mp_cart_i= ', Mp_cart(:,i), 'Mm_cart_j =',Mm_cart(:,j)
+				write(*,*) 'Mp_sph_i= ', Mp(:,i), 'Mm_sph_j =',Mm(:,j)
+				write(*,*)
+				!stop
 			endif	
 
 			!revert to initial state
@@ -265,7 +272,7 @@ use m_derived_types, only : io_parameter,lattice
 			if(i.ne.j) then !off-diagonal term
 				Hess_phi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0 * dphi**2 *sin(M0(1,i))*sin(M0(1,j)) )
 			else
-				Hess_phi(i,j)= (  Ep - 2.0d0*E0 + Em ) / ( dphi**2 *sin(M0(1,i))*sin(M0(1,i)) )
+				Hess_phi(i,j)= (  Ep - 2.0d0*E0 + Em ) / ( dphi**2 *sin(M0(1,i))*sin(M0(1,j)) )
 			endif	
 			
 			!revert to initial state

@@ -198,7 +198,7 @@ subroutine dump_config_matrix_N_1D_real(io,N,matrix)
     ! internale variables
     character(len=30) :: rw_format
     
-    write(rw_format,'( "(", I4, "f14.8,2x)" )') N
+    write(rw_format,'( "(", I4, "E24.16,2x)" )') N
     write(io,rw_format) matrix
 end subroutine 
 
@@ -248,7 +248,7 @@ character(len=100) :: rw_format
 
 N(1:3)=lat%dim_lat
 
-write(rw_format,'( "(", I4, "f14.8,2x)" )') lat%M%dim_mode
+write(rw_format,'( "(", I4, "E24.16,2x)" )') lat%M%dim_mode
 
 do i_z=1,N(3)
   do i_y=1,N(2)
