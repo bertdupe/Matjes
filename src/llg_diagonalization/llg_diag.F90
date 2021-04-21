@@ -135,7 +135,6 @@ subroutine build_num_hess(lat,io_simu,Hams,M0,Hess_theta,Hess_phi,Hess_thetaphi,
 use m_derived_types, only : io_parameter,lattice
 	use m_io_files_utils, only: open_file_write,close_file
     type(io_parameter), intent(in)  :: io_simu
-   ! type(min_input), intent(in)     :: io_min
     type(lattice),intent(inout)     :: lat
     class(t_H), intent(in)          :: Hams(:)
     real(8),intent(in) 				:: M0(:,:)
@@ -148,8 +147,8 @@ use m_derived_types, only : io_parameter,lattice
     integer                     	:: N_cell,N_dim,N_mag
     integer                     	:: i,j,io_file(2)
     real(8),pointer             	:: M3(:,:)
-    character(len=50)   :: file_name(2),form
     logical :: print_hess,save_hess,save_hess_submat
+    real(8)							:: epsi
     
     !initialization 
     
@@ -172,6 +171,7 @@ use m_derived_types, only : io_parameter,lattice
     
     dphi=0.001d0
     dtheta=0.001d0
+    epsi=1.0d-8 !tolerance on accuracy
     
     print_hess=.false. 
     save_hess=.true. 
@@ -223,14 +223,8 @@ use m_derived_types, only : io_parameter,lattice
 				Hess_theta(i,j)=(  Ep - Epm - Emp + Em ) / (4.0d0*dtheta*dtheta)
 			else !diagonal term
 				Hess_theta(i,j)= (  Ep - 2.0d0*E0 +  Em ) / (dtheta*dtheta) 
-				!write(*,*) 'i,j =',i,j, ' Hess_theta(i,j)=',Hess_theta(i,j),' with num= ',(  Ep - 2.0d0*E0 + Em ),' and denom = ',(dtheta*dtheta) 
-				!write(*,*)'Ep= ',Ep,' Em= ',Em,' E0= ', E0
-				!write(*,*)'M0_cart_i= ', M0_cart(:,i)
-				!write(*,*)'Mp_cart_i= ', Mp_cart(:,i), 'Mm_cart_j =',Mm_cart(:,j)
-				!write(*,*) 'Mp_sph_i= ', Mp(:,i), 'Mm_sph_j =',Mm(:,j)
-				!write(*,*)
-				!stop
 			endif	
+			if(abs(Hess_theta(i,j)).le.epsi) Hess_theta(i,j)=0.0d0
 
 			!revert to initial state
 			Mp(:,:)=M0(:,:)
@@ -274,7 +268,8 @@ use m_derived_types, only : io_parameter,lattice
 			else
 				Hess_phi(i,j)= (  Ep - 2.0d0*E0 + Em ) / ( dphi**2 *sin(M0(1,i))*sin(M0(1,j)) )
 			endif	
-			
+			if(abs(Hess_phi(i,j)).le.epsi) Hess_phi(i,j)=0.0d0
+		
 			!revert to initial state
 			Mp(:,:)=M0(:,:)
 			Mm(:,:)=M0(:,:)
@@ -313,6 +308,7 @@ use m_derived_types, only : io_parameter,lattice
 				
 			!Hess_thetaphi entry
 			Hess_thetaphi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0*dphi*dtheta*sin(M0(1,j)) )
+			if(abs(Hess_thetaphi(i,j)).le.epsi) Hess_thetaphi(i,j)=0.0d0
 			
 			!revert to initial state
 			Mp(:,:)=M0(:,:)
@@ -352,6 +348,7 @@ use m_derived_types, only : io_parameter,lattice
 					
 			!Hess_thetaphi entry
 			Hess_phitheta(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0*dphi*dtheta *sin(M0(1,i)) )
+			if(abs(Hess_phitheta(i,j)).le.epsi)  Hess_phitheta(i,j)=0.0d0
 			
 			!revert to initial state
 			Mp(:,:)=M0(:,:)
