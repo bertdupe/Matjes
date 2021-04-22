@@ -69,7 +69,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     type(mpi_type),intent(in)       :: comm
     ! internal
     logical :: gra_log,io_stochafield
-    integer :: i,j,gra_freq,i_loop,input_excitations
+    integer :: i,j,i_loop,input_excitations
     ! lattices that are used during the calculations
     type(lattice)                         :: lat_1,lat_2
     
@@ -168,7 +168,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         
         gra_log=io_simu%io_Xstruct
         io_stochafield=io_simu%io_Tfield
-        gra_freq=io_simu%io_frequency
         gra_topo=io_simu%io_topo
         ktini=ext_param%ktini
         ktfin=ext_param%ktfin
@@ -300,24 +299,28 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 said_it_once=.True.
             endif
             Eold=Edy
-            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            !!!!!!!!!!!!!!! plotting with graphical frequency
-            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            if(mod(j-1,gra_freq)==0)then
-                tag=j/gra_freq
-                if (io_simu%io_Beff) call print_Beff(tag,Beff_v)
-            
-                if (io_simu%io_Energy_Distrib)then
-                    if(io_simu%io_Energy_detail)then
-                        Call write_energy_field(tag,H_res,mag_lattice,1) !1 for magnetic field
-                    else
-                        Call write_energy_field(tag,H    ,mag_lattice,1) !1 for magnetic field
-                    endif
+        endif
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        !!!!!!!!!!!!!!! plotting with graphical frequency
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if(mod(j-1,io_simu%io_frequency)==0)then
+            tag=j/io_simu%io_frequency
+
+            if (io_simu%io_Energy_Distrib)then
+                if(comm%Np>1) Call mag_lattice%bcast_val(comm)
+                if(io_simu%io_Energy_detail)then
+                    Call write_energy_field(tag,H_res,mag_lattice,1,comm%ismas) !1 for magnetic field
+                else
+                    Call write_energy_field(tag,H    ,mag_lattice,1,comm%ismas) !1 for magnetic field
                 endif
+            endif
+
+            if(comm%ismas)then
+                if (io_simu%io_Beff) call print_Beff(tag,Beff_v)
 
                 if (io_simu%io_tracker)then
                     ERROR STOP "plot_tracking is not implemented with the new lattce and Hamiltonian"
-                    !call plot_tracking(j/gra_freq,lat_1,Hams)
+                    !call plot_tracking(j/io_simu%io_frequency,lat_1,Hams)
                 endif
 
                 if(gra_log) then
@@ -327,14 +330,16 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                     write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
                 endif
                 if(gra_topo) Call get_charge_map(tag,mag_lattice,Q_neigh)
-            
+       
                 if (io_simu%io_Force) &!call forces(tag,lat_1%ordpar%all_l_modes,mag_lattice%dim_mode,mag_lattice%areal)
                     & ERROR STOP "FORCES HAVE TO BE REIMPLEMENTED"
-            
+       
                 if(io_simu%io_fft_Xstruct) &!call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%periodic,mag_lattice%dim_mode,tag)
                     & ERROR STOP "PLOT FFT HAS TO BE REIMPLEMENTED"
             endif
-            
+        endif
+             
+        if(comm%ismas)then
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!
             ! update timestep
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!

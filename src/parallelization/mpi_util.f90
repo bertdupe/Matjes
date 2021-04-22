@@ -21,13 +21,33 @@ interface bcast
 end interface
 
 interface reduce_sum
+    module procedure reduce_sum_int1
     module procedure reduce_sum_real1
+    module procedure reduce_sum_real2
 end interface 
 
 interface reduce_lor
     module procedure reduce_lor_val
 end interface 
 contains
+
+subroutine reduce_sum_int1(arr,com)
+    use mpi_basic
+    integer,intent(inout)          :: arr(:)
+    class(mpi_type),intent(in)     :: com
+#ifdef CPP_MPI    
+    integer                        :: ierr
+
+    if(com%ismas)then
+        Call MPI_Reduce(MPI_IN_PLACE, arr(1), size(arr), MPI_INTEGER, MPI_SUM, com%mas, com%com, ierr)
+    else
+        Call MPI_Reduce(arr(1),       arr(1), size(arr), MPI_INTEGER, MPI_SUM, com%mas, com%com, ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
 
 subroutine reduce_sum_real1(arr,com)
     use mpi_basic
@@ -45,6 +65,24 @@ subroutine reduce_sum_real1(arr,com)
     continue
 #endif
 end subroutine
+
+subroutine reduce_sum_real2(arr,com)
+    use mpi_basic
+    real(8),intent(inout)          :: arr(:,:)
+    class(mpi_type),intent(in)     :: com
+#ifdef CPP_MPI    
+    integer                        :: ierr
+
+    if(com%ismas)then
+        Call MPI_Reduce(MPI_IN_PLACE, arr(1,1), size(arr), MPI_DOUBLE_PRECISION, MPI_SUM, com%mas, com%com, ierr)
+    else
+        Call MPI_Reduce(arr(1,1),     arr(1,1), size(arr), MPI_DOUBLE_PRECISION, MPI_SUM, com%mas, com%com, ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
 
 subroutine reduce_lor_val(val,com)
     use mpi_basic

@@ -221,22 +221,31 @@ end subroutine
 
 
 subroutine energy_distrib(this,lat,order,Edist)
+    !gets the energy at the sites, so far very wastefull with the memory
+    use mpi_util
+    use mpi_distrib_v
     class(hamiltonian),intent(inout)    :: this
     type(lattice), intent(in)           :: lat
     integer,intent(in)                  :: order
     real(8),allocatable,intent(inout)   :: Edist(:,:)
 
-    integer     ::  i
-
-    if(any(this%is_para)) ERROR STOP "IMPLEMENT"
+    integer     :: i
+    integer     :: mult(this%com_outer%Np)
     
     if(allocated(Edist))then
         if(size(Edist,1)/=lat%Ncell*lat%site_per_cell(order).and.size(Edist,2)==this%NH_total) deallocate(Edist)
     endif
     if(.not.allocated(Edist)) allocate(Edist(lat%Ncell*lat%site_per_cell(order),this%NH_total),source=0.0d0)
-    do i=1,this%NH_total
+    do i=1,this%NH_local
         Call this%H(i)%energy_dist(lat,order,Edist(:,i))
     enddo
+    if(this%is_para(2)) Call reduce_sum(Edist,this%com_inner)
+    if(this%is_para(1))then
+        mult=0
+        mult(this%com_outer%id+1)=size(Edist,1)*this%NH_local
+        Call reduce_sum(mult,this%com_outer)
+        Call gatherv(Edist,mult,this%com_outer)
+    endif
 end subroutine
 
 subroutine energy_resolved(this,lat,E)

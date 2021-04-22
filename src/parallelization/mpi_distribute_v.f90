@@ -6,6 +6,7 @@ implicit none
 
 interface gatherv
     module procedure gatherv_real
+    module procedure gatherv_real2mult
     module procedure measure_gatherv
     module procedure thermo_gatherv
 end interface gatherv
@@ -136,5 +137,25 @@ subroutine gatherv_real(arr,com)
     continue
 #endif
 end subroutine
+
+subroutine gatherv_real2mult(arr,mult,com)
+    use mpi_basic
+    real(8),intent(in)             :: arr(:,:)
+    class(mpi_distv),intent(in)    :: com
+    integer,intent(in)             :: mult(com%Np)
+#ifdef CPP_MPI    
+    integer    :: ierr
+    integer    :: cnt(size(com%cnt))
+    integer    :: displ(size(com%displ)) 
+
+    cnt=com%cnt*mult
+    displ=com%displ*mult
+
+    Call MPI_Gatherv(arr(1,1),cnt(com%id+1),MPI_DOUBLE_PRECISION,arr(1,1),cnt,displ,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
 end module
 
