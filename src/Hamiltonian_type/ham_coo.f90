@@ -14,6 +14,7 @@ contains
     procedure :: eval_single
     procedure :: init_connect
     procedure :: init_mult_connect_2
+    procedure :: init_coo
 
     procedure :: destroy_child
     procedure :: copy_child
@@ -142,6 +143,44 @@ subroutine pop_par(this,dimH,nnz,val,rowind,colind)
     Call MOVE_ALLOC(this%colind,colind)
 
 end subroutine
+
+subroutine init_coo(this,rowind,colind,val,dim_mode,op_l,op_r,lat,mult_M_single)
+    !constructs a Hamiltonian based directly on the coo-arrays, which are moved into the type
+    use m_derived_types, only: lattice,op_abbrev_to_int
+    class(t_H_coo),intent(inout)        :: this
+    real(8),allocatable,intent(inout)   :: val(:)
+    integer,allocatable,intent(inout)   :: rowind(:),colind(:)
+    integer,intent(in)                  :: dim_mode(2)
+    character(len=*),intent(in)         :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
+    character(len=*),intent(in)         :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
+    type(lattice),intent(in)            :: lat
+    integer,intent(in)                  :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
+
+
+    integer,allocatable :: order_l(:),order_r(:)
+
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
+
+    allocate(order_l(len(op_l)),source=0)
+    allocate(order_r(len(op_r)),source=0)
+    order_l=op_abbrev_to_int(op_l)
+    order_r=op_abbrev_to_int(op_r)
+
+    if(.not.allocated(rowind)) ERROR STOP "valind has to be allocated to initialize t_H_coo though init_coo"
+    if(.not.allocated(colind)) ERROR STOP "rowind has to be allocated to initialize t_H_coo though init_coo"
+    if(.not.allocated(val   )) ERROR STOP "val    has to be allocated to initialize t_H_coo though init_coo"
+
+    this%nnz=size(val)
+
+    Call move_alloc(rowind,this%rowind)
+    Call move_alloc(colind,this%colind)
+    Call move_alloc(val,   this%val   )
+
+    Call this%init_base(lat,order_l,order_r)
+    this%dimH=lat%Ncell*dim_mode
+    this%mult_M_single=mult_M_single
+    Call check_H(this)
+end subroutine 
 
 
 subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)

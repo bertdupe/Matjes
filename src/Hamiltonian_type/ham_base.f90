@@ -26,6 +26,7 @@ contains
     !Hamiltonian initialization routines
     procedure(int_init_H_connect),deferred          :: init_connect !based on Hamiltonian in coo format input (arrays), only rank_2, connection input
     procedure(int_init_H_mult_connect_2),deferred   :: init_mult_connect_2 !based on Hamiltonian in coo format input (arrays), for rank >2, but only at 2 sites at once, connection input
+    procedure(int_init_H_coo),deferred              :: init_coo!based on Hamiltonian in coo format input (arrays), the coo data-arrays are directly moved into the type
 
     procedure(int_destroy),deferred         :: optimize  !calls possible optimization routines rearanging internal Hamiltonian layout
     procedure(int_mult),deferred            :: mult_r,mult_l !multipy out with left/right side
@@ -167,6 +168,19 @@ abstract interface
         integer,intent(in)          :: mult_M_single
         integer,intent(in),optional :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
     end subroutine
+
+    subroutine int_init_H_coo(this,rowind,colind,val,dim_mode,op_l,op_r,lat,mult_M_single)
+        import t_H_base,lattice
+        class(t_H_base),intent(inout)       :: this
+        real(8),allocatable,intent(inout)   :: val(:)
+        integer,allocatable,intent(inout)   :: rowind(:),colind(:)
+        integer,intent(in)                  :: dim_mode(2)
+        character(len=*),intent(in)         :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
+        character(len=*),intent(in)         :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
+        type(lattice),intent(in)            :: lat
+        integer,intent(in)                  :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
+    end subroutine
+
 
     subroutine int_init_H_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
         import t_H_base,lattice

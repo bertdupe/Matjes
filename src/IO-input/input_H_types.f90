@@ -82,23 +82,31 @@ type,extends(io_H_base) :: io_U_ASR
     real(8)     :: c_ASR=-1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
 
+type,extends(io_H_base) :: io_H_dipole_direct
+    integer     :: period_cutoff(3)=[1,1,1]  !not really used yet
+    integer     :: dist_cutoff=-1.0 !not really used yet  
+end type
+
+
+
 type,extends(io_H_base) :: io_H_Mag_Biq
     type(Hr_pair),allocatable   :: pair(:)
 end type
 
 type :: io_H
-    type(io_H_aniso)    :: aniso
-    type(io_H_zeeman)   :: zeeman
-    type(io_H_ME_J)     :: ME_J
-    type(io_H_ME_D)     :: ME_D
-    type(io_H_J)        :: J
-    type(io_H_sp4)      :: sp4
-    type(io_H_TJ)       :: TJ
-    type(io_H_D)        :: D
-    type(io_H_Ph)       :: F
-    type(io_H_stark)    :: stark
-    type(io_U_ASR)      :: ASR_Ph
-    type(io_H_Mag_Biq)  :: M_biq
+    type(io_H_aniso)            :: aniso
+    type(io_H_zeeman)           :: zeeman
+    type(io_H_ME_J)             :: ME_J
+    type(io_H_ME_D)             :: ME_D
+    type(io_H_J)                :: J
+    type(io_H_sp4)              :: sp4
+    type(io_H_TJ)               :: TJ
+    type(io_H_D)                :: D
+    type(io_H_Ph)               :: F
+    type(io_H_stark)            :: stark
+    type(io_U_ASR)              :: ASR_Ph
+    type(io_H_Mag_Biq)          :: M_biq
+    type(io_H_dipole_direct)    :: dip_dir
 end type
 
 contains
