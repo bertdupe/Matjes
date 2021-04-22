@@ -11,6 +11,10 @@ type col_mat
     integer :: nnz=0
     integer,allocatable :: col(:)
     integer,allocatable :: reverse(:,:)
+contains
+    procedure   :: bcast=> col_mat_bcast
+    procedure   :: recv => col_mat_recv
+    procedure   :: send => col_mat_send
 end type
 
 type, extends(F_mode) :: F_mode_rankN_sparse_col 
@@ -341,31 +345,94 @@ subroutine bcast(this,comm)
     type(mpi_type),intent(in)               ::  comm
 #ifdef CPP_MPI
     integer     :: ierr, i
-    integer     :: N
   
     Call this%bcast_base(comm)
-    Call MPI_Bcast(this%mode_size,1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.allocated(this%ratio))then
+        allocate(this%ratio(this%N_mode))
+        allocate(this%dat(this%N_mode))
+    endif
     Call MPI_Bcast(this%ratio,this%N_mode, MPI_INTEGER, comm%mas, comm%com,ierr)
 
-    ERROR STOP "ALSO TOTALLY UNTESTED"
     !bcast mat
-    do i=1,N
-        Call MPI_Bcast(this%dat(i)%nnz    ,1, MPI_INTEGER, comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%dat(i)%dim_mat,2, MPI_INTEGER, comm%mas, comm%com,ierr)
-        if(.not.comm%ismas)then
-            allocate(this%dat(i)%col(this%dat(i)%nnz))
-            allocate(this%dat(i)%reverse(this%ratio(i),this%dat(i)%dim_mat(2)))
-        endif
-        Call MPI_Bcast(this%dat(i)%col,this%dat(i)%nnz, MPI_INTEGER         , comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%dat(i)%reverse,this%dat(i)%nnz, MPI_INTEGER         , comm%mas, comm%com,ierr)
+    do i=1,this%N_mode
+        Call this%dat(i)%bcast(comm)
     enddo
+    Call MPI_Bcast(this%ratio, size(this%ratio), MPI_INTEGER, comm%mas, comm%com,ierr)
 #else
     continue
 #endif
 end subroutine 
 
+subroutine col_mat_bcast(this,comm)
+    use mpi_util
+    class(col_mat),intent(inout):: this
+    type(mpi_type),intent(in)   :: comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: shp(6)
+
+    if(comm%ismas) shp=[this%dim_mat(1), this%dim_mat(2), this%nnz, size(this%col),size(this%reverse,1),size(this%reverse,2)]
+    Call MPI_Bcast(shp, 6, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas)then
+        this%dim_mat=shp(1:2)
+        this%nnz=shp(3)
+        if(.not.allocated(this%col)    ) allocate(this%col(shp(4)))
+        if(.not.allocated(this%reverse)) allocate(this%reverse(shp(5),shp(6)))
+    endif
+    Call mpi_BCast(this%col,     size(this%col),     MPI_INTEGER, comm%mas, comm%com, ierr)
+    Call mpi_BCast(this%reverse, size(this%reverse), MPI_INTEGER, comm%mas, comm%com, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine col_mat_send(this,ithread,tag,com)
+    use mpi_util
+    class(col_mat),intent(in)   :: this
+    integer,intent(in)          :: ithread
+    integer,intent(in)          :: tag
+    integer,intent(in)          :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: shp(6)
+
+    shp=[this%dim_mat(1), this%dim_mat(2), this%nnz, size(this%col),size(this%reverse,1),size(this%reverse,2)]
+    Call mpi_send(shp,          6,                  MPI_INTEGER, ithread, tag, com, ierr)
+    Call mpi_send(this%col,     size(this%col),     MPI_INTEGER, ithread, tag, com, ierr)
+    Call mpi_send(this%reverse, size(this%reverse), MPI_INTEGER, ithread, tag, com, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine col_mat_recv(this,ithread,tag,com)
+    use mpi_util
+    class(col_mat),intent(inout):: this
+    integer,intent(in)          :: ithread
+    integer,intent(in)          :: tag
+    integer,intent(in)          :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: shp(6)
+    integer     :: stat(MPI_STATUS_SIZE) 
+
+    Call mpi_recv(shp, 6, MPI_INTEGER, ithread, tag, com, stat, ierr)
+    this%dim_mat=shp(1:2)
+    this%nnz=shp(3)
+    allocate(this%col(shp(4)),this%reverse(shp(5),shp(6)))
+    Call mpi_recv(this%col,     size(this%col),     MPI_INTEGER, ithread, tag, com, stat, ierr)
+    Call mpi_recv(this%reverse, size(this%reverse), MPI_INTEGER, ithread, tag, com, stat, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+
 subroutine send(this,ithread,tag,com)
-!    use mpi_basic                
+    use mpi_basic                
     class(F_mode_rankN_sparse_col),intent(in)    :: this
     integer,intent(in)          :: ithread
     integer,intent(in)          :: tag
@@ -373,16 +440,22 @@ subroutine send(this,ithread,tag,com)
 
 #ifdef CPP_MPI
     integer     :: ierr
+    integer     :: N, i
 
     Call this%send_base(ithread,tag,com)
-    ERROR STOP "IMPLEMENT"
+    N=size(this%dat)
+    Call mpi_send(N, 1, MPI_INTEGER, ithread, tag, com, ierr)
+    do i=1,N
+        Call this%dat(i)%send(ithread,tag,com)
+    enddo
+    Call mpi_send(this%ratio, N, MPI_INTEGER, ithread, tag, com, ierr)
 #else
     continue
 #endif
 end subroutine
 
 subroutine recv(this,ithread,tag,com)
-!    use mpi_basic                
+    use mpi_basic                
     class(F_mode_rankN_sparse_col),intent(inout) :: this
     integer,intent(in)          :: ithread
     integer,intent(in)          :: tag
@@ -390,9 +463,16 @@ subroutine recv(this,ithread,tag,com)
 
 #ifdef CPP_MPI
     integer     :: ierr
+    integer     :: stat(MPI_STATUS_SIZE) 
+    integer     :: N, i
 
     Call this%recv_base(ithread,tag,com)
-    ERROR STOP "IMPLEMENT"
+    Call mpi_recv(N, 1, MPI_INTEGER, ithread, tag, com, stat, ierr)
+    allocate(this%dat(N),this%ratio(N))
+    do i=1,N
+        Call this%dat(i)%recv(ithread,tag,com)
+    enddo
+    Call mpi_recv(this%ratio, N, MPI_INTEGER, ithread, tag, com, stat, ierr)
 #else
     continue
 #endif

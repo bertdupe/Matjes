@@ -221,9 +221,12 @@ subroutine distribute(this,comm)
     use mpi_basic                
     class(t_H_eigen_mem),intent(inout)  ::  this
     type(mpi_type),intent(in)           ::  comm
-
+#ifdef CPP_MPI
     Call this%t_H_eigen%distribute(comm)
     Call eigen_H_distribute(comm%id,comm%mas,comm%ismas,this%H_T,comm%com)
+#else
+    continue
+#endif
 end subroutine 
 
 #endif 

@@ -365,9 +365,13 @@ subroutine distribute(this,comm)
     class(t_H_eigen),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm
 
+#ifdef CPP_MPI
     Call this%bcast_base(comm)
     Call eigen_H_distribute(comm%id,comm%mas,comm%ismas,this%H,comm%com)
     if(.not.comm%ismas) Call this%set_deriv()
+#else
+    continue
+#endif
 end subroutine 
 
 

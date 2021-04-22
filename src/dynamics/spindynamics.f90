@@ -35,10 +35,10 @@ subroutine spindynamics(lat,io_simu,ext_param,Ham,Ham_res,comm)
 
     Call io_dyn%read_file(comm=comm)
 
-    Call spindynamics_run(lat,io_dyn,io_simu,ext_param,H,H_res)
+    Call spindynamics_run(lat,io_dyn,io_simu,ext_param,H,H_res,comm)
 end subroutine
 
-subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
+subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_topo_commons, only: get_charge, neighbor_Q
     use m_update_time, only: update_time,init_update_time
     use m_constants, only : pi,k_b
@@ -66,6 +66,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
     type(io_parameter), intent(in)  :: io_simu
     type(simulation_parameters), intent(in) :: ext_param
     type(hamiltonian),intent(inout)     ::  H,H_res
+    type(mpi_type),intent(in)       :: comm
     ! internal
     logical :: gra_log,io_stochafield
     integer :: i,j,gra_freq,i_loop,input_excitations
@@ -96,13 +97,13 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
     integer,allocatable ::  Q_neigh(:,:)
     integer :: io_Eout_contrib
     integer :: dim_mode !dim_mode of the iterated order parameter
-    logical :: ismas
+
+    real(8),allocatable ::  Beff_tmp(:)
 
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! Initialize all data necessary on all threads
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ismas=H%is_master()
     dim_mode=mag_lattice%M%dim_mode
     N_cell=mag_lattice%Ncell
     Call mag_lattice%used_order(used)
@@ -110,12 +111,12 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
     ! Create copies of lattice with order-parameter for intermediary states
     Call mag_lattice%copy(lat_1) 
     allocate(Beff(dim_mode*N_cell),source=0.0d0)
+    allocate(Beff_tmp(dim_mode*N_cell),source=0.0d0)
 
     !generalize the following
     call select_propagator(ext_param%ktini,N_loop)
 
-    if(ismas)then
-
+    if(comm%ismas)then
         time=0.0d0
         input_excitations=0
         if(modulo(dim_mode,3)/=0) STOP "dynamics will only work if the considered order-parameter can be described as 3-vector"
@@ -186,7 +187,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
     
     Edy=H%energy(mag_lattice)
 
-    if(ismas)then
+    if(comm%ismas)then
         write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell,8)
     
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -216,7 +217,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
     do j=1,io_dyn%duration
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
        !   call init_temp_measure(check,check1,check2,check3)
-        if(ismas)then
+        if(comm%ismas)then
             call truncate(lat_1,used)
             Edy=0.0d0
             ave_torque=0.0d0
@@ -225,13 +226,13 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
             !why is this outside of the integration order loop? time changes there
             call update_ext_EM_fields(real_time,check)
         endif
-        
-        !
-        ! loop over the integration order
-        !
-        do i_loop=1,N_loop
-            !get actual dt from butchers table
-            if(ismas)then
+       
+       !
+       ! loop over the integration order
+       !
+       do i_loop=1,N_loop
+           !get actual dt from butchers table
+            if(comm%ismas)then
                 dt=get_dt_mode(timestep_int,i_loop)
                 
                 ! loop that get all the fields
@@ -244,10 +245,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
                 endif
             endif
 
-            !get effective field on magnetic lattice
-            Call H%get_eff_field(lat_1,Beff,1)
+           !get effective field on magnetic lattice
+            if(comm%Np>1) Call lat_1%bcast_val(comm)
+           Call H%get_eff_field(lat_1,Beff,1,Beff_tmp)
 
-            if(ismas)then
+            if(comm%ismas)then
                 !do integration
                 ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
                 Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop))
@@ -259,14 +261,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
         enddo
         !!!!!!!!!!!!!!! copy the final configuration in my_lattice
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if(ismas)then
+        if(comm%ismas)then
             Call lat_2%M%copy_val(mag_lattice%M)
             call truncate(mag_lattice,used)
         endif
-        
+       
+        if(comm%Np>1) Call mag_lattice%bcast_val(comm)
         Edy=H%energy(mag_lattice)/real(N_cell,8)
        
-        if(ismas)then
+        if(comm%ismas)then
             if (mod(j-1,io_dyn%Efreq).eq.0) then
                 !get values to plot (Mavg,topo)
                 Mdy=sum(mag_lattice%M%modes_3,2)/real(N_cell,8)  !sums over all magnetic atoms in unit cell ( not sure if this is wanted)
@@ -349,7 +352,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res)
             real_time=real_time+timestep_int !increment time counter
         endif
     enddo 
-    if(ismas)then 
+    if(comm%ismas)then 
         !!!!!!!!!!!!!!! end of iteration
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         close(7)

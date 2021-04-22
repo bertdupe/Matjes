@@ -195,6 +195,7 @@ subroutine init_H_mv(this,Harr)
     endif
     Call move_alloc(Harr,this%H)
     this%NH_total=size(this%H)
+    this%NH_local=this%NH_total
     this%is_set=.true.
 end subroutine
 
@@ -214,6 +215,7 @@ subroutine init_H_cp(this,Harr)
         Call Harr(i)%copy(this%H(i))
     enddo
     this%NH_total=size(this%H)
+    this%NH_local=this%NH_total
     this%is_set=.true.
 end subroutine
 
@@ -243,13 +245,12 @@ subroutine energy_resolved(this,lat,E)
     !get contribution-resolved energies
     !only correct on outer master thread
     class(hamiltonian),intent(in)   :: this
-    type (lattice),intent(inout)    :: lat
+    type (lattice),intent(in)       :: lat
     real(8),intent(out)             :: E(this%NH_total)
 
     integer     ::  i
 
     E=0.0d0
-    if(any(this%is_para)) Call lat%bcast_val(this%com_global)
     do i=1,this%NH_local
         Call this%H(i)%eval_all(E(i),lat)
     enddo
@@ -259,9 +260,9 @@ end subroutine
 
 function energy(this,lat)result(E)
     !returns the total energy of the Hamiltonian array
-    class(hamiltonian),intent(in)   ::  this
-    type(lattice),intent(inout)     ::  lat
-    real(8)                         ::  E
+    class(hamiltonian),intent(in)   :: this
+    type(lattice),intent(in)        :: lat
+    real(8)                         :: E
 
     real(8)     ::  tmp_E(this%NH_total)
     
@@ -290,23 +291,22 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     E=sum(tmp_E)
 end function
 
-subroutine get_eff_field(this,lat,B,Ham_type)
+subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
     use mpi_basic
     use mpi_util
-    class(hamiltonian),intent(inout)    :: this
-    type (lattice),intent(inout)        :: lat    !lattice containing current order-parameters 
-    real(8),intent(inout)               :: B(:)
+    class(hamiltonian),intent(in)       :: this
+    type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
+    real(8),intent(out)                 :: B(:)
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
+    real(8),intent(out)                 :: tmp(size(B))
 
     integer     :: iH, ierr
-    real(8)     :: tmp(size(B))
-
     B=0.0d0
-    if(any(this%is_para)) Call lat%bcast_val(this%com_global)
     do iH=1,this%NH_local
         Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B,tmp)
     enddo
+
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 end subroutine
