@@ -5,6 +5,14 @@ implicit none
 private
 public read_dip_input, get_dipolar
 
+   !Matjes length scale is nm, magnetic moments are in bohr magneton mu_b, energy shall be in eV
+   !mu_0*mu_b^2/(nm^3)  * J_to_eV
+   !mu_0=1.25663706212d-6  kg*m/s^2/A^2
+   !mu_b=9.2740100783d-24  A*m^2
+   !nm=1.0d-9  m
+   !J_to_eV=1/1.602176634d-19 
+
+real(8),parameter   ::  dip_pref=6.745817653234234066975d-7
 contains
 
 subroutine read_dip_input(io_param,fname,io)
@@ -15,151 +23,134 @@ subroutine read_dip_input(io_param,fname,io)
 
     Call get_parameter(io_param,fname,'mag_dip_direct',io%is_set) 
     Call get_parameter(io_param,fname,'mag_dip_period_cut',io%period_cutoff) 
-    Call get_parameter(io_param,fname,'mag_dip_dist_cut',io%dist_cutoff) 
+!    Call get_parameter(io_param,fname,'mag_dip_dist_cut',io%dist_cutoff) 
 
 end subroutine
 
 subroutine get_dipolar(Ham,io,lat)
-    !get coupling in t_H Hamiltonian format
+    !poor mans approach to get dipolar energy manually by an in principle dense matrix
+    !the implementation is rather studid since it uses a sparse matrix format to save a dense matrix (also it doesn't check for zeros...)
+    !this scales really terribly to large systems and should only be used for very small systems or as a check for the fft dipolar inplementation
     use m_H_public
     use m_mode_public
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
+    use m_constants, only : pi
 
     class(t_H),intent(inout)            :: Ham  !Hamiltonian in which all contributions are added up
-    type(io_H_dipole_direct),intent(in) :: io
+    type(io_H_dipole_direct),intent(in) :: io   !input parameters 
     type(lattice),intent(in)            :: lat
 
+    real(8),allocatable ::  val(:)              !value array of coo-matrix
+    integer,allocatable ::  rowind(:),colind(:) !indice arrays of coo-matrix
+    integer             ::  nnz                 !number of entries in coo-arrays
 
-!    !local Hamiltonian
-!    real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
-!    !local Hamiltonian in coo format
-!    real(8),allocatable  :: val_tmp(:)
-!    integer,allocatable  :: ind_tmp(:,:)
-!
-    real(8),allocatable ::  diff_vec_arr(:,:,:)
-    real(8),allocatable ::  one_over_r3(:,:)
+    real(8),allocatable,target  :: pos(:)       !position vector of all magnetic atoms (3*Nmag*Ncell)
+    real(8),pointer             :: pos3(:,:)    !position vector of all magnetic atoms (3,Nmag*Ncell)
+    real(8) :: diff(3), diffunit(3), diffnorm    !difference vector, unit-vector, and norm
 
-    integer     :: i,j,ii
-    integer     ::  N
-!
-!    integer         :: i_atpair,N_atpair    !loop parameters which atom-type connection are considered (different neighbor types)
-!    integer         :: i_dist,N_dist        !loop parameters which  connection are considered (different neighbor types)
-!    integer         :: i_pair           !loop keeping track which unique connection between the same atom types is considered (indexes "number shells" in neighbors-type)
-!    integer         :: i_shell          !counting the number of unique connection for given atom types and a distance
-!    integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
-!    type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
-!    real(8)         :: J                !magnitude of Hamiltonian parameter
-!    integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
-    real(8),allocatable ::  val(:)
-    integer,allocatable ::  rowind(:),colind(:)
-!
+    integer                     :: Nmag         !number of magnetic moments
+    real(8),allocatable         :: magmom(:)    !magnetic moment per magnetic atom within unit-cell
+    real(8)                     :: mag_i,mag_j  !local magnetic moment in loop
+
+    real(8),allocatable         :: supercell_vec(:,:)   !supercell lattice vectors whose periodicity are considered (3,:)
+    integer                     :: ind_zero !index where supercell_vec contains the 0 entry (0.0,0.0,0.0)
+
+    real(8)     :: tmp_val(9)   !temporary Hamiltonian values for a i-j pair
+    integer     :: i, j, l, ii  !some loop parameters
+    integer     :: N            !number of total magnetic atoms in entire supercell
+
+
     if(io%is_set)then
-        Call get_diff_vec_arr(diff_vec_arr,lat)
-        N=size(diff_vec_arr,2)
-        allocate(one_over_r3(N.N))
-        Call get_1_over_R3(diff_vec_arr,size(one_over_r3),one_over_r3)
-        do i=1,size(one_over_r3,1)
-            one_over_r3(i,i)=0.0d0
-        enddo
-        allocate(val((N-1)*N)
-        ii=0
-        do i=1,N
-            do j=1,N
-                if(j==i) cycle
-                ii=ii+1
-                rowind(ii)=j
-                colind(ii)=j
-                val
+        Nmag=lat%nmag
+        N=Nmag*lat%Ncell
 
+        !get positions
+        Call lat%get_pos_mag(pos)
+        pos3(1:3,1:size(pos)/3)=>pos
+
+        !get supercell difference vectors
+        Call get_supercell_vec(supercell_vec,lat,io%period_cutoff)
+        ind_zero=minloc(norm2(supercell_vec,1),1)
+
+        !get magnetic moment magnitudes
+        Call lat%cell%get_mag_magmom(magmom)
+
+        !prepare coo-matrix
+        nnz=N*N*9
+        allocate(val(nnz),source=0.0d0)
+        allocate(rowind(nnz),colind(nnz),source=0)
+
+        !fill all Hamiltonian entries
+        ii=1
+        do i=1,N
+            mag_i=magmom(modulo(i-1,Nmag)+1)
+            write(*,*) 'DERP',i,N
+            do j=1,N
+                mag_j=magmom(modulo(j-1,Nmag)+1)
+                rowind(ii:ii+8)=(i-1)*3+[1,1,1,2,2,2,3,3,3] 
+                colind(ii:ii+8)=(j-1)*3+[1,2,3,1,2,3,1,2,3] 
+                do l=1,size(supercell_vec,2)    !loop over different supercells
+                    if(j==i.and.l==ind_zero) cycle  !no entry for really same site
+                    diff=pos3(:,j)-pos3(:,i)+supercell_vec(:,l)
+                    diffnorm=norm2(diff)
+                    diffunit=diff/diffnorm
+                    tmp_val(1)=3.0d0*diffunit(1)*diffunit(1)-1.0d0     !xx
+                    tmp_val(2)=3.0d0*diffunit(2)*diffunit(1)           !yx 
+                    tmp_val(3)=3.0d0*diffunit(3)*diffunit(1)           !zx 
+                    tmp_val(4)=3.0d0*diffunit(1)*diffunit(2)           !xy 
+                    tmp_val(5)=3.0d0*diffunit(2)*diffunit(2)-1.0d0     !yy
+                    tmp_val(6)=3.0d0*diffunit(3)*diffunit(2)           !zy 
+                    tmp_val(7)=3.0d0*diffunit(1)*diffunit(3)           !xz 
+                    tmp_val(8)=3.0d0*diffunit(2)*diffunit(3)           !yz 
+                    tmp_val(9)=3.0d0*diffunit(3)*diffunit(3)-1.0d0     !zz
+                    val(ii:ii+8)=val(ii:ii+8)+tmp_val/(diffnorm**3)*mag_j*mag_i
+                enddo
+                ii=ii+9
             enddo
         enddo
-        
+        val=-val*dip_pref*0.5d0*0.25d0/pi
 
-        write(*,*) minval(one_over_r3),maxval(one_over_r3)
-
-
-        
-!        Call get_Htype(Ham_tmp)
-!        allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
-!        do i_atpair=1,N_atpair
-!            !loop over different connected atom types
-!            Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
-!            N_dist=size(io%pair(i_atpair)%dist)
-!            i_pair=0
-!            connect_bnd=1 !initialization for lower bound
-!            do i_dist=1,N_dist
-!                !loop over distances (nearest, next nearest,... neighbor)
-!                J=io%pair(i_atpair)%val(i_dist)
-!                do i_shell=1,neigh%Nshell(i_dist)
-!                    !loop over all different connections with the same distance
-!                    i_pair=i_pair+1
-!
-!                    !set local Hamiltonian in basis of magnetic orderparameter
-!                    atind_mag(1)=lat%cell%ind_mag(neigh%at_pair(1,i_pair))
-!                    atind_mag(2)=lat%cell%ind_mag(neigh%at_pair(2,i_pair))
-!                    Htmp=0.0d0
-!                    Htmp(atind_mag(1)*3-2,atind_mag(2)*3-2)=J
-!                    Htmp(atind_mag(1)*3-1,atind_mag(2)*3-1)=J
-!                    Htmp(atind_mag(1)*3  ,atind_mag(2)*3  )=J
-!                    connect_bnd(2)=neigh%ishell(i_pair)
-!                    Htmp=-Htmp !flip sign corresponding to previous implementation
-!                    Call get_coo(Htmp,val_tmp,ind_tmp)
-!
-!                    !fill Hamiltonian type
-!                    Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"MM",lat,2)
-!                    deallocate(val_tmp,ind_tmp)
-!                    Call Ham%add(Ham_tmp)
-!                    Call Ham_tmp%destroy()
-!                    connect_bnd(1)=connect_bnd(2)+1
-!                enddo 
-!            enddo
-!        enddo
+        !initialize Hamiltonian array with calculated parameters
+        Call Ham%init_coo(rowind,colind,val,[Nmag*3,Nmag*3],"M","M",lat,2)
         Ham%desc="dipolar direct"
         !set modes
         Call mode_set_rank1(Ham%mode_l,lat,"M")
         Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
-
-    ERROR STOP "FINISH IMPLEMENT DIPOLAR DIRECT"
-
 end subroutine 
 
-subroutine get_1_over_R3(dist,Ndist,div)
-    integer,intent(in)      :: Ndist
-    real(8),intent(in)      :: dist(3,Ndist)
-    real(8),intent(out)     :: div(Ndist)
-
-    div=norm2(dist,dim=1)
-    div=div**3
-    div=1.0d0/div
-end subroutine
-
-subroutine get_diff_vec_arr(diff_vec,lat)
-    real(8),intent(inout),allocatable   :: diff_vec(:,:,:)
+subroutine get_supercell_vec(supercell_vec,lat,period)
+    real(8),intent(inout),allocatable   :: supercell_vec(:,:)
     type(lattice),intent(in)            :: lat
-    integer     ::  N
-    real(8),allocatable,target  ::  pos(:)
-    real(8),pointer             :: pos3(:,:)
-    integer ::  i,j
+    integer,intent(in)                  :: period(3)
 
-    if(allocated(diff_vec)) deallocate(diff_vec)
-    N=lat%Ncell*lat%nmag
-    allocate(diff_vec(3,N,N),source=0.0d0)
+    integer             ::  bnd_ext(2,3)
+    integer             ::  Nrep(3)
+    integer             ::  Ntot
+    integer             ::  i,ii, i3,i2,i1
+    real(8)             ::  vec(3,3)
 
-    Call lat%get_pos_mag(pos)
-    pos3(1:3,1:N)=>pos
-
-!    do i=1,N
-!        diff_vec(:,:,i)=pos3-spread(pos3(:,i),2,N)
-!    enddo
-    do i=1,N
-        do j=1,N
-            diff_vec(:,j,i)=pos3(:,j)-pos3(:,i)
+    if(allocated(supercell_vec)) deallocate(supercell_vec)
+    bnd_ext=0
+    do i=1,3
+        if(lat%periodic(i)) bnd_ext(:,i)=[-period(i),period(i)]
+        Nrep(i)=bnd_ext(2,i)-bnd_ext(1,i)+1
+    enddo
+    Ntot=product(Nrep)
+    allocate(supercell_vec(3,Ntot))
+    ii=0
+    do i3=1,Nrep(3)
+        vec(:,3)=lat%a_sc(3,:)*real(bnd_ext(1,3)+i3-1,8)
+        do i2=1,Nrep(2)
+            vec(:,2)=lat%a_sc(2,:)*real(bnd_ext(1,2)+i2-1,8)
+            do i1=1,Nrep(1)
+                vec(:,1)=lat%a_sc(1,:)*real(bnd_ext(1,1)+i1-1,8)
+                ii=ii+1
+                supercell_vec(:,ii)=sum(vec,2)
+            enddo
         enddo
     enddo
-    
-    nullify(pos3)
-    if(allocated(pos)) deallocate(pos)
+    if(ii/=Ntot) ERROR STOP "unexpected size for supercell vectors in dipolar calculation"
 end subroutine
 end module

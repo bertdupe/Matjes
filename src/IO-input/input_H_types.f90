@@ -83,8 +83,8 @@ type,extends(io_H_base) :: io_U_ASR
 end type
 
 type,extends(io_H_base) :: io_H_dipole_direct
-    integer     :: period_cutoff(3)=[1,1,1]  !not really used yet
-    integer     :: dist_cutoff=-1.0 !not really used yet  
+    integer     :: period_cutoff(3)=[1,1,1]  !how many periodic images are considered in each direction
+!    integer     :: dist_cutoff=-1.0 !not really used yet  
 end type
 
 
