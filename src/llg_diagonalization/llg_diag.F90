@@ -171,7 +171,7 @@ use m_derived_types, only : io_parameter,lattice
     
     dphi=0.001d0
     dtheta=0.001d0
-    epsi=1.0d-8 !tolerance on accuracy
+    epsi=1.0d-10 !tolerance on accuracy
     
     print_hess=.false. 
     save_hess=.true. 
