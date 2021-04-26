@@ -42,7 +42,7 @@ subroutine build_transmat(lat,io_simu,Hams)
    
 	io=open_file_read('input')
    	call get_parameter(io,'input','damping',damping)
-   	gyro=1.0d0/(hbar*1e-15) !=gamma/mu_s = mu_s/(hbar*mu_s)=1/hbar in 1/(eV.s), using seconds to get frequencies in Hz
+   	gyro=1.0d0/(hbar)! if this is commented, frequencies in 1e15 Hz *1e-15) !=gamma/mu_s = mu_s/(hbar*mu_s)=1/hbar in 1/(eV.s), using seconds to get frequencies in Hz
    	gp=gyro/(1+damping**2) !precession term
    	hp=damping*gp !alignment term
  
@@ -51,8 +51,8 @@ subroutine build_transmat(lat,io_simu,Hams)
    	save_tr_submat=.true.
    	   	
    	write(6,'(/,a,/)') 'Starting computation of the transition matrix of LLG. Warning: only for energy extrema.'
-   	write(*,*) 'damping=', damping, ' gamma/mu_s= ',gyro,'1/(eV.s)'
-    write(*,*) 'gp=', gp, ' 1/(eV.s), hp= ', hp, '1/(eV.s)' 
+   	write(*,*) 'damping=', damping, ' gamma/mu_s= ',gyro,'1/(eV.fs)'
+    write(*,*) 'gp=', gp, ' 1/(eV.fs), hp= ', hp, '1/(eV.fs)' 
     
     call cart_to_sph(lat,M0) !convert stable state to sph
    

@@ -229,7 +229,7 @@ subroutine spindynamics(mag_lattice,io_simu,ext_param,Hams,Hams_res)
             q_moins=dumy(2)/pi/4.0d0
             vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
             !write data files
-            Write(7,'(I6,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
+            Write(7,'(I12,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
              &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
              &   kT/k_B,(security(i),i=1,2),H_int
             write(8,'(I10,3x,3(E20.12E3,3x))') j,Edy,test_torque,ave_torque
