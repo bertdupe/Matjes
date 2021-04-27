@@ -11,6 +11,7 @@ contains
 subroutine spindynamics(lat,io_simu,ext_param,Ham,Ham_res,comm)
     !wrapper to first initialize all spin-dynamics parameters on the necessary threads
     use m_H_public,only: t_H
+    use m_dipolar_fft, only: get_dip
     type(lattice), intent(inout)                :: lat
     type(io_parameter), intent(inout)           :: io_simu
     type(simulation_parameters), intent(inout)  :: ext_param
@@ -23,6 +24,14 @@ subroutine spindynamics(lat,io_simu,ext_param,Ham,Ham_res,comm)
     if(comm%ismas)then
         Call H%init_H_cp(Ham)   !later change to move, as certain the result is the same (do it even in setup_simu?)
         if(allocated(Ham_res))  Call H_res%init_H_cp(Ham_res)
+        Call get_dip(H%dip,lat)
+        H%NH_total=H%NH_total+1
+        allocate(H%dip_H(3*lat%nmag,lat%ncell))
+        if(allocated(H%dip))then
+            Call get_dip(H_res%dip,lat)
+            H_res%NH_total=H_res%NH_total+1
+            allocate(H_res%dip_H(3*lat%nmag,lat%ncell))
+        endif
     endif
 
     !fill Hamiltonian which allows the distribution

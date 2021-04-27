@@ -24,6 +24,7 @@ use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
 
 use m_mpi_start_end  !also includes mpi_basic
+use m_fftw3,only: fftw_init_threads
 
 Implicit None
 
@@ -47,8 +48,12 @@ Implicit None
 ! the computation time
     real(kind=8) :: computation_time
     type(min_input)    :: io_min
+!$  integer :: ierr
 
     Call init_MPI(mpi_world)
+!$  ierr=fftw_init_threads()
+!$  if(ierr==0) STOP "ERROR WITH OPENMP INITIALIZATION OF FFTW3"
+
     call welcome()
 
 ! initialize the random number generator

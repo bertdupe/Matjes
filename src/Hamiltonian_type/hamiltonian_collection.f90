@@ -1,5 +1,5 @@
 module m_hamiltonian_collection
-use m_H_public, only: t_H, get_Htype_N
+use m_H_public, only: t_H, get_Htype_N, dipolar_fft
 use m_H_type,only : len_desc
 use m_derived_types, only: lattice
 use mpi_basic
@@ -8,14 +8,17 @@ private
 public  ::  hamiltonian
 
 type    ::  hamiltonian
-    logical                     :: is_set=.false.
-    class(t_H),allocatable      :: H(:)
-    logical                     :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
-    type(mpi_type)              :: com_global
-    type(mpi_distv)             :: com_outer
-    type(mpi_type)              :: com_inner
-    integer                     :: NH_total=0  !global size of H
-    integer                     :: NH_local=0  !local size of H (relevant with parallelization)
+    logical                         :: is_set=.false.
+    class(t_H),allocatable          :: H(:)
+    type(dipolar_fft),allocatable   :: dip(:)
+    real(8),allocatable             :: dip_H(:,:)
+    
+    logical                         :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
+    type(mpi_type)                  :: com_global
+    type(mpi_distv)                 :: com_outer
+    type(mpi_type)                  :: com_inner
+    integer                         :: NH_total=0  !global size of H
+    integer                         :: NH_local=0  !local size of H (relevant with parallelization)
 
     character(len=len_desc),allocatable ::  desc_master(:)
 contains
@@ -65,6 +68,7 @@ subroutine distribute(this,com_in)
 
     if(com_in%ismas)then
         if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
+        if(allocated(this%dip)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     endif
     Call bcast(this%NH_total,com_in)
     this%NH_local=this%NH_total
@@ -142,6 +146,7 @@ subroutine bcast(this,comm)
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif
+        if(allocated(this%dip)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     endif
 
     Call MPI_Bcast(this%NH_total,1, MPI_INTEGER, comm%mas, comm%com,i)
@@ -173,6 +178,10 @@ function get_desc(this,i) result(desc)
         write(error_unit,'(A,I6)')  "H-arr size  : ", this%NH_total
         ERROR STOP
     endif
+    if(i==this%NH_total.and.allocated(this%dip))then
+        desc="dipolar"
+        return
+    endif
     if(this%is_para(1))then
         if(this%com_outer%ismas)then
             desc=this%desc_master(i)
@@ -188,7 +197,7 @@ subroutine init_H_mv(this,Harr)
     !initializes the Hamiltonian by moving the H array (thus destroying Harr)
     class(hamiltonian),intent(inout)        :: this
     class(t_H),allocatable,intent(inout)    :: Harr(:)
-   
+  
     if(.not.allocated(Harr))then
         write(error_unit,'(3/A)') "Cannot initialize Hamiltonian, since Harr-input is not allocated"
         ERROR STOP
@@ -246,6 +255,10 @@ subroutine energy_distrib(this,lat,order,Edist)
         Call reduce_sum(mult,this%com_outer)
         Call gatherv(Edist,mult,this%com_outer)
     endif
+    if(allocated(this%dip).and.order==1)then
+        Call this%dip(1)%get_E_distrib(lat,this%dip_H,Edist(:,this%NH_total))
+    endif
+
 end subroutine
 
 subroutine energy_resolved(this,lat,E)
@@ -253,7 +266,7 @@ subroutine energy_resolved(this,lat,E)
     use mpi_util
     !get contribution-resolved energies
     !only correct on outer master thread
-    class(hamiltonian),intent(in)   :: this
+    class(hamiltonian),intent(inout):: this
     type (lattice),intent(in)       :: lat
     real(8),intent(out)             :: E(this%NH_total)
 
@@ -265,11 +278,13 @@ subroutine energy_resolved(this,lat,E)
     enddo
     if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
+
+    if(allocated(this%dip)) Call this%dip(1)%get_E(lat,this%dip_H,E(this%NH_total))
 end subroutine
 
 function energy(this,lat)result(E)
     !returns the total energy of the Hamiltonian array
-    class(hamiltonian),intent(in)   :: this
+    class(hamiltonian),intent(inout):: this
     type(lattice),intent(in)        :: lat
     real(8)                         :: E
 
@@ -291,6 +306,7 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     real(8)     ::  tmp_E(this%NH_total)
     integer     ::  i
 
+    if(allocated(this%dip)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     E=0.0d0
     do i=1,this%NH_total
@@ -304,7 +320,7 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
     use mpi_basic
     use mpi_util
-    class(hamiltonian),intent(in)       :: this
+    class(hamiltonian),intent(inout)    :: this
     type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
     real(8),intent(out)                 :: B(:)
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
@@ -318,6 +334,11 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
 
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
+
+    if(allocated(this%dip))then
+        Call this%dip(1)%get_H(lat,this%dip_H)
+        B=B-2.0d0*reshape(this%dip_H,shape(B))
+    endif
 end subroutine
 
 function is_master(this)result(master)

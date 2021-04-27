@@ -16,6 +16,8 @@ use m_H_dense
 use m_H_manual
 #endif
 
+use m_dipolar_fft, only: dipolar_fft
+
 
 use m_derived_types, only : lattice
 implicit none
