@@ -16,6 +16,8 @@ use m_H_dense
 use m_H_manual
 #endif
 
+use m_dipolar_fft, only: dipolar_fft
+
 
 use m_derived_types, only : lattice
 implicit none
@@ -66,7 +68,7 @@ contains
         Call MPI_Bcast(N,1, MPI_INTEGER, comm%mas, comm%com,i)
         if(.not.comm%ismas) Call get_Htype_N(ham,N)
         do i=1,size(ham)
-            Call Ham(i)%bcast(mpi_world)
+            Call Ham(i)%bcast(comm)
         enddo
 #else
         continue

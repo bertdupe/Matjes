@@ -17,7 +17,6 @@ contains
     procedure :: set_from_Hcoo
 
     procedure :: add_child 
-    procedure :: bcast_child 
     procedure :: destroy_child    
     procedure :: copy_child 
 
@@ -29,6 +28,12 @@ contains
     procedure :: mult_r_ind 
     procedure :: mult_r_disc_disc
     procedure :: get_ind_mult_l
+
+    !MPI
+    procedure :: send
+    procedure :: recv
+    procedure :: distribute
+    procedure :: bcast
 end type
 
 interface t_H_mkl_csr
@@ -126,7 +131,7 @@ end subroutine
 
 subroutine copy_child(this,Hout)
     class(t_H_eigen_mem),intent(in)     :: this
-    class(t_H),intent(inout)        :: Hout
+    class(t_H_base),intent(inout)        :: Hout
     
     Call this%t_H_eigen%copy_child(Hout)
     select type(Hout)
@@ -139,7 +144,7 @@ end subroutine
 
 subroutine add_child(this,H_in)
     class(t_H_eigen_mem),intent(inout)    :: this
-    class(t_H),intent(in)             :: H_in
+    class(t_H_base),intent(in)             :: H_in
 
     Call this%t_H_eigen%add_child(H_in)
 
@@ -149,18 +154,6 @@ subroutine add_child(this,H_in)
     class default
         STOP "Cannot add t_H_eigen_mem type with Hamiltonian that is not a class of t_H_eigen_mem"
     end select
-end subroutine 
-
-subroutine bcast_child(this,comm)
-    use mpi_basic                
-    class(t_H_eigen_mem),intent(inout)  ::  this
-    type(mpi_type),intent(in)       ::  comm
-#ifdef CPP_MPI
-    Call this%t_H_eigen%bcast_child(comm)
-    Call eigen_H_bcast(comm%id,comm%mas,comm%ismas,this%H_T,comm%com) 
-#else
-    continue
-#endif
 end subroutine 
 
 subroutine destroy_child(this)
@@ -176,6 +169,64 @@ subroutine set_from_Hcoo(this,H_coo)
 
     Call this%t_H_eigen%set_from_Hcoo(H_coo)
     Call eigen_get_transpose(this%H,this%H_T)
+end subroutine 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine send(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_eigen_mem),intent(in) :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    Call this%t_H_eigen%send(ithread,tag,com)
+    Call eigen_H_send(ithread,tag,this%H_T,com) 
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_eigen_mem),intent(inout)  :: this
+    integer,intent(in)                  :: ithread
+    integer,intent(in)                  :: tag
+    integer,intent(in)                  :: com
+
+#ifdef CPP_MPI
+    Call this%t_H_eigen%recv(ithread,tag,com)
+    Call eigen_H_recv(ithread,tag,this%H_T,com) 
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast(this,comm)
+    use mpi_basic                
+    class(t_H_eigen_mem),intent(inout)  ::  this
+    type(mpi_type),intent(in)           ::  comm
+#ifdef CPP_MPI
+    Call this%t_H_eigen%bcast(comm)
+    Call eigen_H_bcast(comm%id,comm%mas,comm%ismas,this%H_T,comm%com) 
+#else
+    continue
+#endif
+end subroutine 
+
+subroutine distribute(this,comm)
+    use mpi_basic                
+    class(t_H_eigen_mem),intent(inout)  ::  this
+    type(mpi_type),intent(in)           ::  comm
+#ifdef CPP_MPI
+    Call this%t_H_eigen%distribute(comm)
+    Call eigen_H_distribute(comm%id,comm%mas,comm%ismas,this%H_T,comm%com)
+#else
+    continue
+#endif
 end subroutine 
 
 #endif 

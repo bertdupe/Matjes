@@ -24,7 +24,8 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_ASR_phonon, only: get_ASR_Ph
     use m_Mag_Biq, only: get_Mag_Biq
     use m_4spin, only: get_4spin
-    use m_deriv_set, only: set_deriv
+    use m_dipolar_direct, only: get_dipolar
+    use m_deriv_public, only: set_deriv
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -32,7 +33,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(inout) :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(11)
+    logical :: use_Ham(12)
 
 
     use_ham(1)=H_io%J%is_set
@@ -46,6 +47,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(9)=H_io%ASR_Ph%is_set
     use_ham(10)=H_io%M_biq%is_set
     use_ham(11)=H_io%sp4%is_set
+    use_ham(12)=H_io%dip_dir%is_set
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
@@ -103,6 +105,11 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     !4-spin interaction
     if(use_ham(11))then
         Call get_4spin(Ham_res(i_H),H_io%sp4,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !direct calculation of dipolar interaction
+    if(use_ham(12))then
+        Call get_dipolar(Ham_res(i_H),H_io%dip_dir,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
 

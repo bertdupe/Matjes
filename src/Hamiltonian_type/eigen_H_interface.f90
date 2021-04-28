@@ -16,18 +16,8 @@ module m_eigen_H_interface
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(in)                  :: H
            type(C_PTR),intent(inout)               :: H_T
-       end subroutine
-
-
-        subroutine eigen_H_bcast(id,mas,ismas,mat,comm) bind( c, name="eigen_H_bcast" )
-           use, intrinsic :: iso_c_binding
-           integer( kind = c_int ),value            :: id    !MPI-rank of the processor
-           integer( kind = c_int ),value            :: mas   !MPI-rank of the master
-           logical( kind = c_bool ),value           :: ismas !is master to bcast from
-           type(C_PTR),intent(inout)                :: mat   !matrix to broadcast
-           integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator  the processor
         end subroutine
-        
+         
         subroutine eigen_H_mult_mat_vec(mat,vec_in,vec_out) bind( c, name="eigen_H_mult_mat_vec" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(in)                  :: mat
@@ -186,7 +176,42 @@ module m_eigen_H_interface
            integer( kind = c_int ),intent(in)      :: ind_r(*)
            real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
-    
+#ifdef CPP_MPI
+        subroutine eigen_H_send(id,tag,mat,comm) bind( c, name="eigen_H_send" )
+           use, intrinsic :: iso_c_binding
+           integer( kind = c_int ),intent(in)       :: id    !MPI-rank to target
+           integer( kind = c_int ),intent(in)       :: tag   !MPI-tag
+           type(C_PTR),intent(in)                   :: mat   !matrix to send
+           integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator
+        end subroutine
+
+        subroutine eigen_H_recv(id,tag,mat,comm) bind( c, name="eigen_H_recv" )
+           use, intrinsic :: iso_c_binding
+           integer( kind = c_int ),intent(in)       :: id    !MPI-rank to target
+           integer( kind = c_int ),intent(in)       :: tag   !MPI-tag
+           type(C_PTR),intent(inout)                :: mat   !matrix to send
+           integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator
+        end subroutine
+
+        subroutine eigen_H_bcast(id,mas,ismas,mat,comm) bind( c, name="eigen_H_bcast" )
+           use, intrinsic :: iso_c_binding
+           integer( kind = c_int ),value            :: id    !MPI-rank of the processor
+           integer( kind = c_int ),value            :: mas   !MPI-rank of the master
+           logical( kind = c_bool ),value           :: ismas !is master to bcast from
+           type(C_PTR),intent(inout)                :: mat   !matrix to broadcast
+           integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator  the processor
+        end subroutine
+
+        subroutine eigen_H_distribute(id,mas,ismas,mat,comm) bind( c, name="eigen_H_distribute" )
+           use, intrinsic :: iso_c_binding
+           integer( kind = c_int ),intent(in)       :: id    !MPI-rank of the processor
+           integer( kind = c_int ),intent(in)       :: mas   !MPI-rank of the master
+           logical( kind = c_bool ),intent(in)      :: ismas !is master to bcast from
+           type(C_PTR),intent(inout)                :: mat   !matrix to broadcast
+           integer( kind = c_int ),intent(in)       :: comm  !MPI-communicator  the processor
+        end subroutine
+
+#endif
     end interface
     
 end module 

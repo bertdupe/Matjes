@@ -22,8 +22,10 @@ use m_GNEB, only: GNEB
 use m_write_config, only: write_config
 use m_rw_minimize, only: rw_minimize, min_input
 use m_random_init, only: random_init
+use m_hamiltonian_collection, only: hamiltonian
 
 use m_mpi_start_end  !also includes mpi_basic
+use m_fftw3,only: fftw_init_threads
 
 Implicit None
 
@@ -47,8 +49,12 @@ Implicit None
 ! the computation time
     real(kind=8) :: computation_time
     type(min_input)    :: io_min
+!$  integer :: ierr
 
     Call init_MPI(mpi_world)
+!$  ierr=fftw_init_threads()
+!$  if(ierr==0) STOP "ERROR WITH OPENMP INITIALIZATION OF FFTW3"
+
     call welcome()
 
 ! initialize the random number generator
@@ -123,14 +129,16 @@ Implicit None
         call MonteCarlo(all_lattices,io_simu,ext_param,Ham_res,mpi_world)
     endif
 
+    if (my_simu%name == 'magnet-dynamics')then
+        call spindynamics(all_lattices,io_simu,ext_param,Ham_comb,Ham_res,mpi_world)
+    endif
+
+
     if(mpi_world%ismas)then
         !---------------------------------
         !  Part which does the Spin dynamics
         !    Loop for Spin dynamics
         !---------------------------------
-        
-        if (my_simu%name == 'magnet-dynamics') call spindynamics(all_lattices,io_simu,ext_param,Ham_comb,Ham_res)
-        
         !---------------------------------
         !  Part which does Entropic Sampling
         !---------------------------------

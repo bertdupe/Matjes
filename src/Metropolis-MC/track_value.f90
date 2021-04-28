@@ -1,7 +1,6 @@
 module m_mc_track_val
 use m_derived_types, only : lattice,number_different_order_parameters
-use m_H_public, only: energy_all
-use m_H_type, only:t_H
+use m_H_public, only: energy_all, t_H
 implicit none
 private
 public track_val

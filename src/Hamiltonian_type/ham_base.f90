@@ -1,51 +1,32 @@
 module m_H_type
-!module containing the basic polymorphic Hamiltonian class t_H
+!module containing the basic polymorphic Hamiltonian class t_H_base
 use m_derived_types, only : lattice,number_different_order_parameters
-use m_mode_construction, only: F_mode
+use m_mode_public, only: F_mode, get_mode_ident, set_mode_ident
 implicit none
 
 private
-public t_H
-public t_deriv_base, t_deriv_l, t_deriv_r
+public :: t_H_base
+public :: len_desc
 
-type,abstract    ::  t_deriv_l
-contains
-    procedure(int_deriv_l_get),deferred :: get
-    procedure(int_deriv_l_get_single),deferred :: get_single
-end type
+integer,parameter       ::  len_desc=100    !length of the character describing the Hamiltonian
 
-type,abstract    ::  t_deriv_r
-contains
-    procedure(int_deriv_r_get),deferred :: get
-    procedure(int_deriv_r_get_single),deferred :: get_single
-end type
-
-
-type    :: t_deriv_base
-    class(t_deriv_l),allocatable  :: l
-    class(t_deriv_r),allocatable  :: r
-contains
-    procedure :: get => get_deriv
-    procedure :: get_single => get_deriv_single
-end type
-
-type,abstract :: t_H
+type,abstract :: t_H_base
     !abstrace base class for the Hamiltonian 
     integer                     :: dimH(2)=0        !dimension of Hamiltonian
     integer,allocatable         :: op_l(:),op_r(:)  !operator indices which have to be combined to get the space of the left/right side of the Hamiltonian
     integer                     :: dim_mode(2)=0    !size of left/right mode after multiplying out order parameters (size per lattice point)
     class(F_mode),allocatable   :: mode_l,mode_r    !class to get the left/right mode on which the Hamiltonian acts
     logical,private             :: set=.false.      !has this object been set?
-    character(len=100)          :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
+    character(len=len_desc)     :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
     integer                     :: mult_M_single=0  !factor necessary to calculate energy change correctly when only evaluating single sites
-
-    type(t_deriv_base)          :: deriv(number_different_order_parameters)
+!    type(t_deriv_base)          :: deriv(number_different_order_parameters)
 
 contains
 
     !Hamiltonian initialization routines
     procedure(int_init_H_connect),deferred          :: init_connect !based on Hamiltonian in coo format input (arrays), only rank_2, connection input
     procedure(int_init_H_mult_connect_2),deferred   :: init_mult_connect_2 !based on Hamiltonian in coo format input (arrays), for rank >2, but only at 2 sites at once, connection input
+    procedure(int_init_H_coo),deferred              :: init_coo!based on Hamiltonian in coo format input (arrays), the coo data-arrays are directly moved into the type
 
     procedure(int_destroy),deferred         :: optimize  !calls possible optimization routines rearanging internal Hamiltonian layout
     procedure(int_mult),deferred            :: mult_r,mult_l !multipy out with left/right side
@@ -68,7 +49,6 @@ contains
 
 
     !really non_overridable
-    procedure,NON_OVERRIDABLE               :: bcast
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
     procedure,NON_OVERRIDABLE               :: add
@@ -78,7 +58,17 @@ contains
     procedure(int_add_H),deferred           :: add_child     ! destroys the memory allocation
     procedure(int_destroy),deferred         :: destroy_child
     procedure(int_copy),deferred            :: copy_child
-    procedure(int_bcast),deferred           :: bcast_child
+
+    !MPI-stuff
+    procedure(int_send),deferred            :: send
+    procedure(int_recv),deferred            :: recv
+    procedure(int_mpicom),deferred          :: distribute
+    procedure(int_mpicom),deferred          :: bcast
+
+    procedure,NON_OVERRIDABLE       :: send_base
+    procedure,NON_OVERRIDABLE       :: recv_base
+    procedure,NON_OVERRIDABLE       :: bcast_base
+
 
     !misc.
     procedure,NON_OVERRIDABLE  :: is_set
@@ -93,59 +83,24 @@ end type
 
 
 abstract interface
-    subroutine int_deriv_l_get(this,H,lat,vec)
-        import t_deriv_l, t_H, lattice
-        class(t_deriv_l),intent(in) :: this
-        class(t_H),intent(in)       :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
-    end subroutine
-    subroutine int_deriv_r_get(this,H,lat,vec)
-        import t_deriv_r, t_H, lattice
-        class(t_deriv_r),intent(in) :: this
-        class(t_H),intent(in)       :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
-    end subroutine
-    subroutine int_deriv_l_get_single(this,H,lat,site,vec)
-        import t_deriv_l, t_H, lattice
-        class(t_deriv_l),intent(in) :: this
-        class(t_H),intent(in)       :: H
-        type(lattice),intent(in)    :: lat
-        integer,intent(in)          :: site
-        real(8),intent(inout)       :: vec(:)
-    end subroutine
-    subroutine int_deriv_r_get_single(this,H,lat,site,vec)
-        import t_deriv_r, t_H, lattice
-        class(t_deriv_r),intent(in) :: this
-        class(t_H),intent(in)       :: H
-        type(lattice),intent(in)    :: lat
-        integer,intent(in)          :: site
-        real(8),intent(inout)       :: vec(:)
-    end subroutine
-end interface
-
-
-abstract interface
     subroutine int_mult(this,lat,res)
-        import t_H,lattice
-        class(t_H),intent(in)     :: this
+        import t_H_base,lattice
+        class(t_H_base),intent(in)     :: this
         type(lattice),intent(in)  :: lat
         real(8),intent(inout)     :: res(:)
     end subroutine
 
-
     subroutine int_mult_single(this,i_site,lat,res)
-        import t_H,lattice
-        class(t_H),intent(in)     :: this
+        import t_H_base,lattice
+        class(t_H_base),intent(in)     :: this
         integer,intent(in)        :: i_site
         type(lattice),intent(in)  :: lat
         real(8),intent(inout)     :: res(:)
     end subroutine
 
     subroutine int_mult_red(this,lat,res,op_keep)
-        import t_H,lattice
-        class(t_H),intent(in)     :: this
+        import t_H_base,lattice
+        class(t_H_base),intent(in)     :: this
         type(lattice),intent(in)  :: lat
         real(8),intent(inout)     :: res(:)
         integer,intent(in)        :: op_keep
@@ -153,8 +108,8 @@ abstract interface
 
     subroutine int_mult_cont(this,bnd,vec,res)
         !multiply to the either side with a continuous section of the applied vector
-        import t_H
-        class(t_H),intent(in)       :: this
+        import t_H_base
+        class(t_H_base),intent(in)       :: this
         integer,intent(in)          :: bnd(2)
         real(8),intent(in)          :: vec(bnd(2)-bnd(1)+1)
         real(8),intent(inout)       :: res(:)   !result matrix-vector product
@@ -162,8 +117,8 @@ abstract interface
     
     subroutine int_mult_disc(this,N,ind,vec,res)
         !multiply to the either side with a discontinuous section of the applied vector
-        import t_H
-        class(t_H),intent(in)       :: this
+        import t_H_base
+        class(t_H_base),intent(in)       :: this
         integer,intent(in)          :: N
         integer,intent(in)          :: ind(N)
         real(8),intent(in)          :: vec(N)
@@ -171,8 +126,8 @@ abstract interface
     end subroutine 
 
     subroutine int_mult_ind(this,vec,N,ind_out,vec_out)
-        import t_H
-        class(t_H),intent(in)       :: this
+        import t_H_base
+        class(t_H_base),intent(in)       :: this
         real(8),intent(in)          :: vec(:)
         integer,intent(in)          :: N
         integer,intent(in)          :: ind_out(N)
@@ -181,20 +136,20 @@ abstract interface
 
 
     subroutine int_destroy(this)
-        import t_H
-        class(t_H),intent(inout)  :: this
+        import t_H_base
+        class(t_H_base),intent(inout)  :: this
     end subroutine
 
     subroutine int_eval_all(this,E, lat)
-        import t_H,lattice
-        class(t_H),intent(in)    ::  this
+        import t_H_base,lattice
+        class(t_H_base),intent(in)    ::  this
         type(lattice),intent(in)    ::  lat
         real(8),intent(out)         ::  E
     end subroutine
 
     subroutine int_eval_single(this,E,i_m,dim_bnd,lat)
-        import t_H,lattice,number_different_order_parameters
-        class(t_H),intent(in)    ::  this
+        import t_H_base,lattice,number_different_order_parameters
+        class(t_H_base),intent(in)    ::  this
         type(lattice),intent(in)    ::  lat
         integer,intent(in)          ::  i_m     !site index in (1:Ncell)-basis
         integer,intent(in)          ::  dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
@@ -202,8 +157,8 @@ abstract interface
     end subroutine
 
     subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
-        import t_h,lattice
-        class(t_H),intent(inout)    :: this
+        import t_H_base,lattice
+        class(t_H_base),intent(inout)    :: this
         type(lattice),intent(in)    :: lat
         character(*),intent(in)     :: op_l
         character(*),intent(in)     :: op_r
@@ -214,9 +169,22 @@ abstract interface
         integer,intent(in),optional :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
     end subroutine
 
+    subroutine int_init_H_coo(this,rowind,colind,val,dim_mode,op_l,op_r,lat,mult_M_single)
+        import t_H_base,lattice
+        class(t_H_base),intent(inout)       :: this
+        real(8),allocatable,intent(inout)   :: val(:)
+        integer,allocatable,intent(inout)   :: rowind(:),colind(:)
+        integer,intent(in)                  :: dim_mode(2)
+        character(len=*),intent(in)         :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
+        character(len=*),intent(in)         :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
+        type(lattice),intent(in)            :: lat
+        integer,intent(in)                  :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
+    end subroutine
+
+
     subroutine int_init_H_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
-        import t_h,lattice
-        class(t_H),intent(inout)    :: this
+        import t_H_base,lattice
+        class(t_H_base),intent(inout)    :: this
         type(lattice),intent(in)    :: lat
         character(2),intent(in)     :: order
         real(8),intent(in)          :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
@@ -226,24 +194,39 @@ abstract interface
     end subroutine
 
     subroutine int_add_H(this,H_in)
-        import t_h
-        class(t_H),intent(inout)    :: this
-        class(t_H),intent(in)       :: H_in
+        import t_H_base
+        class(t_H_base),intent(inout)    :: this
+        class(t_H_base),intent(in)       :: H_in
     end subroutine
 
     subroutine int_copy(this,Hout)
-        import t_h
-        class(t_H),intent(in)         :: this
-        class(t_H),intent(inout)      :: Hout
+        import t_H_base
+        class(t_H_base),intent(in)         :: this
+        class(t_H_base),intent(inout)      :: Hout
     end subroutine
 
-    subroutine int_bcast(this,comm)
+    subroutine int_mpicom(this,comm)
         use mpi_basic                
-        import t_h
-        class(t_H),intent(inout)        ::  this
+        import t_H_base
+        class(t_H_base),intent(inout)   ::  this
         type(mpi_type),intent(in)       ::  comm
     end subroutine
 
+    subroutine int_send(this,ithread,tag,com)
+        import t_H_base
+        class(t_H_base),intent(in)  :: this
+        integer,intent(in)          :: ithread
+        integer,intent(in)          :: tag
+        integer,intent(in)          :: com
+    end subroutine
+
+    subroutine int_recv(this,ithread,tag,com)
+        import t_H_base
+        class(t_H_base),intent(inout)   :: this
+        integer,intent(in)              :: ithread
+        integer,intent(in)              :: tag
+        integer,intent(in)              :: com
+    end subroutine
 end interface
 
 contains
@@ -256,7 +239,7 @@ contains
         USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE
         use, intrinsic :: iso_fortran_env, only : error_unit
         !evaluates the energie summed for all sites
-        class(t_H),intent(in)       :: this
+        class(t_H_base),intent(in)       :: this
         type(lattice), intent(in)   :: lat
         real(8), intent(out)        :: E
         ! internal
@@ -275,11 +258,11 @@ contains
         Call this%mode_l%get_mode(lat,modes_l,vec_l)
     
         Call this%mult_r(lat,tmp)
-#ifdef CPP_BLAS
-        E=ddot(this%dimH(1),modes_l,1,tmp,1)
-#else
+!#ifdef CPP_BLAS    !much slower
+!        E=ddot(this%dimH(1),modes_l,1,tmp,1)
+!#else
         E=dot_product(modes_l,tmp)
-#endif
+!#endif
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 
@@ -287,7 +270,7 @@ contains
         use m_type_lattice, only: dim_modes_inner
         !get the energy values per site for a given order
         !might be wrong for non-symmetrical Hamiltonians
-        class(t_H),intent(in)       :: this
+        class(t_H_base),intent(in)       :: this
         type(lattice), intent(in)   :: lat
         integer,intent(in)          :: order
         real(8),intent(out)         :: E(lat%Ncell*lat%site_per_cell(order))
@@ -336,7 +319,7 @@ contains
     subroutine mult_r_red(this,lat,res,op_keep)
         !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H),intent(in)           :: this
+        class(t_H_base),intent(in)           :: this
         type(lattice), intent(in)       :: lat
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
         integer,intent(in)              :: op_keep
@@ -350,7 +333,7 @@ contains
     subroutine mult_l_red(this,lat,res,op_keep)
         !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H),intent(in)           :: this
+        class(t_H_base),intent(in)           :: this
         type(lattice), intent(in)       :: lat
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
         integer,intent(in)              :: op_keep
@@ -362,7 +345,7 @@ contains
     end subroutine 
 
     subroutine mult_l_ind(this,lat,N,ind_out,vec_out)
-        class(t_H),intent(in)       :: this
+        class(t_H_base),intent(in)       :: this
         type(lattice),intent(in)    :: lat
         integer,intent(in)          :: N
         integer,intent(in)          :: ind_out(N)
@@ -375,7 +358,7 @@ contains
     end subroutine
 
     subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
-        class(t_H),intent(in)       :: this
+        class(t_H_base),intent(in)       :: this
         type(lattice),intent(in)    :: lat
         integer,intent(in)          :: N
         integer,intent(in)          :: ind_out(N)
@@ -390,7 +373,7 @@ contains
     subroutine mult_r_red_single(this,i_site,lat,res,op_keep)
         !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H),intent(in)           :: this
+        class(t_H_base),intent(in)           :: this
         type(lattice), intent(in)       :: lat
         integer,intent(in)              :: i_site
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
@@ -414,7 +397,7 @@ contains
     subroutine mult_l_red_single(this,i_site,lat,res,op_keep)
         !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
         !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H),intent(in)           :: this
+        class(t_H_base),intent(in)           :: this
         integer,intent(in)              :: i_site
         type(lattice), intent(in)       :: lat
         real(8), intent(inout)          :: res(:)   !result matrix-vector product
@@ -441,14 +424,15 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-    subroutine bcast(this,comm)
+    subroutine bcast_base(this,comm)
         use mpi_basic                
-        class(t_H),intent(inout)        ::  this
+        class(t_H_base),intent(inout)        ::  this
         type(mpi_type),intent(in)       ::  comm
 #ifdef CPP_MPI
         integer     :: ierr
         integer     :: N(2)
-    
+        integer     :: mode_ident(2)
+
         Call MPI_Bcast(this%dimH         ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%dim_mode     ,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%mult_M_single,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
@@ -466,9 +450,19 @@ contains
         endif
         Call MPI_Bcast(this%op_l,N(1), MPI_INTEGER, comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%op_r,N(2), MPI_INTEGER, comm%mas, comm%com,ierr)
-        Call this%bcast_child(comm)
 
-        STOP "IMPLEMENT BCAST OF MODE_L.MODE_R" !somehow one has to allocated the correct type for the servers...
+        !bcast modes
+        if(comm%ismas)then
+            Call get_mode_ident(this%mode_l,mode_ident(1))
+            Call get_mode_ident(this%mode_r,mode_ident(2))
+        endif
+        Call MPI_Bcast(mode_ident, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
+        if(.not.comm%ismas)then
+            Call set_mode_ident(this%mode_l,mode_ident(1))
+            Call set_mode_ident(this%mode_r,mode_ident(2))
+        endif
+        Call this%mode_l%bcast(comm)
+        Call this%mode_r%bcast(comm)
 #else
         continue
 #endif
@@ -476,8 +470,8 @@ contains
 
     subroutine copy(this,Hout)
         !copy this to Hout
-        class(t_H),intent(in)         :: this
-        class(t_H),intent(inout)      :: Hout
+        class(t_H_base),intent(in)         :: this
+        class(t_H_base),intent(inout)      :: Hout
 
         if(this%is_set())then
             if(.not.allocated(this%op_l).or..not.allocated(this%op_r))&
@@ -501,8 +495,8 @@ contains
     subroutine add(this,H_in)
         use m_type_lattice, only : op_int_to_abbrev
         !add H_in to this Hamiltonian, or set this to H_in is this is not set
-        class(t_H),intent(inout)    :: this
-        class(t_H),intent(in)       :: H_in
+        class(t_H_base),intent(inout)    :: this
+        class(t_H_base),intent(in)       :: H_in
 
         if(this%is_set())then
             !check that it is possible to add Hamiltonians
@@ -524,7 +518,7 @@ contains
 
     subroutine destroy(this)
         !Destroys Hamiltonian
-        class(t_H),intent(inout)    :: this
+        class(t_H_base),intent(inout)    :: this
 
         Call this%destroy_child()
         this%dimH=0
@@ -545,7 +539,7 @@ contains
     end subroutine
 
     subroutine init_base(this,lat,op_l,op_r)
-        class(t_H),intent(inout)    :: this
+        class(t_H_base),intent(inout)    :: this
         class(lattice),intent(in)   :: lat
         !might make sense to change op_l, op_r to characters
         integer,intent(in)          :: op_l(:),op_r(:)
@@ -564,8 +558,8 @@ contains
     end subroutine
 
     subroutine init_otherH(this,H_in)
-        class(t_H),intent(inout)    :: this
-        class(t_H),intent(in)       :: h_in
+        class(t_H_base),intent(inout)    :: this
+        class(t_H_base),intent(in)       :: h_in
 
         this%dimH=H_in%dimH
         this%op_l=H_in%op_l
@@ -579,14 +573,14 @@ contains
     end subroutine
 
     function is_set(this) result(l)
-        class(t_H),intent(in)       ::  this
+        class(t_H_base),intent(in)       ::  this
         logical                     ::  l
 
         l=this%set
     end function
     
     subroutine set_prepared(this,l)
-        class(t_H),intent(inout)    ::  this
+        class(t_H_base),intent(inout)    ::  this
         logical,intent(in)          ::  l
 
         this%set=l
@@ -594,8 +588,8 @@ contains
 
     function same_space(this,comp) result(same)
         !checks if the Hamiltonian acts on the same space
-        class(t_H),intent(in)    ::  this
-        class(t_H),intent(in)    ::  comp
+        class(t_H_base),intent(in)    ::  this
+        class(t_H_base),intent(in)    ::  comp
         logical                  ::  same
 
         same=.false.
@@ -620,7 +614,7 @@ contains
 !!!!!!!!!!!!!!        ROUTINES THAT SHOULD BE IMPLEMENTED MORE EFFICIENTLY    !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine mult_l_single(this,i_site,lat,res)
-    class(t_H),intent(in)        :: this
+    class(t_H_base),intent(in)        :: this
     integer,intent(in)           :: i_site
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
@@ -632,7 +626,7 @@ subroutine mult_l_single(this,i_site,lat,res)
 end subroutine
 
 subroutine mult_r_single(this,i_site,lat,res)
-    class(t_H),intent(in)        :: this
+    class(t_H_base),intent(in)        :: this
     integer,intent(in)           :: i_site
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
@@ -644,7 +638,7 @@ subroutine mult_r_single(this,i_site,lat,res)
 end subroutine
 
 subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
-    class(t_H),intent(in)           :: this
+    class(t_H_base),intent(in)           :: this
     integer,intent(in)              :: ind_in(:)
     integer,intent(out)             :: N_out
     integer,intent(inout)           :: ind_out(:)
@@ -653,7 +647,7 @@ subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
 end subroutine
 
 subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
-    class(t_H),intent(in)           :: this
+    class(t_H_base),intent(in)           :: this
     integer,intent(in)              :: ind_in(:)
     integer,intent(out)             :: N_out
     integer,intent(inout)           :: ind_out(:)
@@ -662,7 +656,7 @@ subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
 end subroutine
 
 subroutine mult_r_disc_disc(this,ind_r,vec_r,ind_l,vec_out)
-    class(t_H),intent(in)           :: this
+    class(t_H_base),intent(in)           :: this
     integer,intent(in)              :: ind_r(:)
     real(8),intent(in)              :: vec_r(:)
     integer,intent(in)              :: ind_l(:)
@@ -672,7 +666,7 @@ subroutine mult_r_disc_disc(this,ind_r,vec_r,ind_l,vec_out)
 end subroutine
 
 subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
-    class(t_H),intent(in)           :: this
+    class(t_H_base),intent(in)           :: this
     integer,intent(in)              :: ind_l(:)
     real(8),intent(in)              :: vec_l(:)
     integer,intent(in)              :: ind_r(:)
@@ -683,6 +677,79 @@ end subroutine
 
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine send_base(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_base),intent(in)      :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N(2),ident(2)
+
+    if(.not.this%is_set()) ERROR STOP "CANNOT SEND HAMILTONIAN WHEN THE ORIGIN IS NOT SET"
+
+
+    N=[size(this%op_l), size(this%op_r)]
+    Call MPI_SEND(this%dimH,          size(this%dimH), MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(N,                  2,               MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%op_l,          N(1),            MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%op_r,          N(2),            MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_mode,      2,               MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%set,           1,               MPI_LOGICAL,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%desc,          len_desc,        MPI_CHARACTER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%mult_M_single, 1,               MPI_INTEGER,   ithread, tag, com, ierr)
+
+    Call get_mode_ident(this%mode_l,ident(1))
+    Call get_mode_ident(this%mode_r,ident(2))
+    Call MPI_SEND(ident, 2, MPI_INTEGER, ithread, tag, com, ierr)
+
+    Call this%mode_l%send(ithread,tag,com)
+    Call this%mode_r%send(ithread,tag,com)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv_base(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_base),intent(inout)   :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N(2),ident(2)
+    integer     :: stat(MPI_STATUS_SIZE) 
+
+    if(this%is_set()) ERROR STOP "CANNOT RECV HAMILTONIAN WHEN THE ORIGIN IS ALREADY SET"
+
+    Call MPI_RECV(this%dimH,          size(this%dimH), MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(N,                  2,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    allocate(this%op_l(N(1)),this%op_r(N(2)))
+    Call MPI_RECV(this%op_l,          N(1),            MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%op_r,          N(2),            MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%dim_mode,      2,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%set,           1,               MPI_LOGICAL,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%desc,          len_desc,        MPI_CHARACTER, ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%mult_M_single, 1,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+
+    Call MPI_RECV(ident, 2, MPI_INTEGER, ithread, tag, com, stat, ierr)
+    Call set_mode_ident(this%mode_l,ident(1))
+    Call set_mode_ident(this%mode_r,ident(2))
+
+    Call this%mode_l%recv(ithread,tag,com)
+    Call this%mode_r%recv(ithread,tag,com)
+#else
+    continue
+#endif
+end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!          HELPER ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -705,37 +772,4 @@ end subroutine
         
         vec_out=sum(vec_in,1)
     end subroutine
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!          DERIV ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    subroutine get_deriv(this,H,lat,vec,tmp)
-        class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
-        class(t_H),intent(in)           :: H                !Hamiltonian that is derivated
-        type(lattice),intent(in)        :: lat
-        real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
-        real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
-
-        Call this%l%get(H,lat,tmp)
-        vec=vec+tmp
-        Call this%r%get(H,lat,tmp)
-        vec=vec+tmp
-    end subroutine
-
-    subroutine get_deriv_single(this,H,lat,site,vec,tmp)
-        class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
-        class(t_H),intent(in)           :: H                !Hamiltonian that is derivated
-        type(lattice),intent(in)        :: lat
-        integer,intent(in)              :: site
-        real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
-        real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
-
-        Call this%l%get_single(H,lat,site,tmp)
-        vec=vec+tmp
-        Call this%r%get_single(H,lat,site,tmp)
-        vec=vec+tmp
-    end subroutine
-
-
 end module

@@ -19,9 +19,14 @@ type, extends(F_mode) :: F_mode_rankN_sparse_coo !contains all entries
     procedure   :: get_mode_single_disc
 
     procedure   :: copy
-    procedure   :: bcast
     procedure   :: destroy
     procedure   :: is_same
+
+    !MPI
+    procedure   :: bcast
+    procedure   :: send
+    procedure   :: recv
+
     !local construction routine
     procedure   :: init_order
 end type

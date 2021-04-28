@@ -6,4 +6,5 @@ src/libraries_and_variables/kgrid.f90
 src/libraries_and_variables/simu-parameters.f90
 src/libraries_and_variables/order_parameter.f90
 src/libraries_and_variables/type_lattice.f90
+src/libraries_and_variables/fftw_util.f90
 )

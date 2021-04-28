@@ -62,6 +62,7 @@ contains
     procedure :: copy_val_to => copy_val_lattice
     !mpi functions
     procedure :: bcast
+    procedure :: bcast_val
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point
     procedure :: set_order_comb
@@ -945,6 +946,9 @@ subroutine copy_lattice(this,copy)
     copy%periodic=this%periodic
     if(allocated(this%world)) allocate(copy%world,source=this%world)
     if(allocated(this%sc_vec_period)) allocate(copy%sc_vec_period,source=this%sc_vec_period)
+    copy%order_set=this%order_set
+    copy%site_per_cell=this%site_per_cell
+    Call this%cell%copy(copy%cell)
 
     if(this%order_set(1)) Call this%M%copy(copy%M,this%dim_lat)
     if(this%order_set(2)) Call this%E%copy(copy%E,this%dim_lat)
@@ -1031,18 +1035,19 @@ use mpi_basic
     integer     :: N
 
     CALL this%cell%bcast(comm)
-    Call MPI_Bcast(this%areal    , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%astar    , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%dim_lat  , 3                   , MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%Ncell    , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%a_sc     , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%a_sc_inv , 9                   , MPI_REAL8  , comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%dim_modes, size(this%dim_modes), MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%n_system , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%nmag     , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%nph      , 1                   , MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%periodic , 3                   , MPI_LOGICAL, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%order_set, size(this%order_set), MPI_LOGICAL, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%areal        , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%astar        , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%dim_lat      , 3                                , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%Ncell        , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%a_sc         , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%a_sc_inv     , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%dim_modes    , size(this%dim_modes)             , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%n_system     , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%nmag         , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%nph          , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%periodic     , 3                                , MPI_LOGICAL, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%order_set    , size(this%order_set)             , MPI_LOGICAL, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%site_per_cell, number_different_order_parameters, MPI_INTEGER, comm%mas, comm%com,ierr)
 
     if(comm%ismas) N=size(this%world)
     Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
@@ -1063,4 +1068,24 @@ use mpi_basic
     continue
 #endif
 end subroutine
+
+subroutine bcast_val(this,comm)
+use mpi_basic                
+    class(lattice),intent(inout)    ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N
+
+    if(this%order_set(1)) Call this%M%bcast_val(comm)
+    if(this%order_set(2)) Call this%E%bcast_val(comm)
+    if(this%order_set(3)) Call this%B%bcast_val(comm)
+    if(this%order_set(4)) Call this%T%bcast_val(comm)
+    if(this%order_set(5)) Call this%u%bcast_val(comm)
+#else
+    continue
+#endif
+end subroutine
+
 end module

@@ -23,9 +23,14 @@ type, extends(F_mode) :: F_mode_rankN_eigen
     procedure   :: get_mode_single_disc
 
     procedure   :: copy
-    procedure   :: bcast
     procedure   :: destroy
     procedure   :: is_same
+
+    !MPI
+    procedure   :: bcast
+    procedure   :: send
+    procedure   :: recv
+
     !local construction routine
     procedure   :: init_order
 end type
@@ -195,19 +200,6 @@ subroutine copy(this,F_out)
     end select
 end subroutine
 
-subroutine bcast(this,comm)
-    use mpi_basic                
-    class(F_mode_rankN_eigen),intent(inout) ::  this        !this might fail if the server threads non-allocated class(F_mode), TAKE CARE OF THIS IN HAM_BASE
-    type(mpi_type),intent(in)               ::  comm
-#ifdef CPP_MPI
-
-    Call bcast_base(this,comm)
-    ERROR STOP "IMPLEMENT"
-#else
-    continue
-#endif
-end subroutine 
-
 subroutine init_order(this,lat,abbrev_in,mat)
     use m_derived_types, only: op_abbrev_to_int
     use m_coo_mat, only: coo_mat
@@ -234,4 +226,60 @@ subroutine init_order(this,lat,abbrev_in,mat)
         Call mat(i)%destroy()
     enddo
 end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine bcast(this,comm)
+    use mpi_basic                
+    class(F_mode_rankN_eigen),intent(inout) ::  this
+    type(mpi_type),intent(in)               ::  comm
+#ifdef CPP_MPI
+
+    Call this%bcast_base(comm)
+    ERROR STOP "IMPLEMENT"
+#else
+    continue
+#endif
+end subroutine 
+
+subroutine send(this,ithread,tag,com)
+!    use mpi_basic                
+    class(F_mode_rankN_eigen),intent(in)    :: this
+    integer,intent(in)          :: ithread
+    integer,intent(in)          :: tag
+    integer,intent(in)          :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+
+    Call this%send_base(ithread,tag,com)
+    ERROR STOP "IMPLEMENT"
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv(this,ithread,tag,com)
+!    use mpi_basic                
+    class(F_mode_rankN_eigen),intent(inout) :: this
+    integer,intent(in)          :: ithread
+    integer,intent(in)          :: tag
+    integer,intent(in)          :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+
+    Call this%recv_base(ithread,tag,com)
+    ERROR STOP "IMPLEMENT"
+#else
+    continue
+#endif
+end subroutine
+
+
+
+
+
 end module

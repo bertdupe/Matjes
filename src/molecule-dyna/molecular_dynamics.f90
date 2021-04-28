@@ -9,12 +9,12 @@ contains
 subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    use m_derived_types, only : lattice,io_parameter,number_different_order_parameters,simulation_parameters
    use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
-   use m_constants, only : k_b
+   use m_constants, only : k_b,pi
    use m_energyfield, only : write_energy_field
    use m_solver_order
    use m_H_public
    use m_solver_commun
-   use m_eff_field, only: get_eff_field
+   use m_eff_field, only : get_eff_field
    use m_createspinfile
    use m_update_time
    use m_write_config
@@ -22,6 +22,10 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    use m_forces
    use m_velocities
    use m_cell
+   use m_io_files_utils
+   use m_topo_sd, only: get_charge_map
+   use m_topo_commons, only: get_charge, neighbor_Q
+   use m_user_info, only: user_info
 
    !!!!!!!!!!!!!!!!!!!!!!!
    ! arguments
@@ -48,6 +52,13 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    real(8),pointer,contiguous       :: Feff_v(:,:),Feff_3(:,:)
    real(8),pointer,contiguous       :: Du_3(:,:,:),Du_int_3(:,:)
 
+   ! conversion factor to go from uam.nm/fs^2 to eV/nm
+!   real(8), parameter :: uamnmfs_to_eVnm = 2.66048E-16
+   real(8), parameter :: uamnmfs_to_eVnm = 1.0d-3
+
+   ! IOs
+   integer :: io_results
+
    ! dummys
    integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,tag,i
    real(8) :: timestep_int,h_int(3),E_int(3),dt
@@ -56,6 +67,9 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    logical :: said_it_once,gra_log,io_stochafield,gra_topo
    integer :: dim_mode !dim_mode of the iterated order parameter
    character(len=100) :: file
+   real(8) :: dumy(5),q_plus,q_moins,vortex(3)
+   integer,allocatable ::  Q_neigh(:,:)
+   real(8) :: time = 0.0d0
 
    ! prepare the matrices for integration
    call rw_dyna_MD(timestep_int,Efreq,duration,file,damp_S,damp_F)
@@ -131,6 +145,18 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     Call my_lattice%copy_val_to(lat_1)
 
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!! Prepare Q_neigh for topological neighbor calculation
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    call user_info(6,time,'topological operators',.false.)
+    Call neighbor_Q(my_lattice,Q_neigh)
+    call user_info(6,time,'done',.true.)
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! initialize Energy
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     E_potential=energy_all(Hams,my_lattice)/real(N_cell,8)
     E_kinetic=0.5d0*sum(masses*V_1**2)/real(N_cell,8)
     Eold=E_potential+E_kinetic
@@ -141,6 +167,16 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
     ! do we use the update timestep
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     call init_update_time('input')
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! prepare the output
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    io_results=open_file_write('EM.dat')
+    Write(io_results,'(21(a,2x))') '# 1:step','2:real_time','3:E_av','4:U', &
+         &  '5:Ux','6:Uy','7:Uz','8:vorticity','9:vx', &
+         &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T=', &
+         &  '16:Tfin=','17:Epot=','18:Ek=','19:Ex','20:Ey=','21:Ez='
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! beginning of the simulation
@@ -155,14 +191,14 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
 
            !get forces on the phonon lattice
            Call get_eff_field(Hams,lat_1,Feff,5)
-           acceleration=(Feff_3-damp_F*V_1)/masses
+           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_1)/masses
 
            V_2=acceleration*dt/2.0d0+V_1      ! ( v of t+dt/2  )
            lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )
 
            !get forces on the phonon lattice
            Call get_eff_field(Hams,lat_2,Feff,5)
-           acceleration=(Feff_3-damp_F*V_2)/masses
+           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses
 
            V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )
 
@@ -170,19 +206,9 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         ! end Verlet algorithm
         !!!!!!!!!!!!!!!!!!!
 
-        Call lat_2%u%copy_val(my_lattice%u)
-        call truncate(my_lattice,used)
+        Call lat_2%u%copy_val(lat_1%u)
+        call truncate(lat_1,used)
 
-        E_potential=energy_all(Hams,my_lattice)/real(N_cell,8)
-        E_kinetic=0.5d0*sum(masses*V_1**2)/real(N_cell,8)
-        E_total=E_potential+E_kinetic
-        temperature=2.0d0*E_kinetic/3.0d0/real(N_cell,8)/k_b
-
-        !if (dabs(check(2)).gt.1.0d-8) call get_temp(security,check,kt)
-
-        if (mod(j-1,Efreq).eq.0) then
-            Pdy=sum(my_lattice%u%modes_3,2)/real(N_cell,8) !sums over all atoms in unit cell
-        endif
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!!!!!!!!!!!!! plotting with graphical frequency
@@ -190,16 +216,33 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         if(mod(j-1,gra_freq)==0)then
             tag=j/gra_freq
 
+            E_potential=energy_all(Hams,lat_1)/real(N_cell,8)
+            E_kinetic=0.5d0*sum(masses*V_1**2)/real(N_cell,8)
+            E_total=E_potential+E_kinetic
+            temperature=2.0d0*E_kinetic/3.0d0/real(N_cell,8)/k_b
+
+            Pdy=sum(lat_1%u%modes_3,2)/real(N_cell,8) !sums of the displacements over all atoms in unit cell
+
+            dumy=get_charge(lat_1,Q_neigh)
+            q_plus=dumy(1)/pi/4.0d0
+            q_moins=dumy(2)/pi/4.0d0
+            vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
+
             if(gra_log) then
-                call CreateSpinFile(tag,my_lattice%u)
-                Call write_config(tag,my_lattice)
+                call CreateSpinFile(tag,lat_1%u)
+                Call write_config(tag,lat_1)
                 write(6,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
                 write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
             endif
 
+            Write(io_results,'(I6,21(E20.12E3,2x),E20.12E3)') j,real_time,E_total, &
+             &   norm2(Pdy),Pdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
+             &   temperature,E_potential,E_kinetic,E_int,H_int
+
             if (io_simu%io_Force)& !call forces(tag,lat_1%ordpar%all_l_modes,my_lattice%dim_mode,my_lattice%areal)
                 & ERROR STOP "FORCES HAVE TO BE REIMPLEMENTED"
 
+            write(6,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
         endif
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -212,11 +255,14 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         !!!!!!!!!!!!!!! end of a timestep
         real_time=real_time+timestep_int !increment time counter
 
-        write(6,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
    enddo
    ! end of the simulation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+call close_file('EM.dat',io_results)
+
+Call lat_1%copy_val_to(my_lattice)
 
 end subroutine
 
