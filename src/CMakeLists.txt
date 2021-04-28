@@ -36,3 +36,5 @@ include(src/Metropolis-MC/CMakeLists.txt)
 include(src/utilities/CMakeLists.txt)
 include(src/vector_utils/CMakeLists.txt)
 include(src/Hamiltonian_derivative/CMakeLists.txt)
+include(src/llg_diagonalization/CMakeLists.txt)
+

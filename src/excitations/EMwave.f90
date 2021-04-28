@@ -67,7 +67,8 @@ else
 endif
 
 ! the electric field is now in V/nm
-EM_Pulse%E_0=I_0*alpha
+EM_Pulse%E_0=I_0!*alpha
+!no alpha trying to do a Bfield wave
 
 end subroutine get_parameter_EMwave
 
