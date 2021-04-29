@@ -25,7 +25,7 @@ use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
 
 use m_mpi_start_end  !also includes mpi_basic
-use m_fftw3,only: fftw_init_threads
+use m_fftw3!,only: fftw_init_threads
 
 Implicit None
 
@@ -52,8 +52,10 @@ Implicit None
 !$  integer :: ierr
 
     Call init_MPI(mpi_world)
+#ifdef CPP_FFTW3
 !$  ierr=fftw_init_threads()
 !$  if(ierr==0) STOP "ERROR WITH OPENMP INITIALIZATION OF FFTW3"
+#endif
 
     call welcome()
 

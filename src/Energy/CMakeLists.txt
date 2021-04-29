@@ -4,6 +4,7 @@ src/Energy/coupling_ME_J.f90
 src/Energy/coupling_ME_D.f90
 src/Energy/dipolar_direct.f90
 src/Energy/dipolar_fft.f90
+src/Energy/dipolar_fft_internal.f90
 src/Energy/dipolar_util.f90
 src/Energy/demag-tensor.f90
 src/Energy/energy_distrib.f90
