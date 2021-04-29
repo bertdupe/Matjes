@@ -27,7 +27,7 @@ subroutine spindynamics(lat,io_simu,ext_param,Ham,Ham_res,comm)
         Call get_dip(H%dip,lat)
         H%NH_total=H%NH_total+1
         allocate(H%dip_H(3*lat%nmag,lat%ncell))
-        if(allocated(H%dip))then
+        if(allocated(Ham_res))then
             Call get_dip(H_res%dip,lat)
             H_res%NH_total=H_res%NH_total+1
             allocate(H_res%dip_H(3*lat%nmag,lat%ncell))
