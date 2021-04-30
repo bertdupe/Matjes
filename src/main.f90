@@ -25,7 +25,7 @@ use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
 
 use m_mpi_start_end  !also includes mpi_basic
-use m_fftw3!,only: fftw_init_threads
+use m_fftw3,only: fftw_init
 
 Implicit None
 
@@ -43,19 +43,12 @@ Implicit None
     type(simulation_parameters) :: ext_param
 ! Hamiltonian used (extend to array with different basis + higher ranks)
     class(t_H),allocatable      :: Ham_res(:), Ham_comb(:)
-! tag that defines the system
-    integer :: n_system
-    Integer :: N_cell
 ! the computation time
     real(kind=8) :: computation_time
     type(min_input)    :: io_min
-!$  integer :: ierr
 
     Call init_MPI(mpi_world)
-#ifdef CPP_FFTW3
-!$  ierr=fftw_init_threads()
-!$  if(ierr==0) STOP "ERROR WITH OPENMP INITIALIZATION OF FFTW3"
-#endif
+    Call fftw_init()
 
     call welcome()
 
@@ -80,11 +73,7 @@ Implicit None
         ! read the input and prepare the lattices, the Hamitlonian and all this mess
         call setup_simu(io_simu,all_lattices,ext_param,Ham_res,Ham_comb)
         
-        ! number of cell in the simulation
-        N_cell=product(all_lattices%dim_lat)
-        n_system=all_lattices%n_system
-        
-        write(6,'(I6,a)') N_cell, ' unit cells'
+        write(6,'(I6,a)') all_lattices%ncell, ' unit cells'
         write(6,'(a)') '-----------------------------------------------'
         write(6,'(a)') ''
         write(6,'(a)') '-----------------------------------------------'
@@ -111,11 +100,6 @@ Implicit None
         Call bcast_Harr(Ham_comb,mpi_world)
         Call parallel_tempering(all_lattices,io_simu,ext_param,Ham_comb,mpi_world)
     endif
-               ! call parallel_tempering(i_biq,i_dip,i_DM,i_four,i_stone,ising,i_print_W,equi,overrel,sphere,underrel,cor_log,gra_log, &
-               ! &    spin,shape_spin,tableNN,shape_tableNN,masque,shape_masque,indexNN,shape_index,EA,n_system, &
-               ! &    n_sizerelax,T_auto,i_optTset,N_cell,print_relax,N_temp,T_relax_temp,kTfin,kTini,h_ext,cone,n_Tsteps, &
-               ! &    i_ghost,n_ghost,nRepProc,mag_lattice)
-
 
     
     !---------------------------------
