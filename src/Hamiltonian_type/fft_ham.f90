@@ -6,7 +6,7 @@ module m_fft_ham
 use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 use m_fftw3
 use m_type_lattice,only: lattice
-use m_dipolar_fft_internal, only: int_set_M, int_get_H
+use m_fft_H_internal, only: int_set_M, int_get_H
 private
 public fft_H
 
@@ -14,6 +14,8 @@ type        ::  fft_H
     private
     logical         :: set=.false.  !all parameters have been initialized
     integer         :: N_rep(3)=0   !size in each dimension of each considered field
+    logical         :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
+                                            ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
     type(c_ptr)     :: plan_mag_F=c_null_ptr   !FFTW plan M_n -> M_F
     type(c_ptr)     :: plan_H_I=c_null_ptr     !FFTW plan H_F -> H_n
     real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
@@ -32,7 +34,13 @@ contains
     procedure,public    :: is_set           !returns set
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
-    procedure,public    :: destroy
+    
+    !utility functions
+    procedure,public    :: destroy          !destroys all data of this type
+    procedure,public    :: copy             !copy this to new instance
+    procedure,public    :: mv               !mv this to new instance
+    procedure,public    :: bcast=>bcast_fft !mv this to new instance
+
 
     !internal procedures
     procedure           :: set_M            !set internal magnetization in normal-space from lattice
@@ -41,11 +49,80 @@ contains
 end type
 contains 
 
+subroutine bcast_fft(this,comm)
+    use mpi_util
+    class(fft_H),intent(inout)  ::  this
+    type(mpi_type),intent(in)   ::  comm
+
+    integer ::  shp(2)
+
+    Call bcast(this%N_rep,comm)
+    Call bcast(this%periodic,comm)
+    if(comm%ismas)then
+        shp=shape(this%M_n)
+    endif
+    Call bcast(shp,comm)
+    if(.not.comm%ismas)then
+        Call this%init_internal(this%periodic)
+        allocate(this%M_n(shp(1),shp(2))) 
+        allocate(this%M_F(shp(1),shp(2))) 
+        allocate(this%H_n(shp(1),shp(2))) 
+        allocate(this%H_F(shp(1),shp(2))) 
+    endif
+    Call bcast_alloc(this%K_F,comm)
+    if(.not.comm%ismas) Call set_fftw_plans(this)
+    Call bcast(this%set,comm)
+end subroutine
+
+subroutine mv(this,H_out)
+    class(fft_H),intent(inout)  :: this
+    type(fft_H),intent(inout)   :: H_out
+
+    if(.not.this%set)then
+        ERROR STOP "CANNOT MV UNINITIALIZED FFT_H"
+    endif
+
+    H_out%N_rep=this%N_rep
+    H_out%periodic=this%periodic
+    call move_alloc(this%M_n,H_out%M_n)
+    call move_alloc(this%M_F,H_out%M_F)
+    call move_alloc(this%H_n,H_out%H_n)
+    call move_alloc(this%H_F,H_out%H_F)
+    call move_alloc(this%K_F,H_out%K_F)
+    H_out%M_internal=>this%M_internal
+    H_out%H_internal=>this%H_internal
+
+    H_out%set=this%set
+    Call this%destroy()
+end subroutine
+
+subroutine copy(this,H_out)
+    class(fft_H),intent(in)     :: this
+    type(fft_H),intent(inout)   :: H_out
+
+    if(.not.this%set)then
+        ERROR STOP "CANNOT COPY UNINITIALIZED FFT_H"
+    endif
+    H_out%N_rep=this%N_rep
+    H_out%periodic=this%periodic
+    allocate(H_out%M_n,mold=this%M_n)
+    allocate(H_out%M_F,mold=this%M_F)
+    allocate(H_out%H_n,mold=this%H_n)
+    allocate(H_out%H_F,mold=this%H_F)
+    allocate(H_out%K_F,source=this%K_F)
+    H_out%M_internal=>this%M_internal
+    H_out%H_internal=>this%H_internal
+    Call set_fftw_plans(H_out)
+
+    H_out%set=this%set
+end subroutine
+
 subroutine destroy(this)
     class(fft_H),intent(inout)     :: this
 
     this%N_rep=0
     this%set=.false.
+    this%periodic=.true.
 #ifdef CPP_FFTW3
     if(c_associated(this%plan_mag_f)) Call fftw_destroy_plan(this%plan_mag_f)
     if(c_associated(this%plan_H_I))   Call fftw_destroy_plan(this%plan_H_I)
@@ -138,8 +215,6 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
 #ifdef CPP_FFTW3
     integer         :: i
     integer         :: Nk_tot           !number of state considered in FT (product of N_rep)
-    integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
-    integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
 
 
     if(allocated(this%M_n))then
@@ -160,31 +235,16 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
         endif
     enddo
     this%N_rep=N_rep
+    this%periodic=periodic
     Nk_tot=product(N_rep)
-    N_rep_rev=N_rep(size(N_rep):1:-1)
 
 !$  Call fftw_plan_with_nthreads(omp_get_max_threads())
     !set order work arrays and fourier transform
     allocate(this%M_N(dim_mode,Nk_tot),source=0.0d0)
     allocate(this%M_F(dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
-    howmany=int(dim_mode,C_int)
-    this%plan_mag_F= fftw_plan_many_dft_r2c(int(3,C_INT), N_rep_rev, howmany,&
-                                           &this%M_n,     N_rep_rev,&
-                                           &howmany,      int(1,C_int), &
-                                           &this%M_F,     N_rep_rev,&
-                                           &howmany,      int(1,C_int), &
-                                           &FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
-
-    !allocate space for effective field and initialize plan for inverse fourier transformation there 
     allocate(this%H_F(dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
     allocate(this%H_n(dim_mode,Nk_tot),source=0.0d0)
-    howmany=int(dim_mode,C_int)
-    this%plan_H_I= fftw_plan_many_dft_c2r(int(3,C_INT), N_rep_rev, howmany,&
-                                         &this%H_F,     N_rep_rev,&
-                                         &howmany,      int(1,C_int), &
-                                         &this%H_n,     N_rep_rev,&
-                                         &howmany,      int(1,C_int), &
-                                         &FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+    Call set_fftw_plans(this)
 
     Call this%init_internal(periodic)
 #else
@@ -195,7 +255,7 @@ end subroutine
 
 subroutine init_internal(this,periodic)
     !initialize internal procedures M_internal and H_internal
-    use m_dipolar_fft_internal
+    use m_fft_H_internal
     class(fft_H),intent(inout)    :: this
     logical,intent(in)            :: periodic(3)  !T: periodic boundary, F: open boundary
 
@@ -271,5 +331,37 @@ subroutine get_E(this,lat,Htmp,E)
     E=sum(Htmp)
 end subroutine
 
+
+subroutine set_fftw_plans(this)
+    class(fft_H),intent(inout)  :: this
+
+    integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
+    integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
+    
+#ifdef CPP_FFTW3
+    if(.not.allocated(this%M_n)) ERROR STOP "cannot set fftw_plans as M_n not allocated"
+    if(.not.allocated(this%M_F)) ERROR STOP "cannot set fftw_plans as M_F not allocated"
+    if(.not.allocated(this%H_n)) ERROR STOP "cannot set fftw_plans as H_n not allocated"
+    if(.not.allocated(this%H_F)) ERROR STOP "cannot set fftw_plans as H_F not allocated"
+
+    N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
+    howmany=int(size(this%M_n,1),C_int)
+    this%plan_mag_F= fftw_plan_many_dft_r2c(int(3,C_INT), N_rep_rev, howmany,&
+                                           &this%M_n,     N_rep_rev,&
+                                           &howmany,      int(1,C_int), &
+                                           &this%M_F,     N_rep_rev,&
+                                           &howmany,      int(1,C_int), &
+                                           &FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
+
+    this%plan_H_I= fftw_plan_many_dft_c2r(int(3,C_INT), N_rep_rev, howmany,&
+                                         &this%H_F,     N_rep_rev,&
+                                         &howmany,      int(1,C_int), &
+                                         &this%H_n,     N_rep_rev,&
+                                         &howmany,      int(1,C_int), &
+                                         &FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+#else
+    ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTW3)"
+#endif
+end subroutine
 
 end module

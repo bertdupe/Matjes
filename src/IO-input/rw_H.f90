@@ -37,11 +37,9 @@ module m_rw_H
         Call read_stark_input(io_param,fname,H_io%stark)
         call read_Mag_Biq_input(io_param,fname,H_io%M_biq)
         call read_sp4_input(io_param,fname,H_io%sp4)
-        call read_dip_input(io_param,fname,H_io%dip_dir)
+        call read_dip_input(io_param,fname,H_io%dip)
 
         call close_file(fname,io_param)
-
-
     end subroutine
 
 

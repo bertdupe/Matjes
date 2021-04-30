@@ -43,6 +43,7 @@ Implicit None
     type(simulation_parameters) :: ext_param
 ! Hamiltonian used (extend to array with different basis + higher ranks)
     class(t_H),allocatable      :: Ham_res(:), Ham_comb(:)
+    type(hamiltonian)           :: H_res,H_comb !newer Hamiltonian class including the FFT parts of the Hamiltonian as well
 ! the computation time
     real(kind=8) :: computation_time
     type(min_input)    :: io_min
@@ -71,7 +72,7 @@ Implicit None
         call close_file('input',io_param)
         
         ! read the input and prepare the lattices, the Hamitlonian and all this mess
-        call setup_simu(io_simu,all_lattices,ext_param,Ham_res,Ham_comb)
+        call setup_simu(io_simu,all_lattices,ext_param,Ham_res,Ham_comb,H_res,H_comb)
         
         write(6,'(I6,a)') all_lattices%ncell, ' unit cells'
         write(6,'(a)') '-----------------------------------------------'
@@ -116,7 +117,7 @@ Implicit None
     endif
 
     if (my_simu%name == 'magnet-dynamics')then
-        call spindynamics(all_lattices,io_simu,ext_param,Ham_comb,Ham_res,mpi_world)
+        call spindynamics(all_lattices,io_simu,ext_param,H_comb,H_res,mpi_world)
     endif
 
 

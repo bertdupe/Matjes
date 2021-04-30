@@ -1,4 +1,4 @@
-module m_dipolar_fft_internal
+module m_fft_H_internal
 !contains different functions to get dipolar effect field or set dipolar internal magnetization
 !which are called in M_internal or H_internal
 public

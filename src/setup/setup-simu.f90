@@ -2,7 +2,7 @@ module m_setup_simu
 implicit none
 
 contains
-subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
+subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb)
     !main setup routine (right now should only be called from one MPI-thread, bcast afterwards)
     use m_derived_types, only: io_parameter,t_cell,simulation_parameters
     use m_fftw, only: set_k_mesh
@@ -16,12 +16,15 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
     use m_io_files_utils, only: open_file_write, close_file
     use m_io_utils, only: dump_config
     use m_set_Hamiltonians,only: set_Hamiltonians
+    use m_set_fft_Hamiltonians,only: set_fft_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
     use m_orders_initialize, only: orders_initialize 
     use m_rw_cell
     use m_rw_H
     use m_H_public
     use m_neighbor_type
+    use m_hamiltonian_collection, only: hamiltonian
+
     
     ! this subroutine is used only to setup the simulation box
     ! it reads first the parameters of the simulation i.e. inp file
@@ -31,6 +34,11 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
     type(lattice), intent(inout) :: my_lattice
     type(simulation_parameters),intent (inout) :: ext_param
     class(t_H),intent(inout),allocatable      ::  Ham_res(:), Ham_comb(:)
+    type(hamiltonian),intent(out)           :: H_res,H_comb
+
+    class(fft_H),allocatable    :: ffT_Ham_res(:)
+    class(fft_H),allocatable    :: fft_Ham_comb(:)
+
     ! variable of the system
     type(t_cell)        :: my_motif
     real(8),allocatable :: pos(:)
@@ -108,6 +116,14 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb)
     keep_resolved_H=io_simu%io_Energy_detail.or..True.  !need to change where all Hamiltonian data is kept
     Call set_Hamiltonians(Ham_res,Ham_comb,keep_resolved_H,H_io,my_lattice)
     call user_info(6,time,'finished setting Hamiltonian',.false.)
+
+    call user_info(6,time,'Start setting Hamiltonian',.false.)
+    Call set_fft_Hamiltonians(fft_Ham_res,fft_Ham_comb,keep_resolved_H,H_io,my_lattice)
+    call user_info(6,time,'finished setting Hamiltonian',.false.)
+
+
+    Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move, as certain the combult is the same (do it even in setup_simu?)
+    if(keep_resolved_H) Call H_res%init_H_cp(my_lattice,Ham_res,fft_Ham_res)   !later change to move, as certain the result is the same (do it even in setup_simu?)
     
     write(6,'(/,a,/)') 'the setup of the simulation is over'
 !#endif

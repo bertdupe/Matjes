@@ -10,8 +10,8 @@ public  ::  hamiltonian
 type    ::  hamiltonian
     logical                         :: is_set=.false.
     class(t_H),allocatable          :: H(:)
-    type(fft_H)                     :: dip
-    real(8),allocatable             :: dip_H(:,:)   !temporary array for effective field from fft
+    type(fft_H)                     :: H_fft
+    real(8),allocatable             :: H_fft_tmparr(:,:)   !temporary array for effective field from fft
     
     logical                         :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
     type(mpi_type)                  :: com_global
@@ -52,6 +52,7 @@ subroutine distribute(this,com_in)
     use mpi_distrib_v
     !subroutine which distributes the H-Hamiltonians from the master of comm to have as few as possible H per thread
     !expects the hamiltonian of the comm-master to be initialized correctly
+    !does not do anything with the H_fft yet
     class(hamiltonian),intent(inout)    :: this
     type(mpi_type),intent(in)           :: com_in
 #ifdef CPP_MPI
@@ -68,7 +69,7 @@ subroutine distribute(this,com_in)
 
     if(com_in%ismas)then
         if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
-        if(this%dip%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
+        if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     endif
     Call bcast(this%NH_total,com_in)
     this%NH_local=this%NH_total
@@ -146,7 +147,7 @@ subroutine bcast(this,comm)
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif
-        if(this%dip%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
+        if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     endif
 
     Call MPI_Bcast(this%NH_total,1, MPI_INTEGER, comm%mas, comm%com,i)
@@ -178,7 +179,7 @@ function get_desc(this,i) result(desc)
         write(error_unit,'(A,I6)')  "H-arr size  : ", this%NH_total
         ERROR STOP
     endif
-    if(i==this%NH_total.and.this%dip%is_set())then
+    if(i==this%NH_total.and.this%H_fft%is_set())then
         desc="dipolar"
         return
     endif
@@ -193,10 +194,12 @@ function get_desc(this,i) result(desc)
     endif
 end function
 
-subroutine init_H_mv(this,Harr)
+subroutine init_H_mv(this,lat,Harr,H_fft)
     !initializes the Hamiltonian by moving the H array (thus destroying Harr)
-    class(hamiltonian),intent(inout)        :: this
-    class(t_H),allocatable,intent(inout)    :: Harr(:)
+    class(hamiltonian),intent(inout)                :: this
+    type(lattice),intent(in)                        :: lat
+    class(t_H),allocatable,intent(inout)            :: Harr(:)
+    class(fft_H),allocatable,intent(inout),optional :: H_fft(:)
   
     if(.not.allocated(Harr))then
         write(error_unit,'(3/A)') "Cannot initialize Hamiltonian, since Harr-input is not allocated"
@@ -205,14 +208,24 @@ subroutine init_H_mv(this,Harr)
     Call move_alloc(Harr,this%H)
     this%NH_total=size(this%H)
     this%NH_local=this%NH_total
+    if(present(H_fft))then
+        if(allocated(H_fft))then
+            if(size(H_fft)/=1) ERROR STOP "IMPLEMENT H_fft array"
+            Call H_fft(1)%mv(this%H_fft)
+            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))
+            this%NH_total=this%NH_total+1
+        endif
+    endif
     this%is_set=.true.
 end subroutine
 
-subroutine init_H_cp(this,Harr)
+subroutine init_H_cp(this,lat,Harr,H_fft)
     use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
     !initializes the Hamiltonian by moving the H array (thus destroying Harr)
-    class(hamiltonian),intent(inout)        :: this
-    class(t_H),allocatable,intent(in)       :: Harr(:)
+    class(hamiltonian),intent(inout)                :: this
+    type(lattice),intent(in)                        :: lat
+    class(t_H),allocatable,intent(in)               :: Harr(:)
+    class(fft_H),allocatable,intent(in),optional    :: H_fft(:)
     integer     ::  i
    
     if(.not.allocated(Harr))then
@@ -225,6 +238,14 @@ subroutine init_H_cp(this,Harr)
     enddo
     this%NH_total=size(this%H)
     this%NH_local=this%NH_total
+    if(present(H_fft))then
+        if(allocated(H_fft))then
+            if(size(H_fft)/=1) ERROR STOP "IMPLEMENT H_fft array"
+            Call H_fft(1)%copy(this%H_fft)
+            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))
+            this%NH_total=this%NH_total+1
+        endif
+    endif
     this%is_set=.true.
 end subroutine
 
@@ -255,8 +276,8 @@ subroutine energy_distrib(this,lat,order,Edist)
         Call reduce_sum(mult,this%com_outer)
         Call gatherv(Edist,mult,this%com_outer)
     endif
-    if(this%dip%is_set().and.order==1)then
-        Call this%dip%get_E_distrib(lat,this%dip_H,Edist(:,this%NH_total))
+    if(this%H_fft%is_set().and.order==1)then
+        Call this%H_fft%get_E_distrib(lat,this%H_fft_tmparr,Edist(:,this%NH_total))
     endif
 
 end subroutine
@@ -279,7 +300,7 @@ subroutine energy_resolved(this,lat,E)
     if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
 
-    if(this%dip%is_set()) Call this%dip%get_E(lat,this%dip_H,E(this%NH_total))
+    if(this%H_fft%is_set()) Call this%H_fft%get_E(lat,this%H_fft_tmparr,E(this%NH_total))
 end subroutine
 
 function energy(this,lat)result(E)
@@ -306,7 +327,7 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     real(8)     ::  tmp_E(this%NH_total)
     integer     ::  i
 
-    if(this%dip%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
+    if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     E=0.0d0
     do i=1,this%NH_total
@@ -335,9 +356,9 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 
-    if(this%dip%is_set())then
-        Call this%dip%get_H(lat,this%dip_H)
-        B=B-2.0d0*reshape(this%dip_H,shape(B))
+    if(this%H_fft%is_set())then
+        Call this%H_fft%get_H(lat,this%H_fft_tmparr)
+        B=B-2.0d0*reshape(this%H_fft_tmparr,shape(B))
     endif
 end subroutine
 

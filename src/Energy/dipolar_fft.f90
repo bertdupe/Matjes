@@ -20,49 +20,38 @@ module m_dipolar_fft
 !where \mu_0 is the vacuum permeability, \mu_i is the magetic moment of the atom_i, r is the distance between site i and j, f{\alpha,\beta} gives the normalized position difference product of the \alpha and \beta component, and 
 !\delta_{\alpha,\beta} is the kronecker delta between \alpha and \beta
 !This corresponds to the conventional DDI Hamiltonian definitions, replacing the M_{\alpha} M_{\beta} with the compenents only.
-
-use m_input_H_types, only: io_H_dipole_direct
+use m_dipolar_direct, only: read_dip_input
+use m_input_H_types, only: io_H_dipole
 use m_derived_types, only: lattice
 use m_fftw3
 use m_dipolar_util, only: dip_pref, get_supercell_vec
-use m_dipolar_fft_internal, only: int_set_M, int_get_H
 use m_fft_ham, only: fft_H
 implicit none
 
 private
-public fft_H, get_dip
+public fft_H, get_dip, get_dipolar_fft
 
 contains
-
-subroutine read_dip_input(io_unit,fname,io)
-    use m_io_utils
-    integer,intent(in)                      :: io_unit
-    character(len=*), intent(in)            :: fname
-    type(io_H_dipole_direct),intent(out)    :: io
-
-    Call get_parameter(io_unit,fname,'mag_dip_fft',io%is_set) 
-    Call get_parameter(io_unit,fname,'mag_dip_period_cut',io%period_cutoff) 
-end subroutine
 
 subroutine get_dip(dip,lat)
     type(fft_H),intent(inout)   :: dip
     type(lattice),intent(in)    :: lat
 
-    type(io_H_dipole_direct)    :: io
+    type(io_H_dipole)           :: io
     integer                     :: io_unit
 
     open(newunit=io_unit,file='input')
     Call read_dip_input(io_unit,'input',io)
     close(io_unit)
-    Call get_dipolar(dip,io,lat)
+    Call get_dipolar_fft(dip,io,lat)
 end subroutine
 
-subroutine get_dipolar(dip,io,lat)
+subroutine get_dipolar_fft(dip,io,lat)
     !main routine to initialize the diplar_fft type
     use m_constants, only : pi
 !$  use omp_lib    
     type(fft_H),intent(inout)               :: dip
-    type(io_H_dipole_direct),intent(in)     :: io
+    type(io_H_dipole),intent(in)            :: io
     type(lattice),intent(in)                :: lat
 
     integer         :: Nmag             !number of magnetic atoms per unit-cell

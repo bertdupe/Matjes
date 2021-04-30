@@ -30,7 +30,8 @@ end type
 
 
 type :: io_H_base
-    logical :: is_set=.false.
+    logical :: is_set=.false.   !gets set to true if sensible input is read
+    logical :: fft=.false.      !whether fft is used if available
 end type
 
 type,extends(io_H_base) :: io_H_aniso
@@ -82,7 +83,7 @@ type,extends(io_H_base) :: io_U_ASR
     real(8)     :: c_ASR=-1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
 
-type,extends(io_H_base) :: io_H_dipole_direct
+type,extends(io_H_base) :: io_H_dipole
     integer     :: period_cutoff(3)=[1,1,1]  !how many periodic images are considered in each direction
 !    integer     :: dist_cutoff=-1.0 !not really used yet  
 end type
@@ -106,7 +107,7 @@ type :: io_H
     type(io_H_stark)            :: stark
     type(io_U_ASR)              :: ASR_Ph
     type(io_H_Mag_Biq)          :: M_biq
-    type(io_H_dipole_direct)    :: dip_dir
+    type(io_H_dipole)           :: dip
 end type
 
 contains
