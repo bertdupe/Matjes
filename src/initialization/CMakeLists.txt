@@ -9,7 +9,6 @@ src/initialization/init-Sk-lattice.f90
 src/initialization/init-skyrmions.f90
 src/initialization/init-skyrmions-lin.f90
 src/initialization/init-spiral.f90
-src/initialization/init-variables.f90
 src/initialization/punch_initialize.f90
 src/initialization/orders_initialize.f90
 src/initialization/utilities-init.f90

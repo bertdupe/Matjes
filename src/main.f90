@@ -4,7 +4,6 @@
 Program Matjes
 use m_io_utils
 use m_io_files_utils
-use m_init_variables
 use m_derived_types
 use m_setup_simu
 use m_write_spin
@@ -55,21 +54,15 @@ Implicit None
     Call random_init()
 
     if(mpi_world%ismas)then
-        io_param=open_file_read('input')
-        
-        !! initialize the variables
-        call init_variables(my_simu) ! initialization of the type of simulation
-        call init_variables(all_lattices) !initialization of the lattice
-        call init_variables(io_simu) ! initialization of the io_part
-        
         ! get the simulation type
+        io_param=open_file_read('input')
         call get_parameter(io_param,'input',my_simu)
         call close_file('input',io_param)
         
         ! read the input and prepare the lattices, the Hamitlonian and all this mess
         call setup_simu(io_simu,all_lattices,ext_param,Ham_res,Ham_comb,H_res,H_comb)
         
-        Call write_config('start',all_lattices)
+        Call write_config('start',all_lattices) !write the initial configuration of all considered states
     endif
     
     !     Start main procedures:
