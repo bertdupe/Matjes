@@ -24,7 +24,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     use m_H_public
     use m_neighbor_type
     use m_hamiltonian_collection, only: hamiltonian
-
     
     ! this subroutine is used only to setup the simulation box
     ! it reads first the parameters of the simulation i.e. inp file
@@ -106,10 +105,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     write(io,'(3E16.8)') pos
     deallocate(pos)
     call close_file('positions.dat',io)
-    
-    
-    ! Check the presence of the dipole dipole
-    !call get_ham_dipole('input',my_lattice,my_motif) !DIPOLE HAS THE BE REIMPLEMENTED
 
     write(6,'(///)') 
     call user_info(6,time,'Start setting Hamiltonian',.false.)
@@ -124,10 +119,14 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
 
     Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move, as certain the combult is the same (do it even in setup_simu?)
     if(keep_resolved_H) Call H_res%init_H_cp(my_lattice,Ham_res,fft_Ham_res)   !later change to move, as certain the result is the same (do it even in setup_simu?)
+
+    if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
     
     write(6,'(/,a,/)') 'the setup of the simulation is over'
-!#endif
-    if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
+    write(6,'(I6,a)') my_lattice%ncell, ' unit cells'
+    write(6,'(a)') '-----------------------------------------------'
+    write(6,'(a)') ''
+    write(6,'(a)') '-----------------------------------------------'
 end subroutine setup_simu
 
 end module

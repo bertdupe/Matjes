@@ -66,7 +66,7 @@ subroutine reorder_temperature(energy,measure,com,nstart,track)
 
     !gather all necessary parameters (energies, temperatures(in measure), and expectation values (measure)
     Call gatherv(energy ,com) 
-    Call gatherv(measure,com)
+    Call measure_gatherv(measure,com)
 
     !Swap temperatures if necessary
     if(com%ismas)then
@@ -99,7 +99,7 @@ subroutine reorder_temperature(energy,measure,com,nstart,track)
         track%label(track%image_temp(Nt))=-1
     endif
     !distribute the rearanged expectation values again
-    Call scatterv(measure,com)
+    Call measure_scatterv(measure,com)
 end subroutine
 
 function accept(kt,E)

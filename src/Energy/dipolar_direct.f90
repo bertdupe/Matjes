@@ -13,13 +13,10 @@ subroutine read_dip_input(io_param,fname,io)
     character(len=*), intent(in)    :: fname
     type(io_H_dipole),intent(out)   :: io
 
-    logical     ::  dense
-
     Call get_parameter(io_param,fname,'mag_dip_use',io%is_set) 
     Call get_parameter(io_param,fname,'mag_dip_period_cut',io%period_cutoff) 
-    dense=.false.
-    Call get_parameter(io_param,fname,'mag_dip_dense',dense) 
-    io%fft=.not.dense
+    io%fft=.true.
+    Call get_parameter(io_param,fname,'mag_dip_fft',io%fft) 
 end subroutine
 
 subroutine get_dipolar(Ham,io,lat)

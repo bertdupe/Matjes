@@ -10,13 +10,14 @@ use m_input_types,only: GNEB_input
 use m_type_lattice,only: lattice
 use m_H_public, only: t_H,energy_all
 use m_eff_field,only: get_eff_field
+use m_hamiltonian_collection, only: hamiltonian
 implicit none
 private
 public :: find_path,find_SP,find_SP_conf
 
 contains
 
-subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,Hams,ci_out)
+subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,H,ci_out)
     use m_precision, only: truncate
     real(8),intent(in)              :: ftol
     integer, intent(in)             :: nim
@@ -26,7 +27,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,Hams,ci_out)
     real(8), intent(out)            :: rx(nim) !< Reaction coordinate
     real(8), intent(out)            :: ene(nim) !< Energy of the images
     real(8), intent(out)            :: dene(nim) !< Derivative of the energy with respect to reaction coordinate
-    class(t_H),intent(in)           :: Hams(:)
+    type(hamiltonian),intent(inout) :: H
     integer,intent(out),optional    :: ci_out
     ! internal
     integer     :: N_mag
@@ -40,6 +41,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,Hams,ci_out)
     integer             :: imax,dim_mode_mag,maximum(2)
     real(8),target,allocatable      :: force1(:,:)
     real(8),target,allocatable      :: force2(:,:)
+    real(8),allocatable             :: force_tmp(:)
     integer             :: im
     real(8),pointer,contiguous     :: force1_3(:,:),force2_3(:,:)
     real(8),pointer,contiguous     :: force1_mode(:,:),force2_mode(:,:)
@@ -62,6 +64,7 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,Hams,ci_out)
     allocate(vel_tmp_arr(dim_mode_mag,N_cell),source=0.0d0)
     allocate(tau_i(dim_mode_mag,N_cell),tau(dim_mode_mag,N_cell),source=0.0d0)
     allocate(force1(dim_mode_mag*N_cell,nim),force2(dim_mode_mag*N_cell,nim),source=0.d0)
+    allocate(force_tmp(dim_mode_mag*N_cell))
     allocate(magarr_tmp(3,N_mag*N_cell),source=0.0d0)
     
     fchk=1d0+ftol
@@ -74,8 +77,9 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,Hams,ci_out)
         force1_3(1:3,1:N_mag*N_cell)=>force1(:,im)
         M3(1:3,1:N_mag*N_cell)=>images(im)%M%modes
 
-        energy(im)=energy_all(Hams,images(im))
-        Call get_eff_field(Hams,images(im),force1(:,im),1)
+        energy(im)=H%energy(images(im))
+        Call H%get_eff_field(images(im),force1(:,im),1,force_tmp)
+
         !Call normalize(force1_3) !temporary taken out, think about normalizations
         Call project(force1_3,M3)
     enddo
@@ -150,8 +154,8 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,Hams,ci_out)
             force2_3(1:3,1:N_mag*N_cell)=>force2(:,im)
             M3(1:3,1:N_mag*N_cell)=>images(im)%M%modes
 
-            energy(im)=energy_all(Hams,images(im)) !total energy at each image
-            Call get_eff_field(Hams,images(im),force2(:,im),1) !get effective field (eV)
+            energy(im)=H%energy(images(im)) !total energy at each image
+            Call H%get_eff_field(images(im),force2(:,im),1,force_tmp) !get effective field (eV)
             !Call normalize(force2_3) !temporary taken out, think about normalizations
             Call project(force2_3,M3)
         enddo

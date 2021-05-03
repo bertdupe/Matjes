@@ -12,17 +12,18 @@ use m_energyfield
 use m_minimize
 use m_H_public
 use m_rw_GNEB,only: GNEB_input  
+use m_hamiltonian_collection, only: hamiltonian
 implicit none
 private
 public :: path_initialization
 
 contains
-subroutine path_initialization(images,io_simu,io_gneb,Ham)
+subroutine path_initialization(images,io_simu,io_gneb,H)
     implicit none
     type(io_parameter), intent(in)  :: io_simu
     type(GNEB_input),intent(in)     :: io_gneb
     type(lattice), intent(inout)    :: images(:)
-    class(t_H),intent(in)           :: Ham(:)
+    type(hamiltonian),intent(inout) :: H
     ! internal variable
     integer :: nim
     
@@ -45,17 +46,17 @@ subroutine path_initialization(images,io_simu,io_gneb,Ham)
        write(*,*) "WARNING, NO INITIAL MINIMIZATION FOR GNEB CHOSEN"
     case(1)
         write (6,'(a)') "Relaxing the first image via the infinite damping method..."
-        call minimize_infdamp(images(1),io_simu,io_gneb%io_min,Ham)
+        call minimize_infdamp_run(images(1),io_simu,io_gneb%io_min,H)
         write (6,'(a)') "Done!"
         write (6,'(a)') "Relaxing the first image via the infinite damping method..."
-        call minimize_infdamp(images(nim),io_simu,io_gneb%io_min,Ham)
+        call minimize_infdamp_run(images(nim),io_simu,io_gneb%io_min,H)
         write (6,'(a)') "Done!"
     case(2)
         write (6,'(a)') "Relaxing the first image..."
-        call minimize(images(1),io_simu,io_gneb%io_min,Ham)
+        call minimize_run(images(1),io_simu,io_gneb%io_min,H)
         write (6,'(a)') "Done!"
         write (6,'(a)') "Relaxing the last image..."
-        call minimize(images(nim),io_simu,io_gneb%io_min,Ham)
+        call minimize_run(images(nim),io_simu,io_gneb%io_min,H)
         write (6,'(a)') "Done!"
     case default
         ERROR STOP "UNEXPECTED io_gneb%min_type"

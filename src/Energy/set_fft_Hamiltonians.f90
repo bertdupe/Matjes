@@ -22,6 +22,7 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(1)=H_io%dip%is_set.and.H_io%dip%fft
 
     N_ham=count(use_ham)
+    if(N_ham<1) return  !nothing to do here
     allocate(fft_H::Ham_res(N_ham))
     i_H=1 
     !dipolar interaction

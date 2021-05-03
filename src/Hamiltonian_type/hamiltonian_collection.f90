@@ -3,6 +3,7 @@ use m_H_public, only: t_H, get_Htype_N, fft_H
 use m_H_type,only : len_desc
 use m_derived_types, only: lattice
 use mpi_basic
+use mpi_util
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
 private
 public  ::  hamiltonian
@@ -33,10 +34,11 @@ contains
     
     !derivative getting routines
     procedure   :: get_eff_field
+    procedure   :: get_eff_field_single
 
     !parallelization routines
     procedure   :: is_master
-    procedure   :: bcast        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
+    procedure   :: bcast => bcast_hamil        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
     procedure   :: distribute   !distributes the different Hamiltonian entries to separate threads
 
     !small access routines
@@ -48,7 +50,6 @@ contains
 
 
 subroutine distribute(this,com_in)
-    use mpi_util
     use mpi_distrib_v
     !subroutine which distributes the H-Hamiltonians from the master of comm to have as few as possible H per thread
     !expects the hamiltonian of the comm-master to be initialized correctly
@@ -134,8 +135,7 @@ subroutine distribute(this,com_in)
 
 end subroutine
 
-
-subroutine bcast(this,comm)
+subroutine bcast_hamil(this,comm)
     !bcast assuming Hamiltonian has not been scattered yet 
     class(hamiltonian),intent(inout)    :: this
     type(mpi_type),intent(in)           :: comm
@@ -252,7 +252,6 @@ end subroutine
 
 subroutine energy_distrib(this,lat,order,Edist)
     !gets the energy at the sites, so far very wastefull with the memory
-    use mpi_util
     use mpi_distrib_v
     class(hamiltonian),intent(inout)    :: this
     type(lattice), intent(in)           :: lat
@@ -284,7 +283,6 @@ end subroutine
 
 subroutine energy_resolved(this,lat,E)
     use mpi_distrib_v, only: gatherv
-    use mpi_util
     !get contribution-resolved energies
     !only correct on outer master thread
     class(hamiltonian),intent(inout):: this
@@ -339,8 +337,6 @@ end function
 
 subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
-    use mpi_basic
-    use mpi_util
     class(hamiltonian),intent(inout)    :: this
     type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
     real(8),intent(out)                 :: B(:)
@@ -362,8 +358,33 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     endif
 end subroutine
 
+subroutine get_eff_field_single(this,lat,site,B,Ham_type,tmp)
+    !calculates the effective internal field acting on a single site
+    class(hamiltonian),intent(inout)    :: this
+    type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
+    integer,intent(in)                  :: site
+    real(8),intent(out)                 :: B(:)
+    integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
+    real(8),intent(out)                 :: tmp(size(B))
+
+    integer     :: iH, ierr
+    B=0.0d0
+    do iH=1,this%NH_local
+        Call this%H(iH)%deriv(Ham_type)%get_single(this%H(iH),lat,site,B,tmp)
+    enddo
+
+    if(any(this%is_para)) Call reduce_sum(B,this%com_global)
+    B=-B    !field is negative derivative
+
+    if(this%H_fft%is_set())then
+        ERROR STOP "IMPLEMENT single field H for FFT"
+!        Call this%H_fft%get_H(lat,this%H_fft_tmparr)
+!        B=B-2.0d0*reshape(this%H_fft_tmparr,shape(B))
+    endif
+end subroutine
+
+
 function is_master(this)result(master)
-    use mpi_basic
     class(hamiltonian),intent(in)       :: this
     logical                             :: master
 
