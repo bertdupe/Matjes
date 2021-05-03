@@ -139,7 +139,7 @@ Implicit None
         !  diag llg
         !---------------------------------
         if (my_simu%name == 'llg_diag')then
-            call diag_llg(all_lattices,io_simu,Ham_comb)
+            call diag_llg(all_lattices,io_simu,H_comb)
         endif
         
         !---------------------------------
