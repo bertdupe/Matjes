@@ -315,8 +315,9 @@ end function
 
 function energy_single(this,i_m,dim_bnd,lat)result(E)
     use m_derived_types, only: number_different_order_parameters
+    use mpi_distrib_v
     !returns the total energy caused by a single entry !needs some updating 
-    class(hamiltonian),intent(in)   :: this
+    class(hamiltonian),intent(inout):: this
     integer,intent(in)              :: i_m
     type (lattice),intent(in)       :: lat
     integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete
@@ -325,13 +326,17 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     real(8)     ::  tmp_E(this%NH_total)
     integer     ::  i
 
-    if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     E=0.0d0
-    do i=1,this%NH_total
+    do i=1,this%NH_local
         Call this%H(i)%eval_single(tmp_E(i),i_m,dim_bnd,lat)
     enddo
-    tmp_E=tmp_E*real(this%H(:)%mult_M_single,8)
+    tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
+    if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
+    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(tmp_E,this%com_outer)
+
+    if(this%H_fft%is_set()) Call this%H_fft%get_E_single(lat,i_m,tmp_E(this%NH_total))
+
     E=sum(tmp_E)
 end function
 
@@ -352,7 +357,7 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 
-    if(this%H_fft%is_set())then
+    if(this%H_fft%is_set().and.Ham_type==1)then
         Call this%H_fft%get_H(lat,this%H_fft_tmparr)
         B=B-2.0d0*reshape(this%H_fft_tmparr,shape(B))
     endif
@@ -376,10 +381,9 @@ subroutine get_eff_field_single(this,lat,site,B,Ham_type,tmp)
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 
-    if(this%H_fft%is_set())then
-        ERROR STOP "IMPLEMENT single field H for FFT"
-!        Call this%H_fft%get_H(lat,this%H_fft_tmparr)
-!        B=B-2.0d0*reshape(this%H_fft_tmparr,shape(B))
+    if(this%H_fft%is_set().and.Ham_type==1)then
+        Call this%H_fft%get_H_single(lat,site,tmp)
+        B=B-2.0d0*tmp
     endif
 end subroutine
 

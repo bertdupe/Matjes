@@ -29,7 +29,9 @@ type        ::  fft_H
     procedure(int_get_H), pointer,nopass    ::  H_internal => null()    !function to get effective field depending on periodic/open boundaries
 contains
     procedure,public    :: get_H            !get effective field
+    procedure,public    :: get_H_single     !get effective field for a single site
     procedure,public    :: get_E            !get energy
+    procedure,public    :: get_E_single     !get energy for a single site
     procedure,public    :: get_E_distrib    !get energy-distribution in Nmag*Ncell-space
     procedure,public    :: is_set           !returns set
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
@@ -43,9 +45,8 @@ contains
 
 
     !internal procedures
-    procedure           :: set_M            !set internal magnetization in normal-space from lattice
-    procedure           :: init_internal    !initialize internal procedures
-
+    procedure           :: set_M                !set internal magnetization in normal-space from lattice
+    procedure           :: init_internal        !initialize internal procedures
 end type
 contains 
 
@@ -308,6 +309,33 @@ subroutine get_H(this,lat,Hout)
 #endif
 end subroutine
 
+subroutine get_H_single(this,lat,site,Hout)
+    !get effective field H
+    class(fft_H),intent(inout)    ::  this
+    type(lattice),intent(in)      ::  lat
+    integer,intent(in)            ::  site
+    real(8),intent(inout)         ::  Hout(3)
+#ifdef CPP_FFTW3
+    integer ::  i,j,l
+
+    Call this%set_M(lat)
+    Call fftw_execute_dft_r2c(this%plan_mag_F, this%M_n, this%M_F)
+
+    this%H_F=cmplx(0.0d0,0.0d0,8)
+    do j=1,size(this%M_F,2)
+        do i=1,lat%Nmag*3
+            do l=1,lat%Nmag*3
+                this%H_F(i,j)=this%H_F(i,j)+this%K_F(i,l,j)*this%M_F(l,j)   !change to matmul
+            enddo
+        enddo
+    enddo
+    Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
+    Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
+#else
+    ERROR STOP "fft_H%get_H_single requires CPP_FFTW"
+#endif
+end subroutine
+
 subroutine get_E_distrib(this,lat,Htmp,E)
     class(fft_H),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
@@ -318,7 +346,6 @@ subroutine get_E_distrib(this,lat,Htmp,E)
     Htmp=Htmp*lat%M%modes_v
     E=sum(reshape(Htmp,[3,lat%Nmag*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
 end subroutine
-
 
 subroutine get_E(this,lat,Htmp,E)
     class(fft_H),intent(inout)    ::  this
@@ -331,6 +358,20 @@ subroutine get_E(this,lat,Htmp,E)
     E=sum(Htmp)
 end subroutine
 
+subroutine get_E_single(this,lat,site,E)
+    !get energy by getting the effective field caused by all sites and multiply the considered site's H with the moment there
+    !it might be faster to do the explicit folding in real space to get the effective field caused by the considered site and multiply then with the entire magnetization (might be worth testing)
+    class(fft_H),intent(inout)  :: this
+    type(lattice),intent(in)    :: lat
+    integer,intent(in)          :: site
+    real(8),intent(out)         :: E
+
+    real(8)                     :: Htmp(3)
+
+    Call this%get_H_single(lat,site,Htmp)
+    Htmp=Htmp*lat%M%modes_3(:,site)
+    E=sum(Htmp)*2.0d0
+end subroutine
 
 subroutine set_fftw_plans(this)
     class(fft_H),intent(inout)  :: this
@@ -362,6 +403,26 @@ subroutine set_fftw_plans(this)
 #else
     ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTW3)"
 #endif
+end subroutine
+
+subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
+    integer,intent(in)          :: isite
+    integer,intent(in)          :: nmag
+    integer,intent(in)          :: dim_lat(3)
+    integer,intent(in)          :: N_rep(3)
+    real(8),intent(in)          :: H(3,Nmag,N_rep(1),N_rep(2),N_rep(3))
+    real(8),intent(inout)       :: H_out(3)
+
+    integer     :: div(4),modu(4)
+    integer     :: i4(4),i 
+
+    modu=[nmag,nmag*dim_lat(1),nmag*product(dim_lat(:2)),nmag*product(dim_lat)]
+    div=[(product(modu(:i-1)),i=1,4)]
+    i4=isite-1
+    i4=i4/div
+    i4=modulo(i4,modu)+1
+
+    H_out=H(:,i4(1),i4(2),i4(3),i4(4))
 end subroutine
 
 end module

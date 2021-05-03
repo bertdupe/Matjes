@@ -12,9 +12,7 @@ abstract interface
         real(8),intent(inout)       :: M   (dim_mode,N_rep  (1),N_rep  (2),N_rep  (3))
         real(8),intent(in)          :: M_in(dim_mode,dim_lat(1),dim_lat(2),dim_lat(3))
     end subroutine
-end interface
 
-abstract interface
     subroutine int_get_H(H,H_out,dim_lat,N_rep,dim_mode)
         integer,intent(in)          :: dim_mode
         integer,intent(in)          :: dim_lat(3)
