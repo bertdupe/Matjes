@@ -140,10 +140,12 @@ subroutine init_order(this,lat,abbrev_in)
     type(lattice),intent(in)                :: lat       !lattice type which knows about all states
     character(len=*), intent(in)            :: abbrev_in
     integer     :: order(len(abbrev_in))
+    integer     :: size_in
     integer     :: i
 
     order=op_abbrev_to_int(abbrev_in)
-    Call this%init_base(order,lat%Ncell*product(lat%dim_modes(this%order)))
+    size_in=lat%Ncell*product(lat%dim_modes(order))
+    Call this%init_base(order,size_in)
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
