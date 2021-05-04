@@ -11,7 +11,6 @@ contains
 subroutine spindynamics(lat,io_simu,ext_param,H,H_res,comm)
     !wrapper to first initialize all spin-dynamics parameters and distribute on the different threads
     use m_H_public,only: t_H
-    use m_dipolar_fft, only: get_dip
     type(lattice), intent(inout)                :: lat
     type(io_parameter), intent(inout)           :: io_simu
     type(simulation_parameters), intent(inout)  :: ext_param

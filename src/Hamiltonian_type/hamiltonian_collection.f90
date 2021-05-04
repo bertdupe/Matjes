@@ -11,7 +11,7 @@ public  ::  hamiltonian
 type    ::  hamiltonian
     logical                         :: is_set=.false.
     class(t_H),allocatable          :: H(:)
-    type(fft_H)                     :: H_fft
+    class(fft_H),allocatable        :: H_fft(:)
     real(8),allocatable             :: H_fft_tmparr(:,:)   !temporary array for effective field from fft
     
     logical                         :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
@@ -20,6 +20,9 @@ type    ::  hamiltonian
     type(mpi_type)                  :: com_inner
     integer                         :: NH_total=0  !global size of H
     integer                         :: NH_local=0  !local size of H (relevant with parallelization)
+    integer                         :: NHF_total=0 !global size of H_fft
+    integer                         :: NHF_local=0 !local size of H_fft (relevant with parallelization, which is not there yet so ==NHF_total)
+    integer                         :: N_total=0   !total number of Hamiltonian entries NH_total+NHF_total
 
     character(len=len_desc),allocatable ::  desc_master(:)
 contains
@@ -85,8 +88,11 @@ subroutine distribute(this,com_in)
     if(com_inner%ismas)then
         if(com_outer%ismas)then
             !save descriptions for later easier io-access
-            allocate(this%desc_master(this%NH_total))
-            this%desc_master=this%H(:)%desc
+            allocate(this%desc_master(this%N_total))
+            this%desc_master(1:this%NH_total)=this%H(:)%desc
+            do i=1,this%NHF_total
+                Call this%H_fft%get_desc(this%desc_master(this%NH_total+i))
+            enddo
 
             !send Hamiltonians
             do ithread=2,com_outer%Np
@@ -147,10 +153,12 @@ subroutine bcast_hamil(this,comm)
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif
-        if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
+        if(allocated(this%H_fft)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE Bcast in hamiltonian"
     endif
 
-    Call MPI_Bcast(this%NH_total,1, MPI_INTEGER, comm%mas, comm%com,i)
+    Call MPI_Bcast(this%N_total,  1, MPI_INTEGER, comm%mas, comm%com,i)
+    Call MPI_Bcast(this%NH_total, 1, MPI_INTEGER, comm%mas, comm%com,i)
+    Call MPI_Bcast(this%NHF_total,1, MPI_INTEGER, comm%mas, comm%com,i)
     if(.not.comm%ismas) Call get_Htype_N(this%H,N)
     do i=1,this%NH_total
         Call this%H(i)%bcast(comm)
@@ -164,7 +172,7 @@ function size_H(this) result(N)
     class(Hamiltonian),intent(in)   :: this
     integer ::  N
 
-    N=this%NH_total
+    N=this%N_total
 end function
 
 function get_desc(this,i) result(desc)
@@ -173,16 +181,16 @@ function get_desc(this,i) result(desc)
     integer,intent(in)                  :: i
     character(len=len_desc)             :: desc
 
-    if(i<1.or.i>this%NH_total)then
+    if(i<1.or.i>this%N_total)then
         write(error_unit,'(3/A)') "Cannot get desciption of Hamiltonian, as the index is not with the bounds of the H-array"
         write(error_unit,'(A,I6)')  "Wanted index: ", i
-        write(error_unit,'(A,I6)')  "H-arr size  : ", this%NH_total
+        write(error_unit,'(A,I6)')  "H-arr size  : ", this%N_total
         ERROR STOP
     endif
-    if(i==this%NH_total.and.this%H_fft%is_set())then
-        desc="dipolar"
-        return
-    endif
+!    if(i==this%NH_total.and.this%H_fft%is_set())then
+!        desc="dipolar"
+!        return
+!    endif
     if(this%is_para(1))then
         if(this%com_outer%ismas)then
             desc=this%desc_master(i)
@@ -190,7 +198,11 @@ function get_desc(this,i) result(desc)
             ERROR STOP "CAN ONLY USE GET_DESC FROM MASTER THREAD"
         endif
     else
-        desc=this%H(i)%desc
+        if(i<=this%NH_total)then
+            desc=this%H(i)%desc
+        else
+            Call this%H_fft(i-this%NH_total)%get_desc(desc)
+        endif
     endif
 end function
 
@@ -210,12 +222,13 @@ subroutine init_H_mv(this,lat,Harr,H_fft)
     this%NH_local=this%NH_total
     if(present(H_fft))then
         if(allocated(H_fft))then
-            if(size(H_fft)/=1) ERROR STOP "IMPLEMENT H_fft array"
-            Call H_fft(1)%mv(this%H_fft)
-            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))
-            this%NH_total=this%NH_total+1
+            Call move_alloc(H_fft,this%H_fft)
+            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
+            this%NHF_total=size(this%H_fft)
+            this%NHF_local=this%NHF_total
         endif
     endif
+    this%N_total=this%NH_total+this%NHF_total
     this%is_set=.true.
 end subroutine
 
@@ -240,12 +253,16 @@ subroutine init_H_cp(this,lat,Harr,H_fft)
     this%NH_local=this%NH_total
     if(present(H_fft))then
         if(allocated(H_fft))then
-            if(size(H_fft)/=1) ERROR STOP "IMPLEMENT H_fft array"
-            Call H_fft(1)%copy(this%H_fft)
-            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))
-            this%NH_total=this%NH_total+1
+            allocate(this%H_fft,mold=H_fft)
+            do i=1,size(H_fft)
+                Call H_fft(i)%copy(this%H_fft(i))
+            enddo
+            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
+            this%NHF_total=size(this%H_fft)
+            this%NHF_local=this%NHF_total
         endif
     endif
+    this%N_total=this%NH_total+this%NHF_total
     this%is_set=.true.
 end subroutine
 
@@ -258,15 +275,15 @@ subroutine energy_distrib(this,lat,order,Edist)
     integer,intent(in)                  :: order
     real(8),allocatable,intent(inout)   :: Edist(:,:)
 
-    integer     :: i
+    integer     :: iH
     integer     :: mult(this%com_outer%Np)
     
     if(allocated(Edist))then
-        if(size(Edist,1)/=lat%Ncell*lat%site_per_cell(order).and.size(Edist,2)==this%NH_total) deallocate(Edist)
+        if(size(Edist,1)/=lat%Ncell*lat%site_per_cell(order).and.size(Edist,2)==this%N_total) deallocate(Edist)
     endif
-    if(.not.allocated(Edist)) allocate(Edist(lat%Ncell*lat%site_per_cell(order),this%NH_total),source=0.0d0)
-    do i=1,this%NH_local
-        Call this%H(i)%energy_dist(lat,order,Edist(:,i))
+    if(.not.allocated(Edist)) allocate(Edist(lat%Ncell*lat%site_per_cell(order),this%N_total),source=0.0d0)
+    do iH=1,this%NH_local
+        Call this%H(iH)%energy_dist(lat,order,Edist(:,iH))
     enddo
     if(this%is_para(2)) Call reduce_sum(Edist,this%com_inner)
     if(this%is_para(1))then
@@ -275,8 +292,10 @@ subroutine energy_distrib(this,lat,order,Edist)
         Call reduce_sum(mult,this%com_outer)
         Call gatherv(Edist,mult,this%com_outer)
     endif
-    if(this%H_fft%is_set().and.order==1)then
-        Call this%H_fft%get_E_distrib(lat,this%H_fft_tmparr,Edist(:,this%NH_total))
+    if(order==1)then
+        do iH=1,this%NHF_local
+            Call this%H_fft(iH)%get_E_distrib(lat,this%H_fft_tmparr,Edist(:,this%NH_total+iH))
+        enddo
     endif
 
 end subroutine
@@ -287,18 +306,20 @@ subroutine energy_resolved(this,lat,E)
     !only correct on outer master thread
     class(hamiltonian),intent(inout):: this
     type (lattice),intent(in)       :: lat
-    real(8),intent(out)             :: E(this%NH_total)
+    real(8),intent(out)             :: E(this%N_total)
 
-    integer     ::  i
+    integer     ::  iH
 
     E=0.0d0
-    do i=1,this%NH_local
-        Call this%H(i)%eval_all(E(i),lat)
+    do iH=1,this%NH_local
+        Call this%H(iH)%eval_all(E(iH),lat)
     enddo
     if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
 
-    if(this%H_fft%is_set()) Call this%H_fft%get_E(lat,this%H_fft_tmparr,E(this%NH_total))
+    do iH=1,this%NHF_total
+        Call this%H_fft(ih)%get_E(lat,this%H_fft_tmparr,E(this%NH_total+iH))
+    enddo
 end subroutine
 
 function energy(this,lat)result(E)
@@ -307,7 +328,7 @@ function energy(this,lat)result(E)
     type(lattice),intent(in)        :: lat
     real(8)                         :: E
 
-    real(8)     ::  tmp_E(this%NH_total)
+    real(8)     ::  tmp_E(this%N_total)
     
     Call this%energy_resolved(lat,tmp_E)
     E=sum(tmp_E)
@@ -320,22 +341,24 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     class(hamiltonian),intent(inout):: this
     integer,intent(in)              :: i_m
     type (lattice),intent(in)       :: lat
-    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete
+    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete, needs something which specified in which space i_m is thoguh
     real(8)                         :: E
 
-    real(8)     ::  tmp_E(this%NH_total)
-    integer     ::  i
+    real(8)     ::  tmp_E(this%N_total)
+    integer     ::  iH
 
     if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     E=0.0d0
-    do i=1,this%NH_local
-        Call this%H(i)%eval_single(tmp_E(i),i_m,dim_bnd,lat)
+    do iH=1,this%NH_local
+        Call this%H(iH)%eval_single(tmp_E(iH),i_m,dim_bnd,lat)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
     if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(tmp_E,this%com_outer)
 
-    if(this%H_fft%is_set()) Call this%H_fft%get_E_single(lat,i_m,tmp_E(this%NH_total))
+    do iH=1,this%NHF_local
+         Call this%H_fft(iH)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
+    enddo
 
     E=sum(tmp_E)
 end function
@@ -357,10 +380,10 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 
-    if(this%H_fft%is_set().and.Ham_type==1)then
-        Call this%H_fft%get_H(lat,this%H_fft_tmparr)
+    do iH=1,this%NHF_local
+        Call this%H_fft(iH)%get_H(lat,this%H_fft_tmparr)
         B=B-2.0d0*reshape(this%H_fft_tmparr,shape(B))
-    endif
+    enddo
 end subroutine
 
 subroutine get_eff_field_single(this,lat,site,B,Ham_type,tmp)
@@ -381,10 +404,10 @@ subroutine get_eff_field_single(this,lat,site,B,Ham_type,tmp)
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 
-    if(this%H_fft%is_set().and.Ham_type==1)then
-        Call this%H_fft%get_H_single(lat,site,tmp)
+    do iH=1,this%NHF_local
+        Call this%H_fft(iH)%get_H_single(lat,site,tmp)
         B=B-2.0d0*tmp
-    endif
+    enddo
 end subroutine
 
 

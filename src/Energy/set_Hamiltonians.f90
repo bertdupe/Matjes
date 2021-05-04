@@ -24,7 +24,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_ASR_phonon, only: get_ASR_Ph
     use m_Mag_Biq, only: get_Mag_Biq
     use m_4spin, only: get_4spin
-    use m_dipolar_direct, only: get_dipolar
+    use m_dipolar_magnetic, only: get_dipolar
     use m_deriv_public, only: set_deriv
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
@@ -36,9 +36,9 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     logical :: use_Ham(12)
 
 
-    use_ham(1)=H_io%J%is_set
-    use_ham(2)=H_io%D%is_set
-    use_ham(3)=H_io%aniso%is_set
+    use_ham(1)=H_io%J%is_set.and..not.H_io%J%fft
+    use_ham(2)=H_io%D%is_set.and..not.H_io%D%fft
+    use_ham(3)=H_io%aniso%is_set.and..not.H_io%aniso%fft
     use_ham(4)=H_io%zeeman%is_set
     use_ham(5)=H_io%ME_J%is_set
     use_ham(6)=H_io%ME_D%is_set

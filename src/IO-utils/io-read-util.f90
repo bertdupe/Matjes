@@ -29,6 +29,11 @@ subroutine set_pos_entry(io,fname,var_name,success_out)
         str= trim(adjustl(str))
         if (len_trim(str)==0) cycle
         if (str(1:1) == '#' ) cycle
+        if (len_trim(str)<length_string) cycle
+        if (len_trim(str)>length_string)then
+            if(str(length_string+1:length_string+1)/=" ") cycle
+        endif
+
         if (str(1:length_string) == var_name(1:length_string))then
             success=.true.
             backspace(io)
@@ -83,6 +88,11 @@ subroutine check_further_entry(io,fname,var_name,another_entry_out)
         str= trim(adjustl(str))
         if (len_trim(str)==0) cycle
         if (str(1:1) == '#' ) cycle
+        if (len_trim(str)<length_string) cycle
+        if (len_trim(str)>length_string)then
+            if(str(length_string+1:length_string+1)/=" ") cycle
+        endif
+
         if (str(1:length_string) == var_name(1:length_string))then
             another_entry=.true.
             exit

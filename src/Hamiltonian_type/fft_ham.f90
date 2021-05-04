@@ -7,6 +7,7 @@ use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 use m_fftw3
 use m_type_lattice,only: lattice
 use m_fft_H_internal, only: int_set_M, int_get_H
+use m_H_type, only: len_desc
 private
 public fft_H
 
@@ -18,6 +19,7 @@ type        ::  fft_H
                                             ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
     type(c_ptr)     :: plan_mag_F=c_null_ptr   !FFTW plan M_n -> M_F
     type(c_ptr)     :: plan_H_I=c_null_ptr     !FFTW plan H_F -> H_n
+    character(len=len_desc)     :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
     real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
 
@@ -36,19 +38,54 @@ contains
     procedure,public    :: is_set           !returns set
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
+    procedure,public    :: get_desc         !get the description
     
     !utility functions
     procedure,public    :: destroy          !destroys all data of this type
     procedure,public    :: copy             !copy this to new instance
     procedure,public    :: mv               !mv this to new instance
+    procedure,public    :: add              !adds two fft_H in same space by adding their K_F
     procedure,public    :: bcast=>bcast_fft !mv this to new instance
 
 
     !internal procedures
     procedure           :: set_M                !set internal magnetization in normal-space from lattice
     procedure           :: init_internal        !initialize internal procedures
+    procedure           :: same_space           !check if 2 fft_H act on same space
 end type
 contains 
+
+subroutine get_desc(this,desc)
+    class(fft_H),intent(in)             :: this
+    character(len=len_desc),intent(out) :: desc
+
+    desc=this%desc
+end subroutine
+
+function same_space(this,comp)result(same)
+    class(fft_H),intent(in) :: this
+    type(fft_H),intent(in)  :: comp
+    logical                 :: same
+
+    if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as this is not set"
+    if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as comp is not set"
+
+    same=all(this%N_rep==comp%N_rep)
+    same=same.and.all(this%periodic.eqv.comp%periodic)
+end function
+
+subroutine add(this,H_in)
+    class(fft_H),intent(inout)  :: this
+    type(fft_H),intent(in)      :: H_in
+
+    if(.not.H_in%set) ERROR STOP "CANNOT ADD fft_H as H_in is not set"
+    if(.not.this%set)then
+        Call H_in%copy(this)
+    else
+        if(.not.this%same_space(H_in)) ERROR STOP "CANNOT ADD fft_H as this and H_in do not act on same space"
+        this%K_F=this%K_F+H_in%K_F
+    endif
+end subroutine
 
 subroutine bcast_fft(this,comm)
     use mpi_util
@@ -145,17 +182,22 @@ pure function is_set(this)result(set)
     set=this%set
 end function
 
-subroutine init_op(this,dim_mode,K_n)
+subroutine init_op(this,dim_mode,K_n,desc_in)
     !subroutine which initializes the fourier-transformed operator of K, while deallocating K_N
-    class(fft_H),intent(inout)          :: this
-    integer,intent(in)                  :: dim_mode
-    real(8),intent(inout),allocatable   :: K_n(:,:,:)
+    class(fft_H),intent(inout)              :: this
+    integer,intent(in)                      :: dim_mode
+    real(8),intent(inout),allocatable       :: K_n(:,:,:)
+    character(len=*),intent(in),optional    :: desc_in
 
 #ifdef CPP_FFTW3
     integer         :: Nk_tot           !number of state considered in FT (product of N_rep)
     integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
     type(c_ptr)     :: plan_K_F !plan for fourier transformation of K
+
+    if(present(desc_in))then
+        if(len(desc_in)<=len_desc) this%desc=desc_in
+    endif
 
     !check shapes etc.
     if(.not.allocated(this%M_n))then

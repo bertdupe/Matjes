@@ -6,13 +6,14 @@ public :: neighbors, get_neigh_distances
 
 
 type :: neighbors
-    integer             :: atid(2)     !atom type indices
-    integer,allocatable :: dist(:)     !distances considered
-    integer,allocatable :: Nshell(:)   !how many different connections are there for each distance  (1:number distance)
-    integer,allocatable :: ishell(:)   !how many entries are there for each shell (1:number shells)
-    integer,allocatable :: at_pair(:,:)    !what are the at_pairs for the shell (2,1:number shells)
-    integer,allocatable :: pairs(:,:)  !what cell pairs in (1:Ncell) for the pair (2,1:number connections)
-    real(8),allocatable :: diff_vec(:,:) !difference vector between each shell (3,1:number shells) 
+    integer             :: atid(2)          !atom type indices
+    integer,allocatable :: dist(:)          !distances considered
+    integer,allocatable :: Nshell(:)        !how many different connections are there for each distance  (1:number distance)
+    integer,allocatable :: ishell(:)        !how many entries are there for each shell (1:number shells)
+    integer,allocatable :: at_pair(:,:)     !what are the at_pairs for the shell (2,1:number shells)
+    integer,allocatable :: diff_cell(:,:)   !what are the at_pairs for the shell (3,1:number shells)
+    integer,allocatable :: pairs(:,:)       !what cell pairs in (1:Ncell) for the pair (2,1:number connections)
+    real(8),allocatable :: diff_vec(:,:)    !difference vector between each shell (3,1:number shells) 
 
     contains
     procedure   :: get   => get_neighbors
@@ -55,10 +56,13 @@ end subroutine
 subroutine unset(neigh)
     class(neighbors),intent(inout) :: neigh
 
-    if(allocated(neigh%Nshell )) deallocate(neigh%Nshell )
-    if(allocated(neigh%ishell )) deallocate(neigh%ishell )
-    if(allocated(neigh%at_pair)) deallocate(neigh%at_pair)
-    if(allocated(neigh%pairs  )) deallocate(neigh%pairs  )
+    if(allocated(neigh%dist     )) deallocate(neigh%dist     )
+    if(allocated(neigh%Nshell   )) deallocate(neigh%Nshell   )
+    if(allocated(neigh%ishell   )) deallocate(neigh%ishell   )
+    if(allocated(neigh%at_pair  )) deallocate(neigh%at_pair  )
+    if(allocated(neigh%diff_cell)) deallocate(neigh%diff_cell)
+    if(allocated(neigh%pairs    )) deallocate(neigh%pairs    )
+    if(allocated(neigh%diff_vec )) deallocate(neigh%diff_vec )
 end subroutine
 
 subroutine get_neighbors(neigh,atid,neighval_in,lat)
@@ -100,6 +104,7 @@ subroutine get_neighbors(neigh,atid,neighval_in,lat)
     pairs(1,:)=id1(pairs(1,:))
     pairs(2,:)=id2(pairs(2,:))
     allocate(neigh%at_pair,source=pairs(1:2,:))
+    allocate(neigh%diff_cell,source=pairs(3:5,:))
 
     !unfold the neighbors to all lattice sites obeying periodicity and fill neighbors-type (neigh)
     Call unfold_neighbors(neigh,pairs,lat)
@@ -115,7 +120,6 @@ subroutine unfold_neighbors(neigh,pairs_in,lat)
 
     integer                     :: ii
     integer                     :: i_pair
-    integer                     :: i_1,i_2  !lattice sites in [1,Ncell] basis
     integer                     :: i3_1(3),i3_2(3)  !lattice sites in ([1,dimlat(1)],[1,dimlat(2)],[1,dimlat(3)])-basis
     integer                     :: i1,i2,i3
     integer                     :: imax(2,3)
