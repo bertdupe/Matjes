@@ -13,6 +13,7 @@ src/Energy/exchange_Heisenberg_D.f90
 src/Energy/exchange_TJ.f90
 src/Energy/setH_util.f90
 src/Energy/set_Hamiltonians.f90
+src/Energy/set_fft_Hamiltonians.f90
 src/Energy/zeeman.f90
 src/Energy/harmonic_phonon.f90
 src/Energy/stark.f90

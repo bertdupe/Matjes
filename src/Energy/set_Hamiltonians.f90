@@ -2,7 +2,7 @@ module m_set_Hamiltonians
 use m_H_public
 implicit none
 private
-public :: set_Hamiltonians,combine_Hamiltonians
+public :: set_Hamiltonians
 
 contains
 
@@ -30,7 +30,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
     type(io_h),intent(in)               :: H_io
-    type(lattice), intent(inout) :: lat
+    type(lattice), intent(in)           :: lat
 
     integer :: i_H,N_ham
     logical :: use_Ham(12)
@@ -47,7 +47,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(9)=H_io%ASR_Ph%is_set
     use_ham(10)=H_io%M_biq%is_set
     use_ham(11)=H_io%sp4%is_set
-    use_ham(12)=H_io%dip_dir%is_set
+    use_ham(12)=H_io%dip%is_set.and..not.H_io%dip%fft
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
@@ -109,7 +109,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     endif
     !direct calculation of dipolar interaction
     if(use_ham(12))then
-        Call get_dipolar(Ham_res(i_H),H_io%dip_dir,lat)
+        Call get_dipolar(Ham_res(i_H),H_io%dip,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
 

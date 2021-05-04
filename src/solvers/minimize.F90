@@ -1,21 +1,52 @@
 module m_minimize
 use m_H_public
 use m_input_types,only : min_input
+use m_derived_types, only : io_parameter,lattice
+use m_rw_minimize, only: rw_minimize, min_input
+use m_hamiltonian_collection, only: hamiltonian
+use mpi_basic
+use, intrinsic :: iso_fortran_env, only : error_unit 
 implicit none
 
-interface minimize
-  module procedure minimize_lattice
-end interface
-
-interface minimize_infdamp
-  module procedure minimize_infdamp_lattice
-  !module procedure minimize_infdamp_2Dlattice,minimize_infdamp_lattice
-end interface
 
 private
-public :: minimize,minimize_infdamp
+public :: minimize, minimize_infdamp
+public :: minimize_run, minimize_infdamp_run
 
 contains
+
+
+
+subroutine minimize(lat,io_simu,H,com)
+    type(io_parameter), intent(in)  :: io_simu
+    type(lattice), intent(inout)    :: lat
+    type(hamiltonian),intent(inout) :: H
+    type(mpi_type),intent(in)       :: com
+
+    type(min_input)                 :: io_min
+
+    if(com%ismas)then
+        if(com%Np>1) write(error_unit,'(//A/A//)') "WARNING, USING MPI-PARALLELIZATION WHICH IS NOT IMPLEMENTED FOR MINIMIZE CALCULATION","this calculation will only run the the master thread" 
+        Call rw_minimize(io_min)
+        Call minimize_run(lat,io_simu,io_min,H)
+    endif
+end subroutine
+
+
+subroutine minimize_infdamp(lat,io_simu,H,com)
+    type(io_parameter), intent(in)  :: io_simu
+    type(lattice), intent(inout)    :: lat
+    type(hamiltonian),intent(inout) :: H
+    type(mpi_type),intent(in)       :: com
+
+    type(min_input)                 :: io_min
+
+    if(com%ismas)then
+        if(com%Np>1) write(error_unit,'(//A/A//)') "WARNING, USING MPI-PARALLELIZATION WHICH IS NOT IMPLEMENTED FOR MINIMIZE_INFDAMP CALCULATION","this calculation will only run the the master thread" 
+        Call rw_minimize(io_min)
+        Call minimize_infdamp_run(lat,io_simu,io_min,H)
+    endif
+end subroutine
 
 !
 !
@@ -23,7 +54,7 @@ contains
 ! The interface is used to put the data into the good format
 !
 !
-subroutine minimize_lattice(lat,io_simu,io_min,Hams)
+subroutine minimize_run(lat,io_simu,io_min,H)
     use m_derived_types, only : io_parameter,lattice
     use m_constants, only : pi
     use m_write_spin
@@ -36,11 +67,12 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     type(io_parameter), intent(in)  :: io_simu
     type(min_input), intent(in)     :: io_min
     type(lattice), intent(inout)    :: lat
-    class(t_H), intent(in)          :: Hams(:)
+    type(hamiltonian),intent(inout) :: H
     ! dummy variable
     real(8),allocatable, dimension(:,:)    :: velocity,predicator,force
     real(8),allocatable, dimension(:)      :: V_eff,F_temp
     real(8),allocatable,target             :: Feff(:)
+    real(8),allocatable,target             :: Ftmp(:)
     real(8),pointer     ::  Feff_vec(:,:)
     ! internal
     real(8)     :: dumy,force_norm,Energy,vmax,vtest,test_torque,max_torque
@@ -62,11 +94,13 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
     dim_mode=lat%M%dim_mode
     
     allocate(Feff(dim_mode*N_cell),source=0.0d0)
+    allocate(Ftmp(dim_mode*N_cell),source=0.0d0)
     Feff_vec(1:dim_mode,1:N_cell)=>Feff
     allocate(velocity(dim_mode,N_cell),predicator(dim_mode,N_cell),force(dim_mode,N_cell),source=0.0d0)
     allocate(V_eff(dim_mode),F_temp(dim_mode),source=0.0d0)
     
-    Call get_eff_field(Hams,lat,Feff,1)
+    Call H%get_eff_field(lat,Feff,1,Ftmp)
+
     do iomp=1,lat%Ncell
         force(:,iomp)=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
         call minimization(lat%M%modes_v(:,iomp),force(:,iomp),predicator(:,iomp),io_min%dt**2,io_min%mass*2.0d0)
@@ -83,7 +117,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
         force_norm=0.0d0
         vmax=0.0d0
         
-        Call get_eff_field(Hams,lat,Feff,1)
+        Call H%get_eff_field(lat,Feff,1,Ftmp)
         do iomp=1,N_cell
             F_temp=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
             call minimization(velocity(:,iomp),(force(:,iomp)+F_temp)/2.0d0,V_eff,io_min%dt,io_min%mass)
@@ -113,7 +147,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
         lat%M%modes_v=predicator
 
         if (mod(i_min,io_min%Efreq).eq.0)then
-            Energy=energy_all(Hams,lat)
+            energy=H%energy(lat)
             write(6,'(/,a,2x,I20)') 'iteration',i_min
             write(6,'(a,2x,f14.11)') 'Energy of the system (eV/unit cell)',Energy/dble(N_cell)
             write(6,'(2(a,2x,f14.11,2x))') 'convergence criteria:',io_min%conv_torque,',Measured Torque:',max_torque
@@ -135,7 +169,7 @@ subroutine minimize_lattice(lat,io_simu,io_min,Hams)
 end subroutine
 
 
-subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
+subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     use m_derived_types, only : io_parameter,lattice
     use m_constants, only : pi
     use m_write_spin
@@ -145,7 +179,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     type(io_parameter), intent(in)  :: io_simu
     type(min_input), intent(in)     :: io_min
     type(lattice),intent(inout)     :: lat
-    class(t_H), intent(in)          :: Hams(:)
+    type(hamiltonian),intent(inout) :: H
     ! internal
     real(8)                     :: max_torque,test_torque,Edy
     integer(8)                  :: iter,gra_freq
@@ -154,6 +188,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     integer                     :: gra_int
     integer                     :: N_cell,N_dim,N_mag
     real(8),allocatable,target  :: F_eff(:)
+    real(8),allocatable         :: F_tmp(:)
     real(8),allocatable         :: F_norm(:),torque(:)
     real(8),pointer             :: M3(:,:),F_eff3(:,:)
     logical                     :: conv
@@ -166,6 +201,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     
     allocate(F_norm(N_mag),source=0.0d0)
     allocate(F_eff(N_dim*N_cell),torque(N_dim*N_cell),source=0.0d0)
+    allocate(F_tmp(N_dim*N_cell),source=0.0d0)
     F_eff3(1:3,1:N_mag)=>F_eff
     M3(1:3,1:N_mag)=>lat%M%all_modes
     
@@ -176,7 +212,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     ! Prepare the calculation of the energy and the effective field
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    Edy=energy_all(Hams,lat)
+    Edy=H%energy(lat)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell,8)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -187,7 +223,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
     do iter=1,io_min%N_minimization
         max_torque=0.0d0
 
-        Call get_eff_field(Hams,lat,F_eff,1)
+        Call H%get_eff_field(lat,F_eff,1,F_tmp)
         F_norm=norm2(F_eff3,1)
         if(any(F_norm.lt.1.0d-8)) stop 'problem in the infinite damping minimization routine' !avoid divide by 0
         torque=cross(lat%M%all_modes,F_eff,1,N_dim*N_cell)
@@ -220,7 +256,7 @@ subroutine minimize_infdamp_lattice(lat,io_simu,io_min,Hams)
         write(*,*) 'Convergence criterion= ',io_min%conv_torque
         write(*,'(///)')
     endif
-    Edy=energy_all(Hams,lat)
+    Edy=H%energy(lat)
     write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell,8)
     nullify(M3,F_eff3)
     deallocate(F_eff,F_norm,torque)

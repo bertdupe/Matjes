@@ -1,7 +1,8 @@
 module m_relaxtyp
     use m_derived_types, only : lattice
-    use m_eff_field, only : get_eff_field_single
-    use m_H_public
+!    use m_eff_field, only : get_eff_field_single
+!    use m_H_public
+    use m_hamiltonian_collection, only: hamiltonian
     implicit none
     private
     public :: underrelax, overrelax
@@ -11,13 +12,13 @@ module m_relaxtyp
     ! in one case, the spins are choosen in the direction of -dE/DM so energy diminishes
     ! in the second case, the spins are choosen in the direction of +dE/DM so energy increases
     !
-    function underrelax(iomp,lat,Hams)
+    function underrelax(iomp,lat,H)
         use m_vector, only : cross
         implicit none
         ! external variable
-        integer, intent(in) :: iomp
-        type(lattice),intent(in)    :: lat
-        class(t_H), intent(in) :: Hams(:)
+        integer, intent(in)                 :: iomp
+        type(lattice),intent(in)            :: lat
+        type(hamiltonian), intent(inout)    :: H
         ! value of the function
         real(kind=8), dimension(3) :: underrelax
         !internal variable
@@ -25,7 +26,8 @@ module m_relaxtyp
         real(kind=8) :: norm_local,dumy(3)
     
         if(lat%M%dim_mode>3) ERROR STOP "THIS WILL FAIL FOR MORE THAN 1 MAGNETIC MOMENT IN UNITCELL"
-        Call get_eff_field_single(Hams,iomp,lat,S_int,1) !1 for magnetism (order_parameter_abbrev)
+        Call H%get_eff_field_single(lat,iomp,S_int,1,dumy)
+!        Call get_eff_field_single(Hams,iomp,lat,S_int,1) !1 for magnetism (order_parameter_abbrev)
         norm_local=norm2(S_int)
         
         if (norm_local.gt.1.0d-8) then
@@ -39,16 +41,15 @@ module m_relaxtyp
         
     end function underrelax
     
-    function overrelax(iomp,lat,Hams)
-        use m_vector, only : cross,norm
+    function overrelax(iomp,lat,H)
         implicit none
         ! external variable
-        integer, intent(in) :: iomp
-        type(lattice),intent(in)    :: lat
-        class(t_H), intent(in) :: Hams(:)
-        real(8), dimension(3) :: overrelax
+        integer, intent(in)                 :: iomp
+        type(lattice),intent(in)            :: lat
+        type(hamiltonian), intent(inout)    :: H
+        real(8), dimension(3)               :: overrelax
     
-        overrelax=-underrelax(iomp,lat,Hams)
+        overrelax=-underrelax(iomp,lat,H)
         
     end function overrelax
 end module

@@ -8,39 +8,24 @@ use mpi_basic, only: mpi_type
 implicit none
 contains
 
-subroutine spindynamics(lat,io_simu,ext_param,Ham,Ham_res,comm)
-    !wrapper to first initialize all spin-dynamics parameters on the necessary threads
+subroutine spindynamics(lat,io_simu,ext_param,H,H_res,comm)
+    !wrapper to first initialize all spin-dynamics parameters and distribute on the different threads
     use m_H_public,only: t_H
     use m_dipolar_fft, only: get_dip
     type(lattice), intent(inout)                :: lat
     type(io_parameter), intent(inout)           :: io_simu
     type(simulation_parameters), intent(inout)  :: ext_param
-    class(t_H),intent(in),allocatable           :: Ham(:),Ham_res(:)
+    type(hamiltonian),intent(inout)             :: H,H_res
     type(mpi_type),intent(in)                   :: comm
 
-    type(hamiltonian)       :: H_res,H
     type(dyna_input)        :: io_dyn
-
-    if(comm%ismas)then
-        Call H%init_H_cp(Ham)   !later change to move, as certain the result is the same (do it even in setup_simu?)
-        if(allocated(Ham_res))  Call H_res%init_H_cp(Ham_res)
-        Call get_dip(H%dip,lat)
-        H%NH_total=H%NH_total+1
-        allocate(H%dip_H(3*lat%nmag,lat%ncell))
-        if(allocated(H%dip))then
-            Call get_dip(H_res%dip,lat)
-            H_res%NH_total=H_res%NH_total+1
-            allocate(H_res%dip_H(3*lat%nmag,lat%ncell))
-        endif
-    endif
-
-    !fill Hamiltonian which allows the distribution
-    Call H%distribute(comm)
-    Call H_res%distribute(comm)
 
     Call lat%bcast(comm)
     Call io_simu%bcast(comm)
     Call ext_param%bcast(comm)
+
+    Call H%distribute(comm)
+    Call H_res%distribute(comm)
 
     Call io_dyn%read_file(comm=comm)
 

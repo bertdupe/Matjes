@@ -1,8 +1,9 @@
 module m_hamiltonian_collection
-use m_H_public, only: t_H, get_Htype_N, dipolar_fft
+use m_H_public, only: t_H, get_Htype_N, fft_H
 use m_H_type,only : len_desc
 use m_derived_types, only: lattice
 use mpi_basic
+use mpi_util
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
 private
 public  ::  hamiltonian
@@ -10,8 +11,8 @@ public  ::  hamiltonian
 type    ::  hamiltonian
     logical                         :: is_set=.false.
     class(t_H),allocatable          :: H(:)
-    type(dipolar_fft),allocatable   :: dip(:)
-    real(8),allocatable             :: dip_H(:,:)
+    type(fft_H)                     :: H_fft
+    real(8),allocatable             :: H_fft_tmparr(:,:)   !temporary array for effective field from fft
     
     logical                         :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
     type(mpi_type)                  :: com_global
@@ -33,10 +34,11 @@ contains
     
     !derivative getting routines
     procedure   :: get_eff_field
+    procedure   :: get_eff_field_single
 
     !parallelization routines
     procedure   :: is_master
-    procedure   :: bcast        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
+    procedure   :: bcast => bcast_hamil        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
     procedure   :: distribute   !distributes the different Hamiltonian entries to separate threads
 
     !small access routines
@@ -48,10 +50,10 @@ contains
 
 
 subroutine distribute(this,com_in)
-    use mpi_util
     use mpi_distrib_v
     !subroutine which distributes the H-Hamiltonians from the master of comm to have as few as possible H per thread
     !expects the hamiltonian of the comm-master to be initialized correctly
+    !does not do anything with the H_fft yet
     class(hamiltonian),intent(inout)    :: this
     type(mpi_type),intent(in)           :: com_in
 #ifdef CPP_MPI
@@ -68,7 +70,7 @@ subroutine distribute(this,com_in)
 
     if(com_in%ismas)then
         if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
-        if(allocated(this%dip)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
+        if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     endif
     Call bcast(this%NH_total,com_in)
     this%NH_local=this%NH_total
@@ -133,8 +135,7 @@ subroutine distribute(this,com_in)
 
 end subroutine
 
-
-subroutine bcast(this,comm)
+subroutine bcast_hamil(this,comm)
     !bcast assuming Hamiltonian has not been scattered yet 
     class(hamiltonian),intent(inout)    :: this
     type(mpi_type),intent(in)           :: comm
@@ -146,7 +147,7 @@ subroutine bcast(this,comm)
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif
-        if(allocated(this%dip)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
+        if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     endif
 
     Call MPI_Bcast(this%NH_total,1, MPI_INTEGER, comm%mas, comm%com,i)
@@ -178,7 +179,7 @@ function get_desc(this,i) result(desc)
         write(error_unit,'(A,I6)')  "H-arr size  : ", this%NH_total
         ERROR STOP
     endif
-    if(i==this%NH_total.and.allocated(this%dip))then
+    if(i==this%NH_total.and.this%H_fft%is_set())then
         desc="dipolar"
         return
     endif
@@ -193,10 +194,12 @@ function get_desc(this,i) result(desc)
     endif
 end function
 
-subroutine init_H_mv(this,Harr)
+subroutine init_H_mv(this,lat,Harr,H_fft)
     !initializes the Hamiltonian by moving the H array (thus destroying Harr)
-    class(hamiltonian),intent(inout)        :: this
-    class(t_H),allocatable,intent(inout)    :: Harr(:)
+    class(hamiltonian),intent(inout)                :: this
+    type(lattice),intent(in)                        :: lat
+    class(t_H),allocatable,intent(inout)            :: Harr(:)
+    class(fft_H),allocatable,intent(inout),optional :: H_fft(:)
   
     if(.not.allocated(Harr))then
         write(error_unit,'(3/A)') "Cannot initialize Hamiltonian, since Harr-input is not allocated"
@@ -205,14 +208,24 @@ subroutine init_H_mv(this,Harr)
     Call move_alloc(Harr,this%H)
     this%NH_total=size(this%H)
     this%NH_local=this%NH_total
+    if(present(H_fft))then
+        if(allocated(H_fft))then
+            if(size(H_fft)/=1) ERROR STOP "IMPLEMENT H_fft array"
+            Call H_fft(1)%mv(this%H_fft)
+            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))
+            this%NH_total=this%NH_total+1
+        endif
+    endif
     this%is_set=.true.
 end subroutine
 
-subroutine init_H_cp(this,Harr)
+subroutine init_H_cp(this,lat,Harr,H_fft)
     use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
     !initializes the Hamiltonian by moving the H array (thus destroying Harr)
-    class(hamiltonian),intent(inout)        :: this
-    class(t_H),allocatable,intent(in)       :: Harr(:)
+    class(hamiltonian),intent(inout)                :: this
+    type(lattice),intent(in)                        :: lat
+    class(t_H),allocatable,intent(in)               :: Harr(:)
+    class(fft_H),allocatable,intent(in),optional    :: H_fft(:)
     integer     ::  i
    
     if(.not.allocated(Harr))then
@@ -225,13 +238,20 @@ subroutine init_H_cp(this,Harr)
     enddo
     this%NH_total=size(this%H)
     this%NH_local=this%NH_total
+    if(present(H_fft))then
+        if(allocated(H_fft))then
+            if(size(H_fft)/=1) ERROR STOP "IMPLEMENT H_fft array"
+            Call H_fft(1)%copy(this%H_fft)
+            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))
+            this%NH_total=this%NH_total+1
+        endif
+    endif
     this%is_set=.true.
 end subroutine
 
 
 subroutine energy_distrib(this,lat,order,Edist)
     !gets the energy at the sites, so far very wastefull with the memory
-    use mpi_util
     use mpi_distrib_v
     class(hamiltonian),intent(inout)    :: this
     type(lattice), intent(in)           :: lat
@@ -255,15 +275,14 @@ subroutine energy_distrib(this,lat,order,Edist)
         Call reduce_sum(mult,this%com_outer)
         Call gatherv(Edist,mult,this%com_outer)
     endif
-    if(allocated(this%dip).and.order==1)then
-        Call this%dip(1)%get_E_distrib(lat,this%dip_H,Edist(:,this%NH_total))
+    if(this%H_fft%is_set().and.order==1)then
+        Call this%H_fft%get_E_distrib(lat,this%H_fft_tmparr,Edist(:,this%NH_total))
     endif
 
 end subroutine
 
 subroutine energy_resolved(this,lat,E)
     use mpi_distrib_v, only: gatherv
-    use mpi_util
     !get contribution-resolved energies
     !only correct on outer master thread
     class(hamiltonian),intent(inout):: this
@@ -279,7 +298,7 @@ subroutine energy_resolved(this,lat,E)
     if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
 
-    if(allocated(this%dip)) Call this%dip(1)%get_E(lat,this%dip_H,E(this%NH_total))
+    if(this%H_fft%is_set()) Call this%H_fft%get_E(lat,this%H_fft_tmparr,E(this%NH_total))
 end subroutine
 
 function energy(this,lat)result(E)
@@ -296,8 +315,9 @@ end function
 
 function energy_single(this,i_m,dim_bnd,lat)result(E)
     use m_derived_types, only: number_different_order_parameters
+    use mpi_distrib_v
     !returns the total energy caused by a single entry !needs some updating 
-    class(hamiltonian),intent(in)   :: this
+    class(hamiltonian),intent(inout):: this
     integer,intent(in)              :: i_m
     type (lattice),intent(in)       :: lat
     integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete
@@ -306,20 +326,22 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     real(8)     ::  tmp_E(this%NH_total)
     integer     ::  i
 
-    if(allocated(this%dip)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
     if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     E=0.0d0
-    do i=1,this%NH_total
+    do i=1,this%NH_local
         Call this%H(i)%eval_single(tmp_E(i),i_m,dim_bnd,lat)
     enddo
-    tmp_E=tmp_E*real(this%H(:)%mult_M_single,8)
+    tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
+    if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
+    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(tmp_E,this%com_outer)
+
+    if(this%H_fft%is_set()) Call this%H_fft%get_E_single(lat,i_m,tmp_E(this%NH_total))
+
     E=sum(tmp_E)
 end function
 
 subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
-    use mpi_basic
-    use mpi_util
     class(hamiltonian),intent(inout)    :: this
     type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
     real(8),intent(out)                 :: B(:)
@@ -335,14 +357,38 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
     B=-B    !field is negative derivative
 
-    if(allocated(this%dip))then
-        Call this%dip(1)%get_H(lat,this%dip_H)
-        B=B-2.0d0*reshape(this%dip_H,shape(B))
+    if(this%H_fft%is_set().and.Ham_type==1)then
+        Call this%H_fft%get_H(lat,this%H_fft_tmparr)
+        B=B-2.0d0*reshape(this%H_fft_tmparr,shape(B))
     endif
 end subroutine
 
+subroutine get_eff_field_single(this,lat,site,B,Ham_type,tmp)
+    !calculates the effective internal field acting on a single site
+    class(hamiltonian),intent(inout)    :: this
+    type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
+    integer,intent(in)                  :: site
+    real(8),intent(out)                 :: B(:)
+    integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
+    real(8),intent(out)                 :: tmp(size(B))
+
+    integer     :: iH, ierr
+    B=0.0d0
+    do iH=1,this%NH_local
+        Call this%H(iH)%deriv(Ham_type)%get_single(this%H(iH),lat,site,B,tmp)
+    enddo
+
+    if(any(this%is_para)) Call reduce_sum(B,this%com_global)
+    B=-B    !field is negative derivative
+
+    if(this%H_fft%is_set().and.Ham_type==1)then
+        Call this%H_fft%get_H_single(lat,site,tmp)
+        B=B-2.0d0*tmp
+    endif
+end subroutine
+
+
 function is_master(this)result(master)
-    use mpi_basic
     class(hamiltonian),intent(in)       :: this
     logical                             :: master
 

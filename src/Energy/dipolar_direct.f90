@@ -1,5 +1,5 @@
 module m_dipolar_direct
-use m_input_H_types, only: io_H_dipole_direct
+use m_input_H_types, only: io_H_dipole
 use m_derived_types, only: lattice
 use m_dipolar_util, only: dip_pref, get_supercell_vec
 implicit none
@@ -11,12 +11,12 @@ subroutine read_dip_input(io_param,fname,io)
     use m_io_utils
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
-    type(io_H_dipole_direct),intent(out)        :: io
+    type(io_H_dipole),intent(out)   :: io
 
-    Call get_parameter(io_param,fname,'mag_dip_direct',io%is_set) 
+    Call get_parameter(io_param,fname,'mag_dip_use',io%is_set) 
     Call get_parameter(io_param,fname,'mag_dip_period_cut',io%period_cutoff) 
-!    Call get_parameter(io_param,fname,'mag_dip_dist_cut',io%dist_cutoff) 
-
+    io%fft=.true.
+    Call get_parameter(io_param,fname,'mag_dip_fft',io%fft) 
 end subroutine
 
 subroutine get_dipolar(Ham,io,lat)
@@ -30,7 +30,7 @@ subroutine get_dipolar(Ham,io,lat)
     use m_constants, only : pi
 
     class(t_H),intent(inout)            :: Ham  !Hamiltonian in which all contributions are added up
-    type(io_H_dipole_direct),intent(in) :: io   !input parameters 
+    type(io_H_dipole),intent(in)        :: io   !input parameters 
     type(lattice),intent(in)            :: lat
 
     real(8),allocatable ::  val(:)              !value array of coo-matrix

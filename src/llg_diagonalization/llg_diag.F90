@@ -1,5 +1,5 @@
 module m_llg_diag
-use m_H_public
+use m_hamiltonian_collection, only: hamiltonian
 use m_input_types,only : min_input
 use m_constants,  only : hbar, mu_B
 use m_io_files_utils
@@ -17,11 +17,11 @@ contains
 
 
 !build transition matrix
-subroutine build_transmat(lat,io_simu,Hams)
+subroutine build_transmat(lat,io_simu,H)
     use m_derived_types, only : io_parameter,lattice
     type(io_parameter), intent(in)  :: io_simu
     type(lattice),intent(inout)     :: lat
-    class(t_H), intent(in)          :: Hams(:)
+    type(hamiltonian),intent(inout) :: H
     ! internal
     real(8), allocatable			:: M0(:,:)
 	real(8),allocatable				:: Tr_theta(:,:), Tr_phi(:,:), Tr_thetaphi(:,:), Tr_phitheta(:,:), Tr(:,:)
@@ -56,7 +56,7 @@ subroutine build_transmat(lat,io_simu,Hams)
     
     call cart_to_sph(lat,M0) !convert stable state to sph
    
-	call build_num_hess(lat,io_simu,Hams,M0,Hess_theta,Hess_phi,Hess_thetaphi,Hess_phitheta) !build the hessian
+	call build_num_hess(lat,io_simu,H,M0,Hess_theta,Hess_phi,Hess_thetaphi,Hess_phitheta) !build the hessian
 	
     write(6,'(/,a,/)') 'Building the transition matrix...'
     
@@ -131,12 +131,12 @@ end subroutine
 
 
 ! 					Build numerical Hessian matrix    
-subroutine build_num_hess(lat,io_simu,Hams,M0,Hess_theta,Hess_phi,Hess_thetaphi,Hess_phitheta)
+subroutine build_num_hess(lat,io_simu,H,M0,Hess_theta,Hess_phi,Hess_thetaphi,Hess_phitheta)
 use m_derived_types, only : io_parameter,lattice
 	use m_io_files_utils, only: open_file_write,close_file
     type(io_parameter), intent(in)  :: io_simu
     type(lattice),intent(inout)     :: lat
-    class(t_H), intent(in)          :: Hams(:)
+    type(hamiltonian),intent(inout) :: H
     real(8),intent(in) 				:: M0(:,:)
     real(8),intent(inout) 			:: Hess_theta(:,:), Hess_phi(:,:), Hess_thetaphi(:,:), Hess_phitheta(:,:)
     ! internal
@@ -177,7 +177,7 @@ use m_derived_types, only : io_parameter,lattice
     save_hess=.true. 
     save_hess_submat=.true. 
     
-    E0=energy_all(Hams,lat)
+    E0=H%energy(lat)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',E0/real(N_cell,8)
     if(any(abs(sin(M0(1,:))).lt.1.0d-8)) stop 'This routine cannot be used if a spin lies at a pole.' !that's a problem
     
@@ -210,13 +210,13 @@ use m_derived_types, only : io_parameter,lattice
 	
 			!compute energies
 			M3=Mp_cart
-			Ep=energy_all(Hams,lat)
+			Ep=H%energy(lat)
 			M3=Mm_cart
-			Em=energy_all(Hams,lat)
+			Em=H%energy(lat)
 			M3=Mmp_cart
-			Emp=energy_all(Hams,lat)
+			Emp=H%energy(lat)
 			M3=Mpm_cart
-			Epm=energy_all(Hams,lat)
+			Epm=H%energy(lat)
 
 			!Hess_theta entry
 			if(i.ne.j) then !off-diagonal term
@@ -254,13 +254,13 @@ use m_derived_types, only : io_parameter,lattice
 				
 			!compute energies
 			M3=Mp_cart
-			Ep=energy_all(Hams,lat)
+			Ep=H%energy(lat)
 			M3=Mm_cart
-			Em=energy_all(Hams,lat)
+			Em=H%energy(lat)
 			M3=Mmp_cart
-			Emp=energy_all(Hams,lat)
+			Emp=H%energy(lat)
 			M3=Mpm_cart
-			Epm=energy_all(Hams,lat)
+			Epm=H%energy(lat)
 			
 			!Hess_phi entry
 			if(i.ne.j) then !off-diagonal term
@@ -298,13 +298,13 @@ use m_derived_types, only : io_parameter,lattice
 				
 			!compute energies
 			M3=Mp_cart
-			Ep=energy_all(Hams,lat)
+			Ep=H%energy(lat)
 			M3=Mm_cart
-			Em=energy_all(Hams,lat)
+			Em=H%energy(lat)
 			M3=Mmp_cart
-			Emp=energy_all(Hams,lat)
+			Emp=H%energy(lat)
 			M3=Mpm_cart
-			Epm=energy_all(Hams,lat)
+			Epm=H%energy(lat)
 				
 			!Hess_thetaphi entry
 			Hess_thetaphi(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0d0*dphi*dtheta*sin(M0(1,j)) )
@@ -338,13 +338,13 @@ use m_derived_types, only : io_parameter,lattice
 				
 			!compute energies
 			M3=Mp_cart
-			Ep=energy_all(Hams,lat)
+			Ep=H%energy(lat)
 			M3=Mm_cart
-			Em=energy_all(Hams,lat)
+			Em=H%energy(lat)
 			M3=Mmp_cart
-			Emp=energy_all(Hams,lat)
+			Emp=H%energy(lat)
 			M3=Mpm_cart
-			Epm=energy_all(Hams,lat)
+			Epm=H%energy(lat)
 					
 			!Hess_thetaphi entry
 			Hess_phitheta(i,j)=(  Ep - Epm - Emp + Em ) /  ( 4.0*dphi*dtheta *sin(M0(1,i)) )
