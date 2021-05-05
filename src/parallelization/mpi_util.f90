@@ -151,7 +151,7 @@ subroutine bcast_alloc_cmplx3(arr,com)
     Call bcast(shp,com)
     if(.not.allocated(arr)) allocate(arr(shp(1),shp(2),shp(3)))
 
-    Call MPI_BCAST(arr(1,1),size(arr),MPI_DOUBLE_COMPLEX,com%mas,com%com,ierr)
+    Call MPI_BCAST(arr(1,1,1),size(arr),MPI_DOUBLE_COMPLEX,com%mas,com%com,ierr)
 #else
     continue
 #endif

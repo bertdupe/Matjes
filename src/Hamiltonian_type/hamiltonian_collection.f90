@@ -73,7 +73,9 @@ subroutine distribute(this,com_in)
 
     if(com_in%ismas)then
         if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
-        if(this%H_fft%is_set()) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE"
+        if(allocated(this%H_fft))then
+            write(error_unit,*) "WARNING, MPI-distributions for H_fft is not implemented"
+        endif
     endif
     Call bcast(this%NH_total,com_in)
     this%NH_local=this%NH_total
@@ -91,7 +93,7 @@ subroutine distribute(this,com_in)
             allocate(this%desc_master(this%N_total))
             this%desc_master(1:this%NH_total)=this%H(:)%desc
             do i=1,this%NHF_total
-                Call this%H_fft%get_desc(this%desc_master(this%NH_total+i))
+                Call this%H_fft(i)%get_desc(this%desc_master(this%NH_total+i))
             enddo
 
             !send Hamiltonians
