@@ -372,6 +372,7 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     real(8),intent(out)                 :: tmp(size(B))
 
     integer     :: iH, ierr
+
     B=0.0d0
     do iH=1,this%NH_local
         Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B,tmp)

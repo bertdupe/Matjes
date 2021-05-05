@@ -84,6 +84,7 @@ subroutine add(this,H_in)
     else
         if(.not.this%same_space(H_in)) ERROR STOP "CANNOT ADD fft_H as this and H_in do not act on same space"
         this%K_F=this%K_F+H_in%K_F
+        this%desc="combined Hamiltonian"
     endif
 end subroutine
 
