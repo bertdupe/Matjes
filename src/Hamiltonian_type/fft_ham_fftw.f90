@@ -1,25 +1,22 @@
-module m_fft_ham
+module m_fft_H_fftw
 !module which contains the general discrete fourier transform Hamiltonian based on FFTW3
 
 !the type is used by first calling init_shape, followed by init_op with the operator as described in more detail for the dipolar_fft interaction
 
 use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 use m_fftw3
+use m_fft_H_base, only: fft_H
 use m_type_lattice,only: lattice
 use m_fft_H_internal, only: int_set_M, int_get_H
 use m_H_type, only: len_desc
 private
-public fft_H
+public fft_H_fftw
 
-type        ::  fft_H
+type,extends(fft_H) ::  fft_H_fftw
     private
-    logical         :: set=.false.  !all parameters have been initialized
-    integer         :: N_rep(3)=0   !size in each dimension of each considered field
-    logical         :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
-                                            ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
     type(c_ptr)     :: plan_mag_F=c_null_ptr   !FFTW plan M_n -> M_F
     type(c_ptr)     :: plan_H_I=c_null_ptr     !FFTW plan H_F -> H_n
-    character(len=len_desc)     :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
+
     real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
 
@@ -35,10 +32,8 @@ contains
     procedure,public    :: get_E            !get energy
     procedure,public    :: get_E_single     !get energy for a single site
     procedure,public    :: get_E_distrib    !get energy-distribution in Nmag*Ncell-space
-    procedure,public    :: is_set           !returns set
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
-    procedure,public    :: get_desc         !get the description
     
     !utility functions
     procedure,public    :: destroy          !destroys all data of this type
@@ -51,52 +46,40 @@ contains
     !internal procedures
     procedure           :: set_M                !set internal magnetization in normal-space from lattice
     procedure           :: init_internal        !initialize internal procedures
-    procedure           :: same_space           !check if 2 fft_H act on same space
 end type
 contains 
 
-subroutine get_desc(this,desc)
-    class(fft_H),intent(in)             :: this
-    character(len=len_desc),intent(out) :: desc
-
-    desc=this%desc
-end subroutine
-
-function same_space(this,comp)result(same)
-    class(fft_H),intent(in) :: this
-    type(fft_H),intent(in)  :: comp
-    logical                 :: same
-
-    if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as this is not set"
-    if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as comp is not set"
-
-    same=all(this%N_rep==comp%N_rep)
-    same=same.and.all(this%periodic.eqv.comp%periodic)
-end function
-
 subroutine add(this,H_in)
-    class(fft_H),intent(inout)  :: this
-    type(fft_H),intent(in)      :: H_in
+    class(fft_H_fftw),intent(inout)  :: this
+    class(fft_H),intent(in)     :: H_in
 
-    if(.not.H_in%set) ERROR STOP "CANNOT ADD fft_H as H_in is not set"
-    if(.not.this%set)then
-        Call H_in%copy(this)
-    else
+    logical :: is_set
+
+    if(.not.H_in%is_set()) ERROR STOP "CANNOT ADD fft_H as H_in is not set"
+    is_set=this%is_set()
+    if(is_set)then
         if(.not.this%same_space(H_in)) ERROR STOP "CANNOT ADD fft_H as this and H_in do not act on same space"
-        this%K_F=this%K_F+H_in%K_F
-        this%desc="combined Hamiltonian"
+        Call this%fft_H%add(H_in)
+        select type(H_in)
+        type is(fft_H_fftw)
+            this%K_F=this%K_F+H_in%K_F
+        class default
+            ERROR STOP "HAS TO HAVE SAME TYPE"
+        end select
+    else
+        Call H_in%copy(this)
     endif
 end subroutine
 
 subroutine bcast_fft(this,comm)
     use mpi_util
-    class(fft_H),intent(inout)  ::  this
+    class(fft_H_fftw),intent(inout)  ::  this
     type(mpi_type),intent(in)   ::  comm
 
     integer ::  shp(2)
 
-    Call bcast(this%N_rep,comm)
-    Call bcast(this%periodic,comm)
+    Call this%fft_H%bcast(comm)
+
     if(comm%ismas)then
         shp=shape(this%M_n)
     endif
@@ -110,58 +93,55 @@ subroutine bcast_fft(this,comm)
     endif
     Call bcast_alloc(this%K_F,comm)
     if(.not.comm%ismas) Call set_fftw_plans(this)
-    Call bcast(this%set,comm)
 end subroutine
 
 subroutine mv(this,H_out)
-    class(fft_H),intent(inout)  :: this
-    type(fft_H),intent(inout)   :: H_out
+    class(fft_H_fftw),intent(inout)  :: this
+    class(fft_H),intent(inout)   :: H_out
 
     if(.not.this%set)then
         ERROR STOP "CANNOT MV UNINITIALIZED FFT_H"
     endif
-
-    H_out%N_rep=this%N_rep
-    H_out%periodic=this%periodic
-    call move_alloc(this%M_n,H_out%M_n)
-    call move_alloc(this%M_F,H_out%M_F)
-    call move_alloc(this%H_n,H_out%H_n)
-    call move_alloc(this%H_F,H_out%H_F)
-    call move_alloc(this%K_F,H_out%K_F)
-    H_out%M_internal=>this%M_internal
-    H_out%H_internal=>this%H_internal
-
-    H_out%set=this%set
+    Call this%fft_H%mv(H_out)
+    select type(H_out)
+    type is(fft_H_fftw)
+        call move_alloc(this%M_n,H_out%M_n)
+        call move_alloc(this%M_F,H_out%M_F)
+        call move_alloc(this%H_n,H_out%H_n)
+        call move_alloc(this%H_F,H_out%H_F)
+        call move_alloc(this%K_F,H_out%K_F)
+        H_out%M_internal=>this%M_internal
+        H_out%H_internal=>this%H_internal
+    class default
+        ERROR STOP "HAS TO HAVE SAME TYPE"
+    end select
     Call this%destroy()
 end subroutine
 
 subroutine copy(this,H_out)
-    class(fft_H),intent(in)     :: this
-    type(fft_H),intent(inout)   :: H_out
+    class(fft_H_fftw),intent(in):: this
+    class(fft_H),intent(inout)   :: H_out
 
-    if(.not.this%set)then
-        ERROR STOP "CANNOT COPY UNINITIALIZED FFT_H"
-    endif
-    H_out%N_rep=this%N_rep
-    H_out%periodic=this%periodic
-    allocate(H_out%M_n,mold=this%M_n)
-    allocate(H_out%M_F,mold=this%M_F)
-    allocate(H_out%H_n,mold=this%H_n)
-    allocate(H_out%H_F,mold=this%H_F)
-    allocate(H_out%K_F,source=this%K_F)
-    H_out%M_internal=>this%M_internal
-    H_out%H_internal=>this%H_internal
-    Call set_fftw_plans(H_out)
-
-    H_out%set=this%set
+    Call this%fft_H%copy(H_out)
+    select type(H_out)
+    type is(fft_H_fftw)
+        allocate(H_out%M_n,mold=this%M_n)
+        allocate(H_out%M_F,mold=this%M_F)
+        allocate(H_out%H_n,mold=this%H_n)
+        allocate(H_out%H_F,mold=this%H_F)
+        allocate(H_out%K_F,source=this%K_F)
+        H_out%M_internal=>this%M_internal
+        H_out%H_internal=>this%H_internal
+        Call set_fftw_plans(H_out)
+    class default
+        ERROR STOP "HAS TO HAVE SAME TYPE"
+    end select
 end subroutine
 
 subroutine destroy(this)
-    class(fft_H),intent(inout)     :: this
+    class(fft_H_fftw),intent(inout)     :: this
 
-    this%N_rep=0
-    this%set=.false.
-    this%periodic=.true.
+    Call this%fft_H%destroy()
 #ifdef CPP_FFTW3
     if(c_associated(this%plan_mag_f)) Call fftw_destroy_plan(this%plan_mag_f)
     if(c_associated(this%plan_H_I))   Call fftw_destroy_plan(this%plan_H_I)
@@ -174,18 +154,11 @@ subroutine destroy(this)
     if(allocated(this%H_F)) deallocate(this%H_F)
     if(allocated(this%H_n)) deallocate(this%H_n)
     nullify(this%M_internal, this%M_internal)
-
 end subroutine
-
-pure function is_set(this)result(set)
-    class(fft_H),intent(in)       :: this
-    logical     ::  set
-    set=this%set
-end function
 
 subroutine init_op(this,dim_mode,K_n,desc_in)
     !subroutine which initializes the fourier-transformed operator of K, while deallocating K_N
-    class(fft_H),intent(inout)              :: this
+    class(fft_H_fftw),intent(inout)         :: this
     integer,intent(in)                      :: dim_mode
     real(8),intent(inout),allocatable       :: K_n(:,:,:)
     character(len=*),intent(in),optional    :: desc_in
@@ -196,9 +169,7 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
     type(c_ptr)     :: plan_K_F !plan for fourier transformation of K
 
-    if(present(desc_in))then
-        if(len(desc_in)<=len_desc) this%desc=desc_in
-    endif
+    Call this%fft_H%init_op(dim_mode,K_n,desc_in)
 
     !check shapes etc.
     if(.not.allocated(this%M_n))then
@@ -249,7 +220,7 @@ end subroutine
 subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     !initializes the arrays with whose the work will be done, sets the shapes, and returns shape data necessary for construction of the operator tensor
 !$  use omp_lib    
-    class(fft_H),intent(inout)  :: this
+    class(fft_H_fftw),intent(inout)  :: this
     integer,intent(in)          :: dim_mode
     logical,intent(in)          :: periodic(3)  !T: periodic boundary, F: open boundary
     integer,intent(in)          :: dim_lat(3)
@@ -267,19 +238,8 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
         ERROR STOP
     endif
 
-    N_rep=dim_lat
-    !set K-boundaries for periodic boundaries
-    Kbd(1,:)=[0,0,0]
-    Kbd(2,:)=dim_lat-1
-    !set K-boundaries for open boundaries if open
-    do i=1,3
-        if(.not.periodic(i))then
-            N_rep(i)=2*N_rep(i)
-            Kbd(:,i)=[-dim_lat(i)+1,dim_lat(i)-1]
-        endif
-    enddo
-    this%N_rep=N_rep
-    this%periodic=periodic
+    Call this%fft_H%init_shape(dim_mode,periodic,dim_lat,Kbd,N_rep)
+
     Nk_tot=product(N_rep)
 
 !$  Call fftw_plan_with_nthreads(omp_get_max_threads())
@@ -300,7 +260,7 @@ end subroutine
 subroutine init_internal(this,periodic)
     !initialize internal procedures M_internal and H_internal
     use m_fft_H_internal
-    class(fft_H),intent(inout)    :: this
+    class(fft_H_fftw),intent(inout)    :: this
     logical,intent(in)            :: periodic(3)  !T: periodic boundary, F: open boundary
 
     if(all(periodic))then
@@ -320,7 +280,7 @@ end subroutine
 
 subroutine set_M(this,lat)
     !set this%M_n from lat%M%modes according to this%M_internal
-    class(fft_H),intent(inout)    ::  this
+    class(fft_H_fftw),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
 
     Call this%M_internal(this%M_n,lat%M%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
@@ -328,7 +288,7 @@ end subroutine
 
 subroutine get_H(this,lat,Hout)
     !get effective field H 
-    class(fft_H),intent(inout)    ::  this
+    class(fft_H_fftw),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
     real(8),intent(inout)         ::  Hout(:,:)
 #ifdef CPP_FFTW3
@@ -354,7 +314,7 @@ end subroutine
 
 subroutine get_H_single(this,lat,site,Hout)
     !get effective field H
-    class(fft_H),intent(inout)    ::  this
+    class(fft_H_fftw),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
     integer,intent(in)            ::  site
     real(8),intent(inout)         ::  Hout(3)
@@ -380,7 +340,7 @@ subroutine get_H_single(this,lat,site,Hout)
 end subroutine
 
 subroutine get_E_distrib(this,lat,Htmp,E)
-    class(fft_H),intent(inout)    ::  this
+    class(fft_H_fftw),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
     real(8),intent(inout)         ::  Htmp(:,:)
     real(8),intent(out)           ::  E(:)
@@ -391,7 +351,7 @@ subroutine get_E_distrib(this,lat,Htmp,E)
 end subroutine
 
 subroutine get_E(this,lat,Htmp,E)
-    class(fft_H),intent(inout)    ::  this
+    class(fft_H_fftw),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
     real(8),intent(inout)         ::  Htmp(:,:)
     real(8),intent(out)           ::  E
@@ -404,7 +364,7 @@ end subroutine
 subroutine get_E_single(this,lat,site,E)
     !get energy by getting the effective field caused by all sites and multiply the considered site's H with the moment there
     !it might be faster to do the explicit folding in real space to get the effective field caused by the considered site and multiply then with the entire magnetization (might be worth testing)
-    class(fft_H),intent(inout)  :: this
+    class(fft_H_fftw),intent(inout)  :: this
     type(lattice),intent(in)    :: lat
     integer,intent(in)          :: site
     real(8),intent(out)         :: E
@@ -417,7 +377,7 @@ subroutine get_E_single(this,lat,site,E)
 end subroutine
 
 subroutine set_fftw_plans(this)
-    class(fft_H),intent(inout)  :: this
+    class(fft_H_fftw),intent(inout)  :: this
 
     integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)

@@ -134,12 +134,12 @@ end subroutine
 subroutine get_anisotropy_fft(H_fft,io,lat)
     !get anisotropy in the fft_H format. 
     !Since the anisotropy is super localized in normal space this makes absolutely no sense unless used in combination with a delocalized Hamiltonian (dipolar-interaction) so that the evaluation is for free 
-    use  m_fft_ham, only: fft_H
+    use m_fft_H_base, only: fft_H
     use m_derived_types, only: lattice
     use m_input_H_types, only: io_H_aniso
     use m_mode_public
 
-    type(fft_H),intent(inout)   :: H_fft
+    class(fft_H),intent(inout)  :: H_fft
     type(io_H_aniso),intent(in) :: io
     type(lattice),intent(in)    :: lat
 

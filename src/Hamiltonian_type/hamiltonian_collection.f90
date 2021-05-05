@@ -1,5 +1,7 @@
 module m_hamiltonian_collection
-use m_H_public, only: t_H, get_Htype_N, fft_H
+use m_H_public, only: t_H, get_Htype_N
+use m_fft_H_public, only: fft_H
+
 use m_H_type,only : len_desc
 use m_derived_types, only: lattice
 use mpi_basic

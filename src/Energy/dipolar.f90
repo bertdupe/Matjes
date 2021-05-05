@@ -56,9 +56,9 @@ end subroutine
 subroutine get_dipolar_fft(dip,io,lat)
     !main routine to describe the dipolar interaction using the discrete fourier transformation
     use m_constants, only : pi
-    use m_fft_ham, only: fft_H
+    use m_fft_H_base, only: fft_H
 !$  use omp_lib    
-    type(fft_H),intent(inout)               :: dip
+    class(fft_H),intent(inout)              :: dip
     type(io_H_dipole),intent(in)            :: io
     type(lattice),intent(in)                :: lat
 

@@ -1,5 +1,5 @@
 module m_set_fft_Hamiltonians
-use m_H_public
+use m_fft_H_public
 implicit none
 private
 public :: set_fft_Hamiltonians
@@ -29,7 +29,7 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
 
     N_ham=count(use_ham)
     if(N_ham<1) return  !nothing to do here
-    allocate(fft_H::Ham_res(N_ham))
+    Call get_fft_H(Ham_res,N_ham) 
     i_H=1 
     !exchange_J (without DMI)
     if(use_ham(1))then
@@ -63,7 +63,7 @@ subroutine combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
 
     integer     ::  i
 
-    allocate(fft_H::Ham_comb(1))
+    Call get_fft_H(Ham_comb,1) 
     do i=1,size(ham_res)
         Call Ham_comb(1)%add(Ham_res(i))
     enddo

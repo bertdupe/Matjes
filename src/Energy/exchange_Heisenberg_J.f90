@@ -96,12 +96,12 @@ end subroutine
 subroutine get_exchange_J_fft(H_fft,io,lat)
     !get heisenberg symmetric exchange in fft_H Hamiltonian format
     !Since the anisotropy is localized localized in normal space this makes absolutely no sense unless used in combination with a delocalized Hamiltonian (dipolar-interaction) so that the evaluation is for free 
-    use m_fft_ham, only: fft_H
+    use m_fft_H_base, only: fft_H
     use m_derived_types, only: lattice
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
 
-    type(fft_H),intent(inout)   :: H_fft 
+    class(fft_H),intent(inout)  :: H_fft 
     type(io_H_J),intent(in)     :: io
     type(lattice),intent(in)    :: lat
 
