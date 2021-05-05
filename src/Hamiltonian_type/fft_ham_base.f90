@@ -1,12 +1,10 @@
 module m_fft_H_base
-!module which contains the general discrete fourier transform Hamiltonian based on FFTW3
+!module which contains the basic Hamiltonian description of a Hamiltonian solved through discrete fourier transformation
+!while this type is not defined as abstract, in general it should be as its main set and evaluation routines will create a crash
 
-!the type is used by first calling init_shape, followed by init_op with the operator as described in more detail for the dipolar_fft interaction
+!only the extensions of this type should be allocated
 
-use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
-use m_fftw3
 use m_type_lattice,only: lattice
-use m_fft_H_internal, only: int_set_M, int_get_H
 use m_H_type, only: len_desc
 private
 public fft_H
@@ -235,9 +233,6 @@ end subroutine
 
 subroutine set_fftw_plans(this)
     class(fft_H),intent(inout)  :: this
-
-    integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
-    integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
     
     ERROR STOP "set_fftw_plans not implemented in base class"
 end subroutine
