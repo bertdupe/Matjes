@@ -11,7 +11,7 @@ type fluct_parameters
 !    integer, allocatable    :: flat_nei(:,:)
 !    integer, allocatable    :: indexNN(:)
     type(neighbors)         :: neigh
-    integer                 :: ind(2)  !index of positive and negative nearest neighbor in neigh%diff_vec array 
+    integer                 :: ind(1)  !index of positive and negative nearest neighbor in neigh%diff_vec array 
 contains
     procedure get_nneigh
 end type
@@ -44,11 +44,11 @@ subroutine init_fluct_parameter(fluct_val,lat,l_use_in,direction)
         allocate(proj(size(diff_vec,2)),source=0.0d0)
         proj=matmul(direction,diff_vec)
         fluct_val%ind(1)=maxloc(proj,1)
-        proj=matmul(diff_vec(:,fluct_val%ind(1)),diff_vec)
-        fluct_val%ind(2)=minloc(proj,1)
+       ! proj=matmul(diff_vec(:,fluct_val%ind(1)),diff_vec)
+        !fluct_val%ind(2)=minloc(proj,1)
         fluct_val%ind=fluct_val%ind+bnd(1)-1
 
-        write(output_unit,'(//A)') "Fluction neighbors are in the following order:"
+        write(output_unit,'(//A)') "Fluctuation neighbors are in the following order:"
         write(output_unit,'(3F16.8)') diff_vec
         write(output_unit,'(/A)') "Considering the following neighbors:"
         write(output_unit,'(3F16.8)') fluct_val%neigh%diff_vec(:,fluct_val%ind)
