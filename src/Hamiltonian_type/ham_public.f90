@@ -2,56 +2,132 @@ module m_H_public
 !module used to choose the correct version of treating the Hamiltonian 
 !and provide all necessary types for other routines
 
-#if defined CPP_MKL_SPBLAS
 use m_H_sparse_mkl
-#elif defined CPP_EIGEN_H
 use m_H_eigen
 use m_H_eigen_mem
-#elif defined CPP_DENSE && defined(CPP_BLAS)
 use m_H_dense_blas
-#elif defined CPP_DENSE
 use m_H_dense
-#else
-!TODO MORE
-use m_H_manual
-#endif
 
 use m_derived_types, only : lattice
 implicit none
+
 public
+#if defined CPP_MKL_SPBLAS
+integer,private ::  mode=1  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
+#elif defined CPP_EIGEN_H
+integer,private ::  mode=2  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
+#elif defined CPP_BLAS
+integer,private ::  mode=4  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
+#else
+integer,private ::  mode=5  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
+#endif
+
 
 contains
+
+    subroutine set_Ham_mode_io(fname_in)
+        use m_io_files_utils, only : open_file_read,close_file
+        use m_io_utils,only: get_parameter
+        character(*),intent(in),optional    :: fname_in
+        !internal
+        character(*),parameter              :: fname_default='input'
+        character(:), allocatable           :: fname
+
+        integer ::  io_param
+
+        if(present(fname_in))then
+            fname=fname_in
+        else
+            fname=fname_default
+        endif
+        io_param=open_file_read(fname)
+        call get_parameter(io_param,fname,'Hamiltonian_mode',mode)
+        call close_file(fname,io_param)
+
+        select case(mode)
+        case(1)
+            write(*,'(/A/)') "Using Hamiltonian implementation: sparse mkl"
+        case(2)
+            write(*,'(/A/)') "Using Hamiltonian implementation: Eigen (saving transpose as well)"
+        case(3)
+            write(*,'(/A/)') "Using Hamiltonian implementation: Eigen"
+        case(4)
+            write(*,'(/A/)') "Using Hamiltonian implementation: Dense using blas"
+        case(5)
+            write(*,'(/A/)') "Using Hamiltonian implementation: Dense"
+        case default
+            ERROR STOP "READ IN UNIMPLEMENTED Hamiltonian_mode"
+        end select
+    end subroutine
+
     subroutine get_Htype(H_out)
         class(t_h),intent(out),allocatable      :: H_out 
+        select case(mode)
+        case(1)
 #if defined CPP_MKL_SPBLAS
-       allocate(t_H_mkl_csr::H_out)
-#elif defined CPP_EIGEN_H
-       !allocate(t_H_eigen::H_out)
-       allocate(t_H_eigen_mem::H_out)   !mem saves transpose H as well which accelerates some operations, but costs memeory (add option)
-#elif defined CPP_DENSE && defined(CPP_BLAS)
-       allocate(t_H_dense_blas::H_out)
-#elif defined CPP_DENSE
-       allocate(t_H_dense::H_out)
+            allocate(t_H_mkl_csr::H_out)
 #else
-       allocate(t_H_manual::H_out)
+            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL_SPBLAS)"
 #endif
+        case(2)
+#if defined CPP_EIGEN_H
+            allocate(t_H_eigen_mem::H_out)
+#else
+            ERROR STOP "CANNOT USE t_H_eigen_mem Sparse Hamiltonian  implementation without Eigen (CPP_EIGEN_H)"
+#endif
+        case(3)
+#if defined CPP_EIGEN_H
+            allocate(t_H_eigen::H_out)
+#else
+            ERROR STOP "CANNOT USE t_H_eigen Sparse Hamiltonian implementation without Eigen (CPP_EIGEN_H)"
+#endif
+        case(4)
+#if defined CPP_BLAS
+            allocate(t_H_dense_blas::H_out)
+#else
+            ERROR STOP "CANNOT USE t_H_dense_blas Sparse Hamiltonian implementation without BLAS (CPP_BLAS)"
+#endif
+        case(5)
+            allocate(t_H_dense::H_out)
+        case default
+            ERROR STOP "UNEXPECTED MODE SET DECIDING HAMILTONIAN IMPLEMENTATION"
+        end select
     end subroutine
     
     subroutine get_Htype_N(H_out,N)
         class(t_h),intent(out),allocatable      :: H_out (:)
         integer,intent(in)                      :: N
+
+        select case(mode)
+        case(1)
 #if defined CPP_MKL_SPBLAS
-       allocate(t_H_mkl_csr::H_out(N))
-#elif defined CPP_EIGEN_H
-       !allocate(t_H_eigen::H_out(N))
-       allocate(t_H_eigen_mem::H_out(N))    !mem saves transpose H as well which accelerates some operations, but costs memeory (add option)
-#elif defined CPP_DENSE && defined(CPP_BLAS)
-       allocate(t_H_dense_blas::H_out(N))
-#elif defined CPP_DENSE
-       allocate(t_H_dense::H_out(N))
+            allocate(t_H_mkl_csr::H_out(N))
 #else
-       allocate(t_H_manual::H_out(N))
+            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL_SPBLAS)"
 #endif
+        case(2)
+#if defined CPP_EIGEN_H
+            allocate(t_H_eigen_mem::H_out(N))
+#else
+            ERROR STOP "CANNOT USE t_H_eigen_mem Sparse Hamiltonian  implementation without Eigen (CPP_EIGEN_H)"
+#endif
+        case(3)
+#if defined CPP_EIGEN_H
+            allocate(t_H_eigen::H_out(N))
+#else
+            ERROR STOP "CANNOT USE t_H_eigen Sparse Hamiltonian implementation without Eigen (CPP_EIGEN_H)"
+#endif
+        case(4)
+#if defined CPP_BLAS
+            allocate(t_H_dense_blas::H_out(N))
+#else
+            ERROR STOP "CANNOT USE t_H_dense_blas Sparse Hamiltonian implementation without BLAS (CPP_BLAS)"
+#endif
+        case(5)
+            allocate(t_H_dense::H_out(N))
+        case default
+            ERROR STOP "UNEXPECTED MODE SET DECIDING HAMILTONIAN IMPLEMENTATION"
+        end select
     end subroutine
 
     subroutine Bcast_Harr(ham,comm)
