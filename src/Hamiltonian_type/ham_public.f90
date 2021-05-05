@@ -16,8 +16,6 @@ use m_H_dense
 use m_H_manual
 #endif
 
-use m_fft_ham, only: fft_H
-
 use m_derived_types, only : lattice
 implicit none
 public

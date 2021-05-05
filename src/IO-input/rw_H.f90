@@ -17,7 +17,7 @@ module m_rw_H
         use m_stark, only : read_stark_input
         use m_Mag_Biq, only : read_Mag_Biq_input
         use m_4spin, only: read_sp4_input
-        use m_dipolar_direct, only: read_dip_input
+        use m_dipolar_magnetic, only: read_dip_input
         
         type(io_H),intent(out)      :: H_io
         character(*),parameter      :: fname='input'

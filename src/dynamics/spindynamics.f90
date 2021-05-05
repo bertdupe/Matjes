@@ -11,7 +11,6 @@ contains
 subroutine spindynamics(lat,io_simu,ext_param,H,H_res,comm)
     !wrapper to first initialize all spin-dynamics parameters and distribute on the different threads
     use m_H_public,only: t_H
-    use m_dipolar_fft, only: get_dip
     type(lattice), intent(inout)                :: lat
     type(io_parameter), intent(inout)           :: io_simu
     type(simulation_parameters), intent(inout)  :: ext_param
@@ -52,6 +51,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     use m_solver_order,only : get_Dmode_int
     use m_dyna_io, only: rw_dyna
+    use,intrinsic :: iso_fortran_env, only : output_unit
 !$  use omp_lib
     
     ! input
@@ -94,10 +94,13 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
     real(8),allocatable ::  Beff_tmp(:)
 
+    real(8)     ::  time_init, time_final
+
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! Initialize all data necessary on all threads
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if(comm%ismas) Call cpu_time(time_init)
     dim_mode=mag_lattice%M%dim_mode
     N_cell=mag_lattice%Ncell
     Call mag_lattice%used_order(used)
@@ -366,6 +369,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         else
             write(6,'(a)') 'the temperature measurement is not possible'
         endif
+    endif
+    if(comm%ismas)then
+        Call cpu_time(time_final)
+        write(output_unit,'(A,F16.8,A)') "time spend in spin-dynamics routine ",time_final-time_init, "s"
     endif
 
 end subroutine 
