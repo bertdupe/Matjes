@@ -142,7 +142,7 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
    
     !broadcast and calculate locally necessary values for further calculations
     Call bcast_alloc(Q_neigh,com)
-    Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct)  !check if this can be bcasted as well
+    Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct,io_MC%fluct_dir)  !check if this can be bcasted as well
 
     !Scatter the measure-tasks to all treads
     Call measure_scatterv(measure,com_outer)

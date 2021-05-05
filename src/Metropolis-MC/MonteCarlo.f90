@@ -112,7 +112,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     !bcast parameters to all threads
     Call bcast(filen_kt_acc,com_all)
     Call bcast_alloc(Q_neigh,com_all)
-    Call init_fluct_parameter(fluct_val,lat,io_MC%do_fluct)  !check if this can be bcasted as well
+    Call init_fluct_parameter(fluct_val,lat,io_MC%do_fluct,io_MC%fluct_dir)  !check if this can be bcasted as well
 
     !Scatter the measure-tasks to all inner master threads (this distributes the temperatures) 
     if(com_inner%ismas)  Call measure_scatterv(measure,com_outer) 

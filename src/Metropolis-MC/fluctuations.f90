@@ -11,6 +11,7 @@ type fluct_parameters
 !    integer, allocatable    :: flat_nei(:,:)
 !    integer, allocatable    :: indexNN(:)
     type(neighbors)         :: neigh
+    integer                 :: ind(2)  !index of positive and negative nearest neighbor in neigh%diff_vec array 
 contains
     procedure get_nneigh
 end type
@@ -23,17 +24,35 @@ function get_nneigh(this)result(nneigh)
     nneigh=this%neigh%Nshell(2) !2 because one is on-site, 2 next nearest neighbor as decided in init_fluct_parameter
 end function
 
-subroutine init_fluct_parameter(fluct_val,lat,l_use_in)
+subroutine init_fluct_parameter(fluct_val,lat,l_use_in,direction)
     use, intrinsic :: iso_fortran_env, only : output_unit
     type(fluct_parameters)     :: fluct_val
     type(lattice),intent(in)    :: lat
     logical,intent(in)          :: l_use_in
+    real(8),intent(in)          :: direction(3)
+
+    integer                     :: bnd(2)
+    real(8),allocatable         :: diff_vec(:,:)
+    real(8),allocatable         :: proj(:) 
 
     fluct_val%l_use=l_use_in
     if(fluct_val%l_use)then
         Call fluct_val%neigh%get([1,1],[0,1],lat)   !so far only fluctuations implemented between next nearest neighbors of first atom type
+        bnd=[fluct_val%neigh%Nshell(1)+1,sum(fluct_val%neigh%Nshell(1:2))]
+        allocate(diff_vec(3,bnd(2)-bnd(1)+1))
+        diff_vec=fluct_val%neigh%diff_vec(:,bnd(1):bnd(2))
+        allocate(proj(size(diff_vec,2)),source=0.0d0)
+        proj=matmul(direction,diff_vec)
+        fluct_val%ind(1)=maxloc(proj,1)
+        proj=matmul(diff_vec(:,fluct_val%ind(1)),diff_vec)
+        fluct_val%ind(2)=minloc(proj,1)
+        fluct_val%ind=fluct_val%ind+bnd(1)-1
+
         write(output_unit,'(//A)') "Fluction neighbors are in the following order:"
-        write(output_unit,'(3F16.8)') fluct_val%neigh%diff_vec(:,2:)
+        write(output_unit,'(3F16.8)') diff_vec
+        write(output_unit,'(/A)') "Considering the following neighbors:"
+        write(output_unit,'(3F16.8)') fluct_val%neigh%diff_vec(:,fluct_val%ind)
+
     endif
 end subroutine
 
@@ -50,6 +69,7 @@ subroutine eval_fluct( MjpMim_ij_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,flu
 	complex(8)		:: MipMip, MipMim, MipMjp
     integer         :: neigh_start
     integer         :: shell_offset
+    integer         :: ind
 
     if(.not.fluct_val%l_use) return
 
@@ -70,10 +90,9 @@ subroutine eval_fluct( MjpMim_ij_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,flu
     enddo
 
     !do nearest neighbor terms
-    neigh_start=fluct_val%neigh%ishell(1)+1
-    shell_offset=sum(fluct_val%neigh%Nshell(:1))
-    do i_sh=1,fluct_val%neigh%Nshell(2)
-        do i_nei=neigh_start,fluct_val%neigh%ishell(shell_offset+i_sh) 
+    do i_sh=1,size(fluct_val%ind)
+        ind=fluct_val%ind(i_sh)
+        do i_nei=fluct_val%neigh%ishell(ind-1)+1, fluct_val%neigh%ishell(ind) 
             i=fluct_val%neigh%pairs(1,i_nei)
             j=fluct_val%neigh%pairs(2,i_nei)
             Mi=lat%M%modes_3(:,i)
@@ -81,7 +100,6 @@ subroutine eval_fluct( MjpMim_ij_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,flu
             MipMjp               =MipMjp               +cmplx(Mi(1)*Mj(1)-Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)+Mi(2)*Mj(1),8)     !why is here a minus?
             MjpMim_ij_sum(i_sh,i)=MjpMim_ij_sum(i_sh,i)+cmplx(Mi(1)*Mj(1)+Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)-Mi(2)*Mj(1),8)
         enddo
-        neigh_start=fluct_val%neigh%ishell(shell_offset+i_sh)+1
     enddo
 
     MipMip_sum=MipMip_sum+MipMip

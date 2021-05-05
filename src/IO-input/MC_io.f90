@@ -15,7 +15,6 @@ type MC_input
 
     logical     :: print_relax=.false.
     logical     :: Cor_log=.false.
-    logical     :: do_fluct=.True.
     logical     :: ising=.false.
     logical     :: underrelax=.false.
     logical     :: overrelax=.false.
@@ -24,6 +23,10 @@ type MC_input
     logical     :: expval_save=.false. !save the expectation values
     logical     :: expval_read=.false.  !read expectation values from previous calculation
     real(8)     :: cone=pi
+
+    !fluction parameters
+    logical     :: do_fluct=.True.
+    real(8)     :: fluct_dir(3)=[1.0d0,0.0d0,0.0d0]
 end type
 
 
@@ -57,7 +60,8 @@ subroutine bcast_MC(this,com)
     Call MPI_BCAST( this%expval_save,1,MPI_LOGICAL,com%mas,com%com,ierr)
     Call MPI_BCAST( this%expval_read,1,MPI_LOGICAL,com%mas,com%com,ierr)
 
-    Call MPI_BCAST( this%cone  ,1,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%cone      ,1,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%fluct_dir ,3,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
 #else
     continue
 #endif
@@ -87,7 +91,9 @@ subroutine rw_MC(inp_MC,io_in)
     call get_parameter(io_input,'input','cone',inp_MC%cone)
     call get_parameter(io_input,'input','print_relax',inp_MC%print_relax)
     call get_parameter(io_input,'input','Cor_log',inp_MC%Cor_log)
+
     call get_parameter(io_input,'input','do_fluct',inp_MC%do_fluct)
+    call get_parameter(io_input,'input','fluct_direction',inp_MC%fluct_dir)
 
     call get_parameter(io_input,'input','ising',inp_MC%ising)
     call get_parameter(io_input,'input','underrelaxation',inp_MC%underrelax)
