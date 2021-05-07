@@ -92,7 +92,7 @@ subroutine bcast_fft(this,comm)
         allocate(this%H_F(shp(1),shp(2))) 
     endif
     Call bcast_alloc(this%K_F,comm)
-    if(.not.comm%ismas) Call set_fftw_plans(this)
+    if(.not.comm%ismas) Call set_plans(this)
 end subroutine
 
 subroutine mv(this,H_out)
@@ -132,7 +132,7 @@ subroutine copy(this,H_out)
         allocate(H_out%K_F,source=this%K_F)
         H_out%M_internal=>this%M_internal
         H_out%H_internal=>this%H_internal
-        Call set_fftw_plans(H_out)
+        Call set_plans(H_out)
     class default
         ERROR STOP "HAS TO HAVE SAME TYPE"
     end select
@@ -248,7 +248,7 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     allocate(this%M_F(dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
     allocate(this%H_F(dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
     allocate(this%H_n(dim_mode,Nk_tot),source=0.0d0)
-    Call set_fftw_plans(this)
+    Call set_plans(this)
 
     Call this%init_internal(periodic)
 #else
@@ -300,11 +300,10 @@ subroutine get_H(this,lat,Hout)
     this%H_F=cmplx(0.0d0,0.0d0,8)
     do j=1,size(this%M_F,2)
         do i=1,lat%Nmag*3
-            do l=1,lat%Nmag*3
-                this%H_F(i,j)=this%H_F(i,j)+this%K_F(i,l,j)*this%M_F(l,j)
-            enddo
+            this%H_F(i,j)=sum(this%K_F(:,i,j)*this%M_F(:,j))
         enddo
     enddo
+
     Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
     Call this%H_internal(this%H_n,Hout,lat%dim_lat,this%N_rep,size(Hout,1))
 #else
@@ -327,9 +326,7 @@ subroutine get_H_single(this,lat,site,Hout)
     this%H_F=cmplx(0.0d0,0.0d0,8)
     do j=1,size(this%M_F,2)
         do i=1,lat%Nmag*3
-            do l=1,lat%Nmag*3
-                this%H_F(i,j)=this%H_F(i,j)+this%K_F(i,l,j)*this%M_F(l,j)   !change to matmul
-            enddo
+            this%H_F(i,j)=sum(this%K_F(:,i,j)*this%M_F(:,j))
         enddo
     enddo
     Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
@@ -376,7 +373,7 @@ subroutine get_E_single(this,lat,site,E)
     E=sum(Htmp)*2.0d0
 end subroutine
 
-subroutine set_fftw_plans(this)
+subroutine set_plans(this)
     class(fft_H_fftw),intent(inout)  :: this
 
     integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)

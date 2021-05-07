@@ -9,7 +9,7 @@ endif()
 
 project(Matjes NONE)
 
-enable_language (Fortran CXX)
+enable_language (Fortran CXX CUDA)
 
 #if(NOT DEFINED custom_MPICCOMP_FORTRAN)
 # find_package(MPI REQUIRED)

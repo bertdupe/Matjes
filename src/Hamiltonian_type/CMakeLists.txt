@@ -21,3 +21,9 @@ set(eigen_H ${eigen_H}
 src/Hamiltonian_type/eigen_H_interface.f90
 src/Hamiltonian_type/eigen_H.cpp
 )
+
+set(cuda_fft ${cuda_fft}
+src/Hamiltonian_type/cuda_fft_interface.f90
+src/Hamiltonian_type/cuda_fft.cpp
+src/Hamiltonian_type/cuda_fft.cu
+)

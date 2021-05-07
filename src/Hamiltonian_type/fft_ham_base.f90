@@ -6,14 +6,16 @@ module m_fft_H_base
 
 use m_type_lattice,only: lattice
 use m_H_type, only: len_desc
+use, intrinsic :: iso_c_binding, only: C_int
 private
 public fft_H
 
 type            ::  fft_H
     private
-    logical,public  :: set=.false.  !all parameters have been initialized
-    integer,public  :: N_rep(3)=0   !size in each dimension of each considered field
-    logical,public  :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
+    logical,public          :: set=.false.  !all parameters have been initialized
+    integer(C_int),public   :: N_rep(3)=0   !size in each dimension of each considered field
+    integer(C_int),public   :: dim_mode=0   !dimension of considered operator field
+    logical,public          :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
                                             ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
     character(len=len_desc)     :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
 contains
@@ -54,10 +56,11 @@ function same_space(this,comp)result(same)
     logical                 :: same
 
     if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as this is not set"
-    if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as comp is not set"
+    if(.not.comp%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as comp is not set"
 
     same=all(this%N_rep==comp%N_rep)
     same=same.and.all(this%periodic.eqv.comp%periodic)
+    same=same.and.this%dim_mode==comp%dim_mode
 end function
 
 subroutine add(this,H_in)
@@ -80,6 +83,7 @@ subroutine bcast_fft(this,comm)
 
     Call bcast(this%N_rep,comm)
     Call bcast(this%periodic,comm)
+    Call bcast(this%dim_mode,comm)
 end subroutine
 
 subroutine mv(this,H_out)
@@ -92,6 +96,7 @@ subroutine mv(this,H_out)
 
     H_out%N_rep=this%N_rep
     H_out%periodic=this%periodic
+    H_out%dim_mode=this%dim_mode
     H_out%set=this%set
 end subroutine
 
@@ -104,6 +109,7 @@ subroutine copy(this,H_out)
     endif
     H_out%N_rep=this%N_rep
     H_out%periodic=this%periodic
+    H_out%dim_mode=this%dim_mode
 
     H_out%set=this%set
 end subroutine
@@ -114,6 +120,7 @@ subroutine destroy(this)
     this%N_rep=0
     this%set=.false.
     this%periodic=.true.
+    this%dim_mode=0
 end subroutine
 
 pure function is_set(this)result(set)
@@ -146,7 +153,6 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     integer,intent(out)         :: N_rep(3)
 
     integer         :: i
-    integer         :: Nk_tot           !number of state considered in FT (product of N_rep)
 
     N_rep=dim_lat
     !set K-boundaries for periodic boundaries
@@ -161,6 +167,7 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     enddo
     this%N_rep=N_rep
     this%periodic=periodic
+    this%dim_mode=dim_mode
 end subroutine
 
 
