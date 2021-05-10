@@ -21,6 +21,18 @@ __global__ void k_time_m(
     }
 }    
 
+__global__ void add_cmplx(
+    cufftDoubleComplex* arr_sum, 
+    cufftDoubleComplex* arr_add,
+    int N){
+
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i < N){
+        arr_sum[i]=cuCadd(arr_sum[i] ,arr_add[i]);
+    }
+}    
+
+
 
 extern "C"{
 void cuda_fft_calc_h(
@@ -56,4 +68,19 @@ void cuda_fft_calc_h(
     err=cudaDeviceSynchronize();
     assert(err == cudaSuccess);
 }
+
+void cuda_fft_add_cmplx(
+    const int N,
+    cufftDoubleComplex* &arr_sum,
+    cufftDoubleComplex* &arr_add){
+
+    int threadsPerBlock = std::min(256,N);
+    int numBlocks= (N+ threadsPerBlock - 1) / threadsPerBlock;
+
+    add_cmplx<<<numBlocks, threadsPerBlock>>>(arr_sum, arr_add,N);
+
+    cudaError_t err=cudaDeviceSynchronize();
+    assert(err == cudaSuccess);
+}
+
 }

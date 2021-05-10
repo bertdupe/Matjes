@@ -12,19 +12,9 @@ use m_derived_types, only : lattice
 implicit none
 
 public
-#if defined CPP_MKL_SPBLAS
-integer,private ::  mode=1  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
-#elif defined CPP_EIGEN_H
-integer,private ::  mode=2  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
-#elif defined CPP_BLAS
-integer,private ::  mode=4  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
-#else
-integer,private ::  mode=5  !chooses which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense)
-#endif
-
+integer,private ::  mode=-1 !stores which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense, -1: not initialized)
 
 contains
-
     subroutine set_Ham_mode_io(fname_in)
         use m_io_files_utils, only : open_file_read,close_file
         use m_io_utils,only: get_parameter
@@ -34,6 +24,16 @@ contains
         character(:), allocatable           :: fname
 
         integer ::  io_param
+
+#if defined CPP_MKL_SPBLAS
+        mode=1
+#elif defined CPP_EIGEN_H
+        mode=2
+#elif defined CPP_BLAS
+        mode=4
+#else
+        mode=5
+#endif
 
         if(present(fname_in))then
             fname=fname_in
@@ -46,7 +46,7 @@ contains
 
         select case(mode)
         case(1)
-            write(*,'(/A/)') "Using Hamiltonian implementation: sparse mkl"
+            write(*,'(/A/)') "Using Hamiltonian implementation: MKL Sparse"
         case(2)
             write(*,'(/A/)') "Using Hamiltonian implementation: Eigen (saving transpose as well)"
         case(3)
@@ -89,6 +89,8 @@ contains
 #endif
         case(5)
             allocate(t_H_dense::H_out)
+        case(-1)
+            ERROR STOP "Cannot allocate Hamiltonian type, mode has not been set using set_H_mode_io"
         case default
             ERROR STOP "UNEXPECTED MODE SET DECIDING HAMILTONIAN IMPLEMENTATION"
         end select
@@ -125,6 +127,8 @@ contains
 #endif
         case(5)
             allocate(t_H_dense::H_out(N))
+        case(-1)
+            ERROR STOP "Cannot allocate Hamiltonian type, mode has not been set using set_H_mode_io"
         case default
             ERROR STOP "UNEXPECTED MODE SET DECIDING HAMILTONIAN IMPLEMENTATION"
         end select
@@ -193,5 +197,12 @@ contains
         tmp_E=tmp_E*real(ham(:)%mult_M_single,8)
         E=sum(tmp_E)
     end function
+
+    subroutine bcast_H_mode(com)
+        use mpi_util
+        class(mpi_type),intent(in)  :: com
+
+        Call bcast(mode,com)
+    end subroutine
 
 end module

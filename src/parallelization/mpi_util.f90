@@ -20,6 +20,7 @@ interface bcast
     module procedure bcast_logical1
     module procedure bcast_real
     module procedure bcast_real1
+    module procedure bcast_character
     module procedure bcast_MC
 end interface
 
@@ -237,6 +238,22 @@ subroutine bcast_real(val,com)
     integer     :: ierr
 
     Call MPI_BCAST(val,1,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_character(val,com)
+    character(len=*),intent(inout)  :: val
+    class(mpi_type),intent(in)      :: com
+#ifdef CPP_MPI    
+    integer     :: length
+    integer     :: ierr
+
+    length=len(val)
+    Call MPI_Allreduce( MPI_IN_PLACE, length, 1, MPI_INTEGER,MPI_MAX, com%com,ierr)
+    if(length/=len(val)) ERROR STOP "Trying to broadcast characters of different length"
+    Call MPI_Bcast(val, length, MPI_CHARACTER, com%mas, com%com,ierr)
 #else
     continue
 #endif

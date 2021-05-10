@@ -23,6 +23,7 @@ use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
 
 use m_mpi_start_end  !also includes mpi_basic
+use m_bcast_global, only: bcast_global_var
 use m_fftw3,only: fftw_init
 
 Implicit None
@@ -68,6 +69,7 @@ Implicit None
     !     Start main procedures:
     !     *****************************************************************
     Call my_simu%bcast(mpi_world)
+    Call bcast_global_var(mpi_world)    !broadcasts the few global and module parameters
  
 
     !---------------------------------

@@ -63,5 +63,27 @@ module m_cuda_fft
             type(C_PTR),intent(in)                  :: arr_in
             type(C_PTR),intent(inout)               :: arr_out
         end subroutine
+
+        subroutine cuda_fft_add_cmplx(N,arr_sum,arr_add) bind( c, name='cuda_fft_add_cmplx')
+            use, intrinsic :: iso_c_binding
+            integer(C_INT),intent(in),value         :: N
+            type(C_PTR),intent(inout)               :: arr_sum
+            type(C_PTR),intent(in)                  :: arr_add
+        end subroutine
+
+        subroutine cuda_fft_destroy_plan(plan) bind( c, name='cuda_fft_destroy_plan')
+            use, intrinsic :: iso_c_binding
+            type(C_PTR),intent(inout)               :: plan
+        end subroutine
+
+        subroutine cuda_fft_destroy_real(plan) bind( c, name='cuda_fft_destroy_real')
+            use, intrinsic :: iso_c_binding
+            type(C_PTR),intent(inout)               :: plan
+        end subroutine
+
+        subroutine cuda_fft_destroy_cmplx(plan) bind( c, name='cuda_fft_destroy_cmplx')
+            use, intrinsic :: iso_c_binding
+            type(C_PTR),intent(inout)               :: plan
+        end subroutine
     end interface
 end module 

@@ -120,8 +120,8 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     call user_info(6,time,'finished setting fft-Hamiltonian',.false.)
 
 
-    Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move, as certain the combult is the same (do it even in setup_simu?)
-    if(keep_resolved_H) Call H_res%init_H_cp(my_lattice,Ham_res,fft_Ham_res)   !later change to move, as certain the result is the same (do it even in setup_simu?)
+    Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move if the hamiltonian-type array is no longer necessary in main routine
+    if(keep_resolved_H) Call H_res%init_H_cp(my_lattice,Ham_res,fft_Ham_res)   !later change to move if the hamiltonian-type array is no longer necessary in main routine
 
     if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
     

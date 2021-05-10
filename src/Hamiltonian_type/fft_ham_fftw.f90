@@ -7,7 +7,6 @@ use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 use m_fftw3
 use m_fft_H_base, only: fft_H
 use m_type_lattice,only: lattice
-use m_fft_H_internal, only: int_set_M, int_get_H
 use m_H_type, only: len_desc
 private
 public fft_H_fftw
@@ -17,21 +16,16 @@ type,extends(fft_H) ::  fft_H_fftw
     type(c_ptr)     :: plan_mag_F=c_null_ptr   !FFTW plan M_n -> M_F
     type(c_ptr)     :: plan_H_I=c_null_ptr     !FFTW plan H_F -> H_n
 
-    real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
+    !fourier transformated arrays
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
-
     complex(C_DOUBLE_COMPLEX),allocatable   ::  K_F(:,:,:)  !demagnetization tensor in fourier-space
-
     complex(C_DOUBLE_COMPLEX),allocatable   ::  H_F(:,:)    !effective field fourier-space 
-    real(C_DOUBLE),allocatable              ::  H_n(:,:)    !effective field normal-space
-    procedure(int_set_M), pointer,nopass    ::  M_internal => null()    !function to set internal magnetization depending on periodic/open boundaries
-    procedure(int_get_H), pointer,nopass    ::  H_internal => null()    !function to get effective field depending on periodic/open boundaries
+    !data stored in base class
+!    real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
+!    real(C_DOUBLE),allocatable              ::  H_n(:,:)    !effective field normal-space
 contains
     procedure,public    :: get_H            !get effective field
     procedure,public    :: get_H_single     !get effective field for a single site
-    procedure,public    :: get_E            !get energy
-    procedure,public    :: get_E_single     !get energy for a single site
-    procedure,public    :: get_E_distrib    !get energy-distribution in Nmag*Ncell-space
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
     
@@ -45,7 +39,6 @@ contains
 
     !internal procedures
     procedure           :: set_M                !set internal magnetization in normal-space from lattice
-    procedure           :: init_internal        !initialize internal procedures
 end type
 contains 
 
@@ -75,20 +68,13 @@ subroutine bcast_fft(this,comm)
     use mpi_util
     class(fft_H_fftw),intent(inout)  ::  this
     type(mpi_type),intent(in)   ::  comm
-
     integer ::  shp(2)
 
     Call this%fft_H%bcast(comm)
-
-    if(comm%ismas)then
-        shp=shape(this%M_n)
-    endif
+    if(comm%ismas) shp=shape(this%M_F)
     Call bcast(shp,comm)
     if(.not.comm%ismas)then
-        Call this%init_internal(this%periodic)
-        allocate(this%M_n(shp(1),shp(2))) 
         allocate(this%M_F(shp(1),shp(2))) 
-        allocate(this%H_n(shp(1),shp(2))) 
         allocate(this%H_F(shp(1),shp(2))) 
     endif
     Call bcast_alloc(this%K_F,comm)
@@ -105,13 +91,9 @@ subroutine mv(this,H_out)
     Call this%fft_H%mv(H_out)
     select type(H_out)
     type is(fft_H_fftw)
-        call move_alloc(this%M_n,H_out%M_n)
         call move_alloc(this%M_F,H_out%M_F)
-        call move_alloc(this%H_n,H_out%H_n)
         call move_alloc(this%H_F,H_out%H_F)
         call move_alloc(this%K_F,H_out%K_F)
-        H_out%M_internal=>this%M_internal
-        H_out%H_internal=>this%H_internal
     class default
         ERROR STOP "HAS TO HAVE SAME TYPE"
     end select
@@ -125,13 +107,9 @@ subroutine copy(this,H_out)
     Call this%fft_H%copy(H_out)
     select type(H_out)
     type is(fft_H_fftw)
-        allocate(H_out%M_n,mold=this%M_n)
         allocate(H_out%M_F,mold=this%M_F)
-        allocate(H_out%H_n,mold=this%H_n)
         allocate(H_out%H_F,mold=this%H_F)
         allocate(H_out%K_F,source=this%K_F)
-        H_out%M_internal=>this%M_internal
-        H_out%H_internal=>this%H_internal
         Call set_plans(H_out)
     class default
         ERROR STOP "HAS TO HAVE SAME TYPE"
@@ -148,12 +126,9 @@ subroutine destroy(this)
 #else
     ERROR STOP "Requires FFTW3"
 #endif
-    if(allocated(this%M_n)) deallocate(this%M_n)
     if(allocated(this%M_F)) deallocate(this%M_F)
     if(allocated(this%K_F)) deallocate(this%K_F)
     if(allocated(this%H_F)) deallocate(this%H_F)
-    if(allocated(this%H_n)) deallocate(this%H_n)
-    nullify(this%M_internal, this%M_internal)
 end subroutine
 
 subroutine init_op(this,dim_mode,K_n,desc_in)
@@ -240,42 +215,16 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
 
     Call this%fft_H%init_shape(dim_mode,periodic,dim_lat,Kbd,N_rep)
 
-    Nk_tot=product(N_rep)
-
 !$  Call fftw_plan_with_nthreads(omp_get_max_threads())
     !set order work arrays and fourier transform
-    allocate(this%M_N(dim_mode,Nk_tot),source=0.0d0)
+    Nk_tot=product(N_rep)
     allocate(this%M_F(dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
     allocate(this%H_F(dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
-    allocate(this%H_n(dim_mode,Nk_tot),source=0.0d0)
     Call set_plans(this)
 
-    Call this%init_internal(periodic)
 #else
         ERROR STOP "CANNOT USE FFTW DIPOL (mag_dip_fft) without FFTW (CPP_FFTW3)"
 #endif
-end subroutine
-
-
-subroutine init_internal(this,periodic)
-    !initialize internal procedures M_internal and H_internal
-    use m_fft_H_internal
-    class(fft_H_fftw),intent(inout)    :: this
-    logical,intent(in)            :: periodic(3)  !T: periodic boundary, F: open boundary
-
-    if(all(periodic))then
-        this%M_internal=>set_M_period_TTT
-        this%H_internal=>set_H_period_TTT
-    elseif(all(periodic(1:2)))then
-        this%M_internal=>set_M_period_TTF
-        this%H_internal=>set_H_period_TTF
-    elseif(all(periodic(1:1)))then
-        this%M_internal=>set_M_period_TFF
-        this%H_internal=>set_H_period_TFF
-    else
-        this%M_internal=>set_M_period_FFF
-        this%H_internal=>set_H_period_FFF
-    endif
 end subroutine
 
 subroutine set_M(this,lat)
@@ -332,45 +281,8 @@ subroutine get_H_single(this,lat,site,Hout)
     Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
     Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
 #else
-    ERROR STOP "fft_H%get_H_single requires CPP_FFTW"
+    ERROR STOP "fft_H_fftw%get_H_single requires CPP_FFTW"
 #endif
-end subroutine
-
-subroutine get_E_distrib(this,lat,Htmp,E)
-    class(fft_H_fftw),intent(inout)    ::  this
-    type(lattice),intent(in)      ::  lat
-    real(8),intent(inout)         ::  Htmp(:,:)
-    real(8),intent(out)           ::  E(:)
-
-    Call this%get_H(lat,Htmp)
-    Htmp=Htmp*lat%M%modes_v
-    E=sum(reshape(Htmp,[3,lat%Nmag*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
-end subroutine
-
-subroutine get_E(this,lat,Htmp,E)
-    class(fft_H_fftw),intent(inout)    ::  this
-    type(lattice),intent(in)      ::  lat
-    real(8),intent(inout)         ::  Htmp(:,:)
-    real(8),intent(out)           ::  E
-
-    Call this%get_H(lat,Htmp)
-    Htmp=Htmp*lat%M%modes_v
-    E=sum(Htmp)
-end subroutine
-
-subroutine get_E_single(this,lat,site,E)
-    !get energy by getting the effective field caused by all sites and multiply the considered site's H with the moment there
-    !it might be faster to do the explicit folding in real space to get the effective field caused by the considered site and multiply then with the entire magnetization (might be worth testing)
-    class(fft_H_fftw),intent(inout)  :: this
-    type(lattice),intent(in)    :: lat
-    integer,intent(in)          :: site
-    real(8),intent(out)         :: E
-
-    real(8)                     :: Htmp(3)
-
-    Call this%get_H_single(lat,site,Htmp)
-    Htmp=Htmp*lat%M%modes_3(:,site)
-    E=sum(Htmp)*2.0d0
 end subroutine
 
 subroutine set_plans(this)

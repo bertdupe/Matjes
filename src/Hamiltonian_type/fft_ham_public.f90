@@ -5,20 +5,13 @@ use m_fft_H_cufft, only: fft_H_cufft
 implicit none
 public
 
-#ifdef CPP_CUDA
-integer,private ::  mode=2  !chooses which implementation is used (1:FFTW3, 2: cuFFT)
-#elif defined CPP_FFTW3
-integer,private ::  mode=1  !chooses which implementation is used (1:FFTW3, 2: cuFFT)
-#else
-integer,private ::  mode=0  !no feasible implementation with preprocessor flags possible
-#endif
+integer,private ::  mode=-1 !stores which implementation is used (1:FFTW3, 2: cuFFT, 0: none, -1: not initialized)
 
 interface  get_fft_H
     module procedure get_fft_H_single
     module procedure get_fft_H_N
 end interface
 private :: get_fft_H_single, get_fft_H_N
-
 
 contains
 
@@ -32,6 +25,13 @@ contains
 
         integer ::  io_param
 
+#ifdef CPP_CUDA
+        mode=2
+#elif defined CPP_FFTW3
+        mode=1
+#else
+        mode=0
+#endif
         if(present(fname_in))then
             fname=fname_in
         else
@@ -73,6 +73,8 @@ contains
 #endif
         case(0)
             ERROR STOP "Cannot allocate Fourier Hamiltonian type, requires either CPP_FFTW3 or CPP_CUDA"
+        case(-1)
+            ERROR STOP "Cannot allocate Fourier Hamiltonian type, mode has not been set using set_fft_H_mode_io"
         case default
             ERROR STOP "UNEXPECTED MODE SET"
         end select
@@ -97,10 +99,20 @@ contains
 #endif
         case(0)
             ERROR STOP "Cannot allocate Fourier Hamiltonian type, requires either CPP_FFTW3 or CPP_CUDA"
+        case(-1)
+            ERROR STOP "Cannot allocate Fourier Hamiltonian type, mode has not been set using set_fft_H_mode_io"
         case default
             ERROR STOP "UNEXPECTED MODE SET"
         end select
 
     end subroutine
+
+    subroutine bcast_fft_H_mode(com)
+        use mpi_util
+        class(mpi_type),intent(in)  :: com
+
+        Call bcast(mode,com)
+    end subroutine
+
 
 end module

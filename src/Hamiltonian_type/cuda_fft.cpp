@@ -153,5 +153,31 @@ void cuda_fft_copy_cmplx(
     assert(err == cudaSuccess);
 }
 
+void cuda_fft_destroy_plan(
+    cufftHandle*& plan){
+
+    cufftResult result=cufftDestroy(*plan);
+    assert(result == CUFFT_SUCCESS);
+    delete(plan);
+    plan=NULL;
+}
+
+void cuda_fft_destroy_real(
+    cufftDoubleReal* & arr){
+
+    cudaError_t err= cudaFree(arr);
+    assert(err == cudaSuccess);
+    arr=NULL;
+}
+
+void cuda_fft_destroy_cmplx(
+    cufftDoubleComplex* & arr){
+
+    cudaError_t err= cudaFree(arr);
+    assert(err == cudaSuccess);
+    arr=NULL;
+}
+
+
 }
 
