@@ -3,6 +3,7 @@ src/Hamiltonian_type/ham_public.f90
 src/Hamiltonian_type/ham_base.f90
 src/Hamiltonian_type/ham_coo.f90
 src/Hamiltonian_type/ham_coo_based.f90
+src/Hamiltonian_type/ham_cusparse.f90
 src/Hamiltonian_type/ham_dense.f90
 src/Hamiltonian_type/ham_dense_blas.f90
 src/Hamiltonian_type/ham_deriv.f90
@@ -26,4 +27,11 @@ set(cuda_fft ${cuda_fft}
 src/Hamiltonian_type/cuda_fft_interface.f90
 src/Hamiltonian_type/cuda_fft.cpp
 src/Hamiltonian_type/cuda_fft.cu
+)
+
+set(cuda_H ${cuda_H}
+src/Hamiltonian_type/cuda_H.cu
+src/Hamiltonian_type/cuda_H_interface.f90
+src/Hamiltonian_type/cuda_H_vec.cu
+src/Hamiltonian_type/cuda_H_vec_interface.f90
 )

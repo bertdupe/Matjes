@@ -3,6 +3,7 @@ module m_H_public
 !and provide all necessary types for other routines
 
 use m_H_sparse_mkl
+use m_H_cusparse
 use m_H_eigen
 use m_H_eigen_mem
 use m_H_dense_blas
@@ -12,7 +13,7 @@ use m_derived_types, only : lattice
 implicit none
 
 public
-integer,private ::  mode=-1 !stores which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense, -1: not initialized)
+integer,private ::  mode=-1 !stores which implementation is used (1:mkl, 2: eigen_mem, 3: eigen, 4:dense_blas, 5: dense, 6: cuda, -1: not initialized)
 
 contains
     subroutine set_Ham_mode_io(fname_in)
@@ -24,8 +25,9 @@ contains
         character(:), allocatable           :: fname
 
         integer ::  io_param
-
-#if defined CPP_MKL_SPBLAS
+#if defined CPP_CUDA
+        mode=6
+#elif defined CPP_MKL_SPBLAS
         mode=1
 #elif defined CPP_EIGEN_H
         mode=2
@@ -55,6 +57,8 @@ contains
             write(*,'(/A/)') "Using Hamiltonian implementation: Dense using blas"
         case(5)
             write(*,'(/A/)') "Using Hamiltonian implementation: Dense"
+        case(6)
+            write(*,'(/A/)') "Using Hamiltonian implementation: Cuda"
         case default
             ERROR STOP "READ IN UNIMPLEMENTED Hamiltonian_mode"
         end select
@@ -89,6 +93,12 @@ contains
 #endif
         case(5)
             allocate(t_H_dense::H_out)
+        case(6)
+#if defined CPP_CUDA
+            allocate(t_H_cusparse::H_out)
+#else
+            ERROR STOP "CANNOT USE t_H_cusparse Sparse Hamiltonian implementation without Cuda (CPP_CUDA)"
+#endif
         case(-1)
             ERROR STOP "Cannot allocate Hamiltonian type, mode has not been set using set_H_mode_io"
         case default
@@ -127,6 +137,12 @@ contains
 #endif
         case(5)
             allocate(t_H_dense::H_out(N))
+        case(6)
+#if defined CPP_CUDA
+            allocate(t_H_cusparse::H_out(N))
+#else
+            ERROR STOP "CANNOT USE t_H_cusparse Sparse Hamiltonian implementation without Cuda (CPP_CUDA)"
+#endif
         case(-1)
             ERROR STOP "Cannot allocate Hamiltonian type, mode has not been set using set_H_mode_io"
         case default

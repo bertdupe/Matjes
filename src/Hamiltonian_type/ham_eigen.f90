@@ -17,7 +17,7 @@ contains
     procedure :: set_from_Hcoo
 
     procedure :: add_child 
-    procedure :: destroy_child    
+    procedure :: destroy_child
     procedure :: copy_child 
     procedure :: optimize
 

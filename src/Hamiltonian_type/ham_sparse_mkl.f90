@@ -294,14 +294,13 @@ subroutine send(this,ithread,tag,com)
     integer,intent(in)              :: ithread
     integer,intent(in)              :: tag
     integer,intent(in)              :: com
-
+#ifdef CPP_MPI
     integer(C_int),pointer          :: ia(:),ja(:)
     real(C_DOUBLE),pointer          :: val(:)
     
     integer     :: nnz
     integer     :: ierr
 
-#ifdef CPP_MPI
     Call this%send_base(ithread,tag,com)
 
     Call unpack_csr(this%dimH(2),this%H,nnz,ia,ja,val)

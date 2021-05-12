@@ -593,10 +593,10 @@ contains
         logical                  ::  same
 
         same=.false.
-        if(.not.this%set.or..not.this%set)then
-            if(any(this%dimH/=comp%dimH).or.any(this%dim_mode/=comp%dim_mode))then
-                if(size(this%op_l)/=size(comp%op_l).or.size(this%op_r)/=size(comp%op_r))then
-                    if(any(this%op_l/=comp%op_l).or.any(this%op_r/=comp%op_r))then
+        if(this%set.and.comp%set)then
+            if(all(this%dimH==comp%dimH).and.all(this%dim_mode==comp%dim_mode))then
+                if(size(this%op_l)==size(comp%op_l).and.size(this%op_r)==size(comp%op_r))then
+                    if(all(this%op_l==comp%op_l).and.any(this%op_r==comp%op_r))then
                         if(this%mode_l%is_same(comp%mode_l))then
                             if(this%mode_r%is_same(comp%mode_r))then
                                 same=.true.
