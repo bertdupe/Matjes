@@ -51,13 +51,14 @@ subroutine mult_l(this,lat,res)
 end subroutine 
 
 
-subroutine eval_single(this,E,i_m,dim_bnd,lat)
+subroutine eval_single(this,E,i_m,order,lat)
     use m_derived_types, only: lattice,number_different_order_parameters
     ! input
     class(t_h_dense_blas),intent(in)    :: this
     type(lattice), intent(in)           :: lat
     integer, intent(in)                 :: i_m
-    integer, intent(in)                 :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
+    integer, intent(in)                 :: order
+!    integer, intent(in)                 :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
     ! output
     real(8), intent(out)                :: E
     ! internal
@@ -70,12 +71,12 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     real(8),parameter           :: alpha=1.0d0,beta=0.0d0
 
     ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
-    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
-
-    size_vec_r=bnd(2)-bnd(1)+1
-    Call DGEMV('N',this%dimH(1),size_vec_r,alpha,this%H(1,bnd(1)),this%dimH(1),modes_r(1),1,beta,tmp,1)
-    E=ddot(this%dimH(2),modes_l,1,tmp,1)
+!    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
+!    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
+!
+!    size_vec_r=bnd(2)-bnd(1)+1
+!    Call DGEMV('N',this%dimH(1),size_vec_r,alpha,this%H(1,bnd(1)),this%dimH(1),modes_r(1),1,beta,tmp,1)
+!    E=ddot(this%dimH(2),modes_l,1,tmp,1)
 end subroutine 
 #endif
 end module

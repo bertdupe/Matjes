@@ -309,15 +309,15 @@ subroutine check_H(this)
 
 end subroutine
 
-subroutine eval_single(this,E,i_m,dim_bnd,lat)
+subroutine eval_single(this,E,i_m,order,lat)
     use m_derived_types, only: lattice, number_different_order_parameters
     ! input
-    class(t_H_coo),intent(in)    :: this
-    type(lattice), intent(in)    :: lat
-    integer, intent(in)          :: i_m
-    integer, intent(in)          :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
+    class(t_H_coo),intent(in)   :: this
+    type(lattice), intent(in)   :: lat
+    integer, intent(in)         :: i_m
+    integer,intent(in)          :: order
     ! output
-    real(kind=8), intent(out)       :: E
+    real(kind=8), intent(out)    :: E
 
     STOP "CANNOT EVALUATE t_H_coo"
     !alternatively add some evaluation without a library

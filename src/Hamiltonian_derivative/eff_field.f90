@@ -35,8 +35,6 @@ subroutine get_eff_field_single(Ham,i_site,lat,B,Ham_type)
     real(8),intent(inout)        :: B(:)
 
     real(8)      :: tmp(size(B))
-    integer      :: Nl,Nr !number of order parameters at left/right side of Hamiltonian 
-    integer      :: Nl_order,Nr_order !number of order parameters occurances at left/right side of Hamiltonian
     integer      :: iH
 
     B=0.d0

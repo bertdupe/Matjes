@@ -24,7 +24,7 @@ contains
     procedure :: mult_l,           mult_r
     procedure :: mult_l_cont,      mult_r_cont
     procedure :: mult_l_disc,      mult_r_disc
-    procedure :: mult_r_single,    mult_l_single
+    procedure :: mult_l_single,    mult_r_single
     procedure :: mult_l_ind,       mult_r_ind
     procedure :: mult_l_disc_disc, mult_r_disc_disc
     procedure :: get_ind_mult_l,   get_ind_mult_r
@@ -286,13 +286,13 @@ subroutine set_from_Hcoo(this,H_coo)
     Call eigen_H_init(nnz,this%dimH,rowind,colind,val,this%H)
 end subroutine 
 
-subroutine eval_single(this,E,i_m,dim_bnd,lat)
+subroutine eval_single(this,E,i_m,order,lat)
     use m_derived_types, only: lattice
     ! input
     class(t_H_eigen),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
-    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)
+    integer,intent(in)              :: order
     ! output
     real(8), intent(out)            :: E
     integer,allocatable             :: ind(:)
@@ -303,9 +303,8 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     real(8),allocatable             :: vec_l(:)
     integer                         :: N_out
 
-    !dim_order_bnd...
     Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
-    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_milt_mat_disc_disc crashes
+    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_mult_mat_disc_disc crashes
     allocate(vec_out(N_out), ind_out(N_out))
     Call eigen_H_mult_mat_disc_disc(this%H,size(ind),ind,vec,N_out,ind_out,vec_out)
     Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)

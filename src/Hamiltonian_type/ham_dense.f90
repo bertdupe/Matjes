@@ -205,12 +205,13 @@ subroutine set_from_Hcoo(this,H_coo)
 end subroutine 
 
 
-subroutine eval_single(this,E,i_m,dim_bnd,lat)
+subroutine eval_single(this,E,i_m,order,lat)
     ! input
     class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
-    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
+    integer,intent(in)              :: order
+!    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
     ! output
     real(8), intent(out)            :: E
     ! internal
@@ -220,14 +221,14 @@ subroutine eval_single(this,E,i_m,dim_bnd,lat)
     integer                         :: bnd(2)
 
     ERROR STOP "THIS PROBABLY NO LONGER WORKS WITH THE NEW MODE_L/MODE_R"   !and in general might be much more difficult to implement with eg. rank 4 in M-space only
-    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
-
-    tmp=matmul(this%H(:,bnd(1):bnd(2)),modes_r)
-    E=dot_product(modes_l,tmp)
-
-    if(allocated(vec_l)) deallocate(vec_l)
-    if(allocated(vec_r)) deallocate(vec_r)
+!    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
+!    Call lat%point_order_single(this%op_r,i_m,dim_bnd,this%dim_mode(2),modes_r,vec_r,bnd)
+!
+!    tmp=matmul(this%H(:,bnd(1):bnd(2)),modes_r)
+!    E=dot_product(modes_l,tmp)
+!
+!    if(allocated(vec_l)) deallocate(vec_l)
+!    if(allocated(vec_r)) deallocate(vec_r)
 end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

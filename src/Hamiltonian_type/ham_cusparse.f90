@@ -41,6 +41,7 @@ contains
     procedure :: mult_l_cont,mult_r_cont
     procedure :: mult_l_disc,mult_r_disc
 
+
     !MPI (real implementation might be complicated)
     procedure :: send
     procedure :: recv
@@ -85,7 +86,6 @@ end subroutine
 subroutine bcast_child(this,comm)
     use mpi_basic
     use mpi_util,only: bcast
-!    use mkl_spblas_util, only: unpack_csr
     class(t_H_cusparse),intent(inout)    ::  this
     type(mpi_type),intent(in)           ::  comm
 #ifdef CPP_MPI
@@ -150,17 +150,33 @@ subroutine set_from_Hcoo(this,H_coo)
     Call cuda_set_buffer(this%buffer,this%H,this%rvec_in,this%rvec_out,handle)
 end subroutine 
 
-subroutine eval_single(this,E,i_m,dim_bnd,lat)
+subroutine eval_single(this,E,i_m,order,lat)
     use m_derived_types, only: lattice
     ! input
-    class(t_H_cusparse),intent(in)   :: this
+    class(t_H_cusparse),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     integer, intent(in)             :: i_m
-    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !not implemented
+    integer,intent(in)              :: order
     ! output
     real(8), intent(out)            :: E
-    ERROR STOP "IMPLEMENT"
+    integer,allocatable             :: ind(:)
+    real(8),allocatable             :: vec(:)
+
+    real(8),allocatable             :: vec_out(:)
+    integer,allocatable             :: ind_out(:)
+    real(8),allocatable             :: vec_l(:)
+    integer                         :: N_out
+
+    !dim_order_bnd...
+    Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
+    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_mult_mat_disc_disc crashes
+    allocate(vec_out(N_out), ind_out(N_out))
+    Call cuda_H_mult_mat_disc_disc(this%H,this%rvec_in,this%rvec_out,size(ind),ind,vec,N_out,ind_out,vec_out)
+!    Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)
+!    E=DOT_PRODUCT(vec_l(:N_out),vec_out(:N_out))
+    ERROR STOP "FINISH IMPLEMENT"
 end subroutine 
+
 
 subroutine mult_r(this,lat,res)
     !mult
@@ -243,7 +259,6 @@ end subroutine
 
 subroutine send(this,ithread,tag,com)
     use mpi_basic                
-    use mkl_spblas_util, only: unpack_csr
     class(t_H_cusparse),intent(in)   :: this
     integer,intent(in)              :: ithread
     integer,intent(in)              :: tag
@@ -276,7 +291,6 @@ end subroutine
 subroutine bcast(this,comm)
     use mpi_basic
     use mpi_util,only: bcast_util => bcast
-    use mkl_spblas_util, only: unpack_csr
     class(t_H_cusparse),intent(inout)    ::  this
     type(mpi_type),intent(in)           ::  comm
 #ifdef CPP_MPI
@@ -289,7 +303,6 @@ end subroutine
 
 subroutine distribute(this,comm)
     use mpi_basic                
-    use mkl_spblas_util, only: unpack_csr
     use mpi_util!,only: bcast_util => bcast
     class(t_H_cusparse),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm

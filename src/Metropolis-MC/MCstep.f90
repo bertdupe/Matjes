@@ -32,15 +32,16 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H)
     real(8) :: S_new(3)     !new spin direction at chosen state
     real(8) :: Dmag(3)      !change of magnetization caused by S_new at i_spin 
     real(8) :: DE           !Energy difference caused by changes spin
-    integer :: i_spin       !chosen spin index (1:N_cell*nmag)
-    integer :: i_site       !unit cell index of chosen spin index
-    integer :: i_spin_uc    !spin index within unit-cell
+    integer :: i_spin       !chosen spin index (1:N_cell*site_per_cell(order))
+!    integer :: i_spin       !chosen spin index (1:N_cell*nmag)
+!    integer :: i_site       !unit cell index of chosen spin index
+!    integer :: i_spin_uc    !spin index within unit-cell
 
     !choose the spin-site which is to be modified
-    call choose_spin(i_spin,N_spin)
-    i_site=(i_spin-1)/lat%nmag+1
-    i_spin_uc= modulo((i_spin-1),lat%nmag)+1
-    state_prop%dim_bnd(:,1)=[(i_spin_uc-1)*3+1,i_spin_uc*3]  !1 has to be magnetic moment order parameter
+    call choose_spin(i_spin,state_prop%Nsite)
+!    i_site=(i_spin-1)/lat%nmag+1
+!    i_spin_uc= modulo((i_spin-1),lat%nmag)+1
+!    state_prop%dim_bnd(:,1)=[(i_spin_uc-1)*3+1,i_spin_uc*3]  !1 has to be magnetic moment order parameter
 
     !----------------------------------
     !       Calculate the energy difference if this was flipped
@@ -48,12 +49,12 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H)
     !----------------------------------
     !get Energy of old configuration
     S_old=lat%M%modes_3(:,i_spin)
-    E_old=H%energy_single(i_site,state_prop%dim_bnd,lat)
+    E_old=H%energy_single(i_spin,state_prop%order,lat)
     
     !get Energy of the new configuration
     S_new=state_prop%spin_sample(i_spin,lat,H)  !choose new magnetic direction
     lat%M%modes_3(:,i_spin)=S_new               !set new configuration
-    E_new=H%energy_single(i_site,state_prop%dim_bnd,lat)
+    E_new=H%energy_single(i_spin,state_prop%order,lat)
     lat%M%modes_3(:,i_spin)=S_old   !revert for now to old state
 
     !! get energy difference

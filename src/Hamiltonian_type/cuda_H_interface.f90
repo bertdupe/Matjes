@@ -58,5 +58,18 @@ module m_cuda_H_interface
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(inout)   		:: buffer
         end subroutine
+
+        subroutine cuda_H_mult_mat_disc_disc(mat,vec_in_dev,vec_out_dev,N_in,ind_in,vec_in,N_out,ind_out,vec_out) bind( c, name="cuda_H_mult_mat_disc_disc" )
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: mat
+           type(C_PTR),intent(in)                  :: vec_in_dev
+           type(C_PTR),intent(in)                  :: vec_out_dev
+           integer(c_int),value                    :: N_in
+           integer(c_int),intent(in)               :: ind_in(*)
+           real( kind = c_double ),intent(in)      :: vec_in(*)
+           integer(c_int),intent(inout)            :: N_out
+           integer(c_int),intent(inout)            :: ind_out(*)
+           real( kind = c_double ),intent(inout)   :: vec_out(*)
+        end subroutine
     end interface
 end module 

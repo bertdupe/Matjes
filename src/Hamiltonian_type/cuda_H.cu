@@ -2,10 +2,34 @@
 #include <cuda_runtime.h>
 #include <cusparse.h>
 #include <cassert>
+
+#include <thrust/device_ptr.h>
+#include <thrust/fill.h>
+
 #ifdef CPP_MPI
 #include <mpi.h>
 #endif
 using namespace std;
+
+__global__ void add_col_mat(
+    double* res, 
+    int* row,
+    int* col,
+    double* val,
+    int col_ind,
+    int ind,
+    double val_vec){
+
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    int Nentry=row[col_ind+1]-row[col_ind];
+//    printf("Nentry: %d \n", Nentry);
+    if (i < Nentry){
+        int col_ind=row[col_ind]+i;
+        res[col_ind]=res[col_ind] + val[col_ind] * val_vec;
+    }
+}    
+
+
 
 extern "C"{
 
@@ -314,24 +338,6 @@ void cuda_H_mult_mat_vec(
     cusparseHandle_t*   &handle){
 
     cusparseStatus_t stat;
-//
-//    //get device buffer
-//    size_t bufferSize=0;
-//    stat =cusparseSpMV_bufferSize(*handle,
-//                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
-//                                  &alpha,
-//                                  mat,
-//                                  in_vec,
-//                                  &beta,
-//                                  out_vec,
-//                                  CUDA_R_64F,
-//                                  CUSPARSE_SPMV_CSR_ALG1,
-//                                  &bufferSize);
-//    assert (CUSPARSE_STATUS_SUCCESS == stat);
-//    char *buffer;
-//    err=cudaMalloc( (void**) &buffer, (size_t) sizeof(char)* bufferSize);
-//    assert( cudaSuccess == err);
-
     const double alpha= 1.0;    //save in device memory
     const double beta = 0.0;
     //do the actual multiplication
@@ -346,11 +352,6 @@ void cuda_H_mult_mat_vec(
                         CUSPARSE_SPMV_CSR_ALG1,
                         buffer);
     assert (CUSPARSE_STATUS_SUCCESS == stat);
-
-
-//    //free intermediate data
-//    err=cudaFree(buffer);
-//    assert( cudaSuccess == err);
 }
 
 void cuda_free_buffer(
@@ -389,5 +390,69 @@ void cuda_set_buffer(
     assert (CUSPARSE_STATUS_SUCCESS == stat);
     err=cudaMalloc( (void**) &buffer, (size_t) sizeof(char)* bufferSize);
     assert( cudaSuccess == err);
+}
+
+void cuda_H_mult_mat_disc_disc(
+    cusparseSpMatDescr* &mat,
+    cusparseDnVecDescr* &in_vec,
+    cusparseDnVecDescr* &out_vec,
+    int N_in,
+    int ind_in[],
+    double vec_in[],
+    int& N_out,  // in: size of ind_out , out: size of relevant indices in ind_out
+    int ind_out[],
+    double vec_out[]){
+
+    cudaError_t err;
+
+    //host data
+    int64_t rows, cols, nnz;
+    cusparseIndexType_t csrRowOffsetsType;
+    cusparseIndexType_t csrColIndType;
+    cusparseIndexBase_t idxBase;
+    cudaDataType        valueType;
+    //Device data
+    void *csrRow_v, *csrCol_v, *csrVal_v;
+    int *csrRow, *csrCol;
+    double *csrVal;
+
+    //get data from old sparse reference
+    cusparseStatus_t stat = cusparseCsrGet(mat, &rows, &cols, &nnz
+                                          ,&csrRow_v,&csrCol_v, &csrVal_v
+                                          ,&csrRowOffsetsType, &csrColIndType, &idxBase, &valueType);
+    assert( CUSPARSE_STATUS_SUCCESS == stat );
+
+    csrRow=(int*) csrRow_v, csrCol=(int*) csrCol_v, csrVal=(double*) csrVal_v;
+
+    //get data from input vector (only used for storage)
+    double* vec_val_dev;
+    stat=cusparseDnVecGetValues(in_vec, (void**) &vec_val_dev);
+    assert( CUSPARSE_STATUS_SUCCESS == stat );
+    thrust::device_ptr<double> dev_ptr(vec_val_dev);
+    thrust::fill(dev_ptr, dev_ptr + cols, 0.0);
+
+//    //set in vector
+//    double *in_val;
+//    int *in_ind;
+//    err =cudaMalloc( &in_val,(size_t) sizeof(double)*N_in);
+//    assert( cudaSuccess == err );
+//    err = cudaMemcpy(in_val, vec_in, (size_t) sizeof(int)*N_in , cudaMemcpyHostToDevice);
+//    assert( cudaSuccess == err );
+//
+//    err =cudaMalloc( &in_ind,(size_t) sizeof(int)*N_in);
+//    assert( cudaSuccess == err );
+//    err = cudaMemcpy(in_ind, ind_in, (size_t) sizeof(int)*N_in , cudaMemcpyHostToDevice);
+//    assert( cudaSuccess == err );
+
+
+    int N=cols;
+    int threadsPerBlock = std::min(256,N);
+    int numBlocks= (N+ threadsPerBlock - 1) / threadsPerBlock;
+
+    for (int i =0; i<N_in; ++i){
+        add_col_mat<<<numBlocks, threadsPerBlock>>>(vec_val_dev,csrRow, csrCol, csrVal, i, ind_in[i], vec_in[i]);
+    }
+
+
 }
 }

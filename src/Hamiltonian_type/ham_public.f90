@@ -194,13 +194,14 @@ contains
         enddo
     end subroutine
      
-    function energy_single(ham,i_m,dim_bnd,lat)result(E)
+    function energy_single(ham,i_m,order,lat)result(E)
         use m_derived_types, only: number_different_order_parameters
         !get all energies from an energy array
         class(t_H),intent(in)       :: ham(:)
         integer,intent(in)          :: i_m
         class(lattice),intent(in)   :: lat
-        integer, intent(in)         :: dim_bnd(2,number_different_order_parameters)  
+        integer,intent(in)          :: order
+!        integer, intent(in)         :: dim_bnd(2,number_different_order_parameters)  
         real(8)                     :: E
 
         real(8)     ::  tmp_E(size(ham))
@@ -208,9 +209,9 @@ contains
 
         E=0.0d0
         do i=1,size(ham)
-            Call ham(i)%eval_single(tmp_E(i),i_m,dim_bnd,lat)
+            Call ham(i)%eval_single(tmp_E(i),i_m,order,lat)
         enddo
-        tmp_E=tmp_E*real(ham(:)%mult_M_single,8)
+        if(order==1) tmp_E=tmp_E*real(ham(:)%mult_M_single,8)
         E=sum(tmp_E)
     end function
 

@@ -19,8 +19,6 @@ type,abstract :: t_H_base
     logical,private             :: set=.false.      !has this object been set?
     character(len=len_desc)     :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
     integer                     :: mult_M_single=0  !factor necessary to calculate energy change correctly when only evaluating single sites
-!    type(t_deriv_base)          :: deriv(number_different_order_parameters)
-
 contains
 
     !Hamiltonian initialization routines
@@ -47,7 +45,6 @@ contains
     procedure                               :: mult_l_ind,      mult_r_ind 
     procedure                               :: mult_l_disc_disc,mult_r_disc_disc
 
-
     !really non_overridable
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
@@ -68,7 +65,6 @@ contains
     procedure,NON_OVERRIDABLE       :: send_base
     procedure,NON_OVERRIDABLE       :: recv_base
     procedure,NON_OVERRIDABLE       :: bcast_base
-
 
     !misc.
     procedure,NON_OVERRIDABLE  :: is_set
@@ -147,12 +143,13 @@ abstract interface
         real(8),intent(out)         ::  E
     end subroutine
 
-    subroutine int_eval_single(this,E,i_m,dim_bnd,lat)
+    subroutine int_eval_single(this,E,i_m,order,lat)
         import t_H_base,lattice,number_different_order_parameters
         class(t_H_base),intent(in)    ::  this
         type(lattice),intent(in)    ::  lat
-        integer,intent(in)          ::  i_m     !site index in (1:Ncell)-basis
-        integer,intent(in)          ::  dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
+        integer,intent(in)          ::  i_m     !site index in (1:Ncell*dim_mode_inner(order)/dim_mode(order))-basis
+        integer,intent(in)          :: order    
+!        integer,intent(in)          ::  dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
         real(8),intent(out)         ::  E       !energy caused by considered site
     end subroutine
 
@@ -358,7 +355,7 @@ contains
     end subroutine
 
     subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
-        class(t_H_base),intent(in)       :: this
+        class(t_H_base),intent(in)  :: this
         type(lattice),intent(in)    :: lat
         integer,intent(in)          :: N
         integer,intent(in)          :: ind_out(N)

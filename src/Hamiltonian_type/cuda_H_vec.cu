@@ -8,8 +8,6 @@
 using namespace std;
 
 extern "C"{
-
-
 void cuda_fvec_alloccopy(
     cusparseDnVecDescr* &vec_in, 
     cusparseDnVecDescr* &vec_out){

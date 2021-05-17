@@ -2,6 +2,7 @@ module m_mc_track_val
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_H_public, only: energy_all, t_H
 use m_hamiltonian_collection, only: hamiltonian
+    use, intrinsic :: iso_fortran_env, only : error_unit
 implicit none
 private
 public track_val
@@ -15,7 +16,10 @@ type track_val
     real(8) :: nb=0.0d0
     real(8) :: cone=0.0d0
     !parameters for single evaluation
-    integer ::  dim_bnd(2,number_different_order_parameters)
+    integer :: order=0  !which order parameter is considered
+    integer :: dim_mode_inner  !mode dimension of considered lattice
+    integer :: Nsite=0  !number of sites
+
     procedure(int_sample),pointer   :: spin_sample => null()
     contains
     procedure :: init
@@ -36,6 +40,7 @@ end interface
 
 contains 
 subroutine init(this,lat,H,io_MC)
+    use m_type_lattice, only: op_name_to_int, dim_modes_inner
     use m_MC_io,only: MC_input
     class(track_val),intent(out)    :: this
     type(lattice),intent(in)        :: lat
@@ -43,17 +48,28 @@ subroutine init(this,lat,H,io_MC)
     class(MC_input),intent(in)      :: io_MC
     integer     ::  i
     logical     ::  used(number_different_order_parameters)
+    character(len=10)   :: tmp_char
 
     this%magnetization=sum(lat%M%modes_3,2) !sum over magnetization of all magnetic atoms without magnetic moment, probably not what is really wanted
     this%E_total=H%energy(lat)
     this%cone=io_MC%cone
-    this%dim_bnd=0
+    
+    this%order=op_name_to_int("magnetic")
     Call lat%used_order(used)
-    do i=1,number_different_order_parameters
-        if(.not.used(i)) cycle 
-        this%dim_bnd(1,i)=1
-        this%dim_bnd(2,i)=lat%get_order_dim(i)
-    enddo
+    if(.not.used(this%order))then
+        write(error_unit,'(///A)') "Trying to initialize track-value for Monte-Carlo to an order which is not initialized."
+        write(error_unit,'(A,I6)') "Considered order index:", this%order
+        write(tmp_char,'(I10)') number_different_order_parameters
+        write(error_unit,'(A,' //tmp_char// 'L3)') "Initialized orders:", used
+        ERROR STOP 
+    endif
+    this%dim_mode_inner=dim_modes_inner(this%order)
+    this%Nsite=lat%Ncell*lat%site_per_cell(this%order)
+    !do i=1,number_different_order_parameters
+    !    if(.not.used(i)) cycle 
+    !    this%dim_bnd(1,i)=1
+    !    this%dim_bnd(2,i)=lat%get_order_dim(i)
+    !enddo
 
     if(io_MC%ising)then
         this%spin_sample=>sample_ising

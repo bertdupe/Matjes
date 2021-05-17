@@ -338,14 +338,15 @@ function energy(this,lat)result(E)
     E=sum(tmp_E)
 end function
 
-function energy_single(this,i_m,dim_bnd,lat)result(E)
+function energy_single(this,i_m,order,lat)result(E)
     use m_derived_types, only: number_different_order_parameters
     use mpi_distrib_v
     !returns the total energy caused by a single entry !needs some updating 
     class(hamiltonian),intent(inout):: this
     integer,intent(in)              :: i_m
     type (lattice),intent(in)       :: lat
-    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete, needs something which specified in which space i_m is thoguh
+    integer,intent(in)              :: order
+!    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete, needs something which specified in which space i_m is thoguh
     real(8)                         :: E
 
     real(8)     ::  tmp_E(this%N_total)
@@ -354,7 +355,7 @@ function energy_single(this,i_m,dim_bnd,lat)result(E)
     if(any(this%is_para)) ERROR STOP "IMPLEMENT"
     E=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%eval_single(tmp_E(iH),i_m,dim_bnd,lat)
+        Call this%H(iH)%eval_single(tmp_E(iH),i_m,order,lat)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
     if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
