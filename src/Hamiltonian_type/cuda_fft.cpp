@@ -1,3 +1,4 @@
+#ifdef CPP_CUDA
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <cufft.h>
@@ -53,9 +54,9 @@ void cuda_fft_set_real(
     const double* arr_in,
     cufftDoubleReal* const& arr_device){
 
+    cudaError_t err;
 #ifdef CPP_DEBUG
     cudaPointerAttributes attributes;
-    cudaError_t err;
     err=cudaPointerGetAttributes (&attributes, arr_device);
     assert(err == cudaSuccess);
     assert(attributes.type == cudaMemoryTypeDevice);
@@ -180,4 +181,4 @@ void cuda_fft_destroy_cmplx(
 
 
 }
-
+#endif

@@ -1,4 +1,5 @@
 module m_fft_H_cufft
+#ifdef CPP_CUDA
 !module which contains the general discrete fourier transform Hamiltonian based on cuFFT
 
 !the type is used by first calling init_shape, followed by init_op with the operator as described in more detail for the dipolar_fft interaction
@@ -243,12 +244,16 @@ subroutine set_M(this,lat)
     !set this%M_n from lat%M%modes according to this%M_internal
     class(fft_H_cufft),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
+#ifdef CPP_CUDA
 
     integer(C_int)  ::  length
 
     length=int(size(this%m_n),C_int)
     Call this%M_internal(this%M_n,lat%M%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
     Call cuda_fft_set_real(length,this%M_n,this%m)
+#else
+    ERROR STOP "fft_H_cufft%set_M requires CPP_CUDA"
+#endif
 end subroutine
 
 subroutine get_H(this,lat,Hout)
@@ -315,5 +320,5 @@ subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
 
     H_out=H(:,i4(1),i4(2),i4(3),i4(4))
 end subroutine
-
+#endif
 end module

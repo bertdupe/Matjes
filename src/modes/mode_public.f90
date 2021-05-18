@@ -3,7 +3,9 @@ use m_derived_types,only: lattice
 use m_mode_construction, only: F_mode
 use m_mode_construction_rank1_point, only: F_mode_rank1_point
 use m_mode_construction_rankN_full_manual, only: F_mode_rankN_full_manual
+#ifdef CPP_EIGEN
 use m_mode_construction_rankN_eigen, only: F_mode_rankN_eigen
+#endif
 use m_mode_construction_rankN_sparse_col, only: F_mode_rankN_sparse_col
 use m_mode_construction_rankN_sparse_col_sepdiff, only: F_mode_rankN_sparse_col_sepdiff
 #if 0
@@ -33,8 +35,12 @@ subroutine get_mode_ident(mode,ident)
         ident=3
     type is(F_mode_rankN_sparse_col_sepdiff)
         ident=4
+#ifdef CPP_EIGEN
     type is(F_mode_rankN_eigen)
         ident=5
+#else
+    ERROR STOP "CANNOT USE EIGEN MODE DESCIPTION WITHOUT EIGEN LIBRARY"
+#endif
     class default
         ident=0
         write(error_unit,"(///A)") "Failed to identify type of mode, probably a programming mistake"
@@ -61,8 +67,12 @@ subroutine set_mode_ident(mode,ident)
         allocate(F_mode_rankN_sparse_col::mode)
     case(4)
         allocate(F_mode_rankN_sparse_col_sepdiff::mode)
-    case(6)
+#ifdef CPP_EIGEN
+    case(5)
         allocate(F_mode_rankN_eigen::mode)
+#else
+    ERROR STOP "CANNOT USE EIGEN MODE DESCIPTION WITHOUT EIGEN LIBRARY"
+#endif
     case default
         write(error_unit,"(///A,I6,/,A)") "Received unexpected identified to allocate mode: ",ident,"Was an mode implementation forgotten?"
         ERROR STOP
@@ -147,6 +157,7 @@ subroutine mode_set_rankN_sparse(mode,abbrev_in,lat,mat,implementation)
             Call mode%init_order(lat,abbrev_in,mat)
         end select
     elseif(implementation==3)then
+#ifdef CPP_EIGEN
         !slower than using *_col type
         !saves the construction procedure in a eigen sparse matrix 
         allocate(F_mode_rankN_eigen::mode)
@@ -154,6 +165,9 @@ subroutine mode_set_rankN_sparse(mode,abbrev_in,lat,mat,implementation)
         type is(F_mode_rankN_eigen)
             Call mode%init_order(lat,abbrev_in,mat)
         end select
+#else
+    ERROR STOP "CANNOT USE EIGEN MODE DESCIPTION WITHOUT EIGEN LIBRARY"
+#endif
 #if 0
     elseif(implementation==98)then
         !rather obsolete, unless *_col does not work

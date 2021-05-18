@@ -1,4 +1,5 @@
 module m_eigen_mode_interface
+#ifdef CPP_EIGEN
     use,intrinsic :: iso_c_binding
     implicit none
     public
@@ -67,5 +68,6 @@ module m_eigen_mode_interface
            real   ( kind = c_double),intent(inout) :: vec(*)
         end subroutine
     end interface
-    
+#endif    
 end module 
+

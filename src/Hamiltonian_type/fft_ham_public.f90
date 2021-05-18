@@ -1,7 +1,9 @@
 module m_fft_H_public
 use m_fft_H_base,  only: fft_H
 use m_fft_H_fftw,  only: fft_H_fftw
+#ifdef CPP_CUDA
 use m_fft_H_cufft, only: fft_H_cufft
+#endif
 implicit none
 public
 

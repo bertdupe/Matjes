@@ -1,4 +1,5 @@
 module m_mode_construction_rankN_eigen
+#ifdef CPP_EIGEN
 use,intrinsic :: iso_c_binding
 use m_mode_construction
 use m_derived_types, only : lattice,number_different_order_parameters
@@ -278,8 +279,5 @@ subroutine recv(this,ithread,tag,com)
 #endif
 end subroutine
 
-
-
-
-
+#endif
 end module

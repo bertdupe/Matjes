@@ -29,7 +29,7 @@ contains
         mode=6
 #elif defined CPP_MKL_SPBLAS
         mode=1
-#elif defined CPP_EIGEN_H
+#elif defined CPP_EIGEN
         mode=2
 #elif defined CPP_BLAS
         mode=4
@@ -74,16 +74,16 @@ contains
             ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL_SPBLAS)"
 #endif
         case(2)
-#if defined CPP_EIGEN_H
+#if defined CPP_EIGEN
             allocate(t_H_eigen_mem::H_out)
 #else
-            ERROR STOP "CANNOT USE t_H_eigen_mem Sparse Hamiltonian  implementation without Eigen (CPP_EIGEN_H)"
+            ERROR STOP "CANNOT USE t_H_eigen_mem Sparse Hamiltonian  implementation without Eigen (CPP_EIGEN)"
 #endif
         case(3)
-#if defined CPP_EIGEN_H
+#if defined CPP_EIGEN
             allocate(t_H_eigen::H_out)
 #else
-            ERROR STOP "CANNOT USE t_H_eigen Sparse Hamiltonian implementation without Eigen (CPP_EIGEN_H)"
+            ERROR STOP "CANNOT USE t_H_eigen Sparse Hamiltonian implementation without Eigen (CPP_EIGEN)"
 #endif
         case(4)
 #if defined CPP_BLAS
@@ -118,16 +118,16 @@ contains
             ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL_SPBLAS)"
 #endif
         case(2)
-#if defined CPP_EIGEN_H
+#if defined CPP_EIGEN
             allocate(t_H_eigen_mem::H_out(N))
 #else
-            ERROR STOP "CANNOT USE t_H_eigen_mem Sparse Hamiltonian  implementation without Eigen (CPP_EIGEN_H)"
+            ERROR STOP "CANNOT USE t_H_eigen_mem Sparse Hamiltonian  implementation without Eigen (CPP_EIGEN)"
 #endif
         case(3)
-#if defined CPP_EIGEN_H
+#if defined CPP_EIGEN
             allocate(t_H_eigen::H_out(N))
 #else
-            ERROR STOP "CANNOT USE t_H_eigen Sparse Hamiltonian implementation without Eigen (CPP_EIGEN_H)"
+            ERROR STOP "CANNOT USE t_H_eigen Sparse Hamiltonian implementation without Eigen (CPP_EIGEN)"
 #endif
         case(4)
 #if defined CPP_BLAS

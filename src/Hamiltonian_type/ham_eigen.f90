@@ -1,5 +1,5 @@
 module m_H_eigen
-#ifdef CPP_EIGEN_H
+#ifdef CPP_EIGEN
 !Hamiltonian type specifications using Eigen to save and evaluate the Hamiltonian
 use m_derived_types, only: lattice, number_different_order_parameters
 use m_eigen_H_interface

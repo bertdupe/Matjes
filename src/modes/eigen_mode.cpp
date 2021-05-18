@@ -1,3 +1,4 @@
+#ifdef CPP_EIGEN
 #include <iostream>
 #include <Eigen/Sparse>
 #include <vector>
@@ -143,3 +144,4 @@ void mode_destroy(
 
 
 }
+#endif

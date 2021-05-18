@@ -1,5 +1,5 @@
 module m_H_eigen_mem
-#ifdef CPP_EIGEN_H
+#ifdef CPP_EIGEN
 !Hamiltonian type specifications extending the Eigen version to also save the transpose 
 !in order to make some operations faster
 use m_derived_types, only: lattice, number_different_order_parameters
