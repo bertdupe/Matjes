@@ -6,6 +6,7 @@ use MKL_SPBLAS
 use m_derived_types, only: lattice,number_different_order_parameters
 use m_H_coo_based
 use mkl_spblas_util, only: unpack_csr
+use m_work_ham_single
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE,C_INT
 
 
@@ -24,6 +25,7 @@ type,extends(t_H_coo_based) :: t_H_mkl_csr
 contains
     !necessary t_H routines
     procedure :: eval_single
+    procedure :: eval_single_work
 
     procedure :: set_from_Hcoo
 
@@ -35,6 +37,8 @@ contains
     procedure :: mult_r,mult_l
     procedure :: mult_l_cont,mult_r_cont
     procedure :: mult_l_disc,mult_r_disc
+
+    procedure :: set_work_size
 
     !MPI
     procedure :: send
@@ -50,6 +54,23 @@ end interface
 private
 public t_H,t_H_mkl_csr
 contains 
+
+subroutine set_work_size(this,work,order)
+    use m_type_lattice, only: dim_modes_inner
+    class(t_H_mkl_csr),intent(in)           :: this
+    class(work_ham_single),intent(inout)    :: work 
+    integer,intent(in)                      :: order
+    integer     :: sizes(2)
+    integer     ::  dim_mode_in
+
+    if(.not.this%is_set()) ERROR STOP "cannot set work size of hamiltonian if it is not set"
+    if(this%col_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if col_max==0"
+    if(.not.any(order==this%op_r)) ERROR STOP "cannot set work size for order which does not appear on right side of Hamiltonian"
+    dim_mode_in=dim_modes_inner(order)
+    sizes(1)= dim_mode_in*(2*this%col_max+1)
+    sizes(2)= dim_mode_in*(  this%col_max+1)
+    Call work%set(sizes)
+end subroutine
 
 type(t_H_mkl_csr) function dummy_constructor()
     !might want some initialization for H and descr, but should work without
@@ -234,6 +255,54 @@ subroutine set_from_Hcoo(this,H_coo)
     Call set_auxiliaries(this)
 end subroutine 
 
+subroutine eval_single_work(this,E,i_m,order,lat,work)
+    use m_derived_types, only: lattice, dim_modes_inner
+    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
+    ! input
+    class(t_H_mkl_csr), intent(in)      :: this
+    type(lattice), intent(in)           :: lat
+    integer, intent(in)                 :: i_m
+    integer, intent(in)                 :: order
+    ! output
+    real(8), intent(out)                :: E
+    !temporary data
+    type(work_ham_single),intent(inout) ::  work
+
+    integer,pointer                 :: ind(:)
+    real(8),pointer                 :: vec(:)
+    real(8),pointer                 :: vec_out(:)
+    integer,pointer                 :: ind_out(:)
+    real(8),pointer                 :: vec_l(:) !discontiguous array on left side
+    integer                         :: N_out
+
+    !some local indices/ loop variables
+    integer :: dim_inner
+    integer ::  i,j, i_col
+    integer :: ii
+
+    dim_inner=dim_modes_inner(order)
+    ind    (1:dim_inner             )=>work%int_arr (1                           :dim_inner                   )
+    ind_out(1:dim_inner*this%col_max)=>work%int_arr (dim_inner+1                 :dim_inner*(1+this%col_max)  )
+    vec    (1:dim_inner             )=>work%real_arr(1                           :dim_inner                   )
+    vec_out(1:dim_inner*this%col_max)=>work%real_arr(dim_inner+1                 :dim_inner*(1+this%col_max)  )
+    vec_l  (1:dim_inner*this%col_max)=>work%real_arr((1+this%col_max)*dim_inner+1:dim_inner*(1+2*this%col_max))
+
+    Call this%mode_r%get_mode_single_disc_expl(lat,1,i_m,dim_inner,ind,vec)
+    N_out=size(ind)*this%col_max
+        
+    ii=0
+    do i=1,size(ind)
+        i_col=ind(i)
+        do j=this%mat_row(i_col),this%mat_row(i_col+1)-1
+            ii=ii+1
+            vec_out(ii)=this%mat_val(j)*vec(i)
+            ind_out(ii)=this%mat_col(j)
+        enddo
+    enddo
+
+    Call this%mode_l%get_mode_disc_expl(lat,ii,ind_out(:ii),vec_l(:ii))
+    E=DOT_PRODUCT(vec_l(:ii),vec_out(:ii))
+end subroutine 
 
 subroutine eval_single(this,E,i_m,order,lat)
     use m_derived_types, only: lattice

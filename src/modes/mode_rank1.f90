@@ -16,6 +16,7 @@ type, extends(F_mode) :: F_mode_rank1_point
 
     procedure   :: get_mode_single_cont
     procedure   :: get_mode_single_disc
+    procedure   :: get_mode_single_disc_expl
 
     procedure   :: copy
     procedure   :: destroy
@@ -45,6 +46,26 @@ subroutine get_ind_site(this,comp,site,ind)
     ind=[((site-1)*inner_dim_mode+i,i=1,inner_dim_mode)]
 end subroutine
 
+subroutine get_mode_single_disc_expl(this,lat,comp,site,dim_mode,ind,vec)
+    class(F_mode_rank1_point),intent(in)   :: this
+    type(lattice),intent(in)               :: lat
+    integer,intent(in)                     :: comp  !mode index
+    integer,intent(in)                     :: site    !entry
+    integer,intent(in)                     :: dim_mode  !inner dim_mode
+    integer,intent(inout)                  :: ind(dim_mode)
+    real(8),intent(inout)                  :: vec(dim_mode)
+
+    integer                     :: i
+    real(8),contiguous,pointer  :: mode(:)
+
+#ifdef CPP_DEBUG
+    if(comp/=1) ERROR STOP "DOESN'T MAKE SENCE FOR comp /=1"
+#endif
+    ind=(site-1)*dim_mode+[(i,i=1,dim_mode)]
+
+    Call lat%set_order_point(this%order(1),mode)
+    vec=mode(ind)
+end subroutine
 
 subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
     class(F_mode_rank1_point),intent(in)   :: this

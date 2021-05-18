@@ -9,13 +9,14 @@ src/Hamiltonian_type/ham_dense_blas.f90
 src/Hamiltonian_type/ham_deriv.f90
 src/Hamiltonian_type/ham_eigen.f90
 src/Hamiltonian_type/ham_eigen_mem.f90
-src/Hamiltonian_type/ham_sparse_mkl.f90
+src/Hamiltonian_type/ham_mkl_csr.f90
 src/Hamiltonian_type/hamiltonian_collection.f90
 src/Hamiltonian_type/fft_ham_fftw.f90
 src/Hamiltonian_type/fft_ham_cufft.f90
 src/Hamiltonian_type/fft_ham_base.f90
 src/Hamiltonian_type/fft_ham_public.f90
 src/Hamiltonian_type/fft_ham_internal.f90
+src/Hamiltonian_type/work_ham_single.f90
 )
 
 set(eigen_H ${eigen_H}

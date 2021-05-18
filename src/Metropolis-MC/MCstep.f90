@@ -6,14 +6,21 @@ use m_choose_spin, only: choose_spin
 use m_relaxtyp,only: underrelax,overrelax
 use m_H_public, only: t_H,energy_single
 use m_hamiltonian_collection, only: hamiltonian
+Implicit none
 
 private
 public :: MCstep
+interface MCstep
+    !ultimately keep only MCstep_work, if all Hamiltonians have eigen_single_work implemented
+    module procedure MCstep_old
+    module procedure MCstep_work
+end interface
+
 contains
 !
 ! ===============================================================
 !
-SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H)
+SUBROUTINE MCstep_old(lat,io_MC,N_spin,state_prop,kt,H)
     use m_constants, only : k_b,pi
     use m_MC_io,only: MC_input
     Implicit none
@@ -33,15 +40,9 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H)
     real(8) :: Dmag(3)      !change of magnetization caused by S_new at i_spin 
     real(8) :: DE           !Energy difference caused by changes spin
     integer :: i_spin       !chosen spin index (1:N_cell*site_per_cell(order))
-!    integer :: i_spin       !chosen spin index (1:N_cell*nmag)
-!    integer :: i_site       !unit cell index of chosen spin index
-!    integer :: i_spin_uc    !spin index within unit-cell
 
     !choose the spin-site which is to be modified
     call choose_spin(i_spin,state_prop%Nsite)
-!    i_site=(i_spin-1)/lat%nmag+1
-!    i_spin_uc= modulo((i_spin-1),lat%nmag)+1
-!    state_prop%dim_bnd(:,1)=[(i_spin_uc-1)*3+1,i_spin_uc*3]  !1 has to be magnetic moment order parameter
 
     !----------------------------------
     !       Calculate the energy difference if this was flipped
@@ -57,7 +58,7 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H)
     E_new=H%energy_single(i_spin,state_prop%order,lat)
     lat%M%modes_3(:,i_spin)=S_old   !revert for now to old state
 
-    !! get energy difference
+    ! get energy difference
     DE=E_new-E_old
     
     state_prop%nb=state_prop%nb+1.0d0
@@ -72,7 +73,65 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H)
     endif
    
     state_prop%rate=state_prop%acc/state_prop%nb
-END SUBROUTINE MCstep
+END SUBROUTINE 
+
+
+SUBROUTINE MCstep_work(lat,io_MC,N_spin,state_prop,kt,H,work)
+    use m_constants, only : k_b,pi
+    use m_MC_io,only: MC_input
+    use m_work_ham_single, only: work_ham_single
+    ! input
+    type(lattice),intent(inout)         :: lat
+    type(MC_input),intent(in)           :: io_MC 
+    real(8), intent(in)                 :: kt
+    integer, intent(in)                 :: N_spin
+    type(track_val),intent(inout)       :: state_prop
+    type(hamiltonian), intent(inout)    :: H
+    type(work_ham_single),intent(inout) :: work
+    
+    ! internal variable
+    real(8) :: E_old        !energy caused by the i_spin-site with S_old 
+    real(8) :: E_new        !energy caused by the i_spin-site with S_new
+    real(8) :: S_old(3)     !old spin direction at chosen state
+    real(8) :: S_new(3)     !new spin direction at chosen state
+    real(8) :: Dmag(3)      !change of magnetization caused by S_new at i_spin 
+    real(8) :: DE           !Energy difference caused by changes spin
+    integer :: i_spin       !chosen spin index (1:N_cell*site_per_cell(order))
+
+    !choose the spin-site which is to be modified
+    call choose_spin(i_spin,state_prop%Nsite)
+
+    !----------------------------------
+    !       Calculate the energy difference if this was flipped
+    !       and decider, if the Spin flip will be performed
+    !----------------------------------
+    !get Energy of old configuration
+    S_old=lat%M%modes_3(:,i_spin)
+    Call H%energy_single_work(i_spin,state_prop%order,lat,work,E_old)
+    
+    !get Energy of the new configuration
+    S_new=state_prop%spin_sample(i_spin,lat,H)  !choose new magnetic direction
+    lat%M%modes_3(:,i_spin)=S_new               !set new configuration
+    Call H%energy_single_work(i_spin,state_prop%order,lat,work,E_new)
+    lat%M%modes_3(:,i_spin)=S_old   !revert for now to old state
+
+    ! get energy difference
+    DE=E_new-E_old
+    
+    state_prop%nb=state_prop%nb+1.0d0
+    if ( accept(kt,DE) ) then
+        Dmag=-S_old+S_new   !change of magnetization
+        ! update the spin
+        lat%M%modes_3(:,i_spin)=S_new
+        ! update the quantities
+        state_prop%E_total=state_prop%E_total+DE
+        state_prop%Magnetization=state_prop%Magnetization+Dmag
+        state_prop%acc=state_prop%acc+1.0d0
+    endif
+   
+    state_prop%rate=state_prop%acc/state_prop%nb
+END SUBROUTINE 
+
 ! ===============================================================
 
 function accept(kt,DE)

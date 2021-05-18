@@ -2,6 +2,7 @@ module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H_base
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_mode_public, only: F_mode, get_mode_ident, set_mode_ident
+use m_work_ham_single, only:  work_ham_single
 implicit none
 
 private
@@ -73,6 +74,8 @@ contains
 
     !TODO:
     procedure(int_eval_single),deferred     :: eval_single !needs some work
+    procedure                               :: eval_single_work !evaluates the energy caused by a single mode (using a work array)
+    procedure                               :: set_work_size    !sets the necessary sizes for the work arrays
 
     !finalize routine? (might be risky with Hamiltonian references that have been passed around)
 end type
@@ -672,6 +675,29 @@ subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
     ERROR STOP "IMPLEMENT LOCALLY"
 end subroutine
 
+subroutine eval_single_work(this,E,i_m,order,lat,work)
+    use m_derived_types, only: lattice, dim_modes_inner
+    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
+    ! input
+    class(t_H_base), intent(in)         :: this
+    type(lattice), intent(in)           :: lat
+    integer, intent(in)                 :: i_m
+    integer, intent(in)                 :: order
+    ! output
+    real(8), intent(out)                :: E
+    !temporary data
+    type(work_ham_single),intent(inout) ::  work
+
+    ERROR STOP "IMPLEMENT"  !implement for local entries, then make deferred if I decide to keep that
+end subroutine
+
+subroutine set_work_size(this,work,order)
+    class(t_H_base),intent(in)              :: this
+    class(work_ham_single),intent(inout)    :: work 
+    integer,intent(in)                      :: order
+
+    ERROR STOP "IMPLEMENT"  !implement for local entries, then make deferred if I decide to keep that
+end subroutine
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

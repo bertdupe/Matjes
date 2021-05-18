@@ -119,8 +119,10 @@ subroutine get_coupling_ME_D(Ham,io,lat)
         Ham%desc="antisymmetric magnetoelectric coupling"
         Call mode_set_rank1(Ham%mode_l,lat,"M")
 #if 0
+!this is an older implementation to describe the rank2 mode
         Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
 #else
+!this implementation to construct the rank2 mode should be faster
         Call coo_full_unfold(2,lat%Ncell,dim_modes_r,mat)
         Call mode_set_rankN_sparse(Ham%mode_r,"ME",lat,mat,1)
 #endif

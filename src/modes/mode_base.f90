@@ -14,13 +14,14 @@ type, abstract :: F_mode
     integer             :: mode_size=-1 !overall size of this mode
     integer,allocatable :: order(:) !order parameter indices of respective rank
     contains
-    procedure(int_get_mode),deferred            :: get_mode           !subroutine which returns the mode 
-    procedure(int_get_mode_exc),deferred        :: get_mode_exc   !subroutine which returns the mode excluding one order parameter 
-    procedure(int_mode_reduce_comp),deferred    :: mode_reduce_comp    !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
+    procedure(int_get_mode),deferred            :: get_mode             !subroutine which returns the mode 
+    procedure(int_get_mode_exc),deferred        :: get_mode_exc         !subroutine which returns the mode excluding one order parameter 
+    procedure(int_mode_reduce_comp),deferred    :: mode_reduce_comp     !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
     procedure(int_get_ind_site),deferred        :: get_ind_site 
 
     procedure(int_get_mode_single_cont),deferred :: get_mode_single_cont  !subroutine which returns the mode as contiguous array
     procedure(int_get_mode_single_disc),deferred :: get_mode_single_disc  !subroutine which returns the mode as discontiguous array
+    procedure                                    :: get_mode_single_disc_expl  !returns discontiguous array of mode to explicit output arrays
 
 !subroutines resolving order to first index
     procedure,NON_OVERRIDABLE               :: get_mode_exc_op   !subroutine which returns the mode excluding one order parameter 
@@ -29,6 +30,7 @@ type, abstract :: F_mode
     procedure                               :: reduce_other_exc
 !routines, which should be implemented more efficiently locally
     procedure                               :: get_mode_disc
+    procedure                               :: get_mode_disc_expl
     procedure                               :: get_mode_exc_op_disc
     procedure                               :: get_mode_exc_disc
     procedure                               :: mode_reduce_comp_disc
@@ -325,7 +327,6 @@ subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)
 
 end subroutine
 
-
 subroutine get_mode_disc(this,lat,ind,vec)
     !should be implemented more efficiently for relevant derived types
     class(F_mode),intent(in)                :: this
@@ -340,6 +341,22 @@ subroutine get_mode_disc(this,lat,ind,vec)
     Call this%get_mode(lat,mode,tmp)
     vec=mode(ind)
 end subroutine
+
+subroutine get_mode_disc_expl(this,lat,N,ind,vec)
+    !should be implemented more efficiently for relevant derived types
+    class(F_mode),intent(in)                :: this
+    type(lattice),intent(in)                :: lat
+    integer,intent(in)                      :: N
+    integer,intent(in)                      :: ind(N)
+    real(8),intent(inout)                   :: vec(N)
+
+    real(8),pointer                         :: mode(:)   !pointer to required mode
+    real(8),allocatable,target              :: tmp(:)    !possible temporary storage for mode pointer
+
+    Call this%get_mode(lat,mode,tmp)
+    vec=mode(ind)
+end subroutine
+
 
 subroutine ind_site(this,op_keep,site,ind)
     class(F_mode),intent(in)            :: this
@@ -424,4 +441,19 @@ subroutine recv_base(this,ithread,tag,com)
 end subroutine
 
 
+subroutine get_mode_single_disc_expl(this,lat,comp,site,dim_mode,ind,vec)
+    !make this deferred if it is implemented everywhere where it might be used
+    class(F_mode),intent(in)   :: this
+    type(lattice),intent(in)   :: lat
+    integer,intent(in)         :: comp  !mode index
+    integer,intent(in)         :: site    !entry
+    integer,intent(in)         :: dim_mode  !inner dim_mode
+    integer,intent(inout)      :: ind(dim_mode)
+    real(8),intent(inout)      :: vec(dim_mode)
+
+    integer                     :: i
+    real(8),contiguous,pointer  :: mode(:)
+
+    ERROR STOP "Implement get_mode single for the particular implementation"
+end subroutine
 end module 

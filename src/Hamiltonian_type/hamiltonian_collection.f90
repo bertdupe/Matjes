@@ -1,6 +1,7 @@
 module m_hamiltonian_collection
 use m_H_public, only: t_H, get_Htype_N
 use m_fft_H_public, only: fft_H
+use m_work_ham_single, only: work_ham_single
 
 use m_H_type,only : len_desc
 use m_derived_types, only: lattice
@@ -36,6 +37,7 @@ contains
     procedure   :: energy_resolved
     procedure   :: energy_single
     procedure   :: energy_distrib
+    procedure   :: energy_single_work
     
     !derivative getting routines
     procedure   :: get_eff_field
@@ -45,6 +47,9 @@ contains
     procedure   :: is_master
     procedure   :: bcast => bcast_hamil        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
     procedure   :: distribute   !distributes the different Hamiltonian entries to separate threads
+
+    !utility routines
+    procedure   :: get_single_work
 
     !small access routines
     procedure   :: size_H
@@ -338,6 +343,36 @@ function energy(this,lat)result(E)
     E=sum(tmp_E)
 end function
 
+subroutine energy_single_work(this,i_m,order,lat,work,E)
+    use m_derived_types, only: number_different_order_parameters
+    use mpi_distrib_v
+    !returns the total energy caused by a single entry !needs some updating 
+    class(hamiltonian),intent(in)   :: this
+    integer,intent(in)              :: i_m
+    type (lattice),intent(in)       :: lat
+    integer,intent(in)              :: order
+    type(work_ham_single),intent(inout) ::  work
+    real(8),intent(out)             :: E
+
+    real(8)     ::  tmp_E(this%N_total)
+    integer     ::  iH
+#ifdef CPP_DEBUG 
+    if(any(this%is_para)) ERROR STOP "IMPLEMENT" !I is rather unlikely that a parallelization here can make this faster
+#endif
+    E=0.0d0
+    do iH=1,this%NH_local
+        Call this%H(iH)%eval_single_work(tmp_E(iH),i_m,order,lat,work)
+    enddo
+    tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
+
+    if(this%NHF_local>0) STOP "IMPLEMENT THIS FOR FFT"
+!    do iH=1,this%NHF_local
+!         Call this%H_fft(iH)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
+!    enddo
+
+    E=sum(tmp_E)
+end subroutine 
+
 function energy_single(this,i_m,order,lat)result(E)
     use m_derived_types, only: number_different_order_parameters
     use mpi_distrib_v
@@ -346,20 +381,19 @@ function energy_single(this,i_m,order,lat)result(E)
     integer,intent(in)              :: i_m
     type (lattice),intent(in)       :: lat
     integer,intent(in)              :: order
-!    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete, needs something which specified in which space i_m is thoguh
     real(8)                         :: E
 
     real(8)     ::  tmp_E(this%N_total)
     integer     ::  iH
-
-    if(any(this%is_para)) ERROR STOP "IMPLEMENT"
+ 
+    if(any(this%is_para)) ERROR STOP "IMPLEMENT" !I is rather unlikely that a parallelization here can make this faster
     E=0.0d0
     do iH=1,this%NH_local
         Call this%H(iH)%eval_single(tmp_E(iH),i_m,order,lat)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
-    if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
-    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(tmp_E,this%com_outer)
+!    if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
+!    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(tmp_E,this%com_outer)
 
     do iH=1,this%NHF_local
          Call this%H_fft(iH)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
@@ -367,6 +401,7 @@ function energy_single(this,i_m,order,lat)result(E)
 
     E=sum(tmp_E)
 end function
+
 
 subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
@@ -433,5 +468,19 @@ function is_master(this)result(master)
         endif
     endif
 end function
+
+subroutine get_single_work(this,order,work)
+    class(hamiltonian),intent(in)       :: this
+    integer,intent(in)                  :: order
+    type(work_ham_single),intent(out)   :: work
+
+    type(work_ham_single)               :: work_arr(this%NH_local)
+    integer     :: iH
+
+    do iH=1,this%NH_local
+        Call this%H(iH)%set_work_size(work_arr(iH),order)
+    enddo
+    Call work%set_max(work_arr)
+end subroutine
 
 end module

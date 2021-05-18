@@ -1,3 +1,4 @@
+
 module m_H_cusparse
 #if defined(CPP_CUDA)
 !cuda cusparse implementation
@@ -152,6 +153,7 @@ end subroutine
 
 subroutine eval_single(this,E,i_m,order,lat)
     use m_derived_types, only: lattice
+    use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
     ! input
     class(t_H_cusparse),intent(in)     :: this
     type(lattice), intent(in)       :: lat
@@ -168,13 +170,16 @@ subroutine eval_single(this,E,i_m,order,lat)
     integer                         :: N_out
 
     !dim_order_bnd...
-    Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
-    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_mult_mat_disc_disc crashes
-    allocate(vec_out(N_out), ind_out(N_out))
-    Call cuda_H_mult_mat_disc_disc(this%H,this%rvec_in,this%rvec_out,size(ind),ind,vec,N_out,ind_out,vec_out)
-!    Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)
-!    E=DOT_PRODUCT(vec_l(:N_out),vec_out(:N_out))
-    ERROR STOP "FINISH IMPLEMENT"
+!    Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
+!    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_mult_mat_disc_disc crashes
+!    allocate(vec_out(N_out), ind_out(N_out))
+!    Call cuda_H_mult_mat_disc_disc(this%H,this%rvec_in,this%rvec_out,size(ind),ind,vec,N_out,ind_out,vec_out)
+!!    Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)
+!!    E=DOT_PRODUCT(vec_l(:N_out),vec_out(:N_out))
+    write(error_unit,"(///A)") "The eval_single routine is not implemented for cuda Hamiltonians (t_H_cusparse)"
+    write(error_unit,"(A)") "There is no reasonable way to parallelize this evaluation, for faster Monte-Carlo sampling the entire MCstep routine should be parallelized in CUDA"
+    write(error_unit,"(A)") "USE A DIFFERENT Hamiltonian_mode"
+    STOP
 end subroutine 
 
 

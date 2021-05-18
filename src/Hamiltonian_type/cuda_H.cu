@@ -393,6 +393,8 @@ void cuda_set_buffer(
 }
 
 void cuda_H_mult_mat_disc_disc(
+    //THIS ROUTINE IS NOT FINISHED AND PROBABLY NEVER WILL BE SINCE DIRECT EVALUATION OF THE SPARSE MATRICES IS FASTER DIRECTLY ON THE CPU
+
     cusparseSpMatDescr* &mat,
     cusparseDnVecDescr* &in_vec,
     cusparseDnVecDescr* &out_vec,
