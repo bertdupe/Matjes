@@ -11,23 +11,24 @@
 #endif
 using namespace std;
 
-__global__ void add_col_mat(
-    double* res, 
-    int* row,
-    int* col,
-    double* val,
-    int col_ind,
-    int ind,
-    double val_vec){
-
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    int Nentry=row[col_ind+1]-row[col_ind];
-//    printf("Nentry: %d \n", Nentry);
-    if (i < Nentry){
-        int col_ind=row[col_ind]+i;
-        res[col_ind]=res[col_ind] + val[col_ind] * val_vec;
-    }
-}    
+//__global__ void add_col_mat(
+//    double* res, 
+//    int* row,
+//    int* col,
+//    double* val,
+//    int col_ind,
+//    int ind,
+//    double val_vec){
+//
+//    int i = blockDim.x * blockIdx.x + threadIdx.x;
+//    int Nentry=row[col_ind+1]-row[col_ind];
+//    int col_ind;
+////    printf("Nentry: %d \n", Nentry);
+//    if (i < Nentry){
+//        int col_ind=row[col_ind]+i;
+//        res[col_ind]=res[col_ind] + val[col_ind] * val_vec;
+//    }
+//}    
 
 
 
@@ -354,6 +355,30 @@ void cuda_H_mult_mat_vec(
     assert (CUSPARSE_STATUS_SUCCESS == stat);
 }
 
+void cuda_H_mult_vec_mat(
+    cusparseSpMatDescr* &mat,
+    cusparseDnVecDescr* &in_vec,
+    cusparseDnVecDescr* &out_vec,
+    char*               &buffer,
+    cusparseHandle_t*   &handle){
+
+    cusparseStatus_t stat;
+    const double alpha= 1.0;    //save in device memory
+    const double beta = 0.0;
+    //do the actual multiplication
+    stat = cusparseSpMV(*handle,
+                        CUSPARSE_OPERATION_TRANSPOSE,
+                        &alpha,
+                        mat,
+                        in_vec,
+                        &beta,
+                        out_vec,
+                        CUDA_R_64F,
+                        CUSPARSE_SPMV_CSR_ALG1,
+                        buffer);
+    assert (CUSPARSE_STATUS_SUCCESS == stat);
+}
+
 void cuda_free_buffer(
     char* &buffer
     ){
@@ -366,6 +391,7 @@ void cuda_free_buffer(
 void cuda_set_buffer(
     char* &buffer,
     cusparseSpMatDescr* &mat,
+    bool transpose,
     cusparseDnVecDescr* &in_vec,
     cusparseDnVecDescr* &out_vec,
     cusparseHandle_t* &handle){
@@ -377,8 +403,15 @@ void cuda_set_buffer(
     size_t bufferSize=0;
     const double alpha= 1.0;
     const double beta = 0.0;
+    cusparseOperation_t operation;
+    if(transpose){
+        operation=CUSPARSE_OPERATION_TRANSPOSE;
+    }else{
+        operation=CUSPARSE_OPERATION_NON_TRANSPOSE;
+    }
+
     stat =cusparseSpMV_bufferSize(*handle,
-                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                  operation,
                                   &alpha,
                                   mat,
                                   in_vec,
@@ -392,69 +425,67 @@ void cuda_set_buffer(
     assert( cudaSuccess == err);
 }
 
-void cuda_H_mult_mat_disc_disc(
-    //THIS ROUTINE IS NOT FINISHED AND PROBABLY NEVER WILL BE SINCE DIRECT EVALUATION OF THE SPARSE MATRICES IS FASTER DIRECTLY ON THE CPU
-
-    cusparseSpMatDescr* &mat,
-    cusparseDnVecDescr* &in_vec,
-    cusparseDnVecDescr* &out_vec,
-    int N_in,
-    int ind_in[],
-    double vec_in[],
-    int& N_out,  // in: size of ind_out , out: size of relevant indices in ind_out
-    int ind_out[],
-    double vec_out[]){
-
-    cudaError_t err;
-
-    //host data
-    int64_t rows, cols, nnz;
-    cusparseIndexType_t csrRowOffsetsType;
-    cusparseIndexType_t csrColIndType;
-    cusparseIndexBase_t idxBase;
-    cudaDataType        valueType;
-    //Device data
-    void *csrRow_v, *csrCol_v, *csrVal_v;
-    int *csrRow, *csrCol;
-    double *csrVal;
-
-    //get data from old sparse reference
-    cusparseStatus_t stat = cusparseCsrGet(mat, &rows, &cols, &nnz
-                                          ,&csrRow_v,&csrCol_v, &csrVal_v
-                                          ,&csrRowOffsetsType, &csrColIndType, &idxBase, &valueType);
-    assert( CUSPARSE_STATUS_SUCCESS == stat );
-
-    csrRow=(int*) csrRow_v, csrCol=(int*) csrCol_v, csrVal=(double*) csrVal_v;
-
-    //get data from input vector (only used for storage)
-    double* vec_val_dev;
-    stat=cusparseDnVecGetValues(in_vec, (void**) &vec_val_dev);
-    assert( CUSPARSE_STATUS_SUCCESS == stat );
-    thrust::device_ptr<double> dev_ptr(vec_val_dev);
-    thrust::fill(dev_ptr, dev_ptr + cols, 0.0);
-
-//    //set in vector
-//    double *in_val;
-//    int *in_ind;
-//    err =cudaMalloc( &in_val,(size_t) sizeof(double)*N_in);
-//    assert( cudaSuccess == err );
-//    err = cudaMemcpy(in_val, vec_in, (size_t) sizeof(int)*N_in , cudaMemcpyHostToDevice);
-//    assert( cudaSuccess == err );
+//void cuda_H_mult_mat_disc_disc(
+//    //THIS ROUTINE IS NOT FINISHED AND PROBABLY NEVER WILL BE SINCE DIRECT EVALUATION OF THE SPARSE MATRICES IS FASTER DIRECTLY ON THE CPU
+//    cusparseSpMatDescr* &mat,
+//    cusparseDnVecDescr* &in_vec,
+//    cusparseDnVecDescr* &out_vec,
+//    int N_in,
+//    int ind_in[],
+//    double vec_in[],
+//    int& N_out,  // in: size of ind_out , out: size of relevant indices in ind_out
+//    int ind_out[],
+//    double vec_out[]){
 //
-//    err =cudaMalloc( &in_ind,(size_t) sizeof(int)*N_in);
-//    assert( cudaSuccess == err );
-//    err = cudaMemcpy(in_ind, ind_in, (size_t) sizeof(int)*N_in , cudaMemcpyHostToDevice);
-//    assert( cudaSuccess == err );
+//    cudaError_t err;
+//
+//    //host data
+//    int64_t rows, cols, nnz;
+//    cusparseIndexType_t csrRowOffsetsType;
+//    cusparseIndexType_t csrColIndType;
+//    cusparseIndexBase_t idxBase;
+//    cudaDataType        valueType;
+//    //Device data
+//    void *csrRow_v, *csrCol_v, *csrVal_v;
+//    int *csrRow, *csrCol;
+//    double *csrVal;
+//
+//    //get data from old sparse reference
+//    cusparseStatus_t stat = cusparseCsrGet(mat, &rows, &cols, &nnz
+//                                          ,&csrRow_v,&csrCol_v, &csrVal_v
+//                                          ,&csrRowOffsetsType, &csrColIndType, &idxBase, &valueType);
+//    assert( CUSPARSE_STATUS_SUCCESS == stat );
+//
+//    csrRow=(int*) csrRow_v, csrCol=(int*) csrCol_v, csrVal=(double*) csrVal_v;
+//
+//    //get data from input vector (only used for storage)
+//    double* vec_val_dev;
+//    stat=cusparseDnVecGetValues(in_vec, (void**) &vec_val_dev);
+//    assert( CUSPARSE_STATUS_SUCCESS == stat );
+//    thrust::device_ptr<double> dev_ptr(vec_val_dev);
+//    thrust::fill(dev_ptr, dev_ptr + cols, 0.0);
+//
+////    //set in vector
+////    double *in_val;
+////    int *in_ind;
+////    err =cudaMalloc( &in_val,(size_t) sizeof(double)*N_in);
+////    assert( cudaSuccess == err );
+////    err = cudaMemcpy(in_val, vec_in, (size_t) sizeof(int)*N_in , cudaMemcpyHostToDevice);
+////    assert( cudaSuccess == err );
+////
+////    err =cudaMalloc( &in_ind,(size_t) sizeof(int)*N_in);
+////    assert( cudaSuccess == err );
+////    err = cudaMemcpy(in_ind, ind_in, (size_t) sizeof(int)*N_in , cudaMemcpyHostToDevice);
+////    assert( cudaSuccess == err );
+//
+//
+//    int N=cols;
+//    int threadsPerBlock = std::min(256,N);
+//    int numBlocks= (N+ threadsPerBlock - 1) / threadsPerBlock;
+//
+////    for (int i =0; i<N_in; ++i){
+////        add_col_mat<<<numBlocks, threadsPerBlock>>>(vec_val_dev,csrRow, csrCol, csrVal, i, ind_in[i], vec_in[i]);
+////    }
+//}
 
-
-    int N=cols;
-    int threadsPerBlock = std::min(256,N);
-    int numBlocks= (N+ threadsPerBlock - 1) / threadsPerBlock;
-
-    for (int i =0; i<N_in; ++i){
-        add_col_mat<<<numBlocks, threadsPerBlock>>>(vec_val_dev,csrRow, csrCol, csrVal, i, ind_in[i], vec_in[i]);
-    }
-
-
-}
 }

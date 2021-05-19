@@ -2,12 +2,10 @@
 module m_H_cusparse
 #if defined(CPP_CUDA)
 !cuda cusparse implementation
-!so far only multiplication to the right works,
-!extension to left side can be done by introducing lrev_in/out , lbuffer, etc.
-!notice that it requires the transpose matrix, which is supposedly slower, so an overload like 
+!notice that the mult_l requires the transpose matrix, which is supposedly slower, so an overload like 
 !  t_H_eigen_mem saving the transpose as well might be sensible for faster evaluation, if that is neccessary
 
-!also single evaluation should be implemented
+!single evaluation does not really make sense to implement for cuda, as this is not really good parallelizable and the state memcpy's are probably very prohibitive
 
 use m_derived_types, only: lattice,number_different_order_parameters
 use m_H_coo_based
@@ -22,28 +20,30 @@ type(C_PTR),private     ::  handle=c_null_ptr
 type,extends(t_H_coo_based) :: t_H_cusparse
     private
     type(C_PTR)     ::  H=c_null_ptr
-    type(C_PTR)     ::  rvec_in=c_null_ptr
-    type(C_PTR)     ::  rvec_out=c_null_ptr
-    type(C_PTR)     ::  buffer=c_null_ptr
+    type(C_PTR)     ::  rvec=c_null_ptr
+    type(C_PTR)     ::  lvec=c_null_ptr
+    type(C_PTR)     ::  buffer_r=c_null_ptr
+    type(C_PTR)     ::  buffer_l=c_null_ptr
 contains
 !    !necessary t_H routines
     procedure :: eval_single
 
+    !initialization routine
     procedure :: set_from_Hcoo
-
-    procedure :: add_child 
-    procedure :: destroy_child    
-    procedure :: mv_child 
-    procedure :: copy_child 
-    procedure :: bcast_child 
 
     procedure :: optimize
     procedure :: mult_r,mult_l
     procedure :: mult_l_cont,mult_r_cont
     procedure :: mult_l_disc,mult_r_disc
 
+    !utility routines
+    procedure :: add_child 
+    procedure :: destroy_child    
+    procedure :: mv_child 
+    procedure :: copy_child 
+    procedure :: bcast_child 
 
-    !MPI (real implementation might be complicated)
+    !MPI NOT IMPLEMENTED, just placeholders(real implementation might be complicated)
     procedure :: send
     procedure :: recv
     procedure :: bcast
@@ -75,9 +75,10 @@ subroutine copy_child(this,Hout)
     class is(t_H_cusparse)
         Call cuda_H_copy(this%H,Hout%H)
         !COPY VEC
-        Call cuda_fvec_alloccopy(this%rvec_in,  Hout%rvec_in)
-        Call cuda_fvec_alloccopy(this%rvec_out, Hout%rvec_out)
-        Call cuda_set_buffer(Hout%buffer,Hout%H,Hout%rvec_in,Hout%rvec_out,handle)
+        Call cuda_fvec_alloccopy(this%rvec,  Hout%rvec)
+        Call cuda_fvec_alloccopy(this%lvec, Hout%lvec)
+        Call cuda_set_buffer(Hout%buffer_r,Hout%H,logical(.false.,C_BOOL),Hout%rvec,Hout%lvec,handle)
+        Call cuda_set_buffer(Hout%buffer_l,Hout%H,logical(.true. ,C_BOOL),Hout%lvec,Hout%rvec,handle)
         Call this%copy_deriv(Hout)
     class default
         STOP "Cannot copy t_H_cusparse type to Hamiltonian that is not a class of t_H_cusparse"
@@ -109,8 +110,10 @@ subroutine add_child(this,H_in)
         Call cuda_H_add(this%H,H_in%H,tmp_H,handle)
         Call cuda_H_destroy(this%H)
         this%H=tmp_H
-        Call cuda_free_buffer(this%buffer)
-        Call cuda_set_buffer(this%buffer,this%H,this%rvec_in,this%rvec_out,handle)
+        Call cuda_free_buffer(this%buffer_r)
+        Call cuda_free_buffer(this%buffer_l)
+        Call cuda_set_buffer(this%buffer_r,this%H,logical(.false.,C_BOOL),this%rvec,this%lvec,handle)
+        Call cuda_set_buffer(this%buffer_l,this%H,logical(.true. ,C_BOOL),this%lvec,this%rvec,handle)
     class default
         STOP "Cannot add t_h_cusparse type with Hamiltonian that is not a class of t_h_cusparse"
     end select
@@ -123,11 +126,12 @@ subroutine destroy_child(this)
     if(this%is_set())then
         if(c_associated(this%H)) Call cuda_H_destroy(this%H)
         this%H=c_null_ptr
-        if(c_associated(this%rvec_in)) Call cuda_fvec_destroy(this%rvec_in)
-        this%rvec_in=c_null_ptr
-        if(c_associated(this%rvec_out)) Call cuda_fvec_destroy(this%rvec_out)
-        this%rvec_out=c_null_ptr
-        Call cuda_free_buffer(this%buffer)
+        if(c_associated(this%rvec)) Call cuda_fvec_destroy(this%rvec)
+        this%rvec=c_null_ptr
+        if(c_associated(this%lvec)) Call cuda_fvec_destroy(this%lvec)
+        this%lvec=c_null_ptr
+        Call cuda_free_buffer(this%buffer_r)
+        Call cuda_free_buffer(this%buffer_l)
     endif
 end subroutine
 
@@ -146,9 +150,10 @@ subroutine set_from_Hcoo(this,H_coo)
     dimH=this%dimH
     if(.not.c_associated(handle)) Call cuda_create_handle(handle)
     Call cuda_H_init(nnz,dimH,rowind,colind,val,this%H,handle)
-    Call cuda_fvec_init(this%rvec_in,dimH(2))
-    Call cuda_fvec_init(this%rvec_out,dimH(2))
-    Call cuda_set_buffer(this%buffer,this%H,this%rvec_in,this%rvec_out,handle)
+    Call cuda_fvec_init(this%lvec,dimH(1))
+    Call cuda_fvec_init(this%rvec,dimH(2))
+    Call cuda_set_buffer(this%buffer_r,this%H,logical(.false.,C_BOOL),this%rvec,this%lvec,handle)
+    Call cuda_set_buffer(this%buffer_l,this%H,logical(.true. ,C_BOOL),this%lvec,this%rvec,handle)
 end subroutine 
 
 subroutine eval_single(this,E,i_m,order,lat)
@@ -173,7 +178,7 @@ subroutine eval_single(this,E,i_m,order,lat)
 !    Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
 !    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_mult_mat_disc_disc crashes
 !    allocate(vec_out(N_out), ind_out(N_out))
-!    Call cuda_H_mult_mat_disc_disc(this%H,this%rvec_in,this%rvec_out,size(ind),ind,vec,N_out,ind_out,vec_out)
+!    Call cuda_H_mult_mat_disc_disc(this%H,this%rvec,this%lvec,size(ind),ind,vec,N_out,ind_out,vec_out)
 !!    Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)
 !!    E=DOT_PRODUCT(vec_l(:N_out),vec_out(:N_out))
     write(error_unit,"(///A)") "The eval_single routine is not implemented for cuda Hamiltonians (t_H_cusparse)"
@@ -194,9 +199,9 @@ subroutine mult_r(this,lat,res)
     real(8),allocatable,target :: vec(:)
 
     Call this%mode_r%get_mode(lat,modes,vec)
-    Call cuda_fvec_set(this%rvec_in,modes)
-    Call cuda_H_mult_mat_vec(this%H,this%rvec_in, this%rvec_out, this%buffer, handle)
-    Call cuda_fvec_get(this%rvec_out,res)
+    Call cuda_fvec_set(this%rvec,modes)
+    Call cuda_H_mult_mat_vec(this%H,this%rvec, this%lvec, this%buffer_r, handle)
+    Call cuda_fvec_get(this%lvec,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
@@ -205,7 +210,15 @@ subroutine mult_l(this,lat,res)
     class(t_H_cusparse),intent(in)  :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
-    ERROR STOP "IMPLEMENT"
+    ! internal
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+
+    Call this%mode_l%get_mode(lat,modes,vec)
+    Call cuda_fvec_set(this%lvec,modes)
+    Call cuda_H_mult_vec_mat(this%H,this%lvec, this%rvec, this%buffer_l, handle)
+    Call cuda_fvec_get(this%rvec,res)
+    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
 subroutine mult_l_cont(this,bnd,vec,res)

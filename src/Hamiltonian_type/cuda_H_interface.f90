@@ -26,6 +26,15 @@ module m_cuda_H_interface
            type(C_PTR),intent(in)                  :: handle
         end subroutine
 
+        subroutine cuda_H_mult_vec_mat(mat,in_vec,out_vec,buffer,handle) bind( c, name="cuda_H_mult_vec_mat" )
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(in)                  :: mat
+           type(C_PTR),intent(in)                  :: in_vec
+           type(C_PTR),intent(in)                  :: out_vec
+           type(C_PTR),intent(in)                  :: buffer
+           type(C_PTR),intent(in)                  :: handle
+        end subroutine
+
         subroutine cuda_H_copy(H_in,H_copy) bind( c, name="cuda_H_copy" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(in)      		:: H_in
@@ -45,12 +54,13 @@ module m_cuda_H_interface
            type(C_PTR),intent(inout)		:: mat
         end subroutine
 
-        subroutine cuda_set_buffer(buffer,mat_1,mat_2,mat_s,handle) bind( c, name="cuda_set_buffer" )
+        subroutine cuda_set_buffer(buffer,mat,transp,in_vec,out_vec,handle) bind( c, name="cuda_set_buffer" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(inout)   		:: buffer
-           type(C_PTR),intent(in)      		:: mat_1
-           type(C_PTR),intent(in)         	:: mat_2
-           type(C_PTR),intent(inout)      	:: mat_s
+           type(C_PTR),intent(in)      		:: mat
+           logical(C_BOOL),value            :: transp
+           type(C_PTR),intent(in)         	:: in_vec
+           type(C_PTR),intent(in)      	    :: out_vec
            type(C_PTR),intent(in)			:: handle
         end subroutine
 
@@ -59,17 +69,17 @@ module m_cuda_H_interface
            type(C_PTR),intent(inout)   		:: buffer
         end subroutine
 
-        subroutine cuda_H_mult_mat_disc_disc(mat,vec_in_dev,vec_out_dev,N_in,ind_in,vec_in,N_out,ind_out,vec_out) bind( c, name="cuda_H_mult_mat_disc_disc" )
-           use, intrinsic :: iso_c_binding
-           type(C_PTR),intent(in)                  :: mat
-           type(C_PTR),intent(in)                  :: vec_in_dev
-           type(C_PTR),intent(in)                  :: vec_out_dev
-           integer(c_int),value                    :: N_in
-           integer(c_int),intent(in)               :: ind_in(*)
-           real( kind = c_double ),intent(in)      :: vec_in(*)
-           integer(c_int),intent(inout)            :: N_out
-           integer(c_int),intent(inout)            :: ind_out(*)
-           real( kind = c_double ),intent(inout)   :: vec_out(*)
-        end subroutine
+!        subroutine cuda_H_mult_mat_disc_disc(mat,vec_in_dev,vec_out_dev,N_in,ind_in,vec_in,N_out,ind_out,vec_out) bind( c, name="cuda_H_mult_mat_disc_disc" )
+!           use, intrinsic :: iso_c_binding
+!           type(C_PTR),intent(in)                  :: mat
+!           type(C_PTR),intent(in)                  :: vec_in_dev
+!           type(C_PTR),intent(in)                  :: vec_out_dev
+!           integer(c_int),value                    :: N_in
+!           integer(c_int),intent(in)               :: ind_in(*)
+!           real( kind = c_double ),intent(in)      :: vec_in(*)
+!           integer(c_int),intent(inout)            :: N_out
+!           integer(c_int),intent(inout)            :: ind_out(*)
+!           real( kind = c_double ),intent(inout)   :: vec_out(*)
+!        end subroutine
     end interface
 end module 
