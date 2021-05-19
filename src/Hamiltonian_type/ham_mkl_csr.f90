@@ -1,5 +1,5 @@
 module m_H_sparse_mkl
-#if defined(CPP_MKL_SPBLAS)
+#if defined(CPP_MKL)
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
 !eval_single single energy evaluation is rather cumbersome...
 use MKL_SPBLAS

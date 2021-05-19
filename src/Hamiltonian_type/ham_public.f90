@@ -27,7 +27,7 @@ contains
         integer ::  io_param
 #if defined CPP_CUDA
         mode=6
-#elif defined CPP_MKL_SPBLAS
+#elif defined CPP_MKL
         mode=1
 #elif defined CPP_EIGEN
         mode=2
@@ -68,10 +68,10 @@ contains
         class(t_h),intent(out),allocatable      :: H_out 
         select case(mode)
         case(1)
-#if defined CPP_MKL_SPBLAS
+#if defined CPP_MKL
             allocate(t_H_mkl_csr::H_out)
 #else
-            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL_SPBLAS)"
+            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
 #endif
         case(2)
 #if defined CPP_EIGEN
@@ -112,10 +112,10 @@ contains
 
         select case(mode)
         case(1)
-#if defined CPP_MKL_SPBLAS
+#if defined CPP_MKL
             allocate(t_H_mkl_csr::H_out(N))
 #else
-            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL_SPBLAS)"
+            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
 #endif
         case(2)
 #if defined CPP_EIGEN
@@ -133,7 +133,7 @@ contains
 #if defined CPP_BLAS
             allocate(t_H_dense_blas::H_out(N))
 #else
-            ERROR STOP "CANNOT USE t_H_dense_blas Sparse Hamiltonian implementation without BLAS (CPP_BLAS)"
+            ERROR STOP "CANNOT USE t_H_dense_blas Hamiltonian implementation without BLAS (CPP_BLAS)"
 #endif
         case(5)
             allocate(t_H_dense::H_out(N))

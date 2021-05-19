@@ -1,4 +1,3 @@
-set(main_f90 "")
 include(src/CMakeLists.txt)   #read all the source-files
 
 set_source_files_properties(${main_f90} PROPERTIES Fortran_FORMAT FREE)
@@ -36,3 +35,10 @@ if(USE_CUDA)
     target_link_libraries(Matjes cuda_fft cuda_H)
 endif()
 
+if(USE_BLAS)
+    target_link_libraries(Matjes BLAS::BLAS)
+endif()
+
+if(USE_LAPACK)
+    target_link_libraries(Matjes LAPACK::LAPACK)
+endif()

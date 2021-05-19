@@ -22,8 +22,6 @@ implicit none
     write(6,'(/2a)') "You are using the git-version: ",CPP_VERSIONGIT
 #endif
     write(6,'(/)') 
-
-
 end subroutine
 
 subroutine welcome
@@ -32,9 +30,11 @@ use mpi_basic,only: mpi_world
     if(mpi_world%ismas)then
         Call welcome_message()
         write(6,'(a,I10,2x,a)') 'Congratulations, you are now using',mpi_world%NP,'processors'
+        Call print_preprocessor_flags(6)
     endif
 #else
     Call welcome_message()
+    Call print_preprocessor_flags(6)
 #endif
 
 end subroutine 
@@ -73,5 +73,39 @@ endif
 !#endif
 
 end subroutine user_info_raw
+
+subroutine print_preprocessor_flags(io_unit)
+    integer,intent(in)  :: io_unit
+    character(len=*),parameter  :: forma='(2X,A)'
+
+    write(io_unit,'(//A)') "Compiled using the following preprocessor flags:"
+#ifdef CPP_BLAS
+    write(io_unit,forma) "CPP_BLAS"
+#endif
+#ifdef CPP_CUDA
+    write(io_unit,forma) "CPP_CUDA"
+#endif
+#ifdef CPP_DEBUG
+    write(io_unit,forma) "CPP_DEBUG"
+#endif
+#ifdef CPP_EIGEN
+    write(io_unit,forma) "CPP_EIGEN"
+#endif
+#ifdef CPP_FFTW3
+    write(io_unit,forma) "CPP_FFTW3"
+#endif
+#ifdef CPP_MKL
+    write(io_unit,forma) "CPP_MKL"
+#endif
+#ifdef CPP_MPI
+    write(io_unit,forma) "CPP_MPI"
+#endif
+#ifdef CPP_MRG
+    write(io_unit,forma) "CPP_MRG"
+#endif
+    write(io_unit,'(/)')
+
+end subroutine
+
 
 end module m_user_info

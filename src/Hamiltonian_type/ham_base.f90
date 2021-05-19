@@ -246,9 +246,6 @@ contains
         real(C_DOUBLE)              :: tmp(this%dimH(1))
         real(8),pointer             :: modes_l(:)
         real(8),allocatable,target  :: vec_l(:)
-#ifdef CPP_BLAS
-        real(8),external            :: ddot !blas routine
-#endif
     
         if(.not.allocated(this%mode_l).or..not.allocated(this%mode_r))then
             write(error_unit,'(2/2A)') "Failed to evaluate Hamiltonian: ", this%desc
@@ -258,11 +255,8 @@ contains
         Call this%mode_l%get_mode(lat,modes_l,vec_l)
     
         Call this%mult_r(lat,tmp)
-!#ifdef CPP_BLAS    !much slower
-!        E=ddot(this%dimH(1),modes_l,1,tmp,1)
-!#else
         E=dot_product(modes_l,tmp)
-!#endif
+
         if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 

@@ -1,4 +1,5 @@
 module m_H_tb_csr
+#ifdef CPP_MKL
 use m_H_tb_base
 use m_H_tb_coo
 private
@@ -158,5 +159,5 @@ subroutine evec_feast(this,eval,evec)
     allocate(evec,source=x(1:this%dimH,1:m))
     deallocate(x,res)
 end subroutine
-
+#endif
 end module

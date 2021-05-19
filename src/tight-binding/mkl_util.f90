@@ -1,4 +1,4 @@
-#ifdef CPP_MKL_SPBLAS
+#ifdef CPP_MKL
 module mkl_spblas_util
 use MKL_SPBLAS, only: mkl_sparse_z_export_csr,SPARSE_MATRIX_T
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE_COMPLEX,C_PTR,C_F_POINTER,C_INT, C_DOUBLE
