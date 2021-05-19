@@ -241,9 +241,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 endif
             endif
 
-           !get effective field on magnetic lattice
+            !get effective field on magnetic lattice
             if(comm%Np>1) Call lat_1%bcast_val(comm)
-           Call H%get_eff_field(lat_1,Beff,1,Beff_tmp)
+            Call H%get_eff_field(lat_1,Beff,1,Beff_tmp)
 
             if(comm%ismas)then
                 !do integration
