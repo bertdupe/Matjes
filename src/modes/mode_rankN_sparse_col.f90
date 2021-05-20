@@ -24,15 +24,19 @@ type, extends(F_mode) :: F_mode_rankN_sparse_col
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
     procedure   :: get_mode_disc
+    procedure   :: get_mode_disc_expl
     procedure   :: get_mode_exc
     procedure   :: get_mode_exc_disc
     procedure   :: mode_reduce_comp
     procedure   :: mode_reduce_comp_disc
 
-    procedure   :: get_mode_single_cont
-    procedure   :: get_mode_single_disc
+
+
+    procedure   :: get_mode_single
+    procedure   :: get_mode_single_size
 
     procedure   :: get_ind_site
+    procedure   :: get_ind_site_expl
 
     procedure   :: copy
     procedure   :: destroy
@@ -48,6 +52,26 @@ type, extends(F_mode) :: F_mode_rankN_sparse_col
 end type
 
 contains
+
+subroutine get_mode_single_size(this,order,dim_mode)
+    !returns the size of the vector necessary to get to mode set by a single site
+    class(F_mode_rankN_sparse_col),intent(in)    :: this
+    integer,intent(in)          :: order
+    integer,intent(out)         :: dim_mode
+
+    integer :: order_ind,i
+
+    if(.not.any(order/=this%order))then
+#ifdef CPP_DEBUG
+        write(error_unit,'(A)') "trying to get single mode of order which is not the order of the F_mode"
+#endif
+        dim_mode=0
+    else
+        order_ind=findloc(order==this%order,.true.,dim=1)
+        dim_mode=dim_modes_inner(order)*this%ratio(order_ind)
+    endif
+end subroutine
+
 
 subroutine get_ind_site(this,comp,site,ind)
     class(F_mode_rankN_sparse_col),intent(in)   :: this
@@ -69,8 +93,25 @@ subroutine get_ind_site(this,comp,site,ind)
     enddo
 end subroutine
 
+subroutine get_ind_site_expl(this,comp,site,size_out,ind)
+    !get the indices corresponding to the 
+    class(F_mode_rankN_sparse_col),intent(in)   :: this
+    integer,intent(in)                          :: comp
+    integer,intent(in)                          :: site    !entry
+    integer,intent(in)                          :: size_out
+    integer,intent(out)                         :: ind(size_out)
 
-subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
+    integer         :: inner_dim_mode, ratio, i, offset
+
+    ratio=this%ratio(comp)
+    inner_dim_mode=dim_modes_inner(this%order(comp))
+    offset=(site-1)*inner_dim_mode
+    do i=1,inner_dim_mode
+        ind((i-1)*ratio+1:i*ratio)=this%dat(comp)%reverse(:,offset+i)
+    enddo
+end subroutine
+
+subroutine get_mode_single(this,lat,comp,site,ind,vec)
     class(F_mode_rankN_sparse_col),intent(in)   :: this
     type(lattice),intent(in)                    :: lat
     integer,intent(in)                          :: comp  !mode index
@@ -97,6 +138,25 @@ subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
     Call this%get_mode_disc(lat,ind,vec)
 end subroutine
 
+subroutine get_mode_disc_expl(this,lat,N,ind,vec)
+    use, intrinsic :: iso_c_binding, only: C_PTR, C_loc
+    use m_type_lattice, only: dim_modes_inner
+    class(F_mode_rankN_sparse_col),intent(in)    :: this
+    type(lattice),intent(in)                :: lat
+    integer,intent(in)                      :: N
+    integer,intent(in)                      :: ind(N)
+    real(8),intent(out)                     :: vec(N)
+
+    real(8),pointer :: mode_base(:)
+    integer ::  i
+
+    vec=1.0
+    do i=1,size(this%dat)
+        Call lat%set_order_point(this%order(i),mode_base)
+        vec=vec*mode_base(this%dat(i)%col(ind))
+    enddo
+end subroutine
+
 subroutine get_mode_disc(this,lat,ind,vec)
     use, intrinsic :: iso_c_binding, only: C_PTR, C_loc
     use m_type_lattice, only: dim_modes_inner
@@ -117,19 +177,6 @@ subroutine get_mode_disc(this,lat,ind,vec)
     enddo
     vec=product(tmp_internal,dim=2)
     nullify(mode_base)
-end subroutine
-
-
-subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
-    class(F_mode_rankN_sparse_col),intent(in)  :: this
-    type(lattice),intent(in)                    :: lat
-    integer,intent(in)                          :: order
-    integer,intent(in)                          :: i
-    real(8),pointer,intent(out)                 :: modes(:)
-    real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
-    integer,intent(out)                         :: bnd(2)
-
-    ERROR STOP "IMPLEMENT"
 end subroutine
 
 subroutine get_mode_exc_disc(this,lat,comp,ind,vec)
@@ -156,7 +203,6 @@ subroutine get_mode_exc_disc(this,lat,comp,ind,vec)
     vec=product(tmp_internal,dim=2)
     nullify(mode_base)
 end subroutine
-
 
 subroutine get_mode_exc(this,lat,comp,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
@@ -203,7 +249,6 @@ subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)
     enddo
 end subroutine
 
-
 subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_col),intent(in)   :: this
@@ -224,7 +269,6 @@ subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
     !    vec_out(i)=sum(vec_in(this%dat(comp)%reverse(:,i)))
     !enddo
 end subroutine
-
 
 subroutine get_mode(this,lat,mode,tmp)
     class(F_mode_rankN_sparse_col),intent(in)   :: this
@@ -429,7 +473,6 @@ subroutine col_mat_recv(this,ithread,tag,com)
     continue
 #endif
 end subroutine
-
 
 subroutine send(this,ithread,tag,com)
     use mpi_basic                

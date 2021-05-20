@@ -2,21 +2,25 @@ module m_mode_construction_rank1_point
 use m_type_lattice, only: dim_modes_inner
 use m_mode_construction
 use m_derived_types, only : lattice,number_different_order_parameters
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
 implicit none
 private
 public F_mode_rank1_point
 
 type, extends(F_mode) :: F_mode_rank1_point
+    ! uses order(1) from the base type to get the correct order from the lattice type
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
     procedure   :: get_mode_exc
     procedure   :: mode_reduce_comp
     procedure   :: get_ind_site
+    procedure   :: get_ind_site_expl
 
-    procedure   :: get_mode_single_cont
-    procedure   :: get_mode_single_disc
-    procedure   :: get_mode_single_disc_expl
+    procedure   :: get_mode_single
+    procedure   :: get_mode_single_size
+
+    procedure   :: get_mode_disc_expl
 
     procedure   :: copy
     procedure   :: destroy
@@ -32,6 +36,37 @@ end type
 
 contains
 
+subroutine get_mode_single_size(this,order,dim_mode)
+    !returns the size of the vector necessary to get to mode set by a single site
+    class(F_mode_rank1_point),intent(in)    :: this
+    integer,intent(in)          :: order
+    integer,intent(out)         :: dim_mode
+
+    if(order/=this%order(1))then
+#ifdef CPP_DEBUG
+        write(error_unit,'(A)') "trying to get single mode of order which is not the order of the F_mode"
+#endif
+        dim_mode=0
+    else
+        dim_mode=dim_modes_inner(order)
+    endif
+end subroutine
+
+subroutine get_mode_disc_expl(this,lat,N,ind,vec)
+    use, intrinsic :: iso_c_binding, only: C_PTR, C_loc
+    use m_type_lattice, only: dim_modes_inner
+    class(F_mode_rank1_point),intent(in)    :: this
+    type(lattice),intent(in)                :: lat
+    integer,intent(in)                      :: N
+    integer,intent(in)                      :: ind(N)
+    real(8),intent(out)                     :: vec(N)
+
+    real(8),pointer :: mode_base(:)
+
+    Call lat%set_order_point(this%order(1),mode_base)
+    vec=mode_base(ind)
+end subroutine
+
 
 subroutine get_ind_site(this,comp,site,ind)
     class(F_mode_rank1_point),intent(in)   :: this
@@ -46,28 +81,20 @@ subroutine get_ind_site(this,comp,site,ind)
     ind=[((site-1)*inner_dim_mode+i,i=1,inner_dim_mode)]
 end subroutine
 
-subroutine get_mode_single_disc_expl(this,lat,comp,site,dim_mode,ind,vec)
-    class(F_mode_rank1_point),intent(in)   :: this
-    type(lattice),intent(in)               :: lat
-    integer,intent(in)                     :: comp  !mode index
-    integer,intent(in)                     :: site    !entry
-    integer,intent(in)                     :: dim_mode  !inner dim_mode
-    integer,intent(inout)                  :: ind(dim_mode)
-    real(8),intent(inout)                  :: vec(dim_mode)
+subroutine get_ind_site_expl(this,comp,site,size_out,ind)
+    !get the indices corresponding to the 
+    class(F_mode_rank1_point),intent(in)    :: this
+    integer,intent(in)                      :: comp
+    integer,intent(in)                      :: site    !entry
+    integer,intent(in)                      :: size_out
+    integer,intent(out)                     :: ind(size_out)
 
-    integer                     :: i
-    real(8),contiguous,pointer  :: mode(:)
+    integer         :: i
 
-#ifdef CPP_DEBUG
-    if(comp/=1) ERROR STOP "DOESN'T MAKE SENCE FOR comp /=1"
-#endif
-    ind=(site-1)*dim_mode+[(i,i=1,dim_mode)]
-
-    Call lat%set_order_point(this%order(1),mode)
-    vec=mode(ind)
+    ind=(site-1)*size_out+[(i,i=1,size_out)]
 end subroutine
 
-subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
+subroutine get_mode_single(this,lat,comp,site,ind,vec)
     class(F_mode_rank1_point),intent(in)   :: this
     type(lattice),intent(in)               :: lat
     integer,intent(in)                     :: comp  !mode index
@@ -88,24 +115,6 @@ subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
 
     Call lat%set_order_point(this%order(1),mode)
     vec=mode(ind)
-end subroutine
-
-
-subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
-    class(F_mode_rank1_point),intent(in)        :: this
-    type(lattice),intent(in)                    :: lat
-    integer,intent(in)                          :: order
-    integer,intent(in)                          :: i
-    real(8),pointer,intent(out)                 :: modes(:)
-    real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
-    integer,intent(out)                         :: bnd(2)
-
-#ifdef CPP_DEBUG
-    if(order/=this%order(1))then
-        ERROR STOP "trying to get single mode of order which is not the order of the F_mode"
-    endif
-#endif
-    Call lat%set_order_point_single_inner(order,i,modes,bnd)
 end subroutine
 
 subroutine get_mode(this,lat,mode,tmp)

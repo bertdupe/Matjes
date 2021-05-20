@@ -23,59 +23,56 @@ type,abstract :: t_H_base
 contains
 
     !Hamiltonian initialization routines
-    procedure(int_init_H_connect),deferred          :: init_connect !based on Hamiltonian in coo format input (arrays), only rank_2, connection input
-    procedure(int_init_H_mult_connect_2),deferred   :: init_mult_connect_2 !based on Hamiltonian in coo format input (arrays), for rank >2, but only at 2 sites at once, connection input
-    procedure(int_init_H_coo),deferred              :: init_coo!based on Hamiltonian in coo format input (arrays), the coo data-arrays are directly moved into the type
+    procedure(int_init_H_connect),deferred          :: init_connect         !based on Hamiltonian in coo format input (arrays), only rank_2, connection input
+    procedure(int_init_H_mult_connect_2),deferred   :: init_mult_connect_2  !based on Hamiltonian in coo format input (arrays), for rank >2, but only at 2 sites at once, connection input
+    procedure(int_init_H_coo),deferred              :: init_coo             !based on Hamiltonian in coo format input (arrays), the coo data-arrays are directly moved into the type
+    procedure(int_destroy),deferred                 :: optimize             !calls possible optimization routines rearanging internal Hamiltonian layout
 
-    procedure(int_destroy),deferred         :: optimize  !calls possible optimization routines rearanging internal Hamiltonian layout
-    procedure(int_mult),deferred            :: mult_r,mult_l !multipy out with left/right side
-    procedure(int_mult_cont),deferred       :: mult_l_cont,mult_r_cont
-    procedure(int_mult_disc),deferred       :: mult_l_disc,mult_r_disc
+    !routines acting on the entire Hamiltonian
+    procedure ,NON_OVERRIDABLE              :: eval_all                 !evaluates energy of full lattice
+    procedure(int_mult),deferred            :: mult_r,mult_l            !multipy out with left/right side
+    procedure ,NON_OVERRIDABLE              :: mult_r_red,mult_l_red    !multiplied out left/right and reduces result to only one order-parameter
+    procedure ,NON_OVERRIDABLE              :: energy_dist              !get energy distribution per site
 
-    !evaluation routines
-        !actually these could be overridable, but so far used to check no old implementation still has these wrongly
-    procedure ,NON_OVERRIDABLE              :: eval_all !evaluates energy of full lattice
-    procedure ,NON_OVERRIDABLE              :: mult_r_red,mult_l_red !multiplied out left/right and reduces result to only one order-parameter
-    procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single
-    procedure                               :: energy_dist
-
-    procedure                               :: get_ind_mult_r, get_ind_mult_l
-
-        !should be implemented more efficiently, where possible
-    procedure                               :: mult_l_single,   mult_r_single   !multipy out with left/right side
-    procedure                               :: mult_l_ind,      mult_r_ind 
+    !routines acting on parts of the Hamiltonian
+    procedure                               :: mult_l_ind,      mult_r_ind          !
     procedure                               :: mult_l_disc_disc,mult_r_disc_disc
+    procedure                               :: get_ind_mult_r, get_ind_mult_l       !get the indices that appear mulitplying a sparse vectors with the matrix
+!    !probably never used anywhere,implemented for eigen, keep so far as it might make sense at some point
+!    procedure(int_mult_cont),deferred       :: mult_l_cont,mult_r_cont  
+!    procedure(int_mult_disc),deferred       :: mult_l_disc,mult_r_disc
 
-    !really non_overridable
+    !routines acting on parts of the Hamiltonian defined by a single site of an order-parameter
+    procedure(int_eval_single),deferred     :: eval_single                              !evaluates the energy of a single site of a given order-parameter
+    procedure                               :: eval_single_work                         !evaluates the energy caused by a single mode (using a work array)
+    procedure                               :: set_work_size_single                     !sets the necessary sizes for the work arrays
+
+    procedure                               :: mult_l_single,   mult_r_single           !multipy out with left/right side
+    procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single      !multipy out with left/right side excluding single order-parameter
+
+    !Utility functions
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
     procedure,NON_OVERRIDABLE               :: add
     procedure,NON_OVERRIDABLE               :: init_base
     procedure,NON_OVERRIDABLE               :: init_otherH
-
-    procedure(int_add_H),deferred           :: add_child     ! destroys the memory allocation
+    procedure(int_add_H),deferred           :: add_child
     procedure(int_destroy),deferred         :: destroy_child
     procedure(int_copy),deferred            :: copy_child
 
     !MPI-stuff
+    procedure,NON_OVERRIDABLE               :: send_base
+    procedure,NON_OVERRIDABLE               :: recv_base
+    procedure,NON_OVERRIDABLE               :: bcast_base
     procedure(int_send),deferred            :: send
     procedure(int_recv),deferred            :: recv
     procedure(int_mpicom),deferred          :: distribute
     procedure(int_mpicom),deferred          :: bcast
 
-    procedure,NON_OVERRIDABLE       :: send_base
-    procedure,NON_OVERRIDABLE       :: recv_base
-    procedure,NON_OVERRIDABLE       :: bcast_base
-
     !misc.
     procedure,NON_OVERRIDABLE  :: is_set
     procedure,NON_OVERRIDABLE  :: set_prepared
     procedure,NON_OVERRIDABLE  :: same_space
-
-    !TODO:
-    procedure(int_eval_single),deferred     :: eval_single !needs some work
-    procedure                               :: eval_single_work !evaluates the energy caused by a single mode (using a work array)
-    procedure                               :: set_work_size    !sets the necessary sizes for the work arrays
 
     !finalize routine? (might be risky with Hamiltonian references that have been passed around)
 end type
@@ -620,7 +617,7 @@ subroutine mult_l_single(this,i_site,lat,res)
 end subroutine
 
 subroutine mult_r_single(this,i_site,lat,res)
-    class(t_H_base),intent(in)        :: this
+    class(t_H_base),intent(in)   :: this
     integer,intent(in)           :: i_site
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
@@ -632,7 +629,7 @@ subroutine mult_r_single(this,i_site,lat,res)
 end subroutine
 
 subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
-    class(t_H_base),intent(in)           :: this
+    class(t_H_base),intent(in)      :: this
     integer,intent(in)              :: ind_in(:)
     integer,intent(out)             :: N_out
     integer,intent(inout)           :: ind_out(:)
@@ -641,7 +638,7 @@ subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
 end subroutine
 
 subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
-    class(t_H_base),intent(in)           :: this
+    class(t_H_base),intent(in)      :: this
     integer,intent(in)              :: ind_in(:)
     integer,intent(out)             :: N_out
     integer,intent(inout)           :: ind_out(:)
@@ -650,7 +647,7 @@ subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
 end subroutine
 
 subroutine mult_r_disc_disc(this,ind_r,vec_r,ind_l,vec_out)
-    class(t_H_base),intent(in)           :: this
+    class(t_H_base),intent(in)      :: this
     integer,intent(in)              :: ind_r(:)
     real(8),intent(in)              :: vec_r(:)
     integer,intent(in)              :: ind_l(:)
@@ -685,8 +682,8 @@ subroutine eval_single_work(this,E,i_m,order,lat,work)
     ERROR STOP "IMPLEMENT"  !implement for local entries, then make deferred if I decide to keep that
 end subroutine
 
-subroutine set_work_size(this,work,order)
-    class(t_H_base),intent(in)              :: this
+subroutine set_work_size_single(this,work,order)
+    class(t_H_base),intent(inout)           :: this
     class(work_ham_single),intent(inout)    :: work 
     integer,intent(in)                      :: order
 

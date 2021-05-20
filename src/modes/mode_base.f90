@@ -18,10 +18,11 @@ type, abstract :: F_mode
     procedure(int_get_mode_exc),deferred        :: get_mode_exc         !subroutine which returns the mode excluding one order parameter 
     procedure(int_mode_reduce_comp),deferred    :: mode_reduce_comp     !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
     procedure(int_get_ind_site),deferred        :: get_ind_site 
+    procedure(int_get_ind_site_expl),deferred   :: get_ind_site_expl
 
-    procedure(int_get_mode_single_cont),deferred :: get_mode_single_cont  !subroutine which returns the mode as contiguous array
-    procedure(int_get_mode_single_disc),deferred :: get_mode_single_disc  !subroutine which returns the mode as discontiguous array
-    procedure                                    :: get_mode_single_disc_expl  !returns discontiguous array of mode to explicit output arrays
+    procedure(int_get_mode_single),deferred      :: get_mode_single  !subroutine which returns the mode as discontiguous array
+    procedure,NON_OVERRIDABLE                    :: get_mode_single_expl  !returns discontiguous array of mode to explicit output arrays
+    procedure(int_get_mode_single_size),deferred :: get_mode_single_size  !get size necessary to set a single mode
 
 !subroutines resolving order to first index
     procedure,NON_OVERRIDABLE               :: get_mode_exc_op   !subroutine which returns the mode excluding one order parameter 
@@ -64,18 +65,17 @@ abstract interface
         integer,intent(inout),allocatable           :: ind(:)
     end subroutine
 
-    subroutine int_get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
-        import F_mode,lattice
+    subroutine int_get_ind_site_expl(this,comp,site,size_out,ind)
+        import F_mode
         class(F_mode),intent(in)                    :: this
-        type(lattice),intent(in)                    :: lat
-        integer,intent(in)                          :: order
-        integer,intent(in)                          :: i
-        real(8),pointer,intent(out)                 :: modes(:)
-        real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
-        integer,intent(out)                         :: bnd(2)
+        integer,intent(in)                          :: comp  !mode component
+        integer,intent(in)                          :: site    !entry
+        integer,intent(in)                          :: size_out
+        integer,intent(out)                         :: ind(size_out)
     end subroutine
 
-    subroutine int_get_mode_single_disc(this,lat,comp,site,ind,vec)
+
+    subroutine int_get_mode_single(this,lat,comp,site,ind,vec)
         import F_mode, lattice
         class(F_mode),intent(in)                :: this
         type(lattice),intent(in)                :: lat
@@ -83,6 +83,13 @@ abstract interface
         integer,intent(in)                      :: site    !entry
         integer,intent(inout),allocatable       :: ind(:)
         real(8),intent(inout),allocatable       :: vec(:)
+    end subroutine
+
+    subroutine int_get_mode_single_size(this,order,dim_mode)
+        import F_mode
+        class(F_mode),intent(in)    :: this
+        integer,intent(in)          :: order
+        integer,intent(out)         :: dim_mode
     end subroutine
 
     subroutine int_get_mode(this,lat,mode,tmp)
@@ -348,7 +355,7 @@ subroutine get_mode_disc_expl(this,lat,N,ind,vec)
     type(lattice),intent(in)                :: lat
     integer,intent(in)                      :: N
     integer,intent(in)                      :: ind(N)
-    real(8),intent(inout)                   :: vec(N)
+    real(8),intent(out)                     :: vec(N)
 
     real(8),pointer                         :: mode(:)   !pointer to required mode
     real(8),allocatable,target              :: tmp(:)    !possible temporary storage for mode pointer
@@ -440,20 +447,17 @@ subroutine recv_base(this,ithread,tag,com)
 #endif
 end subroutine
 
+subroutine get_mode_single_expl(this,lat,comp,site,size_out,ind,vec)
+    !returns discontiguous array of mode to explicit output arrays
+    class(F_mode),intent(in)    :: this
+    type(lattice),intent(in)    :: lat
+    integer,intent(in)          :: comp  !mode index
+    integer,intent(in)          :: site    !entry
+    integer,intent(in)          :: size_out  !inner dim_mode
+    integer,intent(out)         :: ind(size_out)
+    real(8),intent(out)         :: vec(size_out)
 
-subroutine get_mode_single_disc_expl(this,lat,comp,site,dim_mode,ind,vec)
-    !make this deferred if it is implemented everywhere where it might be used
-    class(F_mode),intent(in)   :: this
-    type(lattice),intent(in)   :: lat
-    integer,intent(in)         :: comp  !mode index
-    integer,intent(in)         :: site    !entry
-    integer,intent(in)         :: dim_mode  !inner dim_mode
-    integer,intent(inout)      :: ind(dim_mode)
-    real(8),intent(inout)      :: vec(dim_mode)
-
-    integer                     :: i
-    real(8),contiguous,pointer  :: mode(:)
-
-    ERROR STOP "Implement get_mode single for the particular implementation"
+    Call this%get_ind_site_expl(comp,site,size_out,ind)
+    Call this%get_mode_disc_expl(lat,size_out,ind,vec)
 end subroutine
 end module 

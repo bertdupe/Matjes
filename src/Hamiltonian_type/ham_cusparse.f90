@@ -175,7 +175,7 @@ subroutine eval_single(this,E,i_m,order,lat)
     integer                         :: N_out
 
     !dim_order_bnd...
-!    Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
+!    Call this%mode_r%get_mode_single(lat,1,i_m,ind,vec)
 !    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_mult_mat_disc_disc crashes
 !    allocate(vec_out(N_out), ind_out(N_out))
 !    Call cuda_H_mult_mat_disc_disc(this%H,this%rvec,this%lvec,size(ind),ind,vec,N_out,ind_out,vec_out)

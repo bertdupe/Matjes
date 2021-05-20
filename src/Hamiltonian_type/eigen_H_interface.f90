@@ -176,6 +176,17 @@ module m_eigen_H_interface
            integer( kind = c_int ),intent(in)      :: ind_r(*)
            real( kind = c_double ),intent(inout)   :: vec_out(*)
         end subroutine
+
+        subroutine eigen_get_dat(h,nnz,dimH,col,row,val) bind(c, name='eigen_get_dat')
+           use, intrinsic :: iso_c_binding
+           type(C_PTR),intent(inout)               :: H
+           integer( kind = c_int ),intent(inout)   :: nnz
+           integer( kind = c_int ),intent(inout)   :: dimH(2)
+           type(C_PTR),intent(inout)               :: col
+           type(C_PTR),intent(inout)               :: row
+           type(C_PTR),intent(inout)               :: val
+        end subroutine
+
 #ifdef CPP_MPI
         subroutine eigen_H_send(id,tag,mat,comm) bind( c, name="eigen_H_send" )
            use, intrinsic :: iso_c_binding

@@ -470,15 +470,15 @@ function is_master(this)result(master)
 end function
 
 subroutine get_single_work(this,order,work)
-    class(hamiltonian),intent(in)       :: this
+    class(hamiltonian),intent(inout)    :: this
     integer,intent(in)                  :: order
-    type(work_ham_single),intent(out)   :: work
+    type(work_ham_single),intent(inout) :: work
 
     type(work_ham_single)               :: work_arr(this%NH_local)
     integer     :: iH
 
     do iH=1,this%NH_local
-        Call this%H(iH)%set_work_size(work_arr(iH),order)
+        Call this%H(iH)%set_work_size_single(work_arr(iH),order)
     enddo
     Call work%set_max(work_arr)
 end subroutine

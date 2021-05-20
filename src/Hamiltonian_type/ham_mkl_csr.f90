@@ -3,7 +3,7 @@ module m_H_sparse_mkl
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
 !eval_single single energy evaluation is rather cumbersome...
 use MKL_SPBLAS
-use m_derived_types, only: lattice,number_different_order_parameters
+use m_type_lattice, only: dim_modes_inner, lattice,number_different_order_parameters
 use m_H_coo_based
 use mkl_spblas_util, only: unpack_csr
 use m_work_ham_single
@@ -15,12 +15,13 @@ type,extends(t_H_coo_based) :: t_H_mkl_csr
     !mkl parameters
     type(SPARSE_MATRIX_T)   :: H
     type(matrix_descr)      :: descr
-    !pointers to Hamiltonian data handled by mkl
+    !pointers to Hamiltonian data handled by mkl (row major format)
     real(C_DOUBLE),pointer  :: mat_val(:)
     integer(C_INT),pointer  :: mat_col(:),mat_row(:)
     integer                 :: nnz
     !helper variables
-    integer                 :: col_max=0
+    integer                 :: row_max=0 !maximal number of entries per row
+    integer                 :: dim_single !dimension for inner work size array of set order (set_work_size_single)
 
 contains
     !necessary t_H routines
@@ -38,7 +39,7 @@ contains
     procedure :: mult_l_cont,mult_r_cont
     procedure :: mult_l_disc,mult_r_disc
 
-    procedure :: set_work_size
+    procedure :: set_work_size_single
 
     !MPI
     procedure :: send
@@ -55,20 +56,25 @@ private
 public t_H,t_H_mkl_csr
 contains 
 
-subroutine set_work_size(this,work,order)
-    use m_type_lattice, only: dim_modes_inner
-    class(t_H_mkl_csr),intent(in)           :: this
+subroutine set_work_size_single(this,work,order)
+    class(t_H_mkl_csr),intent(inout)        :: this
     class(work_ham_single),intent(inout)    :: work 
     integer,intent(in)                      :: order
     integer     :: sizes(2)
-    integer     ::  dim_mode_in
+    integer     :: dim_mode
 
     if(.not.this%is_set()) ERROR STOP "cannot set work size of hamiltonian if it is not set"
-    if(this%col_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if col_max==0"
-    if(.not.any(order==this%op_r)) ERROR STOP "cannot set work size for order which does not appear on right side of Hamiltonian"
-    dim_mode_in=dim_modes_inner(order)
-    sizes(1)= dim_mode_in*(2*this%col_max+1)
-    sizes(2)= dim_mode_in*(  this%col_max+1)
+    if(this%row_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if row_max==0"
+    if(.not.any(order==this%op_l))then
+        if(any(order==this%op_r))then
+            ERROR STOP "So far cannot consider Hamiltonian which has the single evaluation operator in the right side, but not on the left (some csc implementation?)"
+        else
+            ERROR STOP "Hamiltonian has no component of considered single energy evaluation, take it out or consider it somehow else"
+        endif
+    endif
+    Call this%mode_l%get_mode_single_size(order,this%dim_single)    !multiply to the left for single evaluation as that is easier in csr format
+    sizes(1)= this%dim_single*(2*this%row_max+1)
+    sizes(2)= this%dim_single*(  this%row_max+1)
     Call work%set(sizes)
 end subroutine
 
@@ -79,7 +85,6 @@ end function
 
 subroutine mult_r(this,lat,res)
     !mult
-    use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
@@ -98,7 +103,6 @@ subroutine mult_r(this,lat,res)
 end subroutine 
 
 subroutine mult_l(this,lat,res)
-    use m_derived_types, only: lattice
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
@@ -179,7 +183,6 @@ subroutine copy_child(this,Hout)
         stat=mkl_sparse_copy(this%H,this%descr,Hout%H )
         Hout%descr=this%descr
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to copy Sparse_Matrix_T in m_H_sparse_mkl'
-        Call this%copy_deriv(Hout)
         Call set_auxiliaries(Hout)
     class default
         STOP "Cannot copy t_h_mkl_csr type with Hamiltonian that is not a class of t_h_mkl_csr"
@@ -218,7 +221,7 @@ subroutine destroy_child(this)
         stat=mkl_sparse_destroy(this%H)
         nullify(this%mat_val,this%mat_col,this%mat_row)
         this%nnz=0
-        this%col_max=0
+        this%row_max=0
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_csr type in m_H_sparse_mkl'
     endif
 end subroutine
@@ -256,7 +259,6 @@ subroutine set_from_Hcoo(this,H_coo)
 end subroutine 
 
 subroutine eval_single_work(this,E,i_m,order,lat,work)
-    use m_derived_types, only: lattice, dim_modes_inner
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_mkl_csr), intent(in)      :: this
@@ -266,46 +268,48 @@ subroutine eval_single_work(this,E,i_m,order,lat,work)
     ! output
     real(8), intent(out)                :: E
     !temporary data
-    type(work_ham_single),intent(inout) ::  work
-
-    integer,pointer                 :: ind(:)
-    real(8),pointer                 :: vec(:)
-    real(8),pointer                 :: vec_out(:)
-    integer,pointer                 :: ind_out(:)
-    real(8),pointer                 :: vec_l(:) !discontiguous array on left side
-    integer                         :: N_out
+    type(work_ham_single),intent(inout) ::  work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    !temporary data slices
+    integer,pointer,contiguous          :: ind(:)       !indices of all left mode entries which contain the order paramtere order of the site corresponding to i_m
+    real(8),pointer,contiguous          :: vec(:)       !values corresponding to ind
+    integer,pointer,contiguous          :: ind_out(:)   !indices of the result array multipling the vector (ind/vec) to the matrix
+    real(8),pointer,contiguous          :: vec_out(:)   !values corresponding to ind_out
+    real(8),pointer,contiguous          :: vec_r(:)     !values of discontiguous mode array on right side (indices of ind_out)
 
     !some local indices/ loop variables
-    integer :: dim_inner
-    integer ::  i,j, i_col
+    integer ::  i,j, i_row
     integer :: ii
 
-    dim_inner=dim_modes_inner(order)
-    ind    (1:dim_inner             )=>work%int_arr (1                           :dim_inner                   )
-    ind_out(1:dim_inner*this%col_max)=>work%int_arr (dim_inner+1                 :dim_inner*(1+this%col_max)  )
-    vec    (1:dim_inner             )=>work%real_arr(1                           :dim_inner                   )
-    vec_out(1:dim_inner*this%col_max)=>work%real_arr(dim_inner+1                 :dim_inner*(1+this%col_max)  )
-    vec_l  (1:dim_inner*this%col_max)=>work%real_arr((1+this%col_max)*dim_inner+1:dim_inner*(1+2*this%col_max))
+    !associate temporary arrays
+    ind    (1:this%dim_single             )=>work%int_arr (1                                 :this%dim_single                   )
+    ind_out(1:this%dim_single*this%row_max)=>work%int_arr (1+this%dim_single                 :this%dim_single*(1+  this%row_max))
+    vec    (1:this%dim_single             )=>work%real_arr(1                                 :this%dim_single                   )
+    vec_out(1:this%dim_single*this%row_max)=>work%real_arr(1+this%dim_single                 :this%dim_single*(1+  this%row_max))
+    vec_r  (1:this%dim_single*this%row_max)=>work%real_arr(1+this%dim_single*(1+this%row_max):this%dim_single*(1+2*this%row_max))
 
-    Call this%mode_r%get_mode_single_disc_expl(lat,1,i_m,dim_inner,ind,vec)
-    N_out=size(ind)*this%col_max
-        
+    !get left mode corresponding to site i_m of order order
+    Call this%mode_l%get_mode_single_expl(lat,1,i_m,this%dim_single,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
+
+    !Calculate left mode,matrix product only for the necessary discontiguous mode-indices
     ii=0
     do i=1,size(ind)
-        i_col=ind(i)
-        do j=this%mat_row(i_col),this%mat_row(i_col+1)-1
+        i_row=ind(i)
+        do j=this%mat_row(i_row),this%mat_row(i_row+1)-1
             ii=ii+1
             vec_out(ii)=this%mat_val(j)*vec(i)
             ind_out(ii)=this%mat_col(j)
         enddo
     enddo
+    
+    !get right mode for indices of the vec/mat product 
+    Call this%mode_r%get_mode_disc_expl(lat,ii,ind_out(:ii),vec_r(:ii))
 
-    Call this%mode_l%get_mode_disc_expl(lat,ii,ind_out(:ii),vec_l(:ii))
-    E=DOT_PRODUCT(vec_l(:ii),vec_out(:ii))
+    !Get the energy
+    E=DOT_PRODUCT(vec_out(:ii),vec_r(:ii))
+    nullify(ind,ind_out,vec,vec_out,vec_r)
 end subroutine 
 
 subroutine eval_single(this,E,i_m,order,lat)
-    use m_derived_types, only: lattice
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_mkl_csr), intent(in)  :: this
@@ -319,29 +323,29 @@ subroutine eval_single(this,E,i_m,order,lat)
     real(8),allocatable             :: vec(:)
     real(8),allocatable             :: vec_out(:)
     integer,allocatable             :: ind_out(:)
-    real(8),allocatable             :: vec_l(:) !discontiguous array on left side
+    real(8),allocatable             :: vec_r(:) !discontiguous array on left side
     integer                         :: N_out
 
     !some local indices/ loop variables
-    integer ::  i,j, i_col
+    integer ::  i,j, i_row
     integer :: ii
 
-    Call this%mode_r%get_mode_single_disc(lat,1,i_m,ind,vec)
-    N_out=size(ind)*this%col_max
+    Call this%mode_l%get_mode_single(lat,1,i_m,ind,vec)
+    N_out=size(ind)*this%row_max
     allocate(vec_out(N_out), ind_out(N_out))
     
     ii=0
     do i=1,size(ind)
-        i_col=ind(i)
-        do j=this%mat_row(i_col),this%mat_row(i_col+1)-1
+        i_row=ind(i)
+        do j=this%mat_row(i_row),this%mat_row(i_row+1)-1
             ii=ii+1
             vec_out(ii)=this%mat_val(j)*vec(i)
             ind_out(ii)=this%mat_col(j)
         enddo
     enddo
 
-    Call this%mode_l%get_mode_disc(lat,ind_out(:ii),vec_l)
-    E=DOT_PRODUCT(vec_l(:ii),vec_out(:ii))
+    Call this%mode_r%get_mode_disc(lat,ind_out(:ii),vec_r)
+    E=DOT_PRODUCT(vec_out(:ii),vec_r(:ii))
 end subroutine 
 
 subroutine create_sparse_vec(i_m,modes,dim_mode,dim_H,vec)
@@ -441,8 +445,6 @@ subroutine recv(this,ithread,tag,com)
     this%descr%mode=SPARSE_FILL_MODE_LOWER
     Call this%optimize()
 
-    Call this%set_deriv()
-
     Call set_auxiliaries(this)
 #else
     continue
@@ -484,10 +486,9 @@ subroutine bcast(this,comm)
         ierr = mkl_sparse_copy(H_tmp, this%descr, this%H) 
         Call this%optimize()
         deallocate(acsr,ja,ia)
-        Call set_auxiliaries(this)
     endif
     nullify(acsr,ia,ja)
-    if(.not.comm%ismas) Call this%set_deriv()
+    if(.not.comm%ismas) Call set_auxiliaries(this)
 #else
     continue
 #endif
@@ -556,9 +557,8 @@ subroutine distribute(this,comm)
     this%descr%diag=SPARSE_DIAG_NON_UNIT
     this%descr%mode=SPARSE_FILL_MODE_LOWER
     Call this%optimize()
-    Call set_auxiliaries(this)
 
-    if(.not.comm%ismas) Call this%set_deriv()
+    if(.not.comm%ismas) Call set_auxiliaries(this)
 #else
     continue
 #endif
@@ -627,7 +627,7 @@ subroutine distribute(this,comm)
     this%descr%mode=SPARSE_FILL_MODE_LOWER
     Call this%optimize()
 
-    if(.not.comm%ismas) Call this%set_deriv()
+    if(.not.comm%ismas) call set_auxiliaries(this)
 #else
     continue
 #endif
@@ -641,8 +641,10 @@ end subroutine
 
 subroutine set_auxiliaries(this)
     class(t_H_mkl_csr),intent(inout)    :: this
+
+    Call this%set_deriv()
     Call set_H_ptr(this)
-    Call set_col_max(this)
+    Call set_row_max(this)
 end subroutine
 
 subroutine set_H_ptr(this)
@@ -652,7 +654,7 @@ subroutine set_H_ptr(this)
     Call unpack_csr(this%H,this%nnz,this%mat_row,this%mat_col,this%mat_val)
 end subroutine
 
-subroutine set_col_max(this)
+subroutine set_row_max(this)
     class(t_H_mkl_csr),intent(inout)    :: this
     !variable to get multiplication for single evaluation (estimate sizes...)
     integer,allocatable                 :: tmp(:)
@@ -662,7 +664,7 @@ subroutine set_col_max(this)
     do i=1,size(tmp)
         tmp(i)=this%mat_row(i+1)-this%mat_row(i)
     enddo
-    this%col_max=maxval(tmp)
+    this%row_max=maxval(tmp)
 end subroutine
 
 

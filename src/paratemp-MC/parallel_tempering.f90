@@ -43,6 +43,7 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_write_config
     use m_io_files_utils, only: close_file
+    use m_work_ham_single, only: work_ham_single
 
     type(lattice), intent(inout) :: my_lattice
     type(io_parameter), intent(in) :: io_simu
@@ -88,6 +89,8 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     type(fluct_parameters)  :: fluct_val
     integer,allocatable     :: Q_neigh(:,:)
     type(paratemp_track)    :: para_track
+
+    type(work_ham_single)       :: work !type containing work arrays for single energy evaluation
     
     !input parameters that most probably need some external input, which was not supplied in the version this modification is based on
     i_optTset=.True.
@@ -152,6 +155,7 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
         Call state_prop(i_temp)%init(lattices(i_temp),H,io_MC)
     enddo
 
+    Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!   START THE ACTUAL CALCULATION LOOP
@@ -169,11 +173,10 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
                 kt=measure(i_temp)%kt
 
                 !does it make more sense to do big relaxation step at the very beginning?
-
                 Do i_MC=1,autocor_steps*N_spin
-                    Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H)
+                    Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)
                 enddo
-                Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H)! In case autocor_steps set to zero at least one MCstep is done
+                Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)! In case autocor_steps set to zero at least one MCstep is done
 
                 Call measure_add(measure(i_temp),lattices(i_temp),state_prop(i_temp),Q_neigh,fluct_val) !add up relevant observable
                 E_temp(i_temp)=state_prop(i_temp)%E_total !save the total energy of each replicas

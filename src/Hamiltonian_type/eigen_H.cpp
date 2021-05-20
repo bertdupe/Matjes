@@ -484,6 +484,24 @@ void eigen_H_mult_r_ind(
     }
 }
 
+void eigen_get_dat(
+    //pass the data array pointers to the outside
+    SpMat **mat,
+    int& nnz,
+    int size[2],
+    int*& col,
+    int*& row,
+    double*& val){
+    
+    if(! (**mat).isCompressed()) (**mat).makeCompressed();
+    nnz=(**mat).nonZeros();
+    size[0]=(**mat).rows();
+    size[1]=(**mat).cols();
+    val=(**mat).valuePtr();
+    row=(**mat).innerIndexPtr();
+    col=(**mat).outerIndexPtr();
+}
+
 void eigen_H_mult_mat_disc_disc(
     SpMat **mat,
     int N_in,

@@ -1,6 +1,8 @@
 module m_mode_construction_rankN_full_manual
+#if 0
+!obsolete
 use m_mode_construction
-use m_derived_types, only : lattice,number_different_order_parameters
+use m_type_lattice, only: dim_modes_inner,  lattice,number_different_order_parameters
 implicit none
 private
 public F_mode_rankN_full_manual
@@ -12,9 +14,10 @@ type, extends(F_mode) :: F_mode_rankN_full_manual  !contains all entries
     procedure   :: get_mode_exc
     procedure   :: mode_reduce_comp
     procedure   :: get_ind_site
+    procedure   :: get_ind_site_expl
 
-    procedure   :: get_mode_single_cont  !
-    procedure   :: get_mode_single_disc
+    procedure   :: get_mode_single
+    procedure   :: get_mode_single_size
 
     procedure   :: copy
     procedure   :: destroy
@@ -31,18 +34,47 @@ end type
 
 contains
 
+subroutine get_mode_single_size(this,order,dim_mode)
+    !returns the size of the vector necessary to get to mode set by a single site
+    class(F_mode_rankN_full_manual),intent(in)    :: this
+    integer,intent(in)          :: order
+    integer,intent(out)         :: dim_mode
+
+    integer :: order_ind,i
+
+    if(.not.any(order/=this%order))then
+#ifdef CPP_DEBUG
+        write(error_unit,'(A)') "trying to get single mode of order which is not the order of the F_mode"
+#endif
+        dim_mode=0
+    else
+        dim_mode=product(dim_modes_inner(this%order))
+    endif
+end subroutine
+
+
 subroutine get_ind_site(this,comp,site,ind)
     class(F_mode_rankN_full_manual),intent(in)  :: this
     integer,intent(in)                          :: comp  !mode index
     integer,intent(in)                          :: site    !entry
     integer,intent(inout),allocatable           :: ind(:)
 
-    integer         :: inner_dim_mode, i
-
     ERROR STOP "IMPLEMENT"
 end subroutine
 
-subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
+
+subroutine get_ind_site_expl(this,comp,site,size_out,ind)
+    !get the indices corresponding to the 
+    class(F_mode_rankN_full_manual),intent(in)    :: this
+    integer,intent(in)                      :: comp
+    integer,intent(in)                      :: site    !entry
+    integer,intent(in)                      :: size_out
+    integer,intent(out)                     :: ind(size_out)
+    
+    ERROR STOP "IMPLEMENT"
+end subroutine 
+
+subroutine get_mode_single(this,lat,comp,site,ind,vec)
     class(F_mode_rankN_full_manual),intent(in)   :: this
     type(lattice),intent(in)                    :: lat
     integer,intent(in)                          :: comp  !mode index
@@ -52,19 +84,6 @@ subroutine get_mode_single_disc(this,lat,comp,site,ind,vec)
 
     ERROR STOP "IMPLEMENT"
 end subroutine
-
-subroutine get_mode_single_cont(this,lat,order,i,modes,vec,bnd)
-    class(F_mode_rankN_full_manual),intent(in)  :: this
-    type(lattice),intent(in)                    :: lat
-    integer,intent(in)                          :: order
-    integer,intent(in)                          :: i
-    real(8),pointer,intent(out)                 :: modes(:)
-    integer,intent(out)                         :: bnd(2)
-    real(8),allocatable,target,intent(out)      :: vec(:)   !space to allocate array if not single operator
-
-    ERROR STOP "IMPLEMENT"
-end subroutine
-
 
 subroutine get_mode_exc(this,lat,comp,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
@@ -198,5 +217,5 @@ subroutine recv(this,ithread,tag,com)
     continue
 #endif
 end subroutine
-
+#endif
 end module

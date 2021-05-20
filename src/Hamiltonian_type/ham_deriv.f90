@@ -38,6 +38,8 @@ subroutine set_deriv_single(Ham)
     integer         :: Nl_order,Nr_order !numbern of order parameters occurances at left/right side of Hamiltonian
 
     do i_mode=1,number_different_order_parameters
+        if(allocated(Ham%deriv(i_mode)%l)) deallocate(Ham%deriv(i_mode)%l)  !shouldn't really be necessary as one could check that is only is called once at the correct moments, but this is easier
+        if(allocated(Ham%deriv(i_mode)%r)) deallocate(Ham%deriv(i_mode)%r)
         Nl=size(Ham%op_l); Nr=size(Ham%op_r)
         Nl_order=count(Ham%op_l==i_mode); Nr_order=count(Ham%op_r==i_mode)
 
