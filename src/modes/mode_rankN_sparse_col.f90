@@ -30,9 +30,6 @@ type, extends(F_mode) :: F_mode_rankN_sparse_col
     procedure   :: mode_reduce_comp
     procedure   :: mode_reduce_comp_disc
 
-
-
-    procedure   :: get_mode_single
     procedure   :: get_mode_single_size
 
     procedure   :: get_ind_site
@@ -109,33 +106,6 @@ subroutine get_ind_site_expl(this,comp,site,size_out,ind)
     do i=1,inner_dim_mode
         ind((i-1)*ratio+1:i*ratio)=this%dat(comp)%reverse(:,offset+i)
     enddo
-end subroutine
-
-subroutine get_mode_single(this,lat,comp,site,ind,vec)
-    class(F_mode_rankN_sparse_col),intent(in)   :: this
-    type(lattice),intent(in)                    :: lat
-    integer,intent(in)                          :: comp  !mode index
-    integer,intent(in)                          :: site    !entry
-    integer,intent(inout),allocatable           :: ind(:)
-    real(8),intent(inout),allocatable           :: vec(:)
-
-    integer         :: ind_in(dim_modes_inner(this%order(comp)))
-    integer         :: inner_dim_mode, N_out
-
-    integer         :: i
-    integer         :: ratio
-
-    ratio=this%ratio(comp)
-    inner_dim_mode=dim_modes_inner(this%order(comp))
-    ind_in=[((site-1)*inner_dim_mode+i,i=1,inner_dim_mode)]
-    N_out=inner_dim_mode*ratio
-    if(.not.allocated(ind)) allocate(ind(N_out))
-    if(.not.allocated(vec)) allocate(vec(N_out))
-    do i=1,size(ind_in)
-        ind((i-1)*ratio+1:i*ratio)=this%dat(comp)%reverse(:,ind_in(i))
-    enddo
-
-    Call this%get_mode_disc(lat,ind,vec)
 end subroutine
 
 subroutine get_mode_disc_expl(this,lat,N,ind,vec)

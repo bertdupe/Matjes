@@ -105,7 +105,7 @@ subroutine eval_single(this,E,i_m,order,lat,work)
     vec_l  (1:this%dim_single*this%col_max)=>work%real_arr(1+this%dim_single*(1+this%col_max):this%dim_single*(1+2*this%col_max))
 
     !get right mode corresponding to site i_m of order order
-    Call this%mode_r%get_mode_single_expl(lat,1,i_m,this%dim_single,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
+    Call this%mode_r%get_mode_single(lat,1,i_m,this%dim_single,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
 
     !Calculate matrix,right mode product only for the necessary discontiguous mode-indices
     ii=0

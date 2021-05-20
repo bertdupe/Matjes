@@ -14,31 +14,32 @@ type, abstract :: F_mode
     integer             :: mode_size=-1 !overall size of this mode
     integer,allocatable :: order(:) !order parameter indices of respective rank
     contains
+    !routines acting on the entire mode
     procedure(int_get_mode),deferred            :: get_mode             !subroutine which returns the mode 
-    procedure(int_get_mode_exc),deferred        :: get_mode_exc         !subroutine which returns the mode excluding one order parameter 
-    procedure(int_mode_reduce_comp),deferred    :: mode_reduce_comp     !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
-    procedure(int_get_ind_site),deferred        :: get_ind_site 
-    procedure(int_get_ind_site_expl),deferred   :: get_ind_site_expl
+    procedure(int_get_mode_exc),deferred        :: get_mode_exc         !subroutine which returns the mode excluding one order parameter indexed by the module component
+    procedure,NON_OVERRIDABLE                   :: get_mode_exc_op      !subroutine which returns the mode excluding one order parameter indexed by the order parameter
+    procedure(int_mode_reduce_comp),deferred    :: mode_reduce_comp     !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules indexed by the module component
+    procedure,NON_OVERRIDABLE                   :: mode_reduce          !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules indexed by the order parameter
 
-    procedure(int_get_mode_single),deferred      :: get_mode_single  !subroutine which returns the mode as discontiguous array
-    procedure,NON_OVERRIDABLE                    :: get_mode_single_expl  !returns discontiguous array of mode to explicit output arrays
-    procedure(int_get_mode_single_size),deferred :: get_mode_single_size  !get size necessary to set a single mode
-
-!subroutines resolving order to first index
-    procedure,NON_OVERRIDABLE               :: get_mode_exc_op   !subroutine which returns the mode excluding one order parameter 
-    procedure,NON_OVERRIDABLE               :: mode_reduce      !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules
-
-    procedure                               :: reduce_other_exc
-!routines, which should be implemented more efficiently locally
-    procedure                               :: get_mode_disc
-    procedure                               :: get_mode_disc_expl
+    !routines acting on mode depending on a indices
+    procedure                               :: get_mode_disc            !get mode by indices without work array
+    procedure                               :: get_mode_disc_expl       !get mode by indices with work array
     procedure                               :: get_mode_exc_op_disc
     procedure                               :: get_mode_exc_disc
     procedure                               :: mode_reduce_comp_disc
-!misc
-    procedure                               :: ind_site
-    procedure                               :: get_comp
-!basic functionalities
+    procedure                               :: reduce_other_exc
+
+    !routines acting on mode depending on a site
+    procedure(int_get_ind_site),deferred            :: get_ind_site             !get indices of site depending on mode component index
+    procedure                                       :: ind_site                 !get indices of site depending on order parameter index
+    procedure(int_get_ind_site_expl),deferred       :: get_ind_site_expl        !get indices of site depending on mode component index with work array 
+    procedure,NON_OVERRIDABLE                       :: get_mode_single          !returns discontiguous array of mode corresponding to single site entry of given component
+    procedure(int_get_mode_single_size),deferred    :: get_mode_single_size     !get size necessary to set a single mode
+
+    !misc
+    procedure                               :: get_comp !gets the first mode component for an order parameter index
+
+    !basic functionalities
     procedure(int_is_same),deferred         :: is_same
     procedure(int_destroy),deferred         :: destroy
     procedure(int_copy),deferred            :: copy
@@ -46,8 +47,7 @@ type, abstract :: F_mode
     procedure                               :: init_base
     procedure                               :: copy_base
 
-
-!MPI
+    !MPI
     procedure(int_send),deferred            :: send
     procedure(int_recv),deferred            :: recv
     procedure                               :: bcast_base
@@ -72,17 +72,6 @@ abstract interface
         integer,intent(in)                          :: site    !entry
         integer,intent(in)                          :: size_out
         integer,intent(out)                         :: ind(size_out)
-    end subroutine
-
-
-    subroutine int_get_mode_single(this,lat,comp,site,ind,vec)
-        import F_mode, lattice
-        class(F_mode),intent(in)                :: this
-        type(lattice),intent(in)                :: lat
-        integer,intent(in)                      :: comp  !mode index
-        integer,intent(in)                      :: site    !entry
-        integer,intent(inout),allocatable       :: ind(:)
-        real(8),intent(inout),allocatable       :: vec(:)
     end subroutine
 
     subroutine int_get_mode_single_size(this,order,dim_mode)
@@ -331,7 +320,6 @@ subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)
     real(8),intent(inout)       :: vec_out(:)
 
     ERROR STOP "IMPLEMENT LOCALLY"
-
 end subroutine
 
 subroutine get_mode_disc(this,lat,ind,vec)
@@ -447,7 +435,7 @@ subroutine recv_base(this,ithread,tag,com)
 #endif
 end subroutine
 
-subroutine get_mode_single_expl(this,lat,comp,site,size_out,ind,vec)
+subroutine get_mode_single(this,lat,comp,site,size_out,ind,vec)
     !returns discontiguous array of mode to explicit output arrays
     class(F_mode),intent(in)    :: this
     type(lattice),intent(in)    :: lat
