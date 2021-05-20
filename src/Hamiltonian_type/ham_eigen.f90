@@ -20,7 +20,6 @@ type,extends(t_H_coo_based) :: t_H_eigen
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: eval_single_work
 
     procedure :: set_from_Hcoo
 
@@ -76,7 +75,7 @@ subroutine set_work_size_single(this,work,order)
     Call work%set(sizes)
 end subroutine
 
-subroutine eval_single_work(this,E,i_m,order,lat,work)
+subroutine eval_single(this,E,i_m,order,lat,work)
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_eigen), intent(in)        :: this
@@ -372,31 +371,6 @@ subroutine set_from_Hcoo(this,H_coo)
     colind=colind-1;rowind=rowind-1
     Call eigen_H_init(nnz,this%dimH,rowind,colind,val,this%H)
     Call set_auxiliaries(this)
-end subroutine 
-
-subroutine eval_single(this,E,i_m,order,lat)
-    use m_derived_types, only: lattice
-    ! input
-    class(t_H_eigen),intent(in)     :: this
-    type(lattice), intent(in)       :: lat
-    integer, intent(in)             :: i_m
-    integer,intent(in)              :: order
-    ! output
-    real(8), intent(out)            :: E
-    integer,allocatable             :: ind(:)
-    real(8),allocatable             :: vec(:)
-
-    real(8),allocatable             :: vec_out(:)
-    integer,allocatable             :: ind_out(:)
-    real(8),allocatable             :: vec_l(:)
-    integer                         :: N_out
-
-    Call this%mode_r%get_mode_single(lat,1,i_m,ind,vec)
-    N_out=size(ind)*10  !arbitrary, hopefully large enough (otherwise eigen_H_mult_mat_disc_disc crashes
-    allocate(vec_out(N_out), ind_out(N_out))
-    Call eigen_H_mult_mat_disc_disc(this%H,size(ind),ind,vec,N_out,ind_out,vec_out)
-    Call this%mode_l%get_mode_disc(lat,ind_out(:N_out),vec_l)
-    E=DOT_PRODUCT(vec_l(:N_out),vec_out(:N_out))
 end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

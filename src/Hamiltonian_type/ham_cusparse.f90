@@ -156,7 +156,8 @@ subroutine set_from_Hcoo(this,H_coo)
     Call cuda_set_buffer(this%buffer_l,this%H,logical(.true. ,C_BOOL),this%lvec,this%rvec,handle)
 end subroutine 
 
-subroutine eval_single(this,E,i_m,order,lat)
+subroutine eval_single(this,E,i_m,order,lat,work)
+    use m_work_ham_single
     use m_derived_types, only: lattice
     use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
     ! input
@@ -166,13 +167,7 @@ subroutine eval_single(this,E,i_m,order,lat)
     integer,intent(in)              :: order
     ! output
     real(8), intent(out)            :: E
-    integer,allocatable             :: ind(:)
-    real(8),allocatable             :: vec(:)
-
-    real(8),allocatable             :: vec_out(:)
-    integer,allocatable             :: ind_out(:)
-    real(8),allocatable             :: vec_l(:)
-    integer                         :: N_out
+    type(work_ham_single),intent(inout) :: work
 
     !dim_order_bnd...
 !    Call this%mode_r%get_mode_single(lat,1,i_m,ind,vec)

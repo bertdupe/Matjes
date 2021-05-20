@@ -51,7 +51,8 @@ subroutine mult_l(this,lat,res)
 end subroutine 
 
 
-subroutine eval_single(this,E,i_m,order,lat)
+subroutine eval_single(this,E,i_m,order,lat,work)
+    use m_work_ham_single
     use m_derived_types, only: lattice,number_different_order_parameters
     ! input
     class(t_h_dense_blas),intent(in)    :: this
@@ -61,6 +62,7 @@ subroutine eval_single(this,E,i_m,order,lat)
 !    integer, intent(in)                 :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
     ! output
     real(8), intent(out)                :: E
+    type(work_ham_single),intent(inout) :: work
     ! internal
     real(8),pointer                 :: modes_l(:),modes_r(:)
     real(8),allocatable,target      :: vec_l(:),vec_r(:)

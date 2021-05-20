@@ -12,8 +12,6 @@ type,extends(t_H_eigen) :: t_H_eigen_mem
     type(C_PTR)     ::  H_T=c_null_ptr  !transpose Hamiltonian in eigen
 contains
     !necessary t_H routines
-!    procedure :: eval_single
-
     procedure :: set_from_Hcoo
 
     procedure :: add_child 

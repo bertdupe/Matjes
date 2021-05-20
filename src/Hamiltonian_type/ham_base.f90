@@ -43,8 +43,7 @@ contains
 !    procedure(int_mult_disc),deferred       :: mult_l_disc,mult_r_disc
 
     !routines acting on parts of the Hamiltonian defined by a single site of an order-parameter
-    procedure(int_eval_single),deferred     :: eval_single                              !evaluates the energy of a single site of a given order-parameter
-    procedure                               :: eval_single_work                         !evaluates the energy caused by a single mode (using a work array)
+    procedure(int_eval_single),deferred     :: eval_single                         !evaluates the energy caused by a single mode (using a work array)
     procedure                               :: set_work_size_single                     !sets the necessary sizes for the work arrays
 
     procedure                               :: mult_l_single,   mult_r_single           !multipy out with left/right side
@@ -143,14 +142,15 @@ abstract interface
         real(8),intent(out)         ::  E
     end subroutine
 
-    subroutine int_eval_single(this,E,i_m,order,lat)
-        import t_H_base,lattice,number_different_order_parameters
+    subroutine int_eval_single(this,E,i_m,order,lat,work)
+        import t_H_base,lattice,number_different_order_parameters, work_ham_single
         class(t_H_base),intent(in)    ::  this
         type(lattice),intent(in)    ::  lat
         integer,intent(in)          ::  i_m     !site index in (1:Ncell*dim_mode_inner(order)/dim_mode(order))-basis
         integer,intent(in)          :: order    
 !        integer,intent(in)          ::  dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
         real(8),intent(out)         ::  E       !energy caused by considered site
+        type(work_ham_single),intent(inout) ::  work
     end subroutine
 
     subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
@@ -664,22 +664,6 @@ subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
     real(8),intent(inout)           :: vec_out(:)
 
     ERROR STOP "IMPLEMENT LOCALLY"
-end subroutine
-
-subroutine eval_single_work(this,E,i_m,order,lat,work)
-    use m_derived_types, only: lattice, dim_modes_inner
-    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
-    ! input
-    class(t_H_base), intent(in)         :: this
-    type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m
-    integer, intent(in)                 :: order
-    ! output
-    real(8), intent(out)                :: E
-    !temporary data
-    type(work_ham_single),intent(inout) ::  work
-
-    ERROR STOP "IMPLEMENT"  !implement for local entries, then make deferred if I decide to keep that
 end subroutine
 
 subroutine set_work_size_single(this,work,order)

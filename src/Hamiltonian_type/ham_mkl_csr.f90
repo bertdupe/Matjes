@@ -1,7 +1,6 @@
 module m_H_sparse_mkl
 #if defined(CPP_MKL)
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
-!eval_single single energy evaluation is rather cumbersome...
 use MKL_SPBLAS
 use m_type_lattice, only: dim_modes_inner, lattice,number_different_order_parameters
 use m_H_coo_based
@@ -26,7 +25,6 @@ type,extends(t_H_coo_based) :: t_H_mkl_csr
 contains
     !necessary t_H routines
     procedure :: eval_single
-    procedure :: eval_single_work
 
     procedure :: set_from_Hcoo
 
@@ -258,7 +256,7 @@ subroutine set_from_Hcoo(this,H_coo)
     Call set_auxiliaries(this)
 end subroutine 
 
-subroutine eval_single_work(this,E,i_m,order,lat,work)
+subroutine eval_single(this,E,i_m,order,lat,work)
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_mkl_csr), intent(in)      :: this
@@ -307,45 +305,6 @@ subroutine eval_single_work(this,E,i_m,order,lat,work)
     !Get the energy
     E=DOT_PRODUCT(vec_out(:ii),vec_r(:ii))
     nullify(ind,ind_out,vec,vec_out,vec_r)
-end subroutine 
-
-subroutine eval_single(this,E,i_m,order,lat)
-    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
-    ! input
-    class(t_H_mkl_csr), intent(in)  :: this
-    type(lattice), intent(in)       :: lat
-    integer, intent(in)             :: i_m
-    integer, intent(in)             :: order
-    ! output
-    real(8), intent(out)            :: E
-
-    integer,allocatable             :: ind(:)
-    real(8),allocatable             :: vec(:)
-    real(8),allocatable             :: vec_out(:)
-    integer,allocatable             :: ind_out(:)
-    real(8),allocatable             :: vec_r(:) !discontiguous array on left side
-    integer                         :: N_out
-
-    !some local indices/ loop variables
-    integer ::  i,j, i_row
-    integer :: ii
-
-    Call this%mode_l%get_mode_single(lat,1,i_m,ind,vec)
-    N_out=size(ind)*this%row_max
-    allocate(vec_out(N_out), ind_out(N_out))
-    
-    ii=0
-    do i=1,size(ind)
-        i_row=ind(i)
-        do j=this%mat_row(i_row),this%mat_row(i_row+1)-1
-            ii=ii+1
-            vec_out(ii)=this%mat_val(j)*vec(i)
-            ind_out(ii)=this%mat_col(j)
-        enddo
-    enddo
-
-    Call this%mode_r%get_mode_disc(lat,ind_out(:ii),vec_r)
-    E=DOT_PRODUCT(vec_out(:ii),vec_r(:ii))
 end subroutine 
 
 subroutine create_sparse_vec(i_m,modes,dim_mode,dim_H,vec)

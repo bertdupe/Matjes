@@ -4,7 +4,6 @@ use m_mc_track_val, only: track_val
 use m_sampling, only: sphereft,equirep
 use m_choose_spin, only: choose_spin
 use m_relaxtyp,only: underrelax,overrelax
-use m_H_public, only: t_H,energy_single
 use m_hamiltonian_collection, only: hamiltonian
 Implicit none
 
@@ -46,12 +45,12 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H,work)
     !----------------------------------
     !get Energy of old configuration
     S_old=lat%M%modes_3(:,i_spin)
-    Call H%energy_single_work(i_spin,state_prop%order,lat,work,E_old)
+    Call H%energy_single(i_spin,state_prop%order,lat,work,E_old)
     
     !get Energy of the new configuration
     S_new=state_prop%spin_sample(i_spin,lat,H)  !choose new magnetic direction
     lat%M%modes_3(:,i_spin)=S_new               !set new configuration
-    Call H%energy_single_work(i_spin,state_prop%order,lat,work,E_new)
+    Call H%energy_single(i_spin,state_prop%order,lat,work,E_new)
     lat%M%modes_3(:,i_spin)=S_old   !revert for now to old state
 
     ! get energy difference

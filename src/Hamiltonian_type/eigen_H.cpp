@@ -573,23 +573,6 @@ void eigen_H_copy(
     **Ham_out=**Ham_in;
 }
 
-void eigen_H_eval_single(
-    int ind,
-    int dim_mode,
-    double vec_l[],
-    double vec_r[],
-    SpMat **mat,
-    double *E){
-
-    int rows=(*mat)->rows();
-    Map<Matrix<double,1,Dynamic>> l_vec(vec_l,rows);
-    SpVec r_vec(dim_mode);
-    for(int i=0; i < dim_mode; i++ ){
-        r_vec.coeffRef(i)=vec_r[i];   
-    }
-    *E = l_vec * (((*mat)->block(0,ind,rows,dim_mode) * r_vec).pruned());
-}
-
 void eigen_H_destroy(
     SpMat **Ham){
 

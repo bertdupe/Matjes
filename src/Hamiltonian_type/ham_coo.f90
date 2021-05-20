@@ -3,6 +3,8 @@ module m_H_coo
 !hence evaluation does not work <- don't use in ham_type_gen 
 use m_H_deriv, only: t_H
 use m_H_type, only: t_H_base
+use m_derived_types, only: lattice, number_different_order_parameters,op_abbrev_to_int
+use mpi_basic                
 
 type,extends(t_H) :: t_H_coo
     private
@@ -80,7 +82,6 @@ end subroutine
 
 
 subroutine mult_r(this,lat,res)
-    use m_derived_types, only: lattice
     class(t_H_coo),intent(in)    :: this
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
@@ -89,7 +90,6 @@ subroutine mult_r(this,lat,res)
 end subroutine 
 
 subroutine mult_l(this,lat,res)
-    use m_derived_types, only: lattice
     class(t_H_coo),intent(in)    :: this
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
@@ -146,7 +146,6 @@ end subroutine
 
 subroutine init_coo(this,rowind,colind,val,dim_mode,op_l,op_r,lat,mult_M_single)
     !constructs a Hamiltonian based directly on the coo-arrays, which are moved into the type
-    use m_derived_types, only: lattice,op_abbrev_to_int
     class(t_H_coo),intent(inout)        :: this
     real(8),allocatable,intent(inout)   :: val(:)
     integer,allocatable,intent(inout)   :: rowind(:),colind(:)
@@ -185,7 +184,6 @@ end subroutine
 
 subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
     !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
-    use m_derived_types, only: lattice,op_abbrev_to_int
     class(t_H_coo),intent(inout)    :: this
 
     type(lattice),intent(in)        :: lat
@@ -309,8 +307,8 @@ subroutine check_H(this)
 
 end subroutine
 
-subroutine eval_single(this,E,i_m,order,lat)
-    use m_derived_types, only: lattice, number_different_order_parameters
+subroutine eval_single(this,E,i_m,order,lat,work)
+    use m_work_ham_single
     ! input
     class(t_H_coo),intent(in)   :: this
     type(lattice), intent(in)   :: lat
@@ -318,10 +316,9 @@ subroutine eval_single(this,E,i_m,order,lat)
     integer,intent(in)          :: order
     ! output
     real(kind=8), intent(out)    :: E
+    type(work_ham_single),intent(inout) :: work
 
-    STOP "CANNOT EVALUATE t_H_coo"
-    !alternatively add some evaluation without a library
-
+    ERROR STOP "CANNOT calculate single energy contributions with this Hamiltonian-type"
 end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -329,7 +326,6 @@ end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine send(this,ithread,tag,com)
-    use mpi_basic                
     class(t_H_coo),intent(in)      :: this
     integer,intent(in)              :: ithread
     integer,intent(in)              :: tag
@@ -344,7 +340,6 @@ subroutine send(this,ithread,tag,com)
 end subroutine
 
 subroutine recv(this,ithread,tag,com)
-    use mpi_basic                
     class(t_H_coo),intent(inout)   :: this
     integer,intent(in)              :: ithread
     integer,intent(in)              :: tag
@@ -359,7 +354,6 @@ subroutine recv(this,ithread,tag,com)
 end subroutine
 
 subroutine bcast(this,comm)
-    use mpi_basic                
     class(t_H_coo),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm
 
@@ -367,7 +361,6 @@ subroutine bcast(this,comm)
 end subroutine 
 
 subroutine distribute(this,comm)
-    use mpi_basic                
     class(t_H_coo),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm
 

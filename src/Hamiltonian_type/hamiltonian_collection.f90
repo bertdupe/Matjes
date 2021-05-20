@@ -37,7 +37,6 @@ contains
     procedure   :: energy_resolved
     procedure   :: energy_single
     procedure   :: energy_distrib
-    procedure   :: energy_single_work
     
     !derivative getting routines
     procedure   :: get_eff_field
@@ -343,7 +342,7 @@ function energy(this,lat)result(E)
     E=sum(tmp_E)
 end function
 
-subroutine energy_single_work(this,i_m,order,lat,work,E)
+subroutine energy_single(this,i_m,order,lat,work,E)
     use m_derived_types, only: number_different_order_parameters
     use mpi_distrib_v
     !returns the total energy caused by a single entry !needs some updating 
@@ -361,7 +360,7 @@ subroutine energy_single_work(this,i_m,order,lat,work,E)
 #endif
     E=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%eval_single_work(tmp_E(iH),i_m,order,lat,work)
+        Call this%H(iH)%eval_single(tmp_E(iH),i_m,order,lat,work)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
 
@@ -372,36 +371,6 @@ subroutine energy_single_work(this,i_m,order,lat,work,E)
 
     E=sum(tmp_E)
 end subroutine 
-
-function energy_single(this,i_m,order,lat)result(E)
-    use m_derived_types, only: number_different_order_parameters
-    use mpi_distrib_v
-    !returns the total energy caused by a single entry !needs some updating 
-    class(hamiltonian),intent(inout):: this
-    integer,intent(in)              :: i_m
-    type (lattice),intent(in)       :: lat
-    integer,intent(in)              :: order
-    real(8)                         :: E
-
-    real(8)     ::  tmp_E(this%N_total)
-    integer     ::  iH
- 
-    if(any(this%is_para)) ERROR STOP "IMPLEMENT" !I is rather unlikely that a parallelization here can make this faster
-    E=0.0d0
-    do iH=1,this%NH_local
-        Call this%H(iH)%eval_single(tmp_E(iH),i_m,order,lat)
-    enddo
-    tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
-!    if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
-!    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(tmp_E,this%com_outer)
-
-    do iH=1,this%NHF_local
-         Call this%H_fft(iH)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
-    enddo
-
-    E=sum(tmp_E)
-end function
-
 
 subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
