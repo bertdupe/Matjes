@@ -492,7 +492,6 @@ void eigen_get_dat(
     int*& col,
     int*& row,
     double*& val){
-    
     if(! (**mat).isCompressed()) (**mat).makeCompressed();
     nnz=(**mat).nonZeros();
     size[0]=(**mat).rows();

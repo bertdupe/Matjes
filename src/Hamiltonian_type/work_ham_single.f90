@@ -1,7 +1,9 @@
 module m_work_ham_single
 !module for derived type which provides some arrays for temporary array when evaluating the Energy of Hamiltonians
 private
-public work_ham_single
+public work_ham_single, work_size_single, N_work_single
+
+integer,parameter   ::  N_work_single=2
 
 type work_ham_single
     !internal data arrays, DO NOT MODIFY UNLESS YOU KNOW WHAT YOU ARE DOING (pointers because targets in types does not work)
@@ -17,6 +19,17 @@ contains
     final       :: finalize
 end type
 contains
+
+subroutine work_size_single(dim_single,line_max,sizes)
+    !routine which defines the size of the work array
+    integer,intent(in)          :: dim_single   !corresponds to dim_single or dimT_single of the Hamiltonian implementation (dimension for inner work size array of set order)
+    integer,intent(in)          :: line_max     !number of matrix entries on the col/row (corresponds to col_max/row_max)
+    integer,intent(out)         :: sizes(N_work_single)
+
+    sizes(1)= dim_single*(2*line_max+1)
+    sizes(2)= dim_single*(  line_max+3)
+end subroutine
+
 
 subroutine finalize(this)
     type(work_ham_single),intent(inout)    ::  this

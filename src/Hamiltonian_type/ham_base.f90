@@ -35,19 +35,21 @@ contains
     procedure ,NON_OVERRIDABLE              :: energy_dist              !get energy distribution per site
 
     !routines acting on parts of the Hamiltonian
-    procedure                               :: mult_l_ind,      mult_r_ind          !
-    procedure                               :: mult_l_disc_disc,mult_r_disc_disc
-    procedure                               :: get_ind_mult_r, get_ind_mult_l       !get the indices that appear mulitplying a sparse vectors with the matrix
+!    procedure                               :: mult_l_ind,      mult_r_ind          !
+!    procedure                               :: mult_l_disc_disc,mult_r_disc_disc
+!    procedure                               :: get_ind_mult_r, get_ind_mult_l       !get the indices that appear mulitplying a sparse vectors with the matrix
 !    !probably never used anywhere,implemented for eigen, keep so far as it might make sense at some point
 !    procedure(int_mult_cont),deferred       :: mult_l_cont,mult_r_cont  
 !    procedure(int_mult_disc),deferred       :: mult_l_disc,mult_r_disc
 
+    procedure                               :: mult_l_single, mult_r_single
+
     !routines acting on parts of the Hamiltonian defined by a single site of an order-parameter
     procedure(int_eval_single),deferred     :: eval_single                         !evaluates the energy caused by a single mode (using a work array)
-    procedure                               :: set_work_size_single                     !sets the necessary sizes for the work arrays
+    procedure                               :: set_work_single                     !sets the necessary sizes for the work arrays
 
-    procedure                               :: mult_l_single,   mult_r_single           !multipy out with left/right side
-    procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single      !multipy out with left/right side excluding single order-parameter
+!    procedure                               :: mult_l_single,   mult_r_single           !multipy out with left/right side
+!    procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single      !multipy out with left/right side excluding single order-parameter
 
     !Utility functions
     procedure,NON_OVERRIDABLE               :: destroy
@@ -361,52 +363,52 @@ contains
         vec_out=res(ind_out)
     end subroutine
 
-    subroutine mult_r_red_single(this,i_site,lat,res,op_keep)
-        !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
-        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H_base),intent(in)           :: this
-        type(lattice), intent(in)       :: lat
-        integer,intent(in)              :: i_site
-        real(8), intent(inout)          :: res(:)   !result matrix-vector product
-        integer,intent(in)              :: op_keep
-        ! internal
-        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-        real(8),pointer                 :: modes(:)
-        real(8),allocatable,target      :: vec(:)
-
-        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
-    
-        allocate(tmp(this%dim_mode(1)))
-        Call this%mult_r_single(i_site,lat,tmp)
-        allocate(vec(this%dim_mode(1)),source=0.0d0)
-        Call lat%set_order_comb_exc_single(i_site,this%op_l,vec,this%op_l==op_keep)
-        tmp=tmp*vec
-!        Call lat%reduce_single(i_site,tmp,this%op_l,op_keep,res)   !op_keep changed to ind_keep
-        deallocate(tmp,vec)
-    end subroutine 
-    
-    subroutine mult_l_red_single(this,i_site,lat,res,op_keep)
-        !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
-        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H_base),intent(in)           :: this
-        integer,intent(in)              :: i_site
-        type(lattice), intent(in)       :: lat
-        real(8), intent(inout)          :: res(:)   !result matrix-vector product
-        integer,intent(in)              :: op_keep
-        ! internal
-        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-        real(8),allocatable,target      :: vec(:)
-    
-        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
-
-        allocate(tmp(this%dim_mode(2)))
-        Call this%mult_l_single(i_site,lat,tmp)
-        allocate(vec(this%dim_mode(2)),source=0.0d0)
-        Call lat%set_order_comb_exc_single(i_site,this%op_r,vec,this%op_r==op_keep)
-        tmp=tmp*vec
-!        Call lat%reduce_single(i_site,tmp,this%op_r,op_keep,res)   !op_keep changed to ind_keep
-        deallocate(tmp,vec)
-    end subroutine 
+!    subroutine mult_r_red_single(this,i_site,lat,res,op_keep)
+!        !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
+!        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
+!        class(t_H_base),intent(in)           :: this
+!        type(lattice), intent(in)       :: lat
+!        integer,intent(in)              :: i_site
+!        real(8), intent(inout)          :: res(:)   !result matrix-vector product
+!        integer,intent(in)              :: op_keep
+!        ! internal
+!        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+!        real(8),pointer                 :: modes(:)
+!        real(8),allocatable,target      :: vec(:)
+!
+!        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
+!    
+!        allocate(tmp(this%dim_mode(1)))
+!        Call this%mult_r_single(i_site,lat,tmp)
+!        allocate(vec(this%dim_mode(1)),source=0.0d0)
+!        Call lat%set_order_comb_exc_single(i_site,this%op_l,vec,this%op_l==op_keep)
+!        tmp=tmp*vec
+!!        Call lat%reduce_single(i_site,tmp,this%op_l,op_keep,res)   !op_keep changed to ind_keep
+!        deallocate(tmp,vec)
+!    end subroutine 
+!    
+!    subroutine mult_l_red_single(this,i_site,lat,res,op_keep)
+!        !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
+!        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
+!        class(t_H_base),intent(in)           :: this
+!        integer,intent(in)              :: i_site
+!        type(lattice), intent(in)       :: lat
+!        real(8), intent(inout)          :: res(:)   !result matrix-vector product
+!        integer,intent(in)              :: op_keep
+!        ! internal
+!        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
+!        real(8),allocatable,target      :: vec(:)
+!    
+!        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
+!
+!        allocate(tmp(this%dim_mode(2)))
+!        Call this%mult_l_single(i_site,lat,tmp)
+!        allocate(vec(this%dim_mode(2)),source=0.0d0)
+!        Call lat%set_order_comb_exc_single(i_site,this%op_r,vec,this%op_r==op_keep)
+!        tmp=tmp*vec
+!!        Call lat%reduce_single(i_site,tmp,this%op_r,op_keep,res)   !op_keep changed to ind_keep
+!        deallocate(tmp,vec)
+!    end subroutine 
 
 
 
@@ -604,29 +606,29 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!        ROUTINES THAT SHOULD BE IMPLEMENTED MORE EFFICIENTLY    !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine mult_l_single(this,i_site,lat,res)
-    class(t_H_base),intent(in)        :: this
-    integer,intent(in)           :: i_site
-    type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: res(:)
-
-    real(8)                      :: tmp(this%dimH(2))
-
-    Call this%mult_l(lat,tmp)
-    res=tmp((i_site-1)*this%dim_mode(1)+1:i_site*this%dim_mode(1))
-end subroutine
-
-subroutine mult_r_single(this,i_site,lat,res)
-    class(t_H_base),intent(in)   :: this
-    integer,intent(in)           :: i_site
-    type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: res(:)
-
-    real(8)                      :: tmp(this%dimH(1))
-
-    Call this%mult_r(lat,tmp)
-    res=tmp((i_site-1)*this%dim_mode(2)+1:i_site*this%dim_mode(2))
-end subroutine
+!subroutine mult_l_single(this,i_site,lat,res)
+!    class(t_H_base),intent(in)        :: this
+!    integer,intent(in)           :: i_site
+!    type(lattice),intent(in)     :: lat
+!    real(8),intent(inout)        :: res(:)
+!
+!    real(8)                      :: tmp(this%dimH(2))
+!
+!    Call this%mult_l(lat,tmp)
+!    res=tmp((i_site-1)*this%dim_mode(1)+1:i_site*this%dim_mode(1))
+!end subroutine
+!
+!subroutine mult_r_single(this,i_site,lat,res)
+!    class(t_H_base),intent(in)   :: this
+!    integer,intent(in)           :: i_site
+!    type(lattice),intent(in)     :: lat
+!    real(8),intent(inout)        :: res(:)
+!
+!    real(8)                      :: tmp(this%dimH(1))
+!
+!    Call this%mult_r(lat,tmp)
+!    res=tmp((i_site-1)*this%dim_mode(2)+1:i_site*this%dim_mode(2))
+!end subroutine
 
 subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
     class(t_H_base),intent(in)      :: this
@@ -666,7 +668,7 @@ subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
     ERROR STOP "IMPLEMENT LOCALLY"
 end subroutine
 
-subroutine set_work_size_single(this,work,order)
+subroutine set_work_single(this,work,order)
     class(t_H_base),intent(inout)           :: this
     class(work_ham_single),intent(inout)    :: work 
     integer,intent(in)                      :: order
@@ -763,6 +765,7 @@ end subroutine
             endif
     end subroutine
 
+
     subroutine get_sum(N1,N2,vec_in,vec_out)
         integer,intent(in)  ::  N1,N2
         real(8),intent(in)  :: vec_in(N1,N2)
@@ -770,4 +773,39 @@ end subroutine
         
         vec_out=sum(vec_in,1)
     end subroutine
+
+subroutine mult_l_single(this,i_m,comp,lat,work,vec)
+    use m_type_lattice, only: dim_modes_inner
+    !Calculates the entries of the left vector*matrix product which corresponds to the i_m's site of component comp of the right modes
+    ! input
+    class(t_H_base), intent(in)         :: this
+    type(lattice), intent(in)           :: lat
+    integer, intent(in)                 :: i_m      !index of the comp's right mode in the inner dim_mode
+    integer, intent(in)                 :: comp     !component of right mode
+    !temporary data
+    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    ! output
+    real(8),intent(inout)               :: vec(:)
+
+    ERROR STOP "IMPLEMENT LOCALLY"
+end subroutine
+
+subroutine mult_r_single(this,i_m,comp,lat,work,vec)
+    use m_type_lattice, only: dim_modes_inner
+    !Calculates the entries of the left vector*matrix product which corresponds to the i_m's site of component comp of the right modes
+    ! input
+    class(t_H_base), intent(in)         :: this
+    type(lattice), intent(in)           :: lat
+    integer, intent(in)                 :: i_m      !index of the comp's right mode in the inner dim_mode
+    integer, intent(in)                 :: comp     !component of right mode
+    !temporary data
+    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    ! output
+    real(8),intent(inout)               :: vec(:)
+
+    ERROR STOP "IMPLEMENT LOCALLY"
+end subroutine
+
+
+
 end module

@@ -19,6 +19,7 @@ type, extends(F_mode) :: F_mode_rank1_point
 
     procedure   :: get_mode_single_size
     procedure   :: get_mode_disc_expl
+    procedure   :: reduce_site_vec
 
     procedure   :: copy
     procedure   :: destroy
@@ -33,6 +34,22 @@ type, extends(F_mode) :: F_mode_rank1_point
 end type
 
 contains
+
+subroutine reduce_site_vec(this,comp,vec_in,vec_out)
+    !reduce the vector along the comp mode if the vec_in has been set with get_ind_site
+    !doesn't really make sense for rank1 since there is nothing to reduce
+    class(F_mode_rank1_point),intent(in)        :: this
+    integer,intent(in)                          :: comp
+    real(8),intent(in)                          :: vec_in(:)
+    real(8),intent(out)                         :: vec_out(:)
+
+#ifdef CPP_DEBUG
+    if(comp>this%N_mode) ERROR STOP "COMP shall not be larger than N_mode"
+#endif
+    write(error_unit,*) "WARNING, using reduce_site_vec for rank1 mode which is superfluous"
+    vec_out=vec_in      
+end subroutine
+
 
 subroutine get_mode_single_size(this,order,dim_mode)
     !returns the size of the vector necessary to get to mode set by a single site

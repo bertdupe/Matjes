@@ -1,4 +1,4 @@
-module m_H_sparse_mkl
+module m_H_mkl_csr
 #if defined(CPP_MKL)
 !Hamiltonian type specifications using MKL_SPARSE inspector mkl in csr 
 use MKL_SPBLAS
@@ -9,18 +9,22 @@ use m_work_ham_single
 USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE,C_INT
 
 
+private
+public t_H,t_H_mkl_csr
+
 type,extends(t_H_coo_based) :: t_H_mkl_csr
-    private
+!    private
     !mkl parameters
     type(SPARSE_MATRIX_T)   :: H
     type(matrix_descr)      :: descr
     !pointers to Hamiltonian data handled by mkl (row major format)
-    real(C_DOUBLE),pointer  :: mat_val(:)
-    integer(C_INT),pointer  :: mat_col(:),mat_row(:)
+    real(C_DOUBLE),pointer  :: H_val(:)
+    integer(C_INT),pointer  :: H_col(:),H_row(:)
     integer                 :: nnz
     !helper variables
     integer                 :: row_max=0 !maximal number of entries per row
-    integer                 :: dim_single !dimension for inner work size array of set order (set_work_size_single)
+    integer                 :: dim_l_single=0 !dimension for inner work size array of set order on left side(set_work_size_single)
+    integer                 :: dim_r_single=0 !dimension for inner work size array of set order (set_work_size_single)
 
 contains
     !necessary t_H routines
@@ -34,10 +38,14 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
-    procedure :: mult_l_cont,mult_r_cont
-    procedure :: mult_l_disc,mult_r_disc
 
-    procedure :: set_work_size_single
+    procedure :: mult_r_single
+
+    procedure :: set_work_single
+    procedure :: get_work_size_single
+
+    !utility
+    procedure :: set_auxiliaries
 
     !MPI
     procedure :: send
@@ -50,11 +58,9 @@ interface t_H_mkl_csr
     procedure :: dummy_constructor
 end interface 
  
-private
-public t_H,t_H_mkl_csr
 contains 
 
-subroutine set_work_size_single(this,work,order)
+subroutine set_work_single(this,work,order)
     class(t_H_mkl_csr),intent(inout)        :: this
     class(work_ham_single),intent(inout)    :: work 
     integer,intent(in)                      :: order
@@ -70,10 +76,17 @@ subroutine set_work_size_single(this,work,order)
             ERROR STOP "Hamiltonian has no component of considered single energy evaluation, take it out or consider it somehow else"
         endif
     endif
-    Call this%mode_l%get_mode_single_size(order,this%dim_single)    !multiply to the left for single evaluation as that is easier in csr format
-    sizes(1)= this%dim_single*(2*this%row_max+1)
-    sizes(2)= this%dim_single*(  this%row_max+1)
+    Call this%mode_l%get_mode_single_size(order,this%dim_l_single)
+    Call this%mode_r%get_mode_single_size(order,this%dim_r_single)
+    Call this%get_work_size_single(sizes)
     Call work%set(sizes)
+end subroutine
+
+subroutine get_work_size_single(this,sizes)
+    class(t_H_mkl_csr),intent(in)   :: this
+    integer,intent(out)             :: sizes(2)
+
+    Call work_size_single(this%dim_l_single,this%row_max,sizes)
 end subroutine
 
 type(t_H_mkl_csr) function dummy_constructor()
@@ -118,50 +131,6 @@ subroutine mult_l(this,lat,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-
-subroutine mult_l_cont(this,bnd,vec,res)
-    !multiply to the right with a continuous section of the right vector
-    class(t_H_mkl_csr),intent(in)     :: this
-    integer,intent(in)              :: bnd(2)
-    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
-end subroutine 
-
-subroutine mult_r_cont(this,bnd,vec,res)
-    !multiply to the right with a continuous section of the right vector
-    class(t_H_mkl_csr),intent(in)     :: this
-    integer,intent(in)              :: bnd(2)
-    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
-end subroutine 
-
-subroutine mult_l_disc(this,N,ind,vec,res)
-    !multiply to the right with a discontinuous section of the right vector
-    class(t_H_mkl_csr),intent(in)     :: this
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind(N)
-    real(8),intent(in)              :: vec(N)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
-end subroutine 
-
-subroutine mult_r_disc(this,N,ind,vec,res)
-    !multiply to the right with a discontinuous section of the right vector
-    class(t_H_mkl_csr),intent(in)     :: this
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind(N)
-    real(8),intent(in)              :: vec(N)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
-end subroutine 
-
-
 subroutine optimize(this)
     class(t_H_mkl_csr),intent(inout)   :: this
     integer     :: stat
@@ -204,7 +173,7 @@ subroutine add_child(this,H_in)
         stat=mkl_sparse_destroy(tmp_H)
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_coo type in m_H_sparse_mkl'
 
-        Call set_auxiliaries(this)
+        Call this%set_auxiliaries()
     class default
         STOP "Cannot add t_h_mkl_csr type with Hamiltonian that is not a class of t_h_mkl_csr"
     end select
@@ -217,7 +186,7 @@ subroutine destroy_child(this)
 
     if(this%is_set())then
         stat=mkl_sparse_destroy(this%H)
-        nullify(this%mat_val,this%mat_col,this%mat_row)
+        nullify(this%H_val,this%H_col,this%H_row)
         this%nnz=0
         this%row_max=0
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_csr type in m_H_sparse_mkl'
@@ -253,7 +222,7 @@ subroutine set_from_Hcoo(this,H_coo)
     stat=MKL_SPARSE_DESTROY(H)
     if(stat /= 0) STOP "error destroying H"
    
-    Call set_auxiliaries(this)
+    Call this%set_auxiliaries()
 end subroutine 
 
 subroutine eval_single(this,E,i_m,order,lat,work)
@@ -279,23 +248,23 @@ subroutine eval_single(this,E,i_m,order,lat,work)
     integer :: ii
 
     !associate temporary arrays
-    ind    (1:this%dim_single             )=>work%int_arr (1                                 :this%dim_single                   )
-    ind_out(1:this%dim_single*this%row_max)=>work%int_arr (1+this%dim_single                 :this%dim_single*(1+  this%row_max))
-    vec    (1:this%dim_single             )=>work%real_arr(1                                 :this%dim_single                   )
-    vec_out(1:this%dim_single*this%row_max)=>work%real_arr(1+this%dim_single                 :this%dim_single*(1+  this%row_max))
-    vec_r  (1:this%dim_single*this%row_max)=>work%real_arr(1+this%dim_single*(1+this%row_max):this%dim_single*(1+2*this%row_max))
+    ind    (1:this%dim_l_single             )=>work%int_arr (1                                 :this%dim_l_single                   )
+    ind_out(1:this%dim_l_single*this%row_max)=>work%int_arr (1+this%dim_l_single                 :this%dim_l_single*(1+  this%row_max))
+    vec    (1:this%dim_l_single             )=>work%real_arr(1                                 :this%dim_l_single                   )
+    vec_out(1:this%dim_l_single*this%row_max)=>work%real_arr(1+this%dim_l_single                 :this%dim_l_single*(1+  this%row_max))
+    vec_r  (1:this%dim_l_single*this%row_max)=>work%real_arr(1+this%dim_l_single*(1+this%row_max):this%dim_l_single*(1+2*this%row_max))
 
     !get left mode corresponding to site i_m of order order
-    Call this%mode_l%get_mode_single(lat,1,i_m,this%dim_single,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
+    Call this%mode_l%get_mode_single(lat,1,i_m,this%dim_l_single,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
 
     !Calculate left mode,matrix product only for the necessary discontiguous mode-indices
     ii=0
     do i=1,size(ind)
         i_row=ind(i)
-        do j=this%mat_row(i_row),this%mat_row(i_row+1)-1
+        do j=this%H_row(i_row),this%H_row(i_row+1)-1
             ii=ii+1
-            vec_out(ii)=this%mat_val(j)*vec(i)
-            ind_out(ii)=this%mat_col(j)
+            vec_out(ii)=this%H_val(j)*vec(i)
+            ind_out(ii)=this%H_col(j)
         enddo
     enddo
     
@@ -307,33 +276,166 @@ subroutine eval_single(this,E,i_m,order,lat,work)
     nullify(ind,ind_out,vec,vec_out,vec_r)
 end subroutine 
 
-subroutine create_sparse_vec(i_m,modes,dim_mode,dim_H,vec)
-    !returns a sparse matrix (vec) in csr-format which describes a sparse (dim_H,1) vector
-    !with the ((i_m-1)*dim_mode+1:i_m*dim_mode)) values from modes
-    type(SPARSE_MATRIX_T),intent(out) :: vec
-    real(8),pointer,intent(in)        :: modes(:)
-    integer,intent(in)                :: i_m
-    integer,intent(in)                :: dim_mode,dim_H
 
-    integer                 :: col(dim_mode)
-    integer                 :: row(dim_mode)
-    type(SPARSE_MATRIX_T)   :: vec_coo
-    integer(C_int)          :: stat
-    integer                 :: i
+subroutine mult_r_single(this,i_m,comp,lat,work,vec)
+    !Calculates the entries of the matrix * right vector product which corresponds to the i_m's site of component comp of the left modes
+    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
+    ! input
+    class(t_H_mkl_csr), intent(in)      :: this
+    type(lattice), intent(in)           :: lat
+    integer, intent(in)                 :: i_m           !index of the comp's left mode in the inner dim_mode
+    integer, intent(in)                 :: comp          !component of right mode
+    !temporary data
+    type(work_ham_single),intent(inout) :: work          !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    ! output
+    real(8),intent(inout)               :: vec(:)        !dim_modes_inner(this%mode_l%order(comp))
 
-    col=1
-    row=dim_mode*(i_m-1)
-    do i=1,dim_mode
-        row(i)=row(i)+i
+    integer :: i,j,i_row
+    integer :: ii
+
+#ifdef CPP_USE_WORK
+    !temporary data slices
+    integer,pointer,contiguous          :: ind_out(:)    !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
+    integer,pointer,contiguous          :: ind_sum(:)    !ind_mult index where the a vec-entry start and end
+    integer,pointer,contiguous          :: ind_mult(:)   !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+    real(8),pointer,contiguous          :: mat_mult(:)   !matrix entries corresponding to ind_mult
+    real(8),pointer,contiguous          :: vec_r(:)      !values of discontiguous right mode which has to be evaluated (indices of ind_mult)
+
+
+    !associate temporary arrays
+    !!int vector slices
+    ind_out (1:this%dim_r_single             )=>work%int_arr (1                               :this%dim_l_single                    )
+    ind_sum (1:this%dim_r_single+1           )=>work%int_arr (1+this%dim_r_single             :this%dim_r_single* 2               +1)
+    ind_mult(1:this%dim_r_single*this%col_max)=>work%int_arr (1+this%dim_r_single*2+1         :this%dim_r_single*(2+ this%col_max)+1)
+    !!real vector slices
+    vec_r   (1:this%dim_r_single*this%col_max)=>work%real_arr(1                               :this%dim_r_single*this%col_max                  )
+    mat_mult(1:this%dim_r_single*this%col_max)=>work%real_arr(1+this%dim_r_single*this%col_max:this%dim_r_single*this%col_max*2                )
+#else
+    !temporary arrays
+    integer                     :: ind_out (this%dim_l_single             )     !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
+    integer                     :: ind_sum (this%dim_l_single+1           )     !ind_mult index where the a vec-entry start and end
+    integer                     :: ind_mult(this%dim_l_single*this%row_max)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+    real(8)                     :: mat_mult(this%dim_l_single*this%row_max)     !matrix entries corresponding to ind_mult
+    real(8)                     :: vec_r   (this%dim_l_single*this%row_max)     !values of discontiguous right mode which has to be evaluated (indices of ind_mult)
+#endif
+    !get indices of the output vector 
+    Call this%mode_l%get_ind_site_expl(comp,i_m,this%dim_l_single,ind_out)
+
+    !get matrix indices and values whose vec.mat product constitute the output vector
+    ind_sum(1)=0
+    ii=0
+    do i=1,this%dim_l_single
+        i_row=ind_out(i)
+        do j=this%H_row(i_row),this%H_row(i_row+1)-1
+            ii=ii+1
+            mat_mult(ii)=this%H_val(j)
+            ind_mult(ii)=this%H_col(j)
+        enddo
+        ind_sum(i+1)=ii
     enddo
 
-    stat=mkl_sparse_d_create_coo(vec_coo, SPARSE_INDEX_BASE_ONE , dim_H , 1 , dim_mode , row , col , modes((i_m-1)*dim_mode+1:i_m*dim_mode))
-    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
-    stat = MKL_SPARSE_CONVERT_CSR(vec_coo,SPARSE_OPERATION_NON_TRANSPOSE,vec)
-    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
-    stat=mkl_sparse_destroy(vec_coo)
-    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
-end subroutine
+    !get the right vector values which are multiplied with the matrix
+    Call this%mode_r%get_mode_disc_expl(lat,ii,ind_mult(:ii),vec_r(:ii))
+
+    !multipy the matrix and right vector entries and sum together to the respective output entry
+    vec_r(:ii)=vec_r(:ii)*mat_mult(:ii)
+    do i=1,this%dim_l_single
+        vec(i)=sum(vec_r(ind_sum(i)+1:ind_sum(i+1)))
+    enddo
+end subroutine 
+
+
+!
+!subroutine mult_l_single(this,i_m,comp,lat,work,vec)
+!    !Calculates the entries of the left vector*matrix product which corresponds to the i_m's site of component comp of the right modes
+!    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
+!    ! input
+!    class(t_H_mkl_csr), intent(in)      :: this
+!    type(lattice), intent(in)           :: lat
+!    integer, intent(in)                 :: i_m      !index of the comp's right mode in the inner dim_mode
+!    integer, intent(in)                 :: comp     !component of right mode
+!    !temporary data
+!    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+!    ! output
+!    real(8),intent(inout)               :: vec(:) ! dim_modes_inner(this%mode_r%order(comp))
+!
+!    !temporary data slices
+!    integer,pointer,contiguous          :: ind_out(:)    !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
+!    integer,pointer,contiguous          :: ind_sum(:)    !ind_mult index where the a vec-entry start and end
+!    integer,pointer,contiguous          :: ind_mult(:)   !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+!    real(8),pointer,contiguous          :: mat_mult(:)   !matrix entries corresponding to ind_mult
+!    real(8),pointer,contiguous          :: vec_l(:)      !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
+!
+!    !some local indices/ loop variables
+!    integer ::  i,j, i_row
+!    integer :: ii
+!
+!    !associate temporary arrays
+!    !!int vector slices
+!    ind_out (1:this%dim_l_single             )=>work%int_arr (1                                 :this%dim_l_single                    )
+!    ind_sum (1:this%dim_l_single+1           )=>work%int_arr (1+this%dim_l_single                 :this%dim_l_single* 2               +1)
+!    ind_mult(1:this%dim_l_single*this%row_max)=>work%int_arr (1+this%dim_l_single*2+1             :this%dim_l_single*(2+ this%row_max)+1)
+!    !!real vector slices
+!    mat_mult(1:this%dim_l_single*this%row_max)=>work%real_arr(1                                 :this%dim_l_single*this%row_max  )
+!    vec_l   (1:this%dim_l_single*this%row_max)=>work%real_arr(1+this%dim_l_single*this%row_max    :this%dim_l_single*this%row_max*2)
+!
+!    !get indices of the output vector 
+!    Call this%mode_r%get_ind_site_expl(comp,i_m,this%dim_l_single,ind_out)
+!
+!    !get matrix indices and values whose vec.mat product constitute the output vector
+!    ind_sum(1)=0
+!    ii=0
+!    do i=1,size(ind_out)
+!        i_row=ind_out(i)
+!        do j=this%H_row(i_row),this%H_row(i_row+1)-1
+!            ii=ii+1
+!            mat_mult(ii)=this%H_val(j)
+!            ind_mult(ii)=this%H_col(j)
+!        enddo
+!        ind_sum(i+1)=ii
+!    enddo
+!
+!    !get the left vector values which are multiplied with the matrix
+!    Call this%mode_l%get_mode_disc_expl(lat,ii,ind_mult(:ii),vec_l(:ii))
+!
+!    !multipy the matrix and left vector entries and sum together to the respective output entry
+!    vec_l(:ii)=vec_l(:ii)*mat_mult(:ii)
+!    do i=1,size(ind_out)
+!        vec(i)=sum(vec_l(ind_sum(i)+1:ind_sum(i+1)))
+!    enddo
+!
+!    nullify(ind_out,ind_sum,ind_mult,mat_mult,vec_l)
+!end subroutine 
+
+
+
+!subroutine create_sparse_vec(i_m,modes,dim_mode,dim_H,vec)
+!    !returns a sparse matrix (vec) in csr-format which describes a sparse (dim_H,1) vector
+!    !with the ((i_m-1)*dim_mode+1:i_m*dim_mode)) values from modes
+!    type(SPARSE_MATRIX_T),intent(out) :: vec
+!    real(8),pointer,intent(in)        :: modes(:)
+!    integer,intent(in)                :: i_m
+!    integer,intent(in)                :: dim_mode,dim_H
+!
+!    integer                 :: col(dim_mode)
+!    integer                 :: row(dim_mode)
+!    type(SPARSE_MATRIX_T)   :: vec_coo
+!    integer(C_int)          :: stat
+!    integer                 :: i
+!
+!    col=1
+!    row=dim_mode*(i_m-1)
+!    do i=1,dim_mode
+!        row(i)=row(i)+i
+!    enddo
+!
+!    stat=mkl_sparse_d_create_coo(vec_coo, SPARSE_INDEX_BASE_ONE , dim_H , 1 , dim_mode , row , col , modes((i_m-1)*dim_mode+1:i_m*dim_mode))
+!    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+!    stat = MKL_SPARSE_CONVERT_CSR(vec_coo,SPARSE_OPERATION_NON_TRANSPOSE,vec)
+!    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+!    stat=mkl_sparse_destroy(vec_coo)
+!    if(stat/=SPARSE_STATUS_SUCCESS) ERROR STOP "mkl error"
+!end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -404,7 +506,7 @@ subroutine recv(this,ithread,tag,com)
     this%descr%mode=SPARSE_FILL_MODE_LOWER
     Call this%optimize()
 
-    Call set_auxiliaries(this)
+    Call this%set_auxiliaries()
 #else
     continue
 #endif
@@ -447,7 +549,7 @@ subroutine bcast(this,comm)
         deallocate(acsr,ja,ia)
     endif
     nullify(acsr,ia,ja)
-    if(.not.comm%ismas) Call set_auxiliaries(this)
+    if(.not.comm%ismas) Call this%set_auxiliaries()
 #else
     continue
 #endif
@@ -517,7 +619,7 @@ subroutine distribute(this,comm)
     this%descr%mode=SPARSE_FILL_MODE_LOWER
     Call this%optimize()
 
-    if(.not.comm%ismas) Call set_auxiliaries(this)
+    if(.not.comm%ismas) Call this%set_auxiliaries()
 #else
     continue
 #endif
@@ -586,7 +688,7 @@ subroutine distribute(this,comm)
     this%descr%mode=SPARSE_FILL_MODE_LOWER
     Call this%optimize()
 
-    if(.not.comm%ismas) call set_auxiliaries(this)
+    if(.not.comm%ismas) call this%set_auxiliaries()
 #else
     continue
 #endif
@@ -609,8 +711,8 @@ end subroutine
 subroutine set_H_ptr(this)
     class(t_H_mkl_csr),intent(inout)    :: this
 
-    nullify(this%mat_row,this%mat_col,this%mat_val)
-    Call unpack_csr(this%H,this%nnz,this%mat_row,this%mat_col,this%mat_val)
+    nullify(this%H_row,this%H_col,this%H_val)
+    Call unpack_csr(this%H,this%nnz,this%H_row,this%H_col,this%H_val)
 end subroutine
 
 subroutine set_row_max(this)
@@ -619,9 +721,9 @@ subroutine set_row_max(this)
     integer,allocatable                 :: tmp(:)
     integer                             :: i
 
-    allocate(tmp(size(this%mat_row)-1))
+    allocate(tmp(size(this%H_row)-1))
     do i=1,size(tmp)
-        tmp(i)=this%mat_row(i+1)-this%mat_row(i)
+        tmp(i)=this%H_row(i+1)-this%H_row(i)
     enddo
     this%row_max=maxval(tmp)
 end subroutine

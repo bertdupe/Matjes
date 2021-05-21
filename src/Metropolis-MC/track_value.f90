@@ -2,7 +2,8 @@ module m_mc_track_val
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_H_public, only: energy_all, t_H
 use m_hamiltonian_collection, only: hamiltonian
-    use, intrinsic :: iso_fortran_env, only : error_unit
+use m_work_ham_single, only:  work_ham_single
+use, intrinsic :: iso_fortran_env, only : error_unit
 implicit none
 private
 public track_val
@@ -27,13 +28,14 @@ end type
 
 
 abstract interface
-    function int_sample(this,i_spin,lat,H)result(spin_new)
-        import track_val,lattice,hamiltonian
-        class(track_val),intent(inout)  :: this
-        integer,intent(in)              :: i_spin
-        type(lattice),intent(in)        :: lat
-        type(hamiltonian),intent(inout) :: H
-        real(8)                         :: spin_new(3)
+    function int_sample(this,i_spin,lat,work,H)result(spin_new)
+        import track_val,lattice,hamiltonian,work_ham_single
+        class(track_val),intent(inout)      :: this
+        integer,intent(in)                  :: i_spin
+        type(lattice),intent(in)            :: lat
+        type(work_ham_single),intent(inout) :: work
+        type(hamiltonian),intent(inout)     :: H
+        real(8)                             :: spin_new(3)
     end function
 end interface
 
@@ -85,10 +87,11 @@ subroutine init(this,lat,H,io_MC)
 END subroutine 
 
 !wrappers for sampling
-function sample_ising(this,i_spin,lat,H)result(spin_new)
+function sample_ising(this,i_spin,lat,work,H)result(spin_new)
     class(track_val),intent(inout)  :: this
     integer,intent(in)              :: i_spin
     type(lattice),intent(in)        :: lat
+    type(work_ham_single),intent(inout) :: work
     type(hamiltonian),intent(inout) :: H
     real(8)                         :: spin_new(3)
 
@@ -96,35 +99,38 @@ function sample_ising(this,i_spin,lat,H)result(spin_new)
 end function
 
 
-function sample_underrelax(this,i_spin,lat,H)result(spin_new)
+function sample_underrelax(this,i_spin,lat,work,H)result(spin_new)
     use m_relaxtyp, only: underrelax 
     class(track_val),intent(inout)  :: this
     integer,intent(in)              :: i_spin
     type(lattice),intent(in)        :: lat
+    type(work_ham_single),intent(inout) :: work
     type(hamiltonian),intent(inout) :: H
     real(8)                         :: spin_new(3)
 
-    spin_new=underrelax(i_spin,lat,H)
+    spin_new=underrelax(i_spin,lat,work,H)
 end function
 
 
-function sample_overrelax(this,i_spin,lat,H)result(spin_new)
+function sample_overrelax(this,i_spin,lat,work,H)result(spin_new)
     use m_relaxtyp, only: overrelax 
     class(track_val),intent(inout)  :: this
     integer,intent(in)              :: i_spin
     type(lattice),intent(in)        :: lat
+    type(work_ham_single),intent(inout) :: work
     type(hamiltonian),intent(inout) :: H
     real(8)                         :: spin_new(3)
 
-    spin_new=overrelax(i_spin,lat,H)
+    spin_new=overrelax(i_spin,lat,work,H)
 end function
 
 
-function sample_equi(this,i_spin,lat,H)result(spin_new)
+function sample_equi(this,i_spin,lat,work,H)result(spin_new)
     use m_sampling, only: equirep
     class(track_val),intent(inout)  :: this
     integer,intent(in)              :: i_spin
     type(lattice),intent(in)        :: lat
+    type(work_ham_single),intent(inout) :: work
     type(hamiltonian),intent(inout) :: H
     real(8)                         :: spin_new(3)
 
@@ -133,11 +139,12 @@ function sample_equi(this,i_spin,lat,H)result(spin_new)
 end function
 
 
-function sample_sphere(this,i_spin,lat,H)result(spin_new)
+function sample_sphere(this,i_spin,lat,work,H)result(spin_new)
     use m_sampling, only: sphereft
     class(track_val),intent(inout)  :: this
     integer,intent(in)              :: i_spin
     type(lattice),intent(in)        :: lat
+    type(work_ham_single),intent(inout) :: work
     type(hamiltonian),intent(inout) :: H
     real(8)                         :: spin_new(3)
 

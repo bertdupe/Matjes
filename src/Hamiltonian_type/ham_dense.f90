@@ -16,9 +16,6 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
-    procedure :: mult_l_cont,mult_r_cont
-    procedure :: mult_l_disc,mult_r_disc
-    procedure :: mult_r_single,mult_l_single
     !MPI
     procedure :: send
     procedure :: recv
@@ -61,44 +58,6 @@ subroutine mult_l(this,lat,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine mult_r_cont(this,bnd,vec,res)
-    class(t_H_dense),intent(in)    :: this
-    integer,intent(in)           :: bnd(2)
-    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_l_cont(this,bnd,vec,res)
-    class(t_H_dense),intent(in)    :: this
-    integer,intent(in)           :: bnd(2)
-    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_r_disc(this,N,ind,vec,res)
-    class(t_H_dense),intent(in)    :: this
-    integer,intent(in)           :: N
-    integer,intent(in)           :: ind(N)
-    real(8),intent(in)           :: vec(N)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_l_disc(this,N,ind,vec,res)
-    class(t_H_dense),intent(in)    :: this
-    integer,intent(in)           :: N
-    integer,intent(in)           :: ind(N)
-    real(8),intent(in)           :: vec(N)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
 subroutine eval_single(this,E,i_m,order,lat,work)
     use m_work_ham_single
     ! input
@@ -114,48 +73,48 @@ subroutine eval_single(this,E,i_m,order,lat,work)
 end subroutine 
 
 
-subroutine mult_r_single(this,i_site,lat,res)
-    !mult
-    use m_derived_types, only: lattice
-    class(t_h_dense),intent(in) :: this
-    integer,intent(in)          :: i_site
-    type(lattice), intent(in)   :: lat
-    real(8), intent(inout)      :: res(:)   !result matrix-vector product
-    ! internal
-    integer                     :: bnd(2)
-    real(8),pointer             :: modes(:)
-    real(8),allocatable,target  :: vec(:)
-
-    Call this%mode_r%get_mode(lat,modes,vec)
-    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-    bnd(1)=this%dim_mode(1)*(i_site-1)+1
-    bnd(2)=this%dim_mode(1)*(i_site)
-    !terrible implementation striding-wise
-    res=matmul(this%H(bnd(1):bnd(2),:),modes)
-
-    if(allocated(vec)) deallocate(vec)
-end subroutine 
-
-subroutine mult_l_single(this,i_site,lat,res)
-    !mult
-    use m_derived_types, only: lattice
-    class(t_h_dense),intent(in) :: this
-    integer,intent(in)          :: i_site
-    type(lattice), intent(in)   :: lat
-    real(8), intent(inout)      :: res(:)   !result matrix-vector product
-    ! internal
-    integer                     :: bnd(2)
-    real(8),pointer             :: modes(:)
-    real(8),allocatable,target  :: vec(:)
-
-    Call this%mode_l%get_mode(lat,modes,vec)
-    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-    bnd(1)=this%dim_mode(2)*(i_site-1)+1
-    bnd(2)=this%dim_mode(2)*(i_site)
-    res=matmul(modes,this%H(:,bnd(1):bnd(2)))
-
-    if(allocated(vec)) deallocate(vec)
-end subroutine 
+!subroutine mult_r_single(this,i_site,lat,res)
+!    !mult
+!    use m_derived_types, only: lattice
+!    class(t_h_dense),intent(in) :: this
+!    integer,intent(in)          :: i_site
+!    type(lattice), intent(in)   :: lat
+!    real(8), intent(inout)      :: res(:)   !result matrix-vector product
+!    ! internal
+!    integer                     :: bnd(2)
+!    real(8),pointer             :: modes(:)
+!    real(8),allocatable,target  :: vec(:)
+!
+!    Call this%mode_r%get_mode(lat,modes,vec)
+!    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
+!    bnd(1)=this%dim_mode(1)*(i_site-1)+1
+!    bnd(2)=this%dim_mode(1)*(i_site)
+!    !terrible implementation striding-wise
+!    res=matmul(this%H(bnd(1):bnd(2),:),modes)
+!
+!    if(allocated(vec)) deallocate(vec)
+!end subroutine 
+!
+!subroutine mult_l_single(this,i_site,lat,res)
+!    !mult
+!    use m_derived_types, only: lattice
+!    class(t_h_dense),intent(in) :: this
+!    integer,intent(in)          :: i_site
+!    type(lattice), intent(in)   :: lat
+!    real(8), intent(inout)      :: res(:)   !result matrix-vector product
+!    ! internal
+!    integer                     :: bnd(2)
+!    real(8),pointer             :: modes(:)
+!    real(8),allocatable,target  :: vec(:)
+!
+!    Call this%mode_l%get_mode(lat,modes,vec)
+!    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
+!    bnd(1)=this%dim_mode(2)*(i_site-1)+1
+!    bnd(2)=this%dim_mode(2)*(i_site)
+!    res=matmul(modes,this%H(:,bnd(1):bnd(2)))
+!
+!    if(allocated(vec)) deallocate(vec)
+!end subroutine 
 
 subroutine optimize(this)
     class(t_h_dense),intent(inout)   :: this

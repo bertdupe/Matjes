@@ -10,6 +10,7 @@ src/Hamiltonian_type/ham_deriv.f90
 src/Hamiltonian_type/ham_eigen.f90
 src/Hamiltonian_type/ham_eigen_mem.f90
 src/Hamiltonian_type/ham_mkl_csr.f90
+src/Hamiltonian_type/ham_mkl_csr_mem.f90
 src/Hamiltonian_type/hamiltonian_collection.f90
 src/Hamiltonian_type/fft_ham_fftw.f90
 src/Hamiltonian_type/fft_ham_cufft.f90

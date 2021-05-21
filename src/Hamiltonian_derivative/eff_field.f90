@@ -2,6 +2,7 @@ module m_eff_field
 !shall be replaced everywhere by get_eff_field from m_hamiltonian_collection's hamiltonian 
 use m_derived_types
 use m_H_public, only : t_H
+use m_work_ham_single, only:  work_ham_single
 implicit none
 private
 public :: get_eff_field,get_eff_field_single
@@ -27,10 +28,11 @@ subroutine get_eff_field(Ham,lat,B,Ham_type)
     B=-B    !field is negative derivative
 end subroutine
 
-subroutine get_eff_field_single(Ham,i_site,lat,B,Ham_type)
+subroutine get_eff_field_single(Ham,i_site,lat,work,B,Ham_type)
 !calculates the effective internal magnetic field acting on the magnetization for the dynamics
     class(t_h),intent(in)        :: Ham(:) !list of Hamiltonians to consider
     integer,intent(in)           :: i_site,Ham_type
+    type(work_ham_single),intent(inout) :: work     !work arrays
     class(lattice),intent(in)    :: lat    !lattice containing current order-parameters 
     real(8),intent(inout)        :: B(:)
 
@@ -39,7 +41,7 @@ subroutine get_eff_field_single(Ham,i_site,lat,B,Ham_type)
 
     B=0.d0
     do iH=1,size(ham)
-        Call Ham(iH)%deriv(Ham_type)%get_single(Ham(iH),lat,i_site,B,tmp)
+        Call Ham(iH)%deriv(Ham_type)%get_single(Ham(iH),lat,i_site,work,B,tmp)
     enddo
     B=-B    !field is negative derivative
 end subroutine

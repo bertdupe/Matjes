@@ -48,7 +48,7 @@ SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H,work)
     Call H%energy_single(i_spin,state_prop%order,lat,work,E_old)
     
     !get Energy of the new configuration
-    S_new=state_prop%spin_sample(i_spin,lat,H)  !choose new magnetic direction
+    S_new=state_prop%spin_sample(i_spin,lat,work,H)  !choose new magnetic direction
     lat%M%modes_3(:,i_spin)=S_new               !set new configuration
     Call H%energy_single(i_spin,state_prop%order,lat,work,E_new)
     lat%M%modes_3(:,i_spin)=S_old   !revert for now to old state

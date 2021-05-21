@@ -35,6 +35,8 @@ type, abstract :: F_mode
     procedure(int_get_ind_site_expl),deferred       :: get_ind_site_expl        !get indices of site depending on mode component index with work array 
     procedure,NON_OVERRIDABLE                       :: get_mode_single          !returns discontiguous array of mode corresponding to single site entry of given component
     procedure(int_get_mode_single_size),deferred    :: get_mode_single_size     !get size necessary to set a single mode
+    procedure(int_reduce_site_vec),deferred         :: reduce_site_vec          !reduce the vector along the comp mode if the vec_in has been set with get_ind_site
+
 
     !misc
     procedure                               :: get_comp !gets the first mode component for an order parameter index
@@ -56,6 +58,13 @@ type, abstract :: F_mode
 end type
 
 abstract interface
+    subroutine int_reduce_site_vec(this,comp,vec_in,vec_out)
+        import F_mode
+        class(F_mode),intent(in)                    :: this
+        integer,intent(in)                          :: comp
+        real(8),intent(in)                          :: vec_in(:)
+        real(8),intent(out)                         :: vec_out(:)
+    end subroutine
 
     subroutine int_get_ind_site(this,comp,site,ind)
         import F_mode

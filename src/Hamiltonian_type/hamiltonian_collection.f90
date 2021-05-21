@@ -396,19 +396,20 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     enddo
 end subroutine
 
-subroutine get_eff_field_single(this,lat,site,B,Ham_type,tmp)
+subroutine get_eff_field_single(this,lat,site,B,work,Ham_type,tmp)
     !calculates the effective internal field acting on a single site
     class(hamiltonian),intent(inout)    :: this
     type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
     integer,intent(in)                  :: site
     real(8),intent(out)                 :: B(:)
+    type(work_ham_single),intent(inout) :: work     !work arrays
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
-    real(8),intent(out)                 :: tmp(size(B))
+    real(8),intent(inout)               :: tmp(size(B))
 
     integer     :: iH, ierr
     B=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%deriv(Ham_type)%get_single(this%H(iH),lat,site,B,tmp)
+        Call this%H(iH)%deriv(Ham_type)%get_single(this%H(iH),lat,site,work,B,tmp)
     enddo
 
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
@@ -447,7 +448,7 @@ subroutine get_single_work(this,order,work)
     integer     :: iH
 
     do iH=1,this%NH_local
-        Call this%H(iH)%set_work_size_single(work_arr(iH),order)
+        Call this%H(iH)%set_work_single(work_arr(iH),order)
     enddo
     Call work%set_max(work_arr)
 end subroutine

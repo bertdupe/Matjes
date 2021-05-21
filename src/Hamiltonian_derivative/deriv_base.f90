@@ -1,6 +1,7 @@
 module m_deriv_base
 use m_H_type, only: t_H_base
 use m_derived_types, only : lattice
+use m_work_ham_single, only:  work_ham_single
 
 private
 public :: t_deriv_l, t_deriv_r, t_deriv_base 
@@ -42,20 +43,22 @@ abstract interface
         type(lattice),intent(in)    :: lat
         real(8),intent(inout)       :: vec(:)
     end subroutine
-    subroutine int_deriv_l_get_single(this,H,lat,site,vec)
-        import t_deriv_l, t_H_base, lattice
+    subroutine int_deriv_l_get_single(this,H,lat,site,work,vec)
+        import t_deriv_l, t_H_base, lattice, work_ham_single
         class(t_deriv_l),intent(in) :: this
         class(t_H_base),intent(in)  :: H
         type(lattice),intent(in)    :: lat
         integer,intent(in)          :: site
+        type(work_ham_single),intent(inout) ::  work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)       :: vec(:)
     end subroutine
-    subroutine int_deriv_r_get_single(this,H,lat,site,vec)
-        import t_deriv_r, t_H_base, lattice
+    subroutine int_deriv_r_get_single(this,H,lat,site,work,vec)
+        import t_deriv_r, t_H_base, lattice, work_ham_single
         class(t_deriv_r),intent(in) :: this
         class(t_H_base),intent(in)  :: H
         type(lattice),intent(in)    :: lat
         integer,intent(in)          :: site
+        type(work_ham_single),intent(inout) ::  work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)       :: vec(:)
     end subroutine
 end interface
@@ -86,17 +89,18 @@ contains
         vec=vec+tmp
     end subroutine
 
-    subroutine get_deriv_single(this,H,lat,site,vec,tmp)
+    subroutine get_deriv_single(this,H,lat,site,work,vec,tmp)
         class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
         class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
         type(lattice),intent(in)        :: lat
         integer,intent(in)              :: site
+        type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
         real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
 
-        Call this%l%get_single(H,lat,site,tmp)
+        Call this%l%get_single(H,lat,site,work,tmp)
         vec=vec+tmp
-        Call this%r%get_single(H,lat,site,tmp)
+        Call this%r%get_single(H,lat,site,work,tmp)
         vec=vec+tmp
     end subroutine
 

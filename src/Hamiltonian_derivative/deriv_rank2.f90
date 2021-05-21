@@ -2,6 +2,7 @@ module m_deriv_rank2
 use m_deriv_base
 use m_derived_types,only : lattice
 use m_H_type, only: t_H_base
+use m_work_ham_single, only:  work_ham_single
 
 private
 public t_deriv_l_1, t_deriv_l_1_sym, t_deriv_r_1 
@@ -53,45 +54,40 @@ contains
         vec=vec*2.0d0
     end subroutine
 
-    subroutine get_l1_single(this,H,lat,site,vec)
+    subroutine get_l1_single(this,H,lat,site,work,vec)
         class(t_deriv_l_1),intent(in)   :: this
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         integer,intent(in)              :: site
+        type(work_ham_single),intent(inout) ::  work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)           :: vec(:)
-        integer     :: ind(size(vec))
-        integer     :: i
 
-        ind=[((site-1)*size(vec)+i,i=1,size(vec))]
-        Call H%mult_r_ind(lat,size(vec),ind,vec)
+        Call H%mult_r_single(site,1,lat,work,vec)     !always has to be first and only component
     end subroutine
 
-    subroutine get_r1_single(this,H,lat,site,vec)
+    subroutine get_r1_single(this,H,lat,site,work,vec)
         class(t_deriv_r_1),intent(in)   :: this
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         integer,intent(in)              :: site
-        real(8),intent(inout)           :: vec(:)
+        type(work_ham_single),intent(inout) ::  work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+        real(8),intent(inout)               :: vec(:)
         integer     :: ind(size(vec))
         integer     :: i
 
-        ind=[((site-1)*size(vec)+i,i=1,size(vec))]
-        Call H%mult_l_ind(lat,size(vec),ind,vec)
+        Call H%mult_l_single(site,1,lat,work,vec)     !always has to be first and only component
     end subroutine
 
-    subroutine get_l1_sym_single(this,H,lat,site,vec)
+    subroutine get_l1_sym_single(this,H,lat,site,work,vec)
         use m_type_lattice, only: dim_modes_inner
         class(t_deriv_l_1_sym),intent(in)   :: this
         class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: site
+        type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)               :: vec(:)
-        integer     :: ind(size(vec))
-        integer     :: i
 
-        ind=[((site-1)*size(vec)+i,i=1,size(vec))]
-        Call H%mult_r_ind(lat,size(vec),ind,vec)
+        Call H%mult_r_single(site,1,lat,work,vec)     !always has to be first and only component
         vec=vec*2.0d0
     end subroutine
-
 end module

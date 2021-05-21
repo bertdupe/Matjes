@@ -109,15 +109,24 @@ subroutine destroy_child(this)
 
     this%dimH=0
     this%nnz=0
-    deallocate(this%val,this%rowind,this%colind)
+    if(allocated(this%val   )) deallocate(this%val   )
+    if(allocated(this%rowind)) deallocate(this%rowind)
+    if(allocated(this%colind)) deallocate(this%colind)
 end subroutine 
 
 subroutine copy_child(this,Hout)
-    class(t_H_coo),intent(in)    :: this
-    class(t_H_base),intent(inout)     :: Hout
+    class(t_H_coo),intent(in)       :: this
+    class(t_H_base),intent(inout)   :: Hout
 
-    STOP "IMPLEMENT copy FOR t_H_coo in m_H_coo if really necessary"
-
+    select type(Hout)
+    class is(t_H_coo)
+        Hout%nnz=this%nnz
+        allocate(Hout%val   ,source=this%val   )
+        allocate(Hout%rowind,source=this%rowind)
+        allocate(Hout%colind,source=this%colind)
+    class default
+        STOP "Cannot copy t_H_coo type with Hamiltonian that is not a class of t_H_coo"
+    end select
 end subroutine 
 
 subroutine add_child(this,H_in)

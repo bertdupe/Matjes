@@ -2,7 +2,8 @@ module m_H_public
 !module used to choose the correct version of treating the Hamiltonian 
 !and provide all necessary types for other routines
 
-use m_H_sparse_mkl
+use m_H_mkl_csr
+use m_H_mkl_csr_mem
 use m_H_cusparse
 use m_H_eigen
 use m_H_eigen_mem
@@ -48,7 +49,7 @@ contains
 
         select case(mode)
         case(1)
-            write(*,'(/A/)') "Using Hamiltonian implementation: MKL Sparse"
+            write(*,'(/A/)') "Using Hamiltonian implementation: MKL Sparse (saving transpose as well) "
         case(2)
             write(*,'(/A/)') "Using Hamiltonian implementation: Eigen (saving transpose as well)"
         case(3)
@@ -59,6 +60,8 @@ contains
             write(*,'(/A/)') "Using Hamiltonian implementation: Dense"
         case(6)
             write(*,'(/A/)') "Using Hamiltonian implementation: Cuda"
+        case(7)
+            write(*,'(/A/)') "Using Hamiltonian implementation: MKL Sparse"
         case default
             ERROR STOP "READ IN UNIMPLEMENTED Hamiltonian_mode"
         end select
@@ -69,9 +72,9 @@ contains
         select case(mode)
         case(1)
 #if defined CPP_MKL
-            allocate(t_H_mkl_csr::H_out)
+            allocate(t_H_mkl_csr_mem::H_out)
 #else
-            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
+            ERROR STOP "CANNOT USE t_H_mkl_csr_mem Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
 #endif
         case(2)
 #if defined CPP_EIGEN
@@ -99,6 +102,12 @@ contains
 #else
             ERROR STOP "CANNOT USE t_H_cusparse Sparse Hamiltonian implementation without Cuda (CPP_CUDA)"
 #endif
+        case(7)
+#if defined CPP_MKL
+            allocate(t_H_mkl_csr::H_out)
+#else
+            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
+#endif
         case(-1)
             ERROR STOP "Cannot allocate Hamiltonian type, mode has not been set using set_H_mode_io"
         case default
@@ -113,9 +122,9 @@ contains
         select case(mode)
         case(1)
 #if defined CPP_MKL
-            allocate(t_H_mkl_csr::H_out(N))
+            allocate(t_H_mkl_csr_mem::H_out(N))
 #else
-            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
+            ERROR STOP "CANNOT USE t_H_mkl_csr_mem Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
 #endif
         case(2)
 #if defined CPP_EIGEN
@@ -142,6 +151,12 @@ contains
             allocate(t_H_cusparse::H_out(N))
 #else
             ERROR STOP "CANNOT USE t_H_cusparse Sparse Hamiltonian implementation without Cuda (CPP_CUDA)"
+#endif
+        case(7)
+#if defined CPP_MKL
+            allocate(t_H_mkl_csr::H_out(N))
+#else
+            ERROR STOP "CANNOT USE t_H_mkl_csr Sparse Hamiltonian  implementation without sparse mkl (CPP_MKL)"
 #endif
         case(-1)
             ERROR STOP "Cannot allocate Hamiltonian type, mode has not been set using set_H_mode_io"
