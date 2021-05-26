@@ -1,4 +1,5 @@
 set(main_f90 ${main_f90}
+src/Hamiltonian_type/eval_single.f90
 src/Hamiltonian_type/ham_public.f90
 src/Hamiltonian_type/ham_base.f90
 src/Hamiltonian_type/ham_coo.f90

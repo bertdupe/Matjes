@@ -360,14 +360,11 @@ subroutine energy_single(this,i_m,order,lat,work,E)
 #endif
     E=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%eval_single(tmp_E(iH),i_m,order,lat,work)
+        Call this%H(iH)%eval_single(order)%calc(this%H(iH),tmp_E(iH),i_m,lat,work)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
 
     if(this%NHF_local>0) STOP "IMPLEMENT THIS FOR FFT"
-!    do iH=1,this%NHF_local
-!         Call this%H_fft(iH)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
-!    enddo
 
     E=sum(tmp_E)
 end subroutine 

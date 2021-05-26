@@ -3,6 +3,7 @@ module m_H_type
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_mode_public, only: F_mode, get_mode_ident, set_mode_ident
 use m_work_ham_single, only:  work_ham_single
+use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 implicit none
 
 private
@@ -20,6 +21,13 @@ type,abstract :: t_H_base
     logical,private             :: set=.false.      !has this object been set?
     character(len=len_desc)     :: desc=""          !description of the Hamiltonian term, only used for user information and should be set manually 
     integer                     :: mult_M_single=0  !factor necessary to calculate energy change correctly when only evaluating single sites
+
+    !variables necessary to sparse matrix ind evaluation    (is not set correctly for all Hamiltonians)
+    integer                     :: col_max=0 !maximal number of entries for left  multiplication
+    integer                     :: row_max=0 !maximal number of entries for right multiplication
+    !sizes of single evaluation for respective order parameter
+    integer                     :: dim_l_single(number_different_order_parameters)=0 !dimension for inner work size array of set order on left side(set_work_size_single)
+    integer                     :: dim_r_single(number_different_order_parameters)=0 !dimension for inner work size array of set order (set_work_size_single)
 contains
 
     !Hamiltonian initialization routines
@@ -35,28 +43,21 @@ contains
     procedure ,NON_OVERRIDABLE              :: energy_dist              !get energy distribution per site
 
     !routines acting on parts of the Hamiltonian
-!    procedure                               :: mult_l_ind,      mult_r_ind          !
-!    procedure                               :: mult_l_disc_disc,mult_r_disc_disc
-!    procedure                               :: get_ind_mult_r, get_ind_mult_l       !get the indices that appear mulitplying a sparse vectors with the matrix
-!    !probably never used anywhere,implemented for eigen, keep so far as it might make sense at some point
-!    procedure(int_mult_cont),deferred       :: mult_l_cont,mult_r_cont  
-!    procedure(int_mult_disc),deferred       :: mult_l_disc,mult_r_disc
-
-    procedure                               :: mult_l_single, mult_r_single
+    procedure                               :: mult_l_disc,   mult_r_disc
 
     !routines acting on parts of the Hamiltonian defined by a single site of an order-parameter
-    procedure(int_eval_single),deferred     :: eval_single                         !evaluates the energy caused by a single mode (using a work array)
+!    procedure(int_eval_single),deferred     :: eval_single                         !evaluates the energy caused by a single mode (using a work array)
     procedure                               :: set_work_single                     !sets the necessary sizes for the work arrays
 
-!    procedure                               :: mult_l_single,   mult_r_single           !multipy out with left/right side
-!    procedure ,NON_OVERRIDABLE              :: mult_r_red_single,mult_l_red_single      !multipy out with left/right side excluding single order-parameter
-
     !Utility functions
+
+    procedure,NON_OVERRIDABLE               :: finish_setup_base
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
     procedure,NON_OVERRIDABLE               :: add
     procedure,NON_OVERRIDABLE               :: init_base
     procedure,NON_OVERRIDABLE               :: init_otherH
+    procedure(int_finish_setup),deferred    :: finish_setup
     procedure(int_add_H),deferred           :: add_child
     procedure(int_destroy),deferred         :: destroy_child
     procedure(int_copy),deferred            :: copy_child
@@ -75,38 +76,45 @@ contains
     procedure,NON_OVERRIDABLE  :: set_prepared
     procedure,NON_OVERRIDABLE  :: same_space
 
+
     !finalize routine? (might be risky with Hamiltonian references that have been passed around)
 end type
 
 
 abstract interface
+
+    subroutine int_finish_setup(this)
+        import t_H_base
+        class(t_H_base),intent(inout)    :: this
+    end subroutine
+
     subroutine int_mult(this,lat,res)
         import t_H_base,lattice
-        class(t_H_base),intent(in)     :: this
-        type(lattice),intent(in)  :: lat
-        real(8),intent(inout)     :: res(:)
+        class(t_H_base),intent(in)  :: this
+        type(lattice),intent(in)    :: lat
+        real(8),intent(inout)       :: res(:)
     end subroutine
 
     subroutine int_mult_single(this,i_site,lat,res)
         import t_H_base,lattice
-        class(t_H_base),intent(in)     :: this
-        integer,intent(in)        :: i_site
-        type(lattice),intent(in)  :: lat
-        real(8),intent(inout)     :: res(:)
+        class(t_H_base),intent(in)  :: this
+        integer,intent(in)          :: i_site
+        type(lattice),intent(in)    :: lat
+        real(8),intent(inout)       :: res(:)
     end subroutine
 
     subroutine int_mult_red(this,lat,res,op_keep)
         import t_H_base,lattice
-        class(t_H_base),intent(in)     :: this
-        type(lattice),intent(in)  :: lat
-        real(8),intent(inout)     :: res(:)
-        integer,intent(in)        :: op_keep
+        class(t_H_base),intent(in)  :: this
+        type(lattice),intent(in)    :: lat
+        real(8),intent(inout)       :: res(:)
+        integer,intent(in)          :: op_keep
     end subroutine
 
     subroutine int_mult_cont(this,bnd,vec,res)
         !multiply to the either side with a continuous section of the applied vector
         import t_H_base
-        class(t_H_base),intent(in)       :: this
+        class(t_H_base),intent(in)  :: this
         integer,intent(in)          :: bnd(2)
         real(8),intent(in)          :: vec(bnd(2)-bnd(1)+1)
         real(8),intent(inout)       :: res(:)   !result matrix-vector product
@@ -115,7 +123,7 @@ abstract interface
     subroutine int_mult_disc(this,N,ind,vec,res)
         !multiply to the either side with a discontinuous section of the applied vector
         import t_H_base
-        class(t_H_base),intent(in)       :: this
+        class(t_H_base),intent(in)  :: this
         integer,intent(in)          :: N
         integer,intent(in)          :: ind(N)
         real(8),intent(in)          :: vec(N)
@@ -124,13 +132,12 @@ abstract interface
 
     subroutine int_mult_ind(this,vec,N,ind_out,vec_out)
         import t_H_base
-        class(t_H_base),intent(in)       :: this
+        class(t_H_base),intent(in)  :: this
         real(8),intent(in)          :: vec(:)
         integer,intent(in)          :: N
         integer,intent(in)          :: ind_out(N)
         real(8),intent(out)         :: vec_out(N)
     end subroutine 
-
 
     subroutine int_destroy(this)
         import t_H_base
@@ -139,33 +146,32 @@ abstract interface
 
     subroutine int_eval_all(this,E, lat)
         import t_H_base,lattice
-        class(t_H_base),intent(in)    ::  this
+        class(t_H_base),intent(in)  ::  this
         type(lattice),intent(in)    ::  lat
         real(8),intent(out)         ::  E
     end subroutine
 
     subroutine int_eval_single(this,E,i_m,order,lat,work)
         import t_H_base,lattice,number_different_order_parameters, work_ham_single
-        class(t_H_base),intent(in)    ::  this
+        class(t_H_base),intent(in)  ::  this
         type(lattice),intent(in)    ::  lat
         integer,intent(in)          ::  i_m     !site index in (1:Ncell*dim_mode_inner(order)/dim_mode(order))-basis
         integer,intent(in)          :: order    
-!        integer,intent(in)          ::  dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
         real(8),intent(out)         ::  E       !energy caused by considered site
         type(work_ham_single),intent(inout) ::  work
     end subroutine
 
     subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
         import t_H_base,lattice
-        class(t_H_base),intent(inout)    :: this
-        type(lattice),intent(in)    :: lat
-        character(*),intent(in)     :: op_l
-        character(*),intent(in)     :: op_r
-        real(8),intent(in)          :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-        integer,intent(in)          :: Hval_ind(:,:)
-        integer,intent(in)          :: connect(:,:)
-        integer,intent(in)          :: mult_M_single
-        integer,intent(in),optional :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
+        class(t_H_base),intent(inout)   :: this
+        type(lattice),intent(in)        :: lat
+        character(*),intent(in)         :: op_l
+        character(*),intent(in)         :: op_r
+        real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+        integer,intent(in)              :: Hval_ind(:,:)
+        integer,intent(in)              :: connect(:,:)
+        integer,intent(in)              :: mult_M_single
+        integer,intent(in),optional     :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
     end subroutine
 
     subroutine int_init_H_coo(this,rowind,colind,val,dim_mode,op_l,op_r,lat,mult_M_single)
@@ -183,25 +189,25 @@ abstract interface
 
     subroutine int_init_H_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
         import t_H_base,lattice
-        class(t_H_base),intent(inout)    :: this
-        type(lattice),intent(in)    :: lat
-        character(2),intent(in)     :: order
-        real(8),intent(in)          :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-        integer,intent(in)          :: Hval_ind(:,:)
-        integer,intent(in)          :: connect(:,:)
-        integer,intent(in)          :: mult_M_single
+        class(t_H_base),intent(inout)   :: this
+        type(lattice),intent(in)        :: lat
+        character(2),intent(in)         :: order
+        real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
+        integer,intent(in)              :: Hval_ind(:,:)
+        integer,intent(in)              :: connect(:,:)
+        integer,intent(in)              :: mult_M_single
     end subroutine
 
     subroutine int_add_H(this,H_in)
         import t_H_base
-        class(t_H_base),intent(inout)    :: this
-        class(t_H_base),intent(in)       :: H_in
+        class(t_H_base),intent(inout)   :: this
+        class(t_H_base),intent(in)      :: H_in
     end subroutine
 
     subroutine int_copy(this,Hout)
         import t_H_base
-        class(t_H_base),intent(in)         :: this
-        class(t_H_base),intent(inout)      :: Hout
+        class(t_H_base),intent(in)      :: this
+        class(t_H_base),intent(inout)   :: Hout
     end subroutine
 
     subroutine int_mpicom(this,comm)
@@ -213,10 +219,10 @@ abstract interface
 
     subroutine int_send(this,ithread,tag,com)
         import t_H_base
-        class(t_H_base),intent(in)  :: this
-        integer,intent(in)          :: ithread
-        integer,intent(in)          :: tag
-        integer,intent(in)          :: com
+        class(t_H_base),intent(in)      :: this
+        integer,intent(in)              :: ithread
+        integer,intent(in)              :: tag
+        integer,intent(in)              :: com
     end subroutine
 
     subroutine int_recv(this,ithread,tag,com)
@@ -337,81 +343,6 @@ contains
         Call this%mode_r%reduce_other_exc(lat,op_keep,tmp,res)
     end subroutine 
 
-    subroutine mult_l_ind(this,lat,N,ind_out,vec_out)
-        class(t_H_base),intent(in)       :: this
-        type(lattice),intent(in)    :: lat
-        integer,intent(in)          :: N
-        integer,intent(in)          :: ind_out(N)
-        real(8),intent(out)         :: vec_out(N)
-
-        real(8)                     :: res(this%dimH(2))
-
-        Call this%mult_l(lat,res)
-        vec_out=res(ind_out)
-    end subroutine
-
-    subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
-        class(t_H_base),intent(in)  :: this
-        type(lattice),intent(in)    :: lat
-        integer,intent(in)          :: N
-        integer,intent(in)          :: ind_out(N)
-        real(8),intent(out)         :: vec_out(N)
-
-        real(8)                     :: res(this%dimH(1))
-
-        Call this%mult_r(lat,res)
-        vec_out=res(ind_out)
-    end subroutine
-
-!    subroutine mult_r_red_single(this,i_site,lat,res,op_keep)
-!        !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
-!        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-!        class(t_H_base),intent(in)           :: this
-!        type(lattice), intent(in)       :: lat
-!        integer,intent(in)              :: i_site
-!        real(8), intent(inout)          :: res(:)   !result matrix-vector product
-!        integer,intent(in)              :: op_keep
-!        ! internal
-!        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-!        real(8),pointer                 :: modes(:)
-!        real(8),allocatable,target      :: vec(:)
-!
-!        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
-!    
-!        allocate(tmp(this%dim_mode(1)))
-!        Call this%mult_r_single(i_site,lat,tmp)
-!        allocate(vec(this%dim_mode(1)),source=0.0d0)
-!        Call lat%set_order_comb_exc_single(i_site,this%op_l,vec,this%op_l==op_keep)
-!        tmp=tmp*vec
-!!        Call lat%reduce_single(i_site,tmp,this%op_l,op_keep,res)   !op_keep changed to ind_keep
-!        deallocate(tmp,vec)
-!    end subroutine 
-!    
-!    subroutine mult_l_red_single(this,i_site,lat,res,op_keep)
-!        !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
-!        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-!        class(t_H_base),intent(in)           :: this
-!        integer,intent(in)              :: i_site
-!        type(lattice), intent(in)       :: lat
-!        real(8), intent(inout)          :: res(:)   !result matrix-vector product
-!        integer,intent(in)              :: op_keep
-!        ! internal
-!        real(8),allocatable             :: tmp(:)   !multipied, but not reduced
-!        real(8),allocatable,target      :: vec(:)
-!    
-!        ERROR STOP "NOT UPDATED TO NEW MODE TYPE"
-!
-!        allocate(tmp(this%dim_mode(2)))
-!        Call this%mult_l_single(i_site,lat,tmp)
-!        allocate(vec(this%dim_mode(2)),source=0.0d0)
-!        Call lat%set_order_comb_exc_single(i_site,this%op_r,vec,this%op_r==op_keep)
-!        tmp=tmp*vec
-!!        Call lat%reduce_single(i_site,tmp,this%op_r,op_keep,res)   !op_keep changed to ind_keep
-!        deallocate(tmp,vec)
-!    end subroutine 
-
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!                    BASE ROUTINES                                !!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -456,6 +387,9 @@ contains
         endif
         Call this%mode_l%bcast(comm)
         Call this%mode_r%bcast(comm)
+        Call MPI_Bcast(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call this%finish_setup()
 #else
         continue
 #endif
@@ -480,6 +414,9 @@ contains
             Hout%mult_M_single=this%mult_M_single
             if(allocated(this%mode_l)) Call this%mode_l%copy(Hout%mode_l)
             if(allocated(this%mode_r)) Call this%mode_r%copy(Hout%mode_r)
+            Hout%dim_l_single=this%dim_l_single
+            Hout%dim_r_single=this%dim_r_single
+            if(allocated(this%mode_l).and.allocated(this%mode_r)) Call Hout%finish_setup()
         else
             STOP "cannot copy H since source is not set"
         endif
@@ -529,6 +466,8 @@ contains
             Call this%mode_r%destroy()
             deallocate(this%mode_r)
         endif
+        this%dim_l_single=0
+        this%dim_r_single=0
     end subroutine
 
     subroutine init_base(this,lat,op_l,op_r)
@@ -561,8 +500,23 @@ contains
         this%mult_M_single=H_in%mult_M_single
         this%desc=H_in%desc
         this%set=.true.
+        this%dim_l_single=H_in%dim_l_single
+        this%dim_r_single=H_in%dim_r_single
         if(allocated(H_in%mode_l)) Call H_in%mode_l%copy(this%mode_l)
         if(allocated(H_in%mode_r)) Call H_in%mode_r%copy(this%mode_r)
+    end subroutine
+
+    subroutine finish_setup_base(this)
+        class(t_H_base),intent(inout)    :: this
+        integer     ::  i
+
+        if(.not.this%set) ERROR STOP "Hamiltoninan should be set when calling finish_setup"
+        if(.not.allocated(this%mode_l)) ERROR STOP "mode_l of Hamiltoninan should be set when calling finish_setup"
+        if(.not.allocated(this%mode_r)) ERROR STOP "mode_l of Hamiltoninan should be set when calling finish_setup"
+        do i=1,number_different_order_parameters
+            Call this%mode_l%get_mode_single_size(i,this%dim_l_single(i))
+            Call this%mode_r%get_mode_single_size(i,this%dim_r_single(i))
+        enddo
     end subroutine
 
     function is_set(this) result(l)
@@ -606,67 +560,6 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!        ROUTINES THAT SHOULD BE IMPLEMENTED MORE EFFICIENTLY    !!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!subroutine mult_l_single(this,i_site,lat,res)
-!    class(t_H_base),intent(in)        :: this
-!    integer,intent(in)           :: i_site
-!    type(lattice),intent(in)     :: lat
-!    real(8),intent(inout)        :: res(:)
-!
-!    real(8)                      :: tmp(this%dimH(2))
-!
-!    Call this%mult_l(lat,tmp)
-!    res=tmp((i_site-1)*this%dim_mode(1)+1:i_site*this%dim_mode(1))
-!end subroutine
-!
-!subroutine mult_r_single(this,i_site,lat,res)
-!    class(t_H_base),intent(in)   :: this
-!    integer,intent(in)           :: i_site
-!    type(lattice),intent(in)     :: lat
-!    real(8),intent(inout)        :: res(:)
-!
-!    real(8)                      :: tmp(this%dimH(1))
-!
-!    Call this%mult_r(lat,tmp)
-!    res=tmp((i_site-1)*this%dim_mode(2)+1:i_site*this%dim_mode(2))
-!end subroutine
-
-subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
-    class(t_H_base),intent(in)      :: this
-    integer,intent(in)              :: ind_in(:)
-    integer,intent(out)             :: N_out
-    integer,intent(inout)           :: ind_out(:)
-
-    ERROR STOP "IMPLEMENT LOCALLY"
-end subroutine
-
-subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
-    class(t_H_base),intent(in)      :: this
-    integer,intent(in)              :: ind_in(:)
-    integer,intent(out)             :: N_out
-    integer,intent(inout)           :: ind_out(:)
-
-    ERROR STOP "IMPLEMENT LOCALLY"
-end subroutine
-
-subroutine mult_r_disc_disc(this,ind_r,vec_r,ind_l,vec_out)
-    class(t_H_base),intent(in)      :: this
-    integer,intent(in)              :: ind_r(:)
-    real(8),intent(in)              :: vec_r(:)
-    integer,intent(in)              :: ind_l(:)
-    real(8),intent(inout)           :: vec_out(:)
-
-    ERROR STOP "IMPLEMENT LOCALLY"
-end subroutine
-
-subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
-    class(t_H_base),intent(in)           :: this
-    integer,intent(in)              :: ind_l(:)
-    real(8),intent(in)              :: vec_l(:)
-    integer,intent(in)              :: ind_r(:)
-    real(8),intent(inout)           :: vec_out(:)
-
-    ERROR STOP "IMPLEMENT LOCALLY"
-end subroutine
 
 subroutine set_work_single(this,work,order)
     class(t_H_base),intent(inout)           :: this
@@ -711,6 +604,9 @@ subroutine send_base(this,ithread,tag,com)
 
     Call this%mode_l%send(ithread,tag,com)
     Call this%mode_r%send(ithread,tag,com)
+
+    Call MPI_SEND(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
 #else
     continue
 #endif
@@ -746,6 +642,9 @@ subroutine recv_base(this,ithread,tag,com)
 
     Call this%mode_l%recv(ithread,tag,com)
     Call this%mode_r%recv(ithread,tag,com)
+    Call MPI_RECV(this%dim_l_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%dim_r_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, stat, ierr)
+    Call this%finish_setup()
 #else
     continue
 #endif
@@ -754,58 +653,68 @@ end subroutine
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!          HELPER ROUTINES          !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    subroutine check_mode_same(mode1,mode2)
-        class(F_mode),intent(in),allocatable    ::  mode1,mode2
-            if(allocated(mode1))then
-                if(allocated(mode2))then
-                    if(.not.mode1%is_same(mode2)) ERROR STOP "Hamiltonian mode1 and mode2 differ"
-                else
-                    ERROR STOP "mode1 allocated but mode2 not allocated, not sure if addition is in correct space"
-                endif
+subroutine check_mode_same(mode1,mode2)
+    class(F_mode),intent(in),allocatable    ::  mode1,mode2
+        if(allocated(mode1))then
+            if(allocated(mode2))then
+                if(.not.mode1%is_same(mode2)) ERROR STOP "Hamiltonian mode1 and mode2 differ"
+            else
+                ERROR STOP "mode1 allocated but mode2 not allocated, not sure if addition is in correct space"
             endif
-    end subroutine
+        endif
+end subroutine
 
 
-    subroutine get_sum(N1,N2,vec_in,vec_out)
-        integer,intent(in)  ::  N1,N2
-        real(8),intent(in)  :: vec_in(N1,N2)
-        real(8),intent(out) :: vec_out(N2)
-        
-        vec_out=sum(vec_in,1)
-    end subroutine
+subroutine get_sum(N1,N2,vec_in,vec_out)
+    integer,intent(in)  ::  N1,N2
+    real(8),intent(in)  :: vec_in(N1,N2)
+    real(8),intent(out) :: vec_out(N2)
+    
+    vec_out=sum(vec_in,1)
+end subroutine
 
-subroutine mult_l_single(this,i_m,comp,lat,work,vec)
-    use m_type_lattice, only: dim_modes_inner
-    !Calculates the entries of the left vector*matrix product which corresponds to the i_m's site of component comp of the right modes
+subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+    !Calculates the entries of the left vector * matrix product for the indices ind_out of the result vector
+    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_base), intent(in)         :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m      !index of the comp's right mode in the inner dim_mode
-    integer, intent(in)                 :: comp     !component of right mode
-    !temporary data
-    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
+    integer, intent(in)                 :: N            !number of indices to calculated
+    integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output
-    real(8),intent(inout)               :: vec(:)
+    real(8),intent(out)                 :: vec(N) ! dim_modes_inner(this%mode_r%order(comp))
+    !temporary data
+    integer,intent(inout)               :: ind_sum (N+1)                 !ind_mult index where the a vec-entry start and end
+    integer,intent(inout)               :: ind_mult(N*this%col_max)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+    real(8),intent(inout)               :: mat_mult(N*this%col_max)     !matrix entries corresponding to ind_mult
+    real(8),intent(inout)               :: vec_mult(N*this%col_max)        !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
 
-    ERROR STOP "IMPLEMENT LOCALLY"
-end subroutine
+    write(error_unit,'(//A)') "Trying to call mult_l_dist with Hamiltonian mode where this is not implemented."
+    write(error_unit,'(A)')   "Please choose a Hamiltonian implementation including an implementation such as the eigen and mkl options."
+    ERROR STOP
+end subroutine 
 
-subroutine mult_r_single(this,i_m,comp,lat,work,vec)
-    use m_type_lattice, only: dim_modes_inner
-    !Calculates the entries of the left vector*matrix product which corresponds to the i_m's site of component comp of the right modes
+subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+    !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector
     ! input
     class(t_H_base), intent(in)         :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m      !index of the comp's right mode in the inner dim_mode
-    integer, intent(in)                 :: comp     !component of right mode
-    !temporary data
-    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
+    integer, intent(in)                 :: N            !number of indices to calculated
+    integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output
-    real(8),intent(inout)               :: vec(:)
+    real(8),intent(out)                 :: vec(N)
+    !temporary data
+    integer,intent(inout)               :: ind_sum (N+1)                !ind_mult index where the a vec-entry start and end
+    integer,intent(inout)               :: ind_mult(N*this%row_max)     !indices of the right array which have non-vanishing contributions to get the ind entries of the mat/vecduct
+    real(8),intent(inout)               :: mat_mult(N*this%row_max)     !matrix entries corresponding to ind_mult
+    real(8),intent(inout)               :: vec_mult(N*this%row_max)     !values of discontiguous right mode which has to be evaluated (indices of ind_mult)
 
-    ERROR STOP "IMPLEMENT LOCALLY"
-end subroutine
-
+    write(error_unit,'(//A)') "Trying to call mult_l_dist with Hamiltonian mode where this is not implemented."
+    write(error_unit,'(A)')   "Please choose a Hamiltonian implementation including an implementation such as the eigen and mkl options."
+    ERROR STOP
+end subroutine 
 
 
 end module

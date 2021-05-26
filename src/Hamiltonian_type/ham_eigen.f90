@@ -6,22 +6,17 @@ use m_eigen_H_interface
 use m_H_coo_based
 use m_mode_construction_rankN_sparse_col
 use m_work_ham_single
+use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 
 type,extends(t_H_coo_based) :: t_H_eigen
     type(C_PTR)     ::  H=c_null_ptr  !pointer to sparse matrix c-object 
 
     !pointers to Hamiltonian data handled by eigen (col major format) (zero based)
     real(C_DOUBLE),pointer  :: H_val(:)
-    integer(C_INT),pointer  :: H_col(:),H_row(:)
+    integer(C_INT),pointer  :: H_outer(:),H_inner(:)
     integer                 :: nnz=0
-    !helper variables
-    integer                 :: col_max=0 !maximal number of entries per col
-    integer                 :: dim_l_single=0 !dimension for inner work size array of set order on left side(set_work_size_single)
-    integer                 :: dim_r_single=0 !dimension for inner work size array of set order (set_work_size_single)
 contains
     !necessary t_H routines
-    procedure :: eval_single
-
     procedure :: set_from_Hcoo
 
     procedure :: add_child 
@@ -30,14 +25,9 @@ contains
     procedure :: optimize
 
     procedure :: mult_l, mult_r
-!    procedure :: mult_l_cont,      mult_r_cont
-!    procedure :: mult_l_disc,      mult_r_disc
-!    procedure :: mult_l_single,    mult_r_single
-!    procedure :: mult_l_ind,       mult_r_ind
-!    procedure :: mult_l_disc_disc, mult_r_disc_disc
-!    procedure :: get_ind_mult_l,   get_ind_mult_r
 
-    procedure :: mult_l_single
+    procedure :: mult_l_disc, mult_r_disc
+
     procedure :: set_work_single
     procedure :: get_work_size_single
 
@@ -74,8 +64,6 @@ subroutine set_work_single(this,work,order)
             ERROR STOP "Hamiltonian has no component of considered single energy evaluation, take it out or consider it somehow else"
         endif
     endif
-    Call this%mode_l%get_mode_single_size(order,this%dim_l_single)
-    Call this%mode_r%get_mode_single_size(order,this%dim_r_single)
     Call this%get_work_size_single(sizes)
     Call work%set(sizes)
 end subroutine
@@ -84,130 +72,130 @@ subroutine get_work_size_single(this,sizes)
     class(t_H_eigen),intent(in) :: this
     integer,intent(out)         :: sizes(2)
 
-    Call work_size_single(this%dim_r_single,this%col_max,sizes)
+    Call work_size_single(maxval(this%dim_r_single),this%col_max,sizes)
 end subroutine
 
-subroutine eval_single(this,E,i_m,order,lat,work)
+!subroutine eval_single(this,E,i_m,order,lat,work)
+!    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
+!    ! input
+!    class(t_H_eigen), intent(in)        :: this
+!    type(lattice), intent(in)           :: lat
+!    integer, intent(in)                 :: i_m
+!    integer, intent(in)                 :: order
+!    ! output
+!    real(8), intent(out)                :: E
+!    !temporary data
+!    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+!    !temporary data slices
+!    integer,pointer,contiguous          :: ind(:)       !indices of all right mode entries which contain the order parameter order of the site corresponding to i_m
+!    real(8),pointer,contiguous          :: vec(:)       !values corresponding to ind
+!    integer,pointer,contiguous          :: ind_out(:)   !indices of the result array multipling the vector (vec/ind) to the matrix
+!    real(8),pointer,contiguous          :: vec_out(:)   !values corresponding to ind_out
+!    real(8),pointer,contiguous          :: vec_mult(:)     !values of discontiguous mode array on right side (indices of ind_out)
+!
+!    !some local indices/ loop variables
+!    integer :: i,j, i_col
+!    integer :: ii
+!#define _dim_ this%dim_r_single(order)
+!    !associate temporary arrays
+!    ind     (1:_dim_             )=>work%int_arr (1                       :_dim_                   )
+!    ind_out (1:_dim_*this%col_max)=>work%int_arr (1+_dim_                 :_dim_*(1+  this%col_max))
+!    vec     (1:_dim_             )=>work%real_arr(1                       :_dim_                   )
+!    vec_out (1:_dim_*this%col_max)=>work%real_arr(1+_dim_                 :_dim_*(1+  this%col_max))
+!    vec_mult(1:_dim_*this%col_max)=>work%real_arr(1+_dim_*(1+this%col_max):_dim_*(1+2*this%col_max))
+!
+!    !get right mode corresponding to site i_m of order order
+!    Call this%mode_r%get_mode_single(lat,1,i_m,_dim_,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
+!
+!    !Calculate matrix,right mode product only for the necessary discontiguous mode-indices
+!    ii=0
+!    do i=1,size(ind)
+!        i_col=ind(i)
+!        do j=this%H_outer(i_col)+1,this%H_outer(i_col+1)
+!            ii=ii+1
+!            vec_out(ii)=this%H_val(j)*vec(i)
+!            ind_out(ii)=this%H_inner(j)
+!        enddo
+!    enddo
+!    ind_out=ind_out+1   !zero based index from c++
+!    
+!    !get left mode for indices of the mat/vec product 
+!    Call this%mode_l%get_mode_disc(lat,ii,ind_out(:ii),vec_mult(:ii))
+!
+!    !Get the energy
+!    E=DOT_PRODUCT(vec_mult(:ii),vec_out(:ii))
+!    nullify(ind,ind_out,vec,vec_out,vec_mult)
+!#undef _dim_    
+!end subroutine 
+
+
+subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+    !Calculates the entries of the left vector * matrix product for the indices ind_out of the result vector
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_eigen), intent(in)        :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m
-    integer, intent(in)                 :: order
+    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
+    integer, intent(in)                 :: N            !number of indices to calculated
+    integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output
-    real(8), intent(out)                :: E
+    real(8),intent(out)                 :: vec(N)       !vector.matrix result
     !temporary data
-    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
-    !temporary data slices
-    integer,pointer,contiguous          :: ind(:)       !indices of all right mode entries which contain the order parameter order of the site corresponding to i_m
-    real(8),pointer,contiguous          :: vec(:)       !values corresponding to ind
-    integer,pointer,contiguous          :: ind_out(:)   !indices of the result array multipling the vector (vec/ind) to the matrix
-    real(8),pointer,contiguous          :: vec_out(:)   !values corresponding to ind_out
-    real(8),pointer,contiguous          :: vec_l(:)     !values of discontiguous mode array on right side (indices of ind_out)
+    integer,intent(inout)               :: ind_sum (N+1)                !ind_mult index where the a vec-entry start and end
+    integer,intent(inout)               :: ind_mult(N*this%col_max)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+    real(8),intent(inout)               :: mat_mult(N*this%col_max)     !matrix entries corresponding to ind_mult
+    real(8),intent(inout)               :: vec_mult(N*this%col_max)     !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
 
     !some local indices/ loop variables
-    integer :: i,j, i_col
-    integer :: ii
-
-    !associate temporary arrays
-    ind    (1:this%dim_r_single             )=>work%int_arr (1                                   :this%dim_r_single                   )
-    ind_out(1:this%dim_r_single*this%col_max)=>work%int_arr (1+this%dim_r_single                 :this%dim_r_single*(1+  this%col_max))
-    vec    (1:this%dim_r_single             )=>work%real_arr(1                                   :this%dim_r_single                   )
-    vec_out(1:this%dim_r_single*this%col_max)=>work%real_arr(1+this%dim_r_single                 :this%dim_r_single*(1+  this%col_max))
-    vec_l  (1:this%dim_r_single*this%col_max)=>work%real_arr(1+this%dim_r_single*(1+this%col_max):this%dim_r_single*(1+2*this%col_max))
-
-    !get right mode corresponding to site i_m of order order
-    Call this%mode_r%get_mode_single(lat,1,i_m,this%dim_r_single,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
-
-    !Calculate matrix,right mode product only for the necessary discontiguous mode-indices
-    ii=0
-    do i=1,size(ind)
-        i_col=ind(i)
-        do j=this%H_col(i_col)+1,this%H_col(i_col+1)
-            ii=ii+1
-            vec_out(ii)=this%H_val(j)*vec(i)
-            ind_out(ii)=this%H_row(j)
-        enddo
-    enddo
-    ind_out=ind_out+1   !zero based index from c++
-    
-    !get left mode for indices of the mat/vec product 
-    Call this%mode_l%get_mode_disc_expl(lat,ii,ind_out(:ii),vec_l(:ii))
-
-    !Get the energy
-    E=DOT_PRODUCT(vec_l(:ii),vec_out(:ii))
-    nullify(ind,ind_out,vec,vec_out,vec_l)
-end subroutine 
-
-
-subroutine mult_l_single(this,i_m,comp,lat,work,vec)
-    !Calculates the entries of the left vector*matrix product which corresponds to the i_m's site of component comp of the right modes
-    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
-    ! input
-    class(t_H_eigen), intent(in)        :: this
-    type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m      !index of the comp's right mode in the inner dim_mode
-    integer, intent(in)                 :: comp     !component of right mode
-    !temporary data
-    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
-    ! output
-    real(8),intent(inout)               :: vec(:) ! dim_modes_inner(this%mode_r%order(comp))
-
-    !some local indices/ loop variables
-    integer ::  i,j, i_col
-    integer :: ii
-
-#ifdef CPP_USE_WORK
-    !temporary data slices
-    integer,pointer,contiguous          :: ind_out(:)    !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
-    integer,pointer,contiguous          :: ind_sum(:)    !ind_mult index where the a vec-entry start and end
-    integer,pointer,contiguous          :: ind_mult(:)   !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
-    real(8),pointer,contiguous          :: mat_mult(:)   !matrix entries corresponding to ind_mult
-    real(8),pointer,contiguous          :: vec_l(:)      !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
-
-    !associate temporary arrays
-    !!int vector slices
-    ind_out (1:this%dim_l_single             )=>work%int_arr (1                               :this%dim_r_single                    )
-    ind_sum (1:this%dim_l_single+1           )=>work%int_arr (1+this%dim_r_single             :this%dim_r_single* 2               +1)
-    ind_mult(1:this%dim_l_single*this%row_max)=>work%int_arr (1+this%dim_r_single*2+1         :this%dim_r_single*(2+ this%row_max)+1)
-    !!real vector slices
-    mat_mult(1:this%dim_l_single*this%row_max)=>work%real_arr(1                               :this%dim_r_single*this%row_max  )
-    vec_l   (1:this%dim_l_single*this%row_max)=>work%real_arr(1+this%dim_r_single*this%row_max:this%dim_r_single*this%row_max*2)
-#else
-    !temporary arrays
-    integer                     :: ind_out (this%dim_r_single             )     !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
-    integer                     :: ind_sum (this%dim_r_single+1           )     !ind_mult index where the a vec-entry start and end
-    integer                     :: ind_mult(this%dim_r_single*this%col_max)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
-    real(8)                     :: mat_mult(this%dim_r_single*this%col_max)     !matrix entries corresponding to ind_mult
-    real(8)                     :: vec_l   (this%dim_r_single*this%col_max)     !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
-#endif
-
-    !get indices of the output vector 
-    Call this%mode_r%get_ind_site_expl(comp,i_m,this%dim_r_single,ind_out)
+    integer ::  i,j, i_outer,ii
 
     !get matrix indices and values whose vec.mat product constitute the output vector
     ind_sum(1)=0
     ii=0
-    do i=1,this%dim_r_single
-        i_col=ind_out(i)
-        do j=this%H_col(i_col)+1,this%H_col(i_col+1)
+    do i=1,N
+        i_outer=ind_out(i)
+        do j=this%H_outer(i_outer)+1,this%H_outer(i_outer+1)
             ii=ii+1
             mat_mult(ii)=this%H_val(j)
-            ind_mult(ii)=this%H_row(j)
+            ind_mult(ii)=this%H_inner(j)
         enddo
         ind_sum(i+1)=ii
     enddo
     ind_mult=ind_mult+1    !zero based index from c++
 
     !get the left vector values which are multiplied with the matrix
-    Call this%mode_l%get_mode_disc_expl(lat,ii,ind_mult(:ii),vec_l(:ii))
+    Call this%mode_l%get_mode_disc(lat,ii,ind_mult(:ii),vec_mult(:ii))
 
     !multipy the matrix and left vector entries and sum together to the respective output entry
-    vec_l(:ii)=vec_l(:ii)*mat_mult(:ii)
-    do i=1,this%dim_r_single
-        vec(i)=sum(vec_l(ind_sum(i)+1:ind_sum(i+1)))
+    vec_mult(:ii)=vec_mult(:ii)*mat_mult(:ii)
+    do i=1,N
+        vec(i)=sum(vec_mult(ind_sum(i)+1:ind_sum(i+1)))
     enddo
 end subroutine 
+
+subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+    !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector
+    ! input
+    class(t_H_eigen), intent(in)        :: this
+    type(lattice), intent(in)           :: lat
+    integer, intent(in)                 :: i_m
+    integer, intent(in)                 :: N
+    integer, intent(in)                 :: ind_out(N)
+    ! output
+    real(8),intent(out)                 :: vec(N)
+    !temporary data
+    integer,intent(inout)               :: ind_sum (N+1)
+    integer,intent(inout)               :: ind_mult(N*this%row_max)
+    real(8),intent(inout)               :: mat_mult(N*this%row_max)
+    real(8),intent(inout)               :: vec_mult(N*this%row_max)
+
+    write(error_unit,'(//A)') "Trying to call mult_l_dist from type t_H_eigen."
+    write(error_unit,'(A)')   "This can not be done efficiently without the transpose as implemented in t_H_eigen_mem."
+    write(error_unit,'(A)')   "Please choose the Hamiltonian implementation including the transpose (Hamiltonian_mode)."
+    ERROR STOP
+end subroutine 
+
+
 
 type(t_H_eigen) function dummy_constructor()
     !might want some initialization for H and descr, but should work without
@@ -347,46 +335,6 @@ subroutine mult_l_ind(this,lat,N,ind_out,vec_out)
 end subroutine
 
 
-!subroutine mult_r_single(this,i_site,lat,res)
-!    !mult
-!    use m_derived_types, only: lattice
-!    class(t_H_eigen),intent(in)     :: this
-!    integer,intent(in)              :: i_site
-!    type(lattice), intent(in)       :: lat
-!    real(8), intent(inout)          :: res(:)   !result matrix-vector product
-!    ! internal
-!    real(8),pointer            :: modes(:)
-!    real(8),allocatable,target :: vec(:)
-!    integer                    :: bnd(2)
-!
-!    Call this%mode_r%get_mode(lat,modes,vec)
-!    bnd(1)=this%dim_mode(1)*(i_site-1)
-!    bnd(2)=this%dim_mode(1)*(i_site)-1
-!    Call eigen_H_mult_mat_vec_single(this%H,bnd(1),bnd(2),modes,res)
-!    if(allocated(vec)) deallocate(vec)
-!end subroutine 
-!
-!
-!subroutine mult_l_single(this,i_site,lat,res)
-!    !mult
-!    use m_derived_types, only: lattice
-!    class(t_H_eigen),intent(in)     :: this
-!    integer,intent(in)              :: i_site
-!    type(lattice), intent(in)       :: lat
-!    real(8), intent(inout)          :: res(:)   !result matrix-vector product
-!    ! internal
-!    real(8),pointer            :: modes(:)
-!    real(8),allocatable,target :: vec(:)
-!    integer                    :: bnd(2)
-!
-!    Call this%mode_l%get_mode(lat,modes,vec)
-!    bnd(1)=this%dim_mode(2)*(i_site-1)
-!    bnd(2)=this%dim_mode(2)*(i_site)-1
-!    Call eigen_H_mult_vec_mat_single(this%H,bnd(1),bnd(2),modes,res)
-!    if(allocated(vec)) deallocate(vec)
-!end subroutine 
-
-
 subroutine mult_l(this,lat,res)
     use m_derived_types, only: lattice
     class(t_H_eigen),intent(in)     :: this
@@ -439,11 +387,9 @@ subroutine destroy_child(this)
 
     if(this%is_set())then
         Call eigen_H_destroy(this%H)
-        nullify(this%H_val,this%H_col,this%H_row)
+        nullify(this%H_val,this%H_outer,this%H_inner)
         this%col_max=0
         this%nnz=0
-        this%dim_l_single=0
-        this%dim_r_single=0
     endif
 end subroutine
 
@@ -541,11 +487,11 @@ subroutine set_H_ptr(this)
     type(C_PTR)     :: col,row,val
     integer         :: dimH(2)
 
-    nullify(this%H_row,this%H_col,this%H_val)
+    nullify(this%H_inner,this%H_outer,this%H_val)
     Call eigen_get_dat(this%H,this%nnz,dimH,col,row,val)
-    CAll C_F_POINTER(col, this%H_col, [dimH(2)+1])
-    CAll C_F_POINTER(row, this%H_row, [this%nnz]) 
-    CAll C_F_POINTER(val, this%H_val, [this%nnz]) 
+    CAll C_F_POINTER(col, this%H_outer, [dimH(2)+1])
+    CAll C_F_POINTER(row, this%H_inner, [this%nnz]) 
+    CAll C_F_POINTER(val, this%H_val,   [this%nnz]) 
 end subroutine
 
 subroutine set_col_max(this)
@@ -554,9 +500,9 @@ subroutine set_col_max(this)
     integer,allocatable               :: tmp(:)
     integer                           :: i
 
-    allocate(tmp(size(this%H_col)-1))
+    allocate(tmp(size(this%H_outer)-1))
     do i=1,size(tmp)
-        tmp(i)=this%H_col(i+1)-this%H_col(i)
+        tmp(i)=this%H_outer(i+1)-this%H_outer(i)
     enddo
     this%col_max=maxval(tmp)
 end subroutine

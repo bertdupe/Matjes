@@ -26,8 +26,8 @@ subroutine work_size_single(dim_single,line_max,sizes)
     integer,intent(in)          :: line_max     !number of matrix entries on the col/row (corresponds to col_max/row_max)
     integer,intent(out)         :: sizes(N_work_single)
 
-    sizes(1)= dim_single*(2*line_max+1)
-    sizes(2)= dim_single*(  line_max+3)
+    sizes(1)=dim_single*(2*line_max+2)       !real array size
+    sizes(2)=dim_single*(  line_max+2)+1     !integer array size
 end subroutine
 
 

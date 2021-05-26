@@ -12,13 +12,15 @@ type, extends(F_mode) :: F_mode_rank1_point
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
-    procedure   :: get_mode_exc
     procedure   :: mode_reduce_comp
     procedure   :: get_ind_site
-    procedure   :: get_ind_site_expl
+    !non-sensical routines required by class (exclude makes no sense to rank1 -> always returns 1)
+    procedure   :: get_mode_exc
+    procedure   :: get_mode_exc_disc
+
 
     procedure   :: get_mode_single_size
-    procedure   :: get_mode_disc_expl
+    procedure   :: get_mode_disc
     procedure   :: reduce_site_vec
 
     procedure   :: copy
@@ -35,6 +37,7 @@ end type
 
 contains
 
+
 subroutine reduce_site_vec(this,comp,vec_in,vec_out)
     !reduce the vector along the comp mode if the vec_in has been set with get_ind_site
     !doesn't really make sense for rank1 since there is nothing to reduce
@@ -43,10 +46,6 @@ subroutine reduce_site_vec(this,comp,vec_in,vec_out)
     real(8),intent(in)                          :: vec_in(:)
     real(8),intent(out)                         :: vec_out(:)
 
-#ifdef CPP_DEBUG
-    if(comp>this%N_mode) ERROR STOP "COMP shall not be larger than N_mode"
-#endif
-    write(error_unit,*) "WARNING, using reduce_site_vec for rank1 mode which is superfluous"
     vec_out=vec_in      
 end subroutine
 
@@ -67,7 +66,7 @@ subroutine get_mode_single_size(this,order,dim_mode)
     endif
 end subroutine
 
-subroutine get_mode_disc_expl(this,lat,N,ind,vec)
+subroutine get_mode_disc(this,lat,N,ind,vec)
     use, intrinsic :: iso_c_binding, only: C_PTR, C_loc
     use m_type_lattice, only: dim_modes_inner
     class(F_mode_rank1_point),intent(in)    :: this
@@ -82,21 +81,7 @@ subroutine get_mode_disc_expl(this,lat,N,ind,vec)
     vec=mode_base(ind)
 end subroutine
 
-
-subroutine get_ind_site(this,comp,site,ind)
-    class(F_mode_rank1_point),intent(in)   :: this
-    integer,intent(in)                          :: comp  !mode index
-    integer,intent(in)                          :: site    !entry
-    integer,intent(inout),allocatable           :: ind(:)
-
-    integer         :: inner_dim_mode, i
-
-    inner_dim_mode=dim_modes_inner(this%order(comp))
-    if(.not.allocated(ind)) allocate(ind(inner_dim_mode),source=0)
-    ind=[((site-1)*inner_dim_mode+i,i=1,inner_dim_mode)]
-end subroutine
-
-subroutine get_ind_site_expl(this,comp,site,size_out,ind)
+subroutine get_ind_site(this,comp,site,size_out,ind)
     !get the indices corresponding to the 
     class(F_mode_rank1_point),intent(in)    :: this
     integer,intent(in)                      :: comp
@@ -126,6 +111,24 @@ subroutine get_mode_exc(this,lat,comp,vec)
     real(8),intent(inout)                       :: vec(:)
 
     ERROR STOP "Calling get_mode_ext does not make sense for a rank1 mode"
+end subroutine
+
+subroutine get_mode_exc_disc(this,lat,comp,N,ind,vec)
+    !doesn't really make sense to call this
+    use, intrinsic :: iso_c_binding, only: C_PTR, C_loc
+    use m_type_lattice, only: dim_modes_inner
+    class(F_mode_rank1_point),intent(in)   :: this
+    type(lattice),intent(in)                    :: lat
+    integer,intent(in)                          :: comp
+    integer,intent(in)                          :: N
+    integer,intent(in)                          :: ind(N)
+    real(8),intent(out)                         :: vec(N)
+
+#ifdef CPP_DEBUG
+    write(error_unit,*) "WARNING, using reduce_site_vec for rank1 mode which is superfluous"
+    if(comp/=1) ERROR STOP "COMP shall not be larger than 1 for mode_rank1 get_mode_exc_disc"
+#endif
+    vec=1.0
 end subroutine
 
 subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)

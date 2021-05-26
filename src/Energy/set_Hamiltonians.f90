@@ -115,11 +115,13 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
 
     do i_H=1,N_ham
         if(.not. Ham_res(i_h)%is_set()) STOP "not all Hamiltonians are set"
+        Call Ham_res(i_h)%finish_setup()
         Call Ham_res(i_h)%optimize()
     enddo
 
     Call combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
     do i_H=1,size(Ham_comb)
+        Call Ham_comb(i_h)%finish_setup()
         Call Ham_comb(i_h)%optimize()
     enddo
     Call set_deriv(Ham_comb)

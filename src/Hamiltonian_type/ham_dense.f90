@@ -7,7 +7,6 @@ type,extends(t_H_coo_based) :: t_H_dense
     real(8),allocatable   :: H(:,:)
 contains
     !necessary t_H routines
-    procedure :: eval_single
     procedure :: set_from_Hcoo 
 
     procedure :: add_child 
@@ -58,63 +57,6 @@ subroutine mult_l(this,lat,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine eval_single(this,E,i_m,order,lat,work)
-    use m_work_ham_single
-    ! input
-    class(t_h_dense),intent(in) :: this
-    type(lattice), intent(in)   :: lat
-    integer, intent(in)         :: i_m
-    integer,intent(in)          :: order
-    ! output
-    real(kind=8), intent(out)    :: E
-    type(work_ham_single),intent(inout) :: work
-
-    ERROR STOP "CANNOT calculate single energy contributions with this Hamiltonian-type"
-end subroutine 
-
-
-!subroutine mult_r_single(this,i_site,lat,res)
-!    !mult
-!    use m_derived_types, only: lattice
-!    class(t_h_dense),intent(in) :: this
-!    integer,intent(in)          :: i_site
-!    type(lattice), intent(in)   :: lat
-!    real(8), intent(inout)      :: res(:)   !result matrix-vector product
-!    ! internal
-!    integer                     :: bnd(2)
-!    real(8),pointer             :: modes(:)
-!    real(8),allocatable,target  :: vec(:)
-!
-!    Call this%mode_r%get_mode(lat,modes,vec)
-!    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-!    bnd(1)=this%dim_mode(1)*(i_site-1)+1
-!    bnd(2)=this%dim_mode(1)*(i_site)
-!    !terrible implementation striding-wise
-!    res=matmul(this%H(bnd(1):bnd(2),:),modes)
-!
-!    if(allocated(vec)) deallocate(vec)
-!end subroutine 
-!
-!subroutine mult_l_single(this,i_site,lat,res)
-!    !mult
-!    use m_derived_types, only: lattice
-!    class(t_h_dense),intent(in) :: this
-!    integer,intent(in)          :: i_site
-!    type(lattice), intent(in)   :: lat
-!    real(8), intent(inout)      :: res(:)   !result matrix-vector product
-!    ! internal
-!    integer                     :: bnd(2)
-!    real(8),pointer             :: modes(:)
-!    real(8),allocatable,target  :: vec(:)
-!
-!    Call this%mode_l%get_mode(lat,modes,vec)
-!    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-!    bnd(1)=this%dim_mode(2)*(i_site-1)+1
-!    bnd(2)=this%dim_mode(2)*(i_site)
-!    res=matmul(modes,this%H(:,bnd(1):bnd(2)))
-!
-!    if(allocated(vec)) deallocate(vec)
-!end subroutine 
 
 subroutine optimize(this)
     class(t_h_dense),intent(inout)   :: this

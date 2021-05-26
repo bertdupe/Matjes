@@ -1,4 +1,3 @@
-
 module m_H_cusparse
 #if defined(CPP_CUDA)
 !cuda cusparse implementation
@@ -25,16 +24,12 @@ type,extends(t_H_coo_based) :: t_H_cusparse
     type(C_PTR)     ::  buffer_r=c_null_ptr
     type(C_PTR)     ::  buffer_l=c_null_ptr
 contains
-!    !necessary t_H routines
-    procedure :: eval_single
 
     !initialization routine
     procedure :: set_from_Hcoo
 
     procedure :: optimize
     procedure :: mult_r,mult_l
-    procedure :: mult_l_cont,mult_r_cont
-    procedure :: mult_l_disc,mult_r_disc
 
     !utility routines
     procedure :: add_child 
@@ -156,25 +151,24 @@ subroutine set_from_Hcoo(this,H_coo)
     Call cuda_set_buffer(this%buffer_l,this%H,logical(.true. ,C_BOOL),this%lvec,this%rvec,handle)
 end subroutine 
 
-subroutine eval_single(this,E,i_m,order,lat,work)
-    use m_work_ham_single
-    use m_derived_types, only: lattice
-    use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
-    ! input
-    class(t_H_cusparse),intent(in)     :: this
-    type(lattice), intent(in)       :: lat
-    integer, intent(in)             :: i_m
-    integer,intent(in)              :: order
-    ! output
-    real(8), intent(out)            :: E
-    type(work_ham_single),intent(inout) :: work
-
-    write(error_unit,"(///A)") "The eval_single routine is not implemented for cuda Hamiltonians (t_H_cusparse)"
-    write(error_unit,"(A)") "There is no reasonable way to parallelize this evaluation, for faster Monte-Carlo sampling the entire MCstep routine should be parallelized in CUDA"
-    write(error_unit,"(A)") "USE A DIFFERENT Hamiltonian_mode"
-    STOP
-end subroutine 
-
+!subroutine eval_single(this,E,i_m,order,lat,work)
+!    use m_work_ham_single
+!    use m_derived_types, only: lattice
+!    use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
+!    ! input
+!    class(t_H_cusparse),intent(in)     :: this
+!    type(lattice), intent(in)       :: lat
+!    integer, intent(in)             :: i_m
+!    integer,intent(in)              :: order
+!    ! output
+!    real(8), intent(out)            :: E
+!    type(work_ham_single),intent(inout) :: work
+!
+!    write(error_unit,"(///A)") "The eval_single routine is not implemented for cuda Hamiltonians (t_H_cusparse)"
+!    write(error_unit,"(A)") "There is no reasonable way to parallelize this evaluation, for faster Monte-Carlo sampling the entire MCstep routine should be parallelized in CUDA"
+!    write(error_unit,"(A)") "USE A DIFFERENT Hamiltonian_mode"
+!    STOP
+!end subroutine 
 
 subroutine mult_r(this,lat,res)
     !mult
@@ -207,48 +201,6 @@ subroutine mult_l(this,lat,res)
     Call cuda_H_mult_vec_mat(this%H,this%lvec, this%rvec, this%buffer_l, handle)
     Call cuda_fvec_get(this%rvec,res)
     if(allocated(vec)) deallocate(vec)
-end subroutine 
-
-subroutine mult_l_cont(this,bnd,vec,res)
-    !multiply to the right with a continuous section of the right vector
-    class(t_H_cusparse),intent(in)  :: this
-    integer,intent(in)              :: bnd(2)
-    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
-end subroutine 
-
-subroutine mult_r_cont(this,bnd,vec,res)
-    !multiply to the right with a continuous section of the right vector
-    class(t_H_cusparse),intent(in)  :: this
-    integer,intent(in)              :: bnd(2)
-    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
-end subroutine 
-
-subroutine mult_l_disc(this,N,ind,vec,res)
-    !multiply to the right with a discontinuous section of the right vector
-    class(t_H_cusparse),intent(in)  :: this
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind(N)
-    real(8),intent(in)              :: vec(N)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
-end subroutine 
-
-subroutine mult_r_disc(this,N,ind,vec,res)
-    !multiply to the right with a discontinuous section of the right vector
-    class(t_H_cusparse),intent(in)  :: this
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind(N)
-    real(8),intent(in)              :: vec(N)
-    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-
-    ERROR STOP "IMPLEMENT"
 end subroutine 
 
 subroutine optimize(this)

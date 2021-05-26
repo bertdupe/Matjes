@@ -13,7 +13,6 @@ type,extends(t_H) :: t_H_coo
     integer,allocatable :: rowind(:),colind(:)
 contains
     !necessary t_H routines
-    procedure :: eval_single
     procedure :: init_connect
     procedure :: init_mult_connect_2
     procedure :: init_coo
@@ -24,8 +23,6 @@ contains
 
     procedure :: optimize
     procedure :: mult_l,mult_r
-    procedure :: mult_l_cont,mult_r_cont
-    procedure :: mult_l_disc,mult_r_disc
 
     !MPI
     procedure :: send
@@ -40,46 +37,6 @@ end type
 private
 public t_H,t_H_coo
 contains 
-
-
-subroutine mult_r_cont(this,bnd,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: bnd(2)
-    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_l_cont(this,bnd,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: bnd(2)
-    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_r_disc(this,N,ind,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: N
-    integer,intent(in)           :: ind(N)
-    real(8),intent(in)           :: vec(N)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_l_disc(this,N,ind,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: N
-    integer,intent(in)           :: ind(N)
-    real(8),intent(in)           :: vec(N)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
 
 subroutine mult_r(this,lat,res)
     class(t_H_coo),intent(in)    :: this
@@ -315,20 +272,6 @@ subroutine check_H(this)
     if(any(this%colind<1)) STOP "H_coo colind entry smaller than 1"
 
 end subroutine
-
-subroutine eval_single(this,E,i_m,order,lat,work)
-    use m_work_ham_single
-    ! input
-    class(t_H_coo),intent(in)   :: this
-    type(lattice), intent(in)   :: lat
-    integer, intent(in)         :: i_m
-    integer,intent(in)          :: order
-    ! output
-    real(kind=8), intent(out)    :: E
-    type(work_ham_single),intent(inout) :: work
-
-    ERROR STOP "CANNOT calculate single energy contributions with this Hamiltonian-type"
-end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!

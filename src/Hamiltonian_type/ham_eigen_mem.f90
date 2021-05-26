@@ -14,9 +14,7 @@ type,extends(t_H_eigen) :: t_H_eigen_mem
 
     !pointers to Hamiltonian data handled by eigen (col major format) (zero based)
     real(C_DOUBLE),pointer  :: HT_val(:)
-    integer(C_INT),pointer  :: HT_col(:),HT_row(:)
-    !helper variables
-    integer                 :: row_max=0 !maximal number of entries per col
+    integer(C_INT),pointer  :: HT_outer(:),HT_inner(:)
 
 contains
     !necessary t_H routines
@@ -28,18 +26,13 @@ contains
 
     procedure :: optimize
     procedure :: mult_l
-!    procedure :: mult_l_cont
-!    procedure :: mult_l_disc
-!    procedure :: mult_r_single,mult_l_single   !can probably be made more efficient, but I am not sure if it is still necessary
     procedure :: mult_r_ind 
-!    procedure :: mult_r_disc_disc
-!    procedure :: get_ind_mult_l
 
 
     procedure :: set_work_single
     procedure :: get_work_size_single
 
-    procedure :: mult_r_single
+    procedure :: mult_r_disc
 
     procedure :: set_auxiliaries
 
@@ -89,77 +82,54 @@ subroutine get_work_size_single(this,sizes)
     integer                         :: sizes_n(N_work_single)
 
     Call this%t_H_eigen%get_work_size_single(sizes_n)
-    Call work_size_single(this%dim_l_single,this%row_max,sizes)
+    Call work_size_single(maxval(this%dim_l_single),this%row_max,sizes)
     sizes=max(sizes,sizes_n)
 end subroutine
 
-subroutine mult_r_single(this,i_m,comp,lat,work,vec)
-    !Calculates the entries of the matrix * right vector product which corresponds to the i_m's site of component comp of the left modes
+subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+    !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_eigen_mem), intent(in)    :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m           !index of the comp's right mode in the inner dim_mode
-    integer, intent(in)                 :: comp          !component of right mode
-    !temporary data
-    type(work_ham_single),intent(inout) :: work          !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
+    integer, intent(in)                 :: N            !number of indices to calculated
+    integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output
-    real(8),intent(inout)               :: vec(:)        !dim_modes_inner(this%mode_l%order(comp))
+    real(8),intent(out)                 :: vec(N) ! dim_modes_inner(this%mode_r%order(comp))
+    !temporary data
+    integer,intent(inout)               :: ind_sum( N+1)                !ind_mult index where the a vec-entry start and end
+    integer,intent(inout)               :: ind_mult(N*this%row_max)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+    real(8),intent(inout)               :: mat_mult(N*this%row_max)     !matrix entries corresponding to ind_mult
+    real(8),intent(inout)               :: vec_mult(N*this%row_max)     !values of discontiguous right mode which has to be evaluated (indices of ind_mult)
 
-    integer :: i,j,i_col
-    integer :: ii
-
-#ifdef CPP_USE_WORK
-    !temporary data slices
-    integer,pointer,contiguous          :: ind_out(:)    !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
-    integer,pointer,contiguous          :: ind_sum(:)    !ind_mult index where the a vec-entry start and end
-    integer,pointer,contiguous          :: ind_mult(:)   !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
-    real(8),pointer,contiguous          :: mat_mult(:)   !matrix entries corresponding to ind_mult
-    real(8),pointer,contiguous          :: vec_r(:)      !values of discontiguous right mode which has to be evaluated (indices of ind_mult)
-
-
-    !associate temporary arrays
-    !!int vector slices
-    ind_out (1:this%dim_r_single             )=>work%int_arr (1                               :this%dim_l_single                    )
-    ind_sum (1:this%dim_r_single+1           )=>work%int_arr (1+this%dim_r_single             :this%dim_r_single* 2               +1)
-    ind_mult(1:this%dim_r_single*this%col_max)=>work%int_arr (1+this%dim_r_single*2+1         :this%dim_r_single*(2+ this%col_max)+1)
-    !!real vector slices
-    vec_r   (1:this%dim_r_single*this%col_max)=>work%real_arr(1                               :this%dim_r_single*this%col_max                  )
-    mat_mult(1:this%dim_r_single*this%col_max)=>work%real_arr(1+this%dim_r_single*this%col_max:this%dim_r_single*this%col_max*2                )
-#else
-    !temporary arrays
-    integer                     :: ind_out (this%dim_l_single             )     !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
-    integer                     :: ind_sum (this%dim_l_single+1           )     !ind_mult index where the a vec-entry start and end
-    integer                     :: ind_mult(this%dim_l_single*this%row_max)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
-    real(8)                     :: mat_mult(this%dim_l_single*this%row_max)     !matrix entries corresponding to ind_mult
-    real(8)                     :: vec_r   (this%dim_l_single*this%row_max)     !values of discontiguous right mode which has to be evaluated (indices of ind_mult)
-#endif
-    !get indices of the output vector 
-    Call this%mode_l%get_ind_site_expl(comp,i_m,this%dim_l_single,ind_out)
+    !some local indices/ loop variables
+    integer ::  i,j, i_outer,ii
 
     !get matrix indices and values whose vec.mat product constitute the output vector
     ind_sum(1)=0
     ii=0
-    do i=1,this%dim_l_single
-        i_col=ind_out(i)
-        do j=this%HT_col(i_col)+1,this%HT_col(i_col+1)
+    do i=1,N
+        i_outer=ind_out(i)
+        do j=this%HT_outer(i_outer)+1,this%HT_outer(i_outer+1)
             ii=ii+1
             mat_mult(ii)=this%HT_val(j)
-            ind_mult(ii)=this%HT_row(j)
+            ind_mult(ii)=this%HT_inner(j)
         enddo
         ind_sum(i+1)=ii
     enddo
     ind_mult=ind_mult+1    !zero based index from c++
 
     !get the right vector values which are multiplied with the matrix
-    Call this%mode_r%get_mode_disc_expl(lat,ii,ind_mult(:ii),vec_r(:ii))
+    Call this%mode_r%get_mode_disc(lat,ii,ind_mult(:ii),vec_mult(:ii))
 
     !multipy the matrix and right vector entries and sum together to the respective output entry
-    vec_r(:ii)=vec_r(:ii)*mat_mult(:ii)
-    do i=1,this%dim_l_single
-        vec(i)=sum(vec_r(ind_sum(i)+1:ind_sum(i+1)))
+    vec_mult(:ii)=vec_mult(:ii)*mat_mult(:ii)
+    do i=1,N
+        vec(i)=sum(vec_mult(ind_sum(i)+1:ind_sum(i+1)))
     enddo
 end subroutine 
+
 
 !subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
 !    !get the indicies in ind_out(:N_out) of the right vector which are necessary to 
@@ -266,7 +236,7 @@ subroutine destroy_child(this)
     Call this%t_H_eigen%destroy_child()
     if(this%is_set())then
         Call eigen_H_destroy(this%HT)
-        nullify(this%HT_val,this%HT_col,this%HT_row)
+        nullify(this%HT_val,this%HT_outer,this%HT_inner)
         this%row_max=0
         this%dim_l_single=0
     endif
@@ -361,11 +331,11 @@ subroutine set_H_ptr(this)
     type(C_PTR)     :: col,row,val
     integer         :: dimH(2), nnz
 
-    nullify(this%HT_row,this%HT_col,this%HT_val)
+    nullify(this%HT_inner,this%HT_outer,this%HT_val)
     Call eigen_get_dat(this%HT,nnz,dimH,col,row,val)
     if(nnz/=this%nnz) ERROR STOP "number of entries of Hamiltonian and Hamiltonian transpose should be identical"
-    CAll C_F_POINTER(col, this%HT_col, [dimH(2)+1])
-    CAll C_F_POINTER(row, this%HT_row, [nnz]) 
+    CAll C_F_POINTER(col, this%HT_outer, [dimH(2)+1])
+    CAll C_F_POINTER(row, this%HT_inner, [nnz]) 
     CAll C_F_POINTER(val, this%HT_val, [nnz]) 
 end subroutine
 
@@ -375,9 +345,9 @@ subroutine set_row_max(this)
     integer,allocatable                 :: tmp(:)
     integer                             :: i
 
-    allocate(tmp(size(this%HT_col)-1))
+    allocate(tmp(size(this%HT_outer)-1))
     do i=1,size(tmp)
-        tmp(i)=this%HT_col(i+1)-this%HT_col(i)
+        tmp(i)=this%HT_outer(i+1)-this%HT_outer(i)
     enddo
     this%row_max=maxval(tmp)
 end subroutine
