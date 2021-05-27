@@ -45,11 +45,9 @@ contains
     procedure                               :: mult_l_disc,   mult_r_disc
 
     !routines acting on parts of the Hamiltonian defined by a single site of an order-parameter
-!    procedure(int_eval_single),deferred     :: eval_single                         !evaluates the energy caused by a single mode (using a work array)
     procedure                               :: set_work_single                     !sets the necessary sizes for the work arrays
 
     !Utility functions
-
     procedure,NON_OVERRIDABLE               :: finish_setup_base
     procedure,NON_OVERRIDABLE               :: destroy
     procedure,NON_OVERRIDABLE               :: copy
@@ -75,13 +73,11 @@ contains
     procedure,NON_OVERRIDABLE  :: set_prepared
     procedure,NON_OVERRIDABLE  :: same_space
 
-
     !finalize routine? (might be risky with Hamiltonian references that have been passed around)
 end type
 
 
 abstract interface
-
     subroutine int_finish_setup(this)
         import t_H_base
         class(t_H_base),intent(inout)    :: this
@@ -96,70 +92,9 @@ abstract interface
         real(8),intent(in),optional :: beta
     end subroutine
 
-    subroutine int_mult_single(this,i_site,lat,res)
-        import t_H_base,lattice
-        class(t_H_base),intent(in)  :: this
-        integer,intent(in)          :: i_site
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: res(:)
-    end subroutine
-
-    subroutine int_mult_red(this,lat,res,op_keep)
-        import t_H_base,lattice
-        class(t_H_base),intent(in)  :: this
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: res(:)
-        integer,intent(in)          :: op_keep
-    end subroutine
-
-    subroutine int_mult_cont(this,bnd,vec,res)
-        !multiply to the either side with a continuous section of the applied vector
-        import t_H_base
-        class(t_H_base),intent(in)  :: this
-        integer,intent(in)          :: bnd(2)
-        real(8),intent(in)          :: vec(bnd(2)-bnd(1)+1)
-        real(8),intent(inout)       :: res(:)   !result matrix-vector product
-    end subroutine 
-    
-    subroutine int_mult_disc(this,N,ind,vec,res)
-        !multiply to the either side with a discontinuous section of the applied vector
-        import t_H_base
-        class(t_H_base),intent(in)  :: this
-        integer,intent(in)          :: N
-        integer,intent(in)          :: ind(N)
-        real(8),intent(in)          :: vec(N)
-        real(8),intent(inout)       :: res(:)   !result matrix-vector product
-    end subroutine 
-
-    subroutine int_mult_ind(this,vec,N,ind_out,vec_out)
-        import t_H_base
-        class(t_H_base),intent(in)  :: this
-        real(8),intent(in)          :: vec(:)
-        integer,intent(in)          :: N
-        integer,intent(in)          :: ind_out(N)
-        real(8),intent(out)         :: vec_out(N)
-    end subroutine 
-
     subroutine int_destroy(this)
         import t_H_base
         class(t_H_base),intent(inout)  :: this
-    end subroutine
-
-    subroutine int_eval_all(this,E, lat)
-        import t_H_base,lattice
-        class(t_H_base),intent(in)  ::  this
-        type(lattice),intent(in)    ::  lat
-        real(8),intent(out)         ::  E
-    end subroutine
-
-    subroutine int_eval_single(this,E,i_m,order,lat,work)
-        import t_H_base,lattice,number_different_order_parameters, work_ham_single
-        class(t_H_base),intent(in)  ::  this
-        type(lattice),intent(in)    ::  lat
-        integer,intent(in)          ::  i_m     !site index in (1:Ncell*dim_mode_inner(order)/dim_mode(order))-basis
-        integer,intent(in)          :: order    
-        real(8),intent(out)         ::  E       !energy caused by considered site
-        type(work_ham_single),intent(inout) ::  work
     end subroutine
 
     subroutine int_init_H_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
@@ -186,7 +121,6 @@ abstract interface
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
     end subroutine
-
 
     subroutine int_init_H_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
         import t_H_base,lattice
@@ -320,7 +254,6 @@ contains
 !!!!!!!!!!!!!!                    BASE ROUTINES                                !!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
     subroutine bcast_base(this,comm)
         use mpi_basic                
         class(t_H_base),intent(inout)        ::  this
@@ -335,7 +268,6 @@ contains
         Call MPI_Bcast(this%mult_M_single,   2, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%set          ,   1, MPI_LOGICAL  , comm%mas, comm%com,ierr)
         Call MPI_Bcast(this%desc         , 100, MPI_CHARACTER, comm%mas, comm%com,ierr)
-
 
         if(comm%ismas)then
             N(1)=size(this%op_l)
@@ -688,6 +620,4 @@ subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_
     write(error_unit,'(A)')   "Please choose a Hamiltonian implementation including an implementation such as the eigen and mkl options."
     ERROR STOP
 end subroutine 
-
-
 end module

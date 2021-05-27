@@ -29,7 +29,7 @@ contains
 
     procedure :: optimize
 
-    !might make sense to add full matrix multiplication to faster side with transpose
+    procedure :: mult_l
     procedure :: mult_l_disc
 
     procedure :: set_work_single
@@ -45,6 +45,39 @@ contains
 end type
 
 contains
+
+subroutine mult_l(this,lat,res,alpha,beta)
+    !this implementation without the transpose is only very slightly faster thatn the operator on this%H with transpose
+    !so that in most cases it is not worth it to use this class if only mult_l is supposed to be optimized
+    class(t_H_mkl_csr_mem),intent(in)   :: this
+    type(lattice), intent(in)           :: lat
+    real(8), intent(inout)              :: res(:)
+    real(8),intent(in),optional         :: alpha
+    real(8),intent(in),optional         :: beta
+    ! internal
+    integer(C_int)             :: stat
+    real(8),pointer            :: modes(:)
+    real(8),allocatable,target :: vec(:)
+    real(8)                    :: alp, bet
+
+    if(present(alpha))then
+        alp=alpha
+    else
+        alp=1.0d0
+    endif
+    if(present(beta))then
+        bet=beta
+    else
+        bet=0.0d0
+    endif
+    Call this%mode_l%get_mode(lat,modes,vec)
+    if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
+    stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alp,this%HT,this%descr,modes,bet,res)
+    if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl_mem"
+    if(allocated(vec)) deallocate(vec)
+end subroutine 
+
+
 
 subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector

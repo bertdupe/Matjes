@@ -80,7 +80,6 @@ type(t_H_mkl_csr) function dummy_constructor()
 end function 
 
 subroutine mult_r(this,lat,res,alpha,beta)
-    !mult
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product

@@ -159,6 +159,7 @@ subroutine mult_r(this,lat,res,alpha,beta)
     if(present(beta))then
         bet=beta
     else
+        res=0.0d0  !prevents uninitialized runtime warnings
         bet=0.0d0
     endif
     Call this%mode_r%get_mode(lat,modes,vec)
@@ -214,6 +215,7 @@ subroutine mult_l(this,lat,res,alpha,beta)
     if(present(beta))then
         bet=beta
     else
+        res=0.0d0  !prevents uninitialized runtime warnings
         bet=0.0d0
     endif
     Call this%mode_l%get_mode(lat,modes,vec)
