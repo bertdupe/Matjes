@@ -350,7 +350,7 @@ end subroutine
 subroutine set_auxiliaries(this)
     class(t_H_eigen),intent(inout)    :: this
 
-    Call this%set_deriv()
+!    Call this%set_deriv()  !probably not necessary here
     Call set_H_ptr(this)
     Call set_col_max(this)
 end subroutine

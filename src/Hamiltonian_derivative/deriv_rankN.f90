@@ -5,25 +5,11 @@ use m_H_type, only: t_H_base
 use m_work_ham_single, only:  work_ham_single
 
 private
-public :: t_deriv_l_N, t_deriv_r_N
-
-type,extends(t_deriv_l)   :: t_deriv_l_N
-    integer ::  order=0
-contains
-    procedure   :: get          => get_lN
-    procedure   :: get_single   => get_lN_single
-end type
-
-type,extends(t_deriv_r)   :: t_deriv_r_N
-    integer ::  order=0
-contains
-    procedure   :: get          => get_rN
-    procedure   :: get_single   => get_rN_single
-end type
+public get_lN, get_rN, get_lN_single, get_rN_single
 
 contains
     subroutine get_lN(this,H,lat,vec)
-        class(t_deriv_l_N),intent(in)   :: this
+        class(t_deriv),intent(in)       :: this
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
@@ -36,7 +22,7 @@ contains
     end subroutine
 
     subroutine get_rN(this,H,lat,vec)
-        class(t_deriv_r_N),intent(in)   :: this
+        class(t_deriv),intent(in)       :: this
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
@@ -49,7 +35,7 @@ contains
     end subroutine
 
     subroutine get_lN_single(this,H,lat,site,work,vec)
-        class(t_deriv_l_N),intent(in)       :: this
+        class(t_deriv),intent(in)           :: this
         class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: site
@@ -106,7 +92,7 @@ contains
     end subroutine
 
     subroutine get_rN_single(this,H,lat,site,work,vec)
-        class(t_deriv_r_N),intent(in)       :: this
+        class(t_deriv),intent(in)           :: this
         class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
         integer,intent(in)                  :: site
