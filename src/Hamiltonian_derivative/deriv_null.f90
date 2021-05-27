@@ -26,7 +26,7 @@ contains
         type(lattice),intent(in)            :: lat
         real(8),intent(inout)               :: vec(:)
         
-        vec=0.0d0
+        continue    !nothing to do here
     end subroutine
 
     subroutine get_r_null(this,H,lat,vec)
@@ -35,7 +35,7 @@ contains
         type(lattice),intent(in)            :: lat
         real(8),intent(inout)               :: vec(:)
 
-        vec=0.0d0
+        continue    !nothing to do here
     end subroutine
 
     subroutine get_l_null_single(this,H,lat,site,work,vec)
@@ -46,7 +46,7 @@ contains
         type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)               :: vec(:)
         
-        vec=0.0d0
+        continue    !nothing to do here
     end subroutine
 
     subroutine get_r_null_single(this,H,lat,site,work,vec)
@@ -57,6 +57,6 @@ contains
         type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)               :: vec(:)
         
-        vec=0.0d0
+        continue    !nothing to do here
     end subroutine
 end module

@@ -39,7 +39,6 @@ contains
     !routines acting on the entire Hamiltonian
     procedure ,NON_OVERRIDABLE              :: eval_all                 !evaluates energy of full lattice
     procedure(int_mult),deferred            :: mult_r,mult_l            !multipy out with left/right side
-    procedure ,NON_OVERRIDABLE              :: mult_r_red,mult_l_red    !multiplied out left/right and reduces result to only one order-parameter
     procedure ,NON_OVERRIDABLE              :: energy_dist              !get energy distribution per site
 
     !routines acting on parts of the Hamiltonian
@@ -88,11 +87,12 @@ abstract interface
         class(t_H_base),intent(inout)    :: this
     end subroutine
 
-    subroutine int_mult(this,lat,res)
+    subroutine int_mult(this,lat,res,beta)
         import t_H_base,lattice
         class(t_H_base),intent(in)  :: this
         type(lattice),intent(in)    :: lat
         real(8),intent(inout)       :: res(:)
+        real(8),intent(in),optional :: beta
     end subroutine
 
     subroutine int_mult_single(this,i_site,lat,res)
@@ -314,34 +314,6 @@ contains
         endif
         if(allocated(vec)) deallocate(vec)
     end subroutine
-
-    subroutine mult_r_red(this,lat,res,op_keep)
-        !multiply out right side, multiply with left order parameter, reduce to only keep operator corresponding to op_keep
-        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H_base),intent(in)           :: this
-        type(lattice), intent(in)       :: lat
-        real(8), intent(inout)          :: res(:)   !result matrix-vector product
-        integer,intent(in)              :: op_keep
-        ! internal
-        real(8)                         :: tmp(this%dimH(1))   !multipied, but not reduced
-    
-        Call this%mult_r(lat,tmp)
-        Call this%mode_l%reduce_other_exc(lat,op_keep,tmp,res)
-    end subroutine 
-    
-    subroutine mult_l_red(this,lat,res,op_keep)
-        !multiply out left side, multiply with right order parameter, reduce to only keep operator corresponding to op_keep
-        !this is mainly necessary to calculate the effective magnetic field (corresponding to derivative with respect to one order parameter)
-        class(t_H_base),intent(in)           :: this
-        type(lattice), intent(in)       :: lat
-        real(8), intent(inout)          :: res(:)   !result matrix-vector product
-        integer,intent(in)              :: op_keep
-        ! internal
-        real(8)                         :: tmp(this%dimH(2))   !multipied, but not reduced
-    
-        Call this%mult_l(lat,tmp)
-        Call this%mode_r%reduce_other_exc(lat,op_keep,tmp,res)
-    end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!                    BASE ROUTINES                                !!!!!!!!!!!

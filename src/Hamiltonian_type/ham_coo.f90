@@ -38,18 +38,20 @@ private
 public t_H,t_H_coo
 contains 
 
-subroutine mult_r(this,lat,res)
+subroutine mult_r(this,lat,res,beta)
     class(t_H_coo),intent(in)    :: this
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
+    real(8),intent(in),optional  :: beta
 
     STOP "IMPLEMENT mult_r FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
-subroutine mult_l(this,lat,res)
+subroutine mult_l(this,lat,res,beta)
     class(t_H_coo),intent(in)    :: this
     type(lattice),intent(in)     :: lat
     real(8),intent(inout)        :: res(:)
+    real(8),intent(in),optional  :: beta
 
     STOP "IMPLEMENT mult_l FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 

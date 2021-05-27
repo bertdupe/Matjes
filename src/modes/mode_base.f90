@@ -17,7 +17,8 @@ type, abstract :: F_mode
     !routines acting on the entire mode
     procedure(int_get_mode),deferred            :: get_mode             !subroutine which returns the mode 
     procedure(int_get_mode_exc),deferred        :: get_mode_exc         !subroutine which returns the mode excluding one order parameter indexed by the module component
-    procedure(int_mode_reduce_comp),deferred    :: mode_reduce_comp     !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules indexed by the module component
+    procedure(int_reduce_comp),deferred         :: reduce_comp          !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules indexed by the module component
+    procedure(int_reduce_comp_add),deferred     :: reduce_comp_add      !subroutine which adds the result of reduce_comp to the output vector
     procedure,NON_OVERRIDABLE                   :: mode_reduce          !subroutine which reduces an input vector to the shape of a single constituent state according the the F_mode rules indexed by the order parameter
 
     !routines acting on mode depending on a indices
@@ -117,15 +118,28 @@ abstract interface
         real(8),intent(inout)                       :: vec(:) !result mode excluding the first state with op_exc
     end subroutine
 
-    subroutine int_mode_reduce_comp(this,lat,vec_in,comp,vec_out)
+    subroutine int_reduce_comp(this,lat,vec_in,comp,vec_out)
         !subroutine which reduces the input mode according to the rules of this F_modes construction rules
         ! to be in the basis of order index by comp
+        !ADDS TO THE VEC_OUT input
         import F_mode,lattice
         class(F_mode),intent(in)        :: this
         real(8),intent(in)              :: vec_in(:)
         type(lattice),intent(in)        :: lat       !lattice type which knows about all states
         integer,intent(in)              :: comp
         real(8),intent(out)             :: vec_out(lat%dim_modes(this%order(comp))*lat%Ncell)
+    end subroutine
+
+    subroutine int_reduce_comp_add(this,lat,vec_in,comp,vec_out)
+        !subroutine which reduces the input mode according to the rules of this F_modes construction rules
+        ! to be in the basis of order index by comp
+        !ADDS TO THE VEC_OUT input
+        import F_mode,lattice
+        class(F_mode),intent(in)        :: this
+        real(8),intent(in)              :: vec_in(:)
+        type(lattice),intent(in)        :: lat       !lattice type which knows about all states
+        integer,intent(in)              :: comp
+        real(8),intent(inout)           :: vec_out(lat%dim_modes(this%order(comp))*lat%Ncell)
     end subroutine
 
     function int_is_same(this,comp)result(same)
@@ -226,12 +240,13 @@ subroutine copy_base(this,F_out)
     F_out%mode_size=this%mode_size
 end subroutine
 
-subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
+subroutine reduce_other_exc(this,lat,op_keep,vec_other,beta,res)
     !subroutine to get the derivative, may be overwritten
     class(F_mode),intent(in)        :: this
     type(lattice),intent(in)        :: lat          !lattice type which knows about all states
     integer,intent(in)              :: op_keep      !operator index which is to be kept (1,number_different_order_parameters)
     real(8),intent(in)              :: vec_other(:) !other vector to which the Hamiltonian has been multiplied
+    real(8),intent(in)              :: beta
     real(8),intent(inout)           :: res(:)
 
     real(8)         :: tmp(size(vec_other))
@@ -247,9 +262,8 @@ subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
     endif
 #endif
     Call this%get_mode_exc(lat,comp,tmp)
-    tmp=vec_other*tmp
-    Call this%mode_reduce_comp(lat,tmp,comp,res)
-    res=res*real(this%order_occ(op_keep),8)
+    tmp=vec_other*tmp*beta*real(this%order_occ(op_keep),8)
+    Call this%reduce_comp_add(lat,tmp,comp,res)
 end subroutine
 
 subroutine get_mode_exc_op_disc(this,lat,op_exc,N,ind,vec)
@@ -294,7 +308,7 @@ subroutine mode_reduce(this,lat,vec_in,op_keep,vec_out)
         ERROR STOP "This makes no sense and should probably prevented earlier in the code"
     endif
 #endif
-    Call this%mode_reduce_comp(lat,vec_in,comp,vec_out)
+    Call this%reduce_comp(lat,vec_in,comp,vec_out)
 end subroutine
 
 subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)

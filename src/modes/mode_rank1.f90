@@ -12,7 +12,8 @@ type, extends(F_mode) :: F_mode_rank1_point
     contains
     !necessary routines as defined by class
     procedure   :: get_mode   !subroutine which returns the mode 
-    procedure   :: mode_reduce_comp
+    procedure   :: reduce_comp
+    procedure   :: reduce_comp_add
     procedure   :: get_ind_site
     !non-sensical routines required by class (exclude makes no sense to rank1 -> always returns 1)
     procedure   :: get_mode_exc
@@ -133,7 +134,7 @@ subroutine get_mode_exc_disc(this,lat,comp,N,ind,vec)
     vec=1.0
 end subroutine
 
-subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
+subroutine reduce_comp(this,lat,vec_in,comp,vec_out)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rank1_point),intent(in)        :: this
     real(8),intent(in)                          :: vec_in(:)
@@ -147,6 +148,22 @@ subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
     if(comp/=1) ERROR STOP "COMP shall not be larger than 1 for mode_rank1 get_mode_exc_disc"
 #endif
     vec_out=vec_in
+end subroutine
+
+subroutine reduce_comp_add(this,lat,vec_in,comp,vec_out)
+    use, intrinsic :: iso_fortran_env, only : error_unit
+    class(F_mode_rank1_point),intent(in)        :: this
+    real(8),intent(in)                          :: vec_in(:)
+    type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
+    integer,intent(in)                          :: comp      !of which operator the first entry is kept
+    real(8),intent(inout)                       :: vec_out(lat%dim_modes(this%order(comp))*lat%Ncell)
+
+#ifdef CPP_DEBUG
+    write(error_unit,*) "WARNING, using mode_reduce_comp for rank1 mode which is superfluous"
+    !make sure to check routines which call that if calling this can be avoided easily
+    if(comp/=1) ERROR STOP "COMP shall not be larger than 1 for mode_rank1 get_mode_exc_disc"
+#endif
+    vec_out=vec_out+vec_in
 end subroutine
 
 function is_same(this,comp)result(same)

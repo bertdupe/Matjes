@@ -26,34 +26,44 @@ private
 public t_H,t_H_dense
 contains 
 
-subroutine mult_r(this,lat,res)
+subroutine mult_r(this,lat,res,beta)
     !mult
     use m_derived_types, only: lattice
-    class(t_h_dense),intent(in)   :: this
+    class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    real(8),intent(in),optional     :: beta
     ! internal
-    real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
+    real(8),pointer                 :: modes(:)
+    real(8),allocatable,target      :: vec(:)
 
     Call this%mode_r%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-    res=matmul(this%H,modes)
+    if(present(beta))then
+        res=matmul(this%H,modes)+beta*res
+    else
+        res=matmul(this%H,modes)
+    endif
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine mult_l(this,lat,res)
+subroutine mult_l(this,lat,res,beta)
     use m_derived_types, only: lattice
-    class(t_h_dense),intent(in)   :: this
+    class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
 
     Call this%mode_l%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
-    res=matmul(modes,this%H)
+    if(present(beta))then
+        res=matmul(modes,this%H)+beta*res
+    else
+        res=matmul(modes,this%H)
+    endif
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 

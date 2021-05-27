@@ -331,18 +331,17 @@ void cuda_H_destroy(
 }
 
 
-void cuda_H_mult_mat_vec(
+void cuda_H_mult_r_beta(
     cusparseSpMatDescr* &mat,
     cusparseDnVecDescr* &in_vec,
     cusparseDnVecDescr* &out_vec,
+    const double        &beta,
     char*               &buffer,
     cusparseHandle_t*   &handle){
 
-    cusparseStatus_t stat;
     const double alpha= 1.0;    //save in device memory
-    const double beta = 0.0;
     //do the actual multiplication
-    stat = cusparseSpMV(*handle,
+    auto stat = cusparseSpMV(*handle,
                         CUSPARSE_OPERATION_NON_TRANSPOSE,
                         &alpha,
                         mat,
@@ -352,21 +351,48 @@ void cuda_H_mult_mat_vec(
                         CUDA_R_64F,
                         CUSPARSE_SPMV_CSR_ALG1,
                         buffer);
+#ifdef CPP_DEBUG
     assert (CUSPARSE_STATUS_SUCCESS == stat);
+#endif
 }
 
-void cuda_H_mult_vec_mat(
+void cuda_H_mult_r(
     cusparseSpMatDescr* &mat,
     cusparseDnVecDescr* &in_vec,
     cusparseDnVecDescr* &out_vec,
     char*               &buffer,
     cusparseHandle_t*   &handle){
 
-    cusparseStatus_t stat;
     const double alpha= 1.0;    //save in device memory
     const double beta = 0.0;
     //do the actual multiplication
-    stat = cusparseSpMV(*handle,
+    auto stat = cusparseSpMV(*handle,
+                        CUSPARSE_OPERATION_NON_TRANSPOSE,
+                        &alpha,
+                        mat,
+                        in_vec,
+                        &beta,
+                        out_vec,
+                        CUDA_R_64F,
+                        CUSPARSE_SPMV_CSR_ALG1,
+                        buffer);
+#ifdef CPP_DEBUG
+    assert (CUSPARSE_STATUS_SUCCESS == stat);
+#endif
+}
+
+
+void cuda_H_mult_l(
+    cusparseSpMatDescr* &mat,
+    cusparseDnVecDescr* &in_vec,
+    cusparseDnVecDescr* &out_vec,
+    char*               &buffer,
+    cusparseHandle_t*   &handle){
+
+    const double alpha= 1.0;    //save in device memory
+    const double beta = 0.0;
+    //do the actual multiplication
+    auto stat = cusparseSpMV(*handle,
                         CUSPARSE_OPERATION_TRANSPOSE,
                         &alpha,
                         mat,
@@ -376,8 +402,37 @@ void cuda_H_mult_vec_mat(
                         CUDA_R_64F,
                         CUSPARSE_SPMV_CSR_ALG1,
                         buffer);
+#ifdef CPP_DEBUG
     assert (CUSPARSE_STATUS_SUCCESS == stat);
+#endif
 }
+
+void cuda_H_mult_l_beta(
+    cusparseSpMatDescr* &mat,
+    cusparseDnVecDescr* &in_vec,
+    cusparseDnVecDescr* &out_vec,
+    const double        &beta,
+    char*               &buffer,
+    cusparseHandle_t*   &handle){
+
+    const double alpha= 1.0;    //save in device memory
+//    const double beta = 0.0;
+    //do the actual multiplication
+    auto stat = cusparseSpMV(*handle,
+                        CUSPARSE_OPERATION_TRANSPOSE,
+                        &alpha,
+                        mat,
+                        in_vec,
+                        &beta,
+                        out_vec,
+                        CUDA_R_64F,
+                        CUSPARSE_SPMV_CSR_ALG1,
+                        buffer);
+#ifdef CPP_DEBUG
+    assert (CUSPARSE_STATUS_SUCCESS == stat);
+#endif
+}
+
 
 void cuda_free_buffer(
     char* &buffer

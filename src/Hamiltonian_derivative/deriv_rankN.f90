@@ -28,7 +28,11 @@ contains
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
 
-        Call H%mult_r_red(lat,vec,this%order) 
+        real(8)                         :: tmp(H%dimH(1))   !multipied, but not reduced
+        real(8),parameter               :: beta=1.0d0
+    
+        Call H%mult_r(lat,tmp)
+        Call H%mode_l%reduce_other_exc(lat,this%order,tmp,beta,vec)
     end subroutine
 
     subroutine get_rN(this,H,lat,vec)
@@ -37,7 +41,11 @@ contains
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
 
-        Call H%mult_l_red(lat,vec,this%order) 
+        real(8)                         :: tmp(H%dimH(2))   !multipied, but not reduced
+        real(8),parameter               :: beta=1.0d0
+    
+        Call H%mult_l(lat,tmp)
+        Call H%mode_r%reduce_other_exc(lat,this%order,tmp,beta,vec)
     end subroutine
 
     subroutine get_lN_single(this,H,lat,site,work,vec)

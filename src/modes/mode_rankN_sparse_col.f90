@@ -26,7 +26,8 @@ type, extends(F_mode) :: F_mode_rankN_sparse_col
     procedure   :: get_mode_disc
     procedure   :: get_mode_exc
     procedure   :: get_mode_exc_disc
-    procedure   :: mode_reduce_comp
+    procedure   :: reduce_comp
+    procedure   :: reduce_comp_add
     procedure   :: mode_reduce_comp_disc
 
     procedure   :: reduce_site_vec
@@ -196,7 +197,8 @@ subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)
     enddo
 end subroutine
 
-subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
+
+subroutine reduce_comp(this,lat,vec_in,comp,vec_out)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_col),intent(in)   :: this
     real(8),intent(in)                          :: vec_in(:)
@@ -208,12 +210,32 @@ subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
 
     vec_out=0.0d0
     do i=1,this%dat(comp)%nnz
-        vec_out(this%dat(comp)%col(i))=vec_out(this%dat(comp)%col(i))+vec_in(i)
+        vec_out(this%dat(comp)%col(i))=vec_in(i)
     enddo
 
     !!alternative way
     !do i=1,this%dat(comp)%dim_mat(2)
     !    vec_out(i)=sum(vec_in(this%dat(comp)%reverse(:,i)))
+    !enddo
+end subroutine
+
+subroutine reduce_comp_add(this,lat,vec_in,comp,vec_out)
+    use, intrinsic :: iso_fortran_env, only : error_unit
+    class(F_mode_rankN_sparse_col),intent(in)   :: this
+    real(8),intent(in)                          :: vec_in(:)
+    type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
+    integer,intent(in)                          :: comp 
+    real(8),intent(inout)                       :: vec_out(lat%dim_modes(this%order(comp))*lat%Ncell)
+
+    integer     ::  i
+
+    do i=1,this%dat(comp)%nnz
+        vec_out(this%dat(comp)%col(i))=vec_out(this%dat(comp)%col(i))+vec_in(i)
+    enddo
+
+    !!alternative way
+    !do i=1,this%dat(comp)%dim_mat(2)
+    !    vec_out(i)=vec_out(i)+sum(vec_in(this%dat(comp)%reverse(:,i)))
     !enddo
 end subroutine
 

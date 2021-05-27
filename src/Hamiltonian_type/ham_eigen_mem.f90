@@ -137,17 +137,23 @@ subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
     Call eigen_H_mult_l_ind(this%HT,modes,N,ind_out,vec_out)
 end subroutine
 
-subroutine mult_l(this,lat,res)
+subroutine mult_l(this,lat,res,beta)
     use m_derived_types, only: lattice
     class(t_H_eigen_mem),intent(in) :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    real(8),intent(in),optional     :: beta
+
     ! internal
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
 
     Call this%mode_l%get_mode(lat,modes,vec)
-    Call eigen_H_mult_r(this%HT,modes,res)
+    if(present(beta))then
+        Call eigen_H_mult_r_beta(this%HT,modes,res,beta)
+    else
+        Call eigen_H_mult_r(this%HT,modes,res)
+    endif
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 

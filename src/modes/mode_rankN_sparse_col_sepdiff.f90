@@ -16,11 +16,12 @@ end type
 
 contains
 
-subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
+subroutine reduce_other_exc(this,lat,op_keep,vec_other,beta,res)
     class(F_mode_rankN_sparse_col_sepdiff),intent(in)   :: this
     type(lattice),intent(in)                            :: lat       !lattice type which knows about all states
     integer,intent(in)                                  :: op_keep
     real(8),intent(in)                                  :: vec_other(:) !other vector to which the Hamiltonian has been multiplied
+    real(8),intent(in)                                  :: beta
     real(8),intent(inout)                               :: res(:)
 
     real(8)         :: tmp(size(vec_other))   !multipied, but not reduced
@@ -28,11 +29,10 @@ subroutine reduce_other_exc(this,lat,op_keep,vec_other,res)
     integer         :: i
 
     reduce=this%order==op_keep
-    res=0.0d0
     do i=1,size(this%dat)
         if(.not.reduce(i)) cycle
         Call this%get_mode_exc(lat,i,tmp)
-        tmp=vec_other*tmp
+        tmp=vec_other*tmp*beta
         Call this%mode_reduce_ind_sum(lat,tmp,i,res)
     enddo
 end subroutine

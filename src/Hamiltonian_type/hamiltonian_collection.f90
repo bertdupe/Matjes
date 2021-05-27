@@ -369,19 +369,18 @@ subroutine energy_single(this,i_m,order,lat,work,E)
     E=sum(tmp_E)
 end subroutine 
 
-subroutine get_eff_field(this,lat,B,Ham_type,tmp)
+subroutine get_eff_field(this,lat,B,Ham_type)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
     class(hamiltonian),intent(inout)    :: this
     type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
     real(8),intent(out)                 :: B(:)
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
-    real(8),intent(out)                 :: tmp(size(B))
 
     integer     :: iH, ierr
 
     B=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B,tmp)
+        Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B)
     enddo
 
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)

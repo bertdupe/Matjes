@@ -46,7 +46,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_print_Beff, only: print_Beff
     use m_precision, only: truncate
     use m_H_public, only: t_H, energy_all
-    use m_eff_field, only :get_eff_field
     use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     use m_solver_order,only : get_Dmode_int
@@ -92,8 +91,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     integer :: io_Eout_contrib
     integer :: dim_mode !dim_mode of the iterated order parameter
 
-    real(8),allocatable ::  Beff_tmp(:)
-
     real(8)     ::  time_init, time_final
 
 
@@ -108,7 +105,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     ! Create copies of lattice with order-parameter for intermediary states
     Call mag_lattice%copy(lat_1) 
     allocate(Beff(dim_mode*N_cell),source=0.0d0)
-    allocate(Beff_tmp(dim_mode*N_cell),source=0.0d0)
 
     !generalize the following
     call select_propagator(ext_param%ktini,N_loop)
@@ -243,7 +239,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
             !get effective field on magnetic lattice
             if(comm%Np>1) Call lat_1%bcast_val(comm)
-            Call H%get_eff_field(lat_1,Beff,1,Beff_tmp)
+            Call H%get_eff_field(lat_1,Beff,1)
 
             if(comm%ismas)then
                 !do integration

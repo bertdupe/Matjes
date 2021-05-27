@@ -37,7 +37,6 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    use m_energyfield, only : write_energy_field
    use m_solver_order
    use m_solver_commun
-   use m_eff_field, only : get_eff_field
    use m_createspinfile
    use m_update_time
    use m_write_config
@@ -73,7 +72,6 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    real(8),allocatable,target       :: Du(:,:,:),Du_int(:,:),V_1(:,:),V_2(:,:),acceleration(:,:),masses(:,:)
    real(8),allocatable,target       :: Feff(:)
    real(8),pointer,contiguous       :: Feff_v(:,:),Feff_3(:,:)
-   real(8),allocatable              :: Feff_tmp(:)
    real(8),pointer,contiguous       :: Du_3(:,:,:),Du_int_3(:,:)
 
    ! conversion factor to go from uam.nm/fs^2 to eV/nm
@@ -122,7 +120,6 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    allocate(Feff(my_lattice%u%dim_mode*N_cell),source=0.0d0)
    Feff_v(1:my_lattice%u%dim_mode,1:N_cell)=>Feff
    Feff_3(1:3,1:N_cell*(dim_mode/3))=>Feff
-   allocate(Feff_tmp(dim_mode*N_cell),source=0.0d0)
 
    allocate(Du(my_lattice%u%dim_mode,N_cell,N_loop),source=0.0d0)
    allocate(Du_int(my_lattice%u%dim_mode,N_cell),source=0.0d0)
@@ -213,14 +210,14 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
         !!!!!!!!!!!!!!!!!!!
 
            !get forces on the phonon lattice
-           Call H%get_eff_field(lat_1,Feff,5,Feff_tmp)
+           Call H%get_eff_field(lat_1,Feff,5)
            acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_1)/masses
 
            V_2=acceleration*dt/2.0d0+V_1      ! ( v of t+dt/2  )
            lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )
 
            !get forces on the phonon lattice
-           Call H%get_eff_field(lat_2,Feff,5,Feff_tmp)
+           Call H%get_eff_field(lat_2,Feff,5)
            acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses
 
            V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )

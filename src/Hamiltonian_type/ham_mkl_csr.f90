@@ -79,39 +79,49 @@ type(t_H_mkl_csr) function dummy_constructor()
     !continue 
 end function 
 
-subroutine mult_r(this,lat,res)
+subroutine mult_r(this,lat,res,beta)
     !mult
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    real(8),intent(in),optional     :: beta
     ! internal
     integer(C_int)             :: stat
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
-    real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
+    real(C_DOUBLE),parameter   :: alpha=1.0d0
 
     Call this%mode_r%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     res=0.0d0
-    stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
+    if(present(beta))then
+        stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes,beta ,res)
+    else
+        stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alpha,this%H,this%descr,modes,0.0d0,res)
+    endif
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_r of m_H_sparse_mkl"
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine mult_l(this,lat,res)
+subroutine mult_l(this,lat,res,beta)
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    real(8),intent(in),optional     :: beta
     ! internal
     integer(C_int)             :: stat
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
-    real(C_DOUBLE),parameter   :: alpha=1.0d0,beta=0.0d0
+    real(C_DOUBLE),parameter   :: alpha=1.0d0
 
     Call this%mode_l%get_mode(lat,modes,vec)
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
     res=0.0d0
-    stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes,beta,res)
+    if(present(beta))then
+        stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes,beta ,res)
+    else
+        stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alpha,this%H,this%descr,modes,0.0d0,res)
+    endif
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl"
     if(allocated(vec)) deallocate(vec)
 end subroutine 

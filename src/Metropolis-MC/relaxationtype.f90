@@ -1,6 +1,5 @@
 module m_relaxtyp
     use m_derived_types, only : lattice
-!    use m_eff_field, only : get_eff_field_single
 !    use m_H_public
     use m_hamiltonian_collection, only: hamiltonian
     use m_work_ham_single, only:  work_ham_single

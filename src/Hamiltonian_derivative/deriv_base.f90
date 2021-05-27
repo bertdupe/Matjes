@@ -76,17 +76,14 @@ contains
         allocate(deriv_out%r,source=this%r)
     end subroutine
 
-    subroutine get_deriv(this,H,lat,vec,tmp)
+    subroutine get_deriv(this,H,lat,vec)
         class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
         class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
-        real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
 
-        Call this%l%get(H,lat,tmp)
-        vec=vec+tmp
-        Call this%r%get(H,lat,tmp)
-        vec=vec+tmp
+        Call this%l%get(H,lat,vec)
+        Call this%r%get(H,lat,vec)
     end subroutine
 
     subroutine get_deriv_single(this,H,lat,site,work,vec,tmp)
