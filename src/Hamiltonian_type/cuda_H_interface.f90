@@ -17,39 +17,23 @@ module m_cuda_H_interface
            type(C_PTR),intent(in)                  :: handle
         end subroutine
 
-        subroutine cuda_H_mult_r(mat,in_vec,out_vec,buffer,handle) bind( c, name="cuda_H_mult_r" )
+        subroutine cuda_H_mult_r(mat,in_vec,out_vec,alpha,beta,buffer,handle) bind( c, name="cuda_H_mult_r" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(in)                  :: mat
            type(C_PTR),intent(in)                  :: in_vec
            type(C_PTR),intent(in)                  :: out_vec
-           type(C_PTR),intent(in)                  :: buffer
-           type(C_PTR),intent(in)                  :: handle
-        end subroutine
-
-        subroutine cuda_H_mult_r_beta(mat,in_vec,out_vec,beta,buffer,handle) bind( c, name="cuda_H_mult_r_beta" )
-           use, intrinsic :: iso_c_binding
-           type(C_PTR),intent(in)                  :: mat
-           type(C_PTR),intent(in)                  :: in_vec
-           type(C_PTR),intent(in)                  :: out_vec
+           real( kind = c_double ),intent(in)      :: alpha
            real( kind = c_double ),intent(in)      :: beta
            type(C_PTR),intent(in)                  :: buffer
            type(C_PTR),intent(in)                  :: handle
         end subroutine
 
-        subroutine cuda_H_mult_l(mat,in_vec,out_vec,buffer,handle) bind( c, name="cuda_H_mult_l" )
+        subroutine cuda_H_mult_l(mat,in_vec,out_vec,alpha,beta,buffer,handle) bind( c, name="cuda_H_mult_l" )
            use, intrinsic :: iso_c_binding
            type(C_PTR),intent(in)                  :: mat
            type(C_PTR),intent(in)                  :: in_vec
            type(C_PTR),intent(in)                  :: out_vec
-           type(C_PTR),intent(in)                  :: buffer
-           type(C_PTR),intent(in)                  :: handle
-        end subroutine
-
-        subroutine cuda_H_mult_l_beta(mat,in_vec,out_vec,beta,buffer,handle) bind( c, name="cuda_H_mult_l_beta" )
-           use, intrinsic :: iso_c_binding
-           type(C_PTR),intent(in)                  :: mat
-           type(C_PTR),intent(in)                  :: in_vec
-           type(C_PTR),intent(in)                  :: out_vec
+           real( kind = c_double ),intent(in)      :: alpha
            real( kind = c_double ),intent(in)      :: beta
            type(C_PTR),intent(in)                  :: buffer
            type(C_PTR),intent(in)                  :: handle

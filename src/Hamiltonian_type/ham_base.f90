@@ -87,11 +87,12 @@ abstract interface
         class(t_H_base),intent(inout)    :: this
     end subroutine
 
-    subroutine int_mult(this,lat,res,beta)
+    subroutine int_mult(this,lat,res,alpha,beta)
         import t_H_base,lattice
         class(t_H_base),intent(in)  :: this
         type(lattice),intent(in)    :: lat
         real(8),intent(inout)       :: res(:)
+        real(8),intent(in),optional :: alpha
         real(8),intent(in),optional :: beta
     end subroutine
 

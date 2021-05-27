@@ -170,47 +170,62 @@ end subroutine
 !    STOP
 !end subroutine 
 
-subroutine mult_r(this,lat,res,beta)
-    !mult
+subroutine mult_r(this,lat,res,alpha,beta)
     use m_derived_types, only: lattice
     class(t_H_cusparse),intent(in)  :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
+    real(8)                    :: alp, bet
 
+    if(present(alpha))then
+        alp=alpha
+    else
+        alp=1.0d0
+    endif
+    if(present(beta))then
+        bet=beta
+        Call cuda_fvec_set(this%rvec,res)
+    else
+        bet=0.0d0
+    endif
     Call this%mode_r%get_mode(lat,modes,vec)
     Call cuda_fvec_set(this%rvec,modes)
-    if(present(beta))then
-        Call cuda_fvec_set(this%lvec,res)
-        Call cuda_H_mult_r_beta(this%H,this%rvec, this%lvec, beta, this%buffer_r, handle)
-    else
-        Call cuda_H_mult_r      (this%H,this%rvec, this%lvec,      this%buffer_r, handle)
-    endif
+    Call cuda_H_mult_r(this%H,this%rvec, this%lvec, alp, bet, this%buffer_r, handle)
     Call cuda_fvec_get(this%lvec,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine mult_l(this,lat,res,beta)
+subroutine mult_l(this,lat,res,alpha,beta)
     use m_derived_types, only: lattice
     class(t_H_cusparse),intent(in)  :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer            :: modes(:)
     real(8),allocatable,target :: vec(:)
+    real(8)                    :: alp, bet
 
+    if(present(alpha))then
+        alp=alpha
+    else
+        alp=1.0d0
+    endif
+    if(present(beta))then
+        bet=beta
+        Call cuda_fvec_set(this%rvec,res)
+    else
+        bet=0.0d0
+    endif
     Call this%mode_l%get_mode(lat,modes,vec)
     Call cuda_fvec_set(this%lvec,modes)
-    if(present(beta))then
-        Call cuda_fvec_set(this%rvec,res)
-        Call cuda_H_mult_l_beta(this%H,this%lvec, this%rvec, beta, this%buffer_l, handle)
-    else
-        Call cuda_H_mult_l     (this%H,this%lvec, this%rvec,       this%buffer_l, handle)
-    endif
+    Call cuda_H_mult_l(this%H,this%lvec, this%rvec, alp, bet, this%buffer_l, handle)
     Call cuda_fvec_get(this%rvec,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 

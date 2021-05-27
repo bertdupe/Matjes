@@ -255,24 +255,15 @@ void eigen_H_add(
 }
 
 void eigen_H_mult_r(
-    const SpMat* &mat,
-    const double vec_in[],
-    double vec_out[]){
-
-    Map<const VectorXd> vec(vec_in,mat->cols());
-    Map<VectorXd> res(vec_out,mat->rows());
-    res= (*mat) * vec;
-}
-
-void eigen_H_mult_r_beta(
     const SpMat*  &mat,
     const double  vec_in[],
     double        vec_out[],
+    const double  &alpha,
     const double  &beta){
 
     Map<const VectorXd> vec(vec_in,mat->cols());
     Map<VectorXd> res(vec_out,mat->rows());
-    res= (*mat) * vec + beta * res;
+    res= alpha * ((*mat) * vec) + beta * res;
 }
 
 
@@ -319,26 +310,16 @@ void eigen_get_dat(
     col=mat->outerIndexPtr();
 }
 
-
 void eigen_H_mult_l(
     const SpMat* &mat,
     const double vec_in[],
-    double vec_out[]){
-
-    Map<const VectorXd> vec(vec_in,mat->rows());
-    Map<VectorXd> res(vec_out,mat->cols());
-    res=mat->transpose() * vec;
-}
-
-void eigen_H_mult_l_beta(
-    const SpMat* &mat,
-    const double vec_in[],
     double vec_out[],
+    const double  &alpha,
     const double  &beta){
 
     Map<const VectorXd> vec(vec_in,mat->rows());
     Map<VectorXd> res(vec_out,mat->cols());
-    res=mat->transpose() * vec + beta * res;
+    res=alpha* (mat->transpose() * vec) + beta * res;
 }
 
 void eigen_H_copy(

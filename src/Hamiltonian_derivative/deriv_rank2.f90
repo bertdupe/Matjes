@@ -32,9 +32,10 @@ contains
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
+        real(8),parameter               :: alpha=1.0d0
         real(8),parameter               :: beta=1.0d0
 
-        Call H%mult_r(lat,vec,beta)
+        Call H%mult_r(lat,vec,alpha,beta)
     end subroutine
 
     subroutine get_r1(this,H,lat,vec)
@@ -42,9 +43,10 @@ contains
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
+        real(8),parameter               :: alpha=1.0d0
         real(8),parameter               :: beta=1.0d0
 
-        Call H%mult_l(lat,vec,beta)
+        Call H%mult_l(lat,vec,alpha,beta)
     end subroutine
 
     subroutine get_l1_sym(this,H,lat,vec)
@@ -52,9 +54,10 @@ contains
         class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
         real(8),intent(inout)               :: vec(:)
-        real(8),parameter                   :: beta=2.0d0
+        real(8),parameter                   :: alpha=2.0d0
+        real(8),parameter                   :: beta=1.0d0
 
-        Call H%mult_r(lat,vec,beta)
+        Call H%mult_r(lat,vec,alpha,beta)
     end subroutine
 
     subroutine get_l1_single(this,H,lat,site,work,vec)
