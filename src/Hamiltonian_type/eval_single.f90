@@ -52,7 +52,6 @@ subroutine set(this,H,order)
             this%comp=H%mode_l%get_comp(order)
             this%calc=>eval_single_left
         else
-            write(*,*) allocated(H%mode_r)
             this%comp=H%mode_r%get_comp(order)
             this%calc=>eval_single_right
         endif

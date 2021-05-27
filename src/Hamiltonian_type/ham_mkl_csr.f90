@@ -63,13 +63,6 @@ subroutine set_work_single(this,work,order)
 
     if(.not.this%is_set()) ERROR STOP "cannot set work size of hamiltonian if it is not set"
     if(this%row_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if row_max==0"
-    if(.not.any(order==this%op_l))then
-        if(any(order==this%op_r))then
-            ERROR STOP "So far cannot consider Hamiltonian which has the single evaluation operator in the right side, but not on the left (some csc implementation?)"
-        else
-            ERROR STOP "Hamiltonian has no component of considered single energy evaluation, take it out or consider it somehow else"
-        endif
-    endif
     Call this%get_work_size_single(sizes)
     Call work%set(sizes)
 end subroutine

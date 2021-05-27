@@ -107,13 +107,6 @@ subroutine set_work_single(this,work,order)
 
     Call this%t_H_mkl_csr%set_work_single(work,order)
     if(this%col_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if col_max=0"
-    if(.not.any(order==this%op_l))then
-        if(any(order==this%op_r))then
-            ERROR STOP "DECIDE HOW TO TREATE CASE WITHOUT ENTRY"
-        else
-            ERROR STOP "Hamiltonian has no component of considered single energy evaluation, take it out or consider it somehow else"
-        endif
-    endif
     Call this%get_work_size_single(sizes)
     Call work%set(sizes)
 end subroutine

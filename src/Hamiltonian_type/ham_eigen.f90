@@ -57,13 +57,6 @@ subroutine set_work_single(this,work,order)
 
     if(.not.this%is_set()) ERROR STOP "cannot set work size of hamiltonian if it is not set"
     if(this%col_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if col_max==0"
-    if(.not.any(order==this%op_r))then
-        if(any(order==this%op_l))then
-            ERROR STOP "So far cannot consider Hamiltonian which has the single evaluation operator in the left side, but not on the right (some csr implementation?)"
-        else
-            ERROR STOP "Hamiltonian has no component of considered single energy evaluation, take it out or consider it somehow else"
-        endif
-    endif
     Call this%get_work_size_single(sizes)
     Call work%set(sizes)
 end subroutine
@@ -74,60 +67,6 @@ subroutine get_work_size_single(this,sizes)
 
     Call work_size_single(maxval(this%dim_r_single),this%col_max,sizes)
 end subroutine
-
-!subroutine eval_single(this,E,i_m,order,lat,work)
-!    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
-!    ! input
-!    class(t_H_eigen), intent(in)        :: this
-!    type(lattice), intent(in)           :: lat
-!    integer, intent(in)                 :: i_m
-!    integer, intent(in)                 :: order
-!    ! output
-!    real(8), intent(out)                :: E
-!    !temporary data
-!    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
-!    !temporary data slices
-!    integer,pointer,contiguous          :: ind(:)       !indices of all right mode entries which contain the order parameter order of the site corresponding to i_m
-!    real(8),pointer,contiguous          :: vec(:)       !values corresponding to ind
-!    integer,pointer,contiguous          :: ind_out(:)   !indices of the result array multipling the vector (vec/ind) to the matrix
-!    real(8),pointer,contiguous          :: vec_out(:)   !values corresponding to ind_out
-!    real(8),pointer,contiguous          :: vec_mult(:)     !values of discontiguous mode array on right side (indices of ind_out)
-!
-!    !some local indices/ loop variables
-!    integer :: i,j, i_col
-!    integer :: ii
-!#define _dim_ this%dim_r_single(order)
-!    !associate temporary arrays
-!    ind     (1:_dim_             )=>work%int_arr (1                       :_dim_                   )
-!    ind_out (1:_dim_*this%col_max)=>work%int_arr (1+_dim_                 :_dim_*(1+  this%col_max))
-!    vec     (1:_dim_             )=>work%real_arr(1                       :_dim_                   )
-!    vec_out (1:_dim_*this%col_max)=>work%real_arr(1+_dim_                 :_dim_*(1+  this%col_max))
-!    vec_mult(1:_dim_*this%col_max)=>work%real_arr(1+_dim_*(1+this%col_max):_dim_*(1+2*this%col_max))
-!
-!    !get right mode corresponding to site i_m of order order
-!    Call this%mode_r%get_mode_single(lat,1,i_m,_dim_,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
-!
-!    !Calculate matrix,right mode product only for the necessary discontiguous mode-indices
-!    ii=0
-!    do i=1,size(ind)
-!        i_col=ind(i)
-!        do j=this%H_outer(i_col)+1,this%H_outer(i_col+1)
-!            ii=ii+1
-!            vec_out(ii)=this%H_val(j)*vec(i)
-!            ind_out(ii)=this%H_inner(j)
-!        enddo
-!    enddo
-!    ind_out=ind_out+1   !zero based index from c++
-!    
-!    !get left mode for indices of the mat/vec product 
-!    Call this%mode_l%get_mode_disc(lat,ii,ind_out(:ii),vec_mult(:ii))
-!
-!    !Get the energy
-!    E=DOT_PRODUCT(vec_mult(:ii),vec_out(:ii))
-!    nullify(ind,ind_out,vec,vec_out,vec_mult)
-!#undef _dim_    
-!end subroutine 
-
 
 subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the left vector * matrix product for the indices ind_out of the result vector
@@ -195,60 +134,11 @@ subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_
     ERROR STOP
 end subroutine 
 
-
-
 type(t_H_eigen) function dummy_constructor()
     !might want some initialization for H and descr, but should work without
 
-
     !continue 
 end function 
-
-subroutine mult_l_disc_disc(this,ind_l,vec_l,ind_r,vec_out)
-    class(t_H_eigen),intent(in)     :: this
-    integer,intent(in)              :: ind_l(:)
-    real(8),intent(in)              :: vec_l(:)
-    integer,intent(in)              :: ind_r(:)
-    real(8),intent(inout)           :: vec_out(:)
-
-    Call eigen_mult_l_disc_disc(this%H,size(ind_l),ind_l,vec_l,size(ind_r),ind_r,vec_out)
-end subroutine
-
-subroutine mult_r_disc_disc(this,ind_r,vec_r,ind_l,vec_out)
-    class(t_H_eigen),intent(in)     :: this
-    integer,intent(in)              :: ind_r(:)
-    real(8),intent(in)              :: vec_r(:)
-    integer,intent(in)              :: ind_l(:)
-    real(8),intent(inout)           :: vec_out(:)
-
-    Call eigen_mult_r_disc_disc(this%H,size(ind_r),ind_r,vec_r,size(ind_l),ind_l,vec_out)
-end subroutine
-
-subroutine get_ind_mult_r(this,ind_in,N_out,ind_out)
-    !get the indicies in ind_out(:N_out) of the right vector which are necessary to 
-    !get all components that 
-    class(t_H_eigen),intent(in)     :: this
-    integer,intent(in)              :: ind_in(:)
-    integer,intent(out)             :: N_out
-    integer,intent(inout)           :: ind_out(:)
-
-    N_out=size(ind_out)
-    Call eigen_H_get_ind_mult_r(this%H,size(ind_in),ind_in,N_out,ind_out)
-    ind_out(1:N_out)=ind_out(1:N_out)+1
-end subroutine 
-
-subroutine get_ind_mult_l(this,ind_in,N_out,ind_out)
-    !get the indicies in ind_out(:N_out) of the right vector which are necessary to 
-    !get all components that 
-    class(t_H_eigen),intent(in)     :: this
-    integer,intent(in)              :: ind_in(:)
-    integer,intent(out)             :: N_out
-    integer,intent(inout)           :: ind_out(:)
-
-    N_out=size(ind_out)
-    Call eigen_H_get_ind_mult_l(this%H,size(ind_in),ind_in,N_out,ind_out)
-    ind_out(1:N_out)=ind_out(1:N_out)+1
-end subroutine 
 
 subroutine mult_r(this,lat,res)
     !mult
@@ -260,51 +150,9 @@ subroutine mult_r(this,lat,res)
     real(8),allocatable,target :: vec(:)
 
     Call this%mode_r%get_mode(lat,modes,vec)
-    Call eigen_H_mult_mat_vec(this%H,modes,res)
+    Call eigen_H_mult_r(this%H,modes,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
-
-!subroutine mult_l_cont(this,bnd,vec,res)
-!    !multiply to the right with a continuous section of the right vector
-!    class(t_H_eigen),intent(in)     :: this
-!    integer,intent(in)              :: bnd(2)
-!    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
-!    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-!
-!    Call eigen_H_mult_vec_mat_cont(this%H,bnd(1),bnd(2),vec,res)
-!end subroutine 
-!
-!subroutine mult_r_cont(this,bnd,vec,res)
-!    !multiply to the right with a continuous section of the right vector
-!    class(t_H_eigen),intent(in)     :: this
-!    integer,intent(in)              :: bnd(2)
-!    real(8),intent(in)              :: vec(bnd(2)-bnd(1)+1)
-!    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-!
-!    Call eigen_H_mult_mat_vec_cont(this%H,bnd(1),bnd(2),vec,res)
-!end subroutine 
-!
-!subroutine mult_l_disc(this,N,ind,vec,res)
-!    !multiply to the right with a discontinuous section of the right vector
-!    class(t_H_eigen),intent(in)     :: this
-!    integer,intent(in)              :: N
-!    integer,intent(in)              :: ind(N)
-!    real(8),intent(in)              :: vec(N)
-!    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-!
-!    Call eigen_H_mult_vec_mat_disc(this%H,N,ind,vec,res)
-!end subroutine 
-!
-!subroutine mult_r_disc(this,N,ind,vec,res)
-!    !multiply to the right with a discontinuous section of the right vector
-!    class(t_H_eigen),intent(in)     :: this
-!    integer,intent(in)              :: N
-!    integer,intent(in)              :: ind(N)
-!    real(8),intent(in)              :: vec(N)
-!    real(8),intent(inout)           :: res(:)   !result matrix-vector product
-!
-!    Call eigen_H_mult_mat_vec_disc(this%H,N,ind,vec,res)
-!end subroutine 
 
 subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
     class(t_H_eigen),intent(in)     :: this
@@ -345,7 +193,7 @@ subroutine mult_l(this,lat,res)
     real(8),allocatable,target :: vec(:)
 
     Call this%mode_l%get_mode(lat,modes,vec)
-    Call eigen_H_mult_vec_mat(this%H,modes,res)
+    Call eigen_H_mult_l(this%H,modes,res)
     if(allocated(vec)) deallocate(vec)
 end subroutine 
 

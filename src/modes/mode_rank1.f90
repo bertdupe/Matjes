@@ -109,8 +109,10 @@ subroutine get_mode_exc(this,lat,comp,vec)
     type(lattice),intent(in)                    :: lat      !lattice type which knows about all states
     integer,intent(in)                          :: comp 
     real(8),intent(inout)                       :: vec(:)
-
-    ERROR STOP "Calling get_mode_ext does not make sense for a rank1 mode"
+#ifdef CPP_DEBUG
+    if(comp/=1) ERROR STOP "get_mode_exc does only make sense for comp=1"
+#endif
+    vec=1.0d0
 end subroutine
 
 subroutine get_mode_exc_disc(this,lat,comp,N,ind,vec)
@@ -139,7 +141,12 @@ subroutine mode_reduce_comp(this,lat,vec_in,comp,vec_out)
     integer,intent(in)                          :: comp      !of which operator the first entry is kept
     real(8),intent(out)                         :: vec_out(lat%dim_modes(this%order(comp))*lat%Ncell)
 
-    ERROR STOP "Calling mode_reduce does not make sense for a rank1 mode"
+#ifdef CPP_DEBUG
+    write(error_unit,*) "WARNING, using mode_reduce_comp for rank1 mode which is superfluous"
+    !make sure to check routines which call that if calling this can be avoided easily
+    if(comp/=1) ERROR STOP "COMP shall not be larger than 1 for mode_rank1 get_mode_exc_disc"
+#endif
+    vec_out=vec_in
 end subroutine
 
 function is_same(this,comp)result(same)
