@@ -189,7 +189,7 @@ subroutine mult_r(this,lat,res,alpha,beta)
     endif
     if(present(beta))then
         bet=beta
-        Call cuda_fvec_set(this%rvec,res)
+        Call cuda_fvec_set(this%lvec,res)
     else
         bet=0.0d0
     endif

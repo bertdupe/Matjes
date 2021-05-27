@@ -59,7 +59,6 @@ void cuda_H_init(
     size_t buffersize;
     int nrows=Hdim[0];
     int ncols=Hdim[1];
-
     //sorting the coo-matrix input into the format necessary for CUDA
       //prepare permutation array for sorting on GPU
     stat = cusparseXcoosort_bufferSizeExt(*handle, nrows, ncols, nnz, rows, cols, &buffersize);
@@ -101,15 +100,28 @@ void cuda_H_init(
     cudaDeviceSynchronize();
 
     //Move values to GPU
-    double* values;
-    err =cudaMalloc( &values, (size_t) sizeof(double)*nnz);
+    double* d_val;
+    err = cudaMalloc( &d_val,      (size_t) sizeof(double)*nnz);
     assert( cudaSuccess == err );
-    err = cudaMemcpy(values, arr_in, (size_t) sizeof(double)*nnz , cudaMemcpyHostToDevice);
+    err = cudaMemcpy(d_val, arr_in, (size_t) sizeof(double)*nnz , cudaMemcpyHostToDevice);
     assert( cudaSuccess == err );
 
+    //get sorted according to buffer
+    double* d_val_sort;
+    err = cudaMalloc( &d_val_sort, (size_t) sizeof(double)*nnz);
+    assert( cudaSuccess == err );
+    stat= cusparseDgthr(*handle,
+                        nnz,
+                        d_val,
+                        d_val_sort,
+                        P,
+                        CUSPARSE_INDEX_BASE_ZERO); //zero because P is automatically in zero base
+    assert( CUSPARSE_STATUS_SUCCESS == stat);
+    err = cudaDeviceSynchronize();
+    assert( cudaSuccess == err );
 
     //Create CSR sparse matrix with Handle
-    stat= cusparseCreateCsr(&spMatDescr, nrows, ncols, nnz, csrRow, cooCols, values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ONE, CUDA_R_64F);
+    stat= cusparseCreateCsr(&spMatDescr, nrows, ncols, nnz, csrRow, cooCols, d_val_sort, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ONE, CUDA_R_64F);
     assert( CUSPARSE_STATUS_SUCCESS == stat);
     cudaDeviceSynchronize();
 
@@ -117,6 +129,7 @@ void cuda_H_init(
     cudaFree(pBuffer);
     cudaFree(P);
     cudaFree(cooRows);
+    cudaFree(d_val);
 }
 
 
