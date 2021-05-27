@@ -12,6 +12,7 @@ type col_mat
     integer,allocatable :: col(:)
     integer,allocatable :: reverse(:,:)
 contains
+    procedure   :: is_same => col_mat_is_same
     procedure   :: bcast=> col_mat_bcast
     procedure   :: recv => col_mat_recv
     procedure   :: send => col_mat_send
@@ -262,12 +263,40 @@ subroutine get_mode(this,lat,mode,tmp)
     nullify(mode_base)
 end subroutine
 
+function col_mat_is_same(this,comp)result(same)
+    class(col_mat),intent(in)   :: this,comp
+    logical                     :: same
+
+    same=this%nnz==comp%nnz
+    if(.not.same) return
+    same=all(this%dim_mat==comp%dim_mat)
+    if(.not.same) return
+    same=allocated(this%col).and.allocated(comp%col)
+    if(.not.same) return
+    same=all(this%col==comp%col)
+    if(.not.same) return
+    same=allocated(this%reverse).and.allocated(comp%reverse)
+    if(.not.same) return
+    same=all(this%reverse==comp%reverse)
+end function
+
 function is_same(this,comp)result(same)
     class(F_mode_rankN_sparse_col),intent(in)  :: this
-    class(F_mode),intent(in)                   :: comp
+    class(F_mode                 ),intent(in)  :: comp
     logical                                    :: same
 
-    ERROR STOP "IMPLEMENT"
+    integer     ::  i
+
+    same=.false.
+    select type (comp)
+    class is(F_mode_rankN_sparse_col)
+        same=all(this%ratio==comp%ratio)
+        if(.not.same) return
+        do i=1,size(this%dat)
+            same=this%dat(i)%is_same(comp%dat(i))
+            if(.not.same) return
+        enddo
+    end select
 end function
 
 subroutine destroy(this)
