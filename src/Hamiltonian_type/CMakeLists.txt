@@ -4,10 +4,10 @@ src/Hamiltonian_type/ham_public.f90
 src/Hamiltonian_type/ham_base.f90
 src/Hamiltonian_type/ham_coo.f90
 src/Hamiltonian_type/ham_coo_based.f90
+src/Hamiltonian_type/ham_combined.f90
 src/Hamiltonian_type/ham_cusparse.f90
 src/Hamiltonian_type/ham_dense.f90
 src/Hamiltonian_type/ham_dense_blas.f90
-src/Hamiltonian_type/ham_deriv.f90
 src/Hamiltonian_type/ham_eigen.f90
 src/Hamiltonian_type/ham_eigen_mem.f90
 src/Hamiltonian_type/ham_mkl_csr.f90

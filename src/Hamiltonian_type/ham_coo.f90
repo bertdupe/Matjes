@@ -1,7 +1,7 @@
 module m_H_coo
 !Hamiltonian type only for calculating coo parameters without external library
 !hence evaluation does not work <- don't use in ham_type_gen 
-use m_H_deriv, only: t_H
+use m_H_combined, only: t_H
 use m_H_type, only: t_H_base
 use m_derived_types, only: lattice, number_different_order_parameters,op_abbrev_to_int
 use mpi_basic                

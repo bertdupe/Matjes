@@ -1,7 +1,7 @@
-
-module m_H_deriv
-!extension of the base type which contains information about how the functional derivatives are to be done
-!later also added eval_single, might make to sense to rename this 
+module m_H_combined
+!extension of the base type which contains information about additional operations which need the base type
+!the operations are the derivative and single evaluation information
+!The information should be set after preparation of the Hamiltonian through finish_setup
 use m_H_type, only: t_H_base
 use m_deriv_public, only: t_deriv, set_deriv
 use m_derived_types, only : lattice,number_different_order_parameters
@@ -21,14 +21,15 @@ end type
 
 contains
 
-
 subroutine finish_setup(this)
     class(t_H),intent(inout)    :: this
 
     integer     :: i_mode
 
     Call this%finish_setup_base()
-    Call this%set_deriv()
+    do i_mode=1,number_different_order_parameters
+        Call set_deriv(this%deriv(i_mode),i_mode,this%op_l,this%op_r)      
+    enddo
     do i_mode=1,number_different_order_parameters
         Call this%eval_single(i_mode)%set(this,i_mode)
     enddo
@@ -46,8 +47,8 @@ subroutine copy_deriv(this,Hout)
     enddo
 end subroutine
 
-
 subroutine set_deriv_single(Ham)
+    !this might be obsolete
     class(t_H),intent(inout)    :: Ham
     integer                     :: i
     do i=1,number_different_order_parameters

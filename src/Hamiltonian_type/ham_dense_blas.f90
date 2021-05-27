@@ -1,7 +1,7 @@
 module m_H_dense_blas
 #ifdef CPP_BLAS
 !Hamiltonian type specifications using dense matrices and no external library
-use m_H_deriv, only: t_H
+use m_H_combined, only: t_H
 use m_H_dense
 use m_derived_types, only: lattice
 
