@@ -15,11 +15,18 @@ contains
         real(8),intent(inout)           :: vec(:)
         type(work_mode),intent(inout)   :: work
 
-        real(8)                         :: tmp(H%dimH(1))   !multipied, but not reduced
         real(8),parameter               :: beta=1.0d0
-    
+
+!        real(8)                         :: tmp(H%dimH(1))   !multipied, but not reduced
+        real(8),pointer,contiguous      :: tmp(:)
+        tmp(1:H%dimH(1))=>work%real_arr(1+work%offset(1):H%dimH(1)+work%offset(1))
+        work%offset(1)=work%offset(1)+H%dimH(1)
+
         Call H%mult_r(lat,tmp,work)
-        Call H%mode_l%reduce_other_exc(lat,this%order,tmp,beta,vec)
+        Call H%mode_l%reduce_other_exc(lat,this%order,tmp,beta,work,vec)
+
+        nullify(tmp)
+        work%offset(1)=work%offset(1)-H%dimH(1)
     end subroutine
 
     subroutine get_rN(this,H,lat,vec,work)
@@ -29,11 +36,17 @@ contains
         real(8),intent(inout)           :: vec(:)
         type(work_mode),intent(inout)   :: work
 
-        real(8)                         :: tmp(H%dimH(2))   !multipied, but not reduced
         real(8),parameter               :: beta=1.0d0
+        !real(8)                         :: tmp(H%dimH(2))   !multipied, but not reduced
+
+        real(8),pointer,contiguous      :: tmp(:)
+        tmp(1:H%dimH(2))=>work%real_arr(1+work%offset(1):H%dimH(2)+work%offset(1))
+        work%offset(1)=work%offset(1)+H%dimH(2)
     
         Call H%mult_l(lat,tmp,work)
-        Call H%mode_r%reduce_other_exc(lat,this%order,tmp,beta,vec)
+        Call H%mode_r%reduce_other_exc(lat,this%order,tmp,beta,work,vec)
+        nullify(tmp)
+        work%offset(1)=work%offset(1)-H%dimH(2)
     end subroutine
 
     subroutine get_lN_single(this,H,lat,site,work,vec)

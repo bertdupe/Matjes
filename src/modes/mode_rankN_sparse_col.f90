@@ -2,7 +2,7 @@ module m_mode_construction_rankN_sparse_col
 use m_mode_construction
 use m_type_lattice, only: dim_modes_inner,  lattice,number_different_order_parameters
 use m_coo_mat
-use m_work_ham_single, only:  work_mode
+use m_work_ham_single, only:  work_mode, N_work
 implicit none
 private
 public F_mode_rankN_sparse_col, col_mat
@@ -30,7 +30,6 @@ type, extends(F_mode) :: F_mode_rankN_sparse_col
     procedure   :: get_mode_exc_disc
     procedure   :: reduce_comp
     procedure   :: reduce_comp_add
-    procedure   :: mode_reduce_comp_disc
 
     procedure   :: reduce_site_vec
     procedure   :: get_mode_single_size
@@ -114,11 +113,11 @@ end subroutine
 subroutine get_mode_disc(this,lat,N,ind,vec)
     use, intrinsic :: iso_c_binding, only: C_PTR, C_loc
     use m_type_lattice, only: dim_modes_inner
-    class(F_mode_rankN_sparse_col),intent(in)    :: this
-    type(lattice),intent(in)                :: lat
-    integer,intent(in)                      :: N
-    integer,intent(in)                      :: ind(N)
-    real(8),intent(out)                     :: vec(N)
+    class(F_mode_rankN_sparse_col),intent(in)   :: this
+    type(lattice),intent(in)                    :: lat
+    integer,intent(in)                          :: N
+    integer,intent(in)                          :: ind(N)
+    real(8),intent(out)                         :: vec(N)
 
     real(8),pointer :: mode_base(:)
     integer ::  i
@@ -154,51 +153,33 @@ subroutine get_mode_exc_disc(this,lat,comp,N,ind,vec)
     enddo
 end subroutine
 
-subroutine get_mode_exc(this,lat,comp,vec)
+subroutine get_mode_exc(this,lat,comp,work,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rankN_sparse_col),intent(in)   :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
     integer,intent(in)                          :: comp
-    real(8),intent(inout)                       :: vec(:)
+    type(work_mode),intent(inout)               :: work     !nothing to do for rank1
+    real(8),intent(inout)                       :: vec(this%mode_size)
 
-    real(8)         :: tmp_internal(this%mode_size,this%N_mode)
-    real(8),pointer :: mode_base(:)
-    integer         :: i
+!    real(8)         :: tmp_modes(this%mode_size,this%N_mode-1)
+    real(8),pointer,contiguous  :: tmp_modes(:,:)
+    real(8),pointer,contiguous  :: mode_base(:)
+    integer             :: i
 
-    tmp_internal=1.d0
+    tmp_modes(1:this%mode_size,1:this%N_mode-1)=>work%real_arr(1+work%offset(1):this%mode_size*(this%N_mode-1)+work%offset(1))
+
+    tmp_modes=1.d0
     do i=1,comp-1
         Call lat%set_order_point(this%order(i),mode_base)
-        tmp_internal(:,i)=mode_base(this%dat(i)%col)
+        tmp_modes(:,i)=mode_base(this%dat(i)%col)
     enddo
     do i=comp+1,this%N_mode
         Call lat%set_order_point(this%order(i),mode_base)
-        tmp_internal(:,i)=mode_base(this%dat(i)%col)
+        tmp_modes(:,i-1)=mode_base(this%dat(i)%col)
     enddo
-    vec=product(tmp_internal,dim=2)
+    vec=product(tmp_modes,dim=2)
     nullify(mode_base)
 end subroutine
-
-subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)
-    class(F_mode_rankN_sparse_col),intent(in)   :: this
-    integer,intent(in)                          :: ind_in(:)
-    real(8),intent(in)                          :: vec_in(:)
-    integer,intent(in)                          :: comp 
-    integer,intent(in)                          :: ind_out(:)
-    real(8),intent(inout)                       :: vec_out(:)
-
-    integer     :: i, j, i_out
-    logical     :: mask(size(vec_in))
-
-    do i=1,size(ind_out)
-        i_out=ind_out(i)
-        mask=.false.
-        do j=1,this%ratio(comp)
-            mask=mask.or.ind_in==this%dat(comp)%reverse(j,i_out)
-        enddo
-        vec_out(i)=sum(vec_in,mask=mask)
-    enddo
-end subroutine
-
 
 subroutine reduce_comp(this,lat,vec_in,comp,vec_out)
     use, intrinsic :: iso_fortran_env, only : error_unit
@@ -241,26 +222,30 @@ subroutine reduce_comp_add(this,lat,vec_in,comp,vec_out)
     !enddo
 end subroutine
 
-subroutine get_mode(this,lat,mode,work)
+subroutine get_mode(this,lat,mode,work,work_size)
     class(F_mode_rankN_sparse_col),intent(in)   :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
-    real(8),intent(out),pointer                 :: mode(:)   !pointer to required mode
+    real(8),intent(out),pointer,contiguous      :: mode(:)   !pointer to required mode
     type(work_mode),intent(inout)               :: work
+    integer,intent(out)                         :: work_size(N_work)
 
-    real(8)         :: tmp_internal(this%mode_size,size(this%dat))
-    real(8),pointer :: mode_base(:)
+    real(8),pointer,contiguous  :: tmp_modes(:,:)
+    real(8),pointer,contiguous  :: mode_base(:)
+    integer             :: i
 
-    integer         :: i
+    mode     (1:this%mode_size              )=>work%real_arr(1               +work%offset(1):this%mode_size                +work%offset(1))
+    tmp_modes(1:this%mode_size,1:this%N_mode)=>work%real_arr(1+this%mode_size+work%offset(1):this%mode_size*(1+this%N_mode)+work%offset(1))
 
-    mode(1:this%mode_size)=>work%real_arr(1:this%mode_size)
-
-    tmp_internal=1.d0
+    tmp_modes=1.d0
     do i=1,size(this%dat)
         Call lat%set_order_point(this%order(i),mode_base)
-        tmp_internal(:,i)=mode_base(this%dat(i)%col)
+        tmp_modes(:,i)=mode_base(this%dat(i)%col)
     enddo
-    mode=product(tmp_internal,dim=2)
-    nullify(mode_base)
+    mode=product(tmp_modes,dim=2)
+    nullify(mode_base,tmp_modes)
+    work_size=0
+    work_size(1)=this%mode_size
+    work%offset=work%offset+work_size
 end subroutine
 
 function col_mat_is_same(this,comp)result(same)
@@ -313,7 +298,7 @@ subroutine destroy(this)
 end subroutine
 
 subroutine copy(this,F_out)
-    class(F_mode_rankN_sparse_col),intent(in)    :: this
+    class(F_mode_rankN_sparse_col),intent(in)   :: this
     class(F_mode),allocatable,intent(inout)     :: F_out
 
     integer ::  i
@@ -337,10 +322,10 @@ end subroutine
 
 subroutine init_order(this,lat,abbrev_in,mat)
     use m_derived_types, only: op_abbrev_to_int
-    class(F_mode_rankN_sparse_col),intent(inout) :: this
-    type(lattice),intent(in)                :: lat       !lattice type which knows about all states
-    character(len=*), intent(in)            :: abbrev_in !considered order abbreviations
-    type(coo_mat),intent(inout)             :: mat(:)    !input matrices, destroyed when returned
+    class(F_mode_rankN_sparse_col),intent(inout)    :: this
+    type(lattice),intent(in)                        :: lat       !lattice type which knows about all states
+    character(len=*), intent(in)                    :: abbrev_in !considered order abbreviations
+    type(coo_mat),intent(inout)                     :: mat(:)    !input matrices, destroyed when returned
     integer     :: order(len(abbrev_in))
     integer     :: i     
 

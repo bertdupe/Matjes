@@ -2,7 +2,7 @@ module m_mode_construction
 ! module that contains functions which combines the different sites on the left and the right of the Hamiltonians
 ! to transform Hamiltonians of ranks >2 to Hamiltonians of rank 2
 use m_derived_types, only : lattice, number_different_order_parameters
-use m_work_ham_single, only:  work_mode
+use m_work_ham_single, only:  work_mode, N_work
 use, intrinsic :: iso_fortran_env, only : error_unit
 implicit none
 
@@ -26,9 +26,6 @@ type, abstract :: F_mode
     procedure(int_get_mode_disc),deferred       :: get_mode_disc       !get mode by indices with work array
     procedure(int_get_mode_exc_disc),deferred   :: get_mode_exc_disc
     procedure                                   :: reduce_other_exc
-     !obsolete?
-!    procedure                                   :: get_mode_exc_op_disc
-!    procedure                                   :: mode_reduce_comp_disc
 
     !routines acting on mode depending on a site
     procedure(int_get_ind_site),deferred            :: get_ind_site        !get indices of site depending on mode component index with work array 
@@ -101,22 +98,24 @@ abstract interface
         integer,intent(out)         :: dim_mode
     end subroutine
 
-    subroutine int_get_mode(this,lat,mode,work)
+    subroutine int_get_mode(this,lat,mode,work,work_size)
         !subroutine which return a pointer to the mode, either saved in the tmp array or at some other independent array (depending on the implementation)
-        import F_mode,lattice, work_mode
+        import F_mode,lattice, work_mode, N_work
         class(F_mode),intent(in)                    :: this
         type(lattice),intent(in)                    :: lat      !lattice type which knows about all states
-        real(8),intent(out),pointer                 :: mode(:)  !pointer to required mode
+        real(8),intent(out),pointer,contiguous      :: mode(:)  !pointer to required mode
         type(work_mode),intent(inout)               :: work     !target to save pointer data, if rank >1
+        integer,intent(out)                         :: work_size(N_work)
     end subroutine
 
-    subroutine int_get_mode_exc(this,lat,comp,vec)
+    subroutine int_get_mode_exc(this,lat,comp,work,vec)
         !subroutine which gets the mode, excluding the first occation of the state indexed by op_exc
-        import F_mode,lattice
+        import F_mode,lattice, work_mode
         class(F_mode),intent(in)                    :: this
         type(lattice),intent(in)                    :: lat    !lattice type which knows about all states
         integer,intent(in)                          :: comp    !operator index which is not multiplied [1,this%N_mode]
-        real(8),intent(inout)                       :: vec(:) !result mode excluding the first state with op_exc
+        type(work_mode),intent(inout)               :: work     !target to save pointer data, if rank >1
+        real(8),intent(inout)                       :: vec(this%mode_size) !result mode excluding the first state with op_exc
     end subroutine
 
     subroutine int_reduce_comp(this,lat,vec_in,comp,vec_out)
@@ -241,17 +240,19 @@ subroutine copy_base(this,F_out)
     F_out%mode_size=this%mode_size
 end subroutine
 
-subroutine reduce_other_exc(this,lat,op_keep,vec_other,beta,res)
+subroutine reduce_other_exc(this,lat,op_keep,vec_other,beta,work,res)
     !subroutine to get the derivative, may be overwritten
     class(F_mode),intent(in)        :: this
     type(lattice),intent(in)        :: lat          !lattice type which knows about all states
     integer,intent(in)              :: op_keep      !operator index which is to be kept (1,number_different_order_parameters)
     real(8),intent(in)              :: vec_other(:) !other vector to which the Hamiltonian has been multiplied
     real(8),intent(in)              :: beta
+    type(work_mode),intent(inout)   :: work
     real(8),intent(inout)           :: res(:)
 
     real(8)         :: tmp(size(vec_other))
     integer         :: i
+!    integer,parameter         :: comp=1
     integer         :: comp
 
     comp=findloc(this%order,op_keep,dim=1)
@@ -262,33 +263,9 @@ subroutine reduce_other_exc(this,lat,op_keep,vec_other,beta,res)
         ERROR STOP "This makes no sense and should probably prevented earlier in the code"
     endif
 #endif
-    Call this%get_mode_exc(lat,comp,tmp)
+    Call this%get_mode_exc(lat,comp,work,tmp)
     tmp=vec_other*tmp*beta*real(this%order_occ(op_keep),8)
     Call this%reduce_comp_add(lat,tmp,comp,res)
-end subroutine
-
-subroutine get_mode_exc_op_disc(this,lat,op_exc,N,ind,vec)
-    class(F_mode),intent(in)        :: this     
-    type(lattice),intent(in)        :: lat      !lattice type which knows about all states
-    integer,intent(in)              :: op_exc   !of which operator the first entry is kept
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind(N)
-    real(8),intent(inout)           :: vec(N)
-
-    real(8)                         :: tmp(this%mode_size)
-    integer         :: comp
-
-    comp=findloc(this%order,op_exc,dim=1)
-#ifdef CPP_DEBUG
-!    if(size(vec)/=this%mode_size) STOP "mode exc call has wrong size for vector"
-    if(comp<1.or.comp>size(this%order))then
-        write(error_unit,'(//A,I6)') "Tried to get mode excluding order no.:", op_exc
-        write(error_unit,*) "But the mode only contains the order:", this%order
-        ERROR STOP "This makes no sense and should probably prevented earlier in the code"
-    endif
-#endif
-    Call this%get_mode_exc(lat,comp,tmp)
-    vec=tmp(ind)
 end subroutine
 
 subroutine mode_reduce(this,lat,vec_in,op_keep,vec_out)
@@ -310,17 +287,6 @@ subroutine mode_reduce(this,lat,vec_in,op_keep,vec_out)
     endif
 #endif
     Call this%reduce_comp(lat,vec_in,comp,vec_out)
-end subroutine
-
-subroutine mode_reduce_comp_disc(this,ind_in,vec_in,comp,ind_out,vec_out)
-    class(F_mode),intent(in)    :: this
-    integer,intent(in)          :: ind_in(:)
-    real(8),intent(in)          :: vec_in(:)
-    integer,intent(in)          :: comp 
-    integer,intent(in)          :: ind_out(:)
-    real(8),intent(inout)       :: vec_out(:)
-
-    ERROR STOP "IMPLEMENT LOCALLY"
 end subroutine
 
 subroutine get_mode_disc(this,lat,N,ind,vec)

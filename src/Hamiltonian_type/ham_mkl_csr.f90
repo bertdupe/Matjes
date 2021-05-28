@@ -87,9 +87,10 @@ subroutine mult_r(this,lat,res,work,alpha,beta)
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
-    integer(C_int)             :: stat
-    real(8),pointer            :: modes(:)
-    real(8)                    :: alp, bet
+    integer(C_int)                  :: stat
+    real(8),pointer ,contiguous     :: modes(:)
+    real(8)                         :: alp, bet
+    integer                         :: work_size(N_work)
 
     if(present(alpha))then
         alp=alpha
@@ -102,11 +103,13 @@ subroutine mult_r(this,lat,res,work,alpha,beta)
         bet=0.0d0
     endif
 
-    Call this%mode_r%get_mode(lat,modes,work)
+    Call this%mode_r%get_mode(lat,modes,work,work_size)
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alp,this%H,this%descr,modes,bet,res)
 #ifdef CPP_DEBUG
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_r of m_H_sparse_mkl"
 #endif
+    nullify(modes)
+    work%offset=work%offset-work_size
 end subroutine 
 
 subroutine mult_l(this,lat,res,work,alpha,beta)
@@ -117,9 +120,10 @@ subroutine mult_l(this,lat,res,work,alpha,beta)
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
-    integer(C_int)             :: stat
-    real(8),pointer            :: modes(:)
-    real(8)                    :: alp, bet
+    integer(C_int)                  :: stat
+    real(8),pointer ,contiguous     :: modes(:)
+    real(8)                         :: alp, bet
+    integer                         :: work_size(N_work)
 
     if(present(alpha))then
         alp=alpha
@@ -132,11 +136,13 @@ subroutine mult_l(this,lat,res,work,alpha,beta)
         bet=0.0d0
     endif
 
-    Call this%mode_l%get_mode(lat,modes,work)
+    Call this%mode_l%get_mode(lat,modes,work,work_size)
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alp,this%H,this%descr,modes,bet,res)
 #ifdef CPP_DEBUG
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl"
 #endif
+    nullify(modes)
+    work%offset=work%offset-work_size
 end subroutine 
 
 subroutine optimize(this)

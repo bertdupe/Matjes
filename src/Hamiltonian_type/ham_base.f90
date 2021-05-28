@@ -2,7 +2,7 @@ module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H_base
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_mode_public, only: F_mode, get_mode_ident, set_mode_ident
-use m_work_ham_single, only:  work_ham_single, work_mode
+use m_work_ham_single, only:  work_ham_single, work_mode, N_work
 use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 implicit none
 
@@ -186,18 +186,23 @@ contains
         type(work_mode),intent(inout)   :: work
         real(8), intent(out)            :: E
         ! internal
-        real(C_DOUBLE)              :: tmp(this%dimH(1))
-        real(8),pointer             :: modes_l(:)
-    
+        real(8),pointer,contiguous  :: modes_l(:)
+        !real(8),pointer,contiguous  :: tmp(:)
+        real(8)                     :: tmp(this%dimH(1))        !for some reason this is faster than the alternative
+        integer                     :: work_size(N_work)
+#ifdef CPP_DEBUG    
         if(.not.allocated(this%mode_l).or..not.allocated(this%mode_r))then
             write(error_unit,'(2/2A)') "Failed to evaluate Hamiltonian: ", this%desc
             ERROR STOP "IMPLEMENT mode_l/mode_r for all Hamiltonians"
         endif
+#endif
+        !tmp(1:this%dimH(1))=>work%real_arr(work%offset(1)+1:work%offset(1)+this%dimH(1))
+        !work%offset(1)=work%offset(1)+this%dimH(1)
 
-        !try to also save tmp in work (difficult because of overlap
         Call this%mult_r(lat,tmp,work)
-        Call this%mode_l%get_mode(lat,modes_l,work)
+        Call this%mode_l%get_mode(lat,modes_l,work,work_size)
         E=dot_product(modes_l,tmp)
+        Call work%reset()
     end subroutine 
 
     subroutine energy_dist(this,lat,order,work,E)
@@ -210,16 +215,18 @@ contains
         type(work_mode),intent(inout)   :: work
         real(8),intent(out)             :: E(lat%Ncell*lat%site_per_cell(order))
         ! internal
-        real(8),pointer             :: modes(:)
+        real(8),pointer,contiguous  :: modes(:)
         real(8),allocatable         :: tmp(:)
         real(8),allocatable         :: red(:)
+        integer                     :: work_size(N_work)
 
         if(any(this%op_l==order))then
             allocate(tmp(this%dimH(1)))
             Call this%mult_r(lat,tmp,work)
-            Call this%mode_l%get_mode(lat,modes,work)
+            Call this%mode_l%get_mode(lat,modes,work,work_size)
             tmp=modes*tmp
             nullify(modes)
+            work%offset=work%offset-work_size
             if(size(this%op_l)>1)then
                 allocate(red(lat%Ncell*lat%dim_modes(order)))
                 Call this%mode_l%mode_reduce(lat,tmp,order,red)
@@ -232,9 +239,10 @@ contains
         elseif(any(this%op_r==order))then
             allocate(tmp(this%dimH(2)))
             Call this%mult_l(lat,tmp,work)
-            Call this%mode_r%get_mode(lat,modes,work)
+            Call this%mode_r%get_mode(lat,modes,work,work_size)
             tmp=modes*tmp
             nullify(modes)
+            work%offset=work%offset-work_size
             if(size(this%op_r)>1)then
                 allocate(red(lat%Ncell*lat%dim_modes(order)))
                 Call this%mode_r%mode_reduce(lat,tmp,order,red)
@@ -247,6 +255,7 @@ contains
         else
             E=0.0d0
         endif
+        Call work%reset()
     end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -480,7 +489,7 @@ subroutine set_work_mode(this,work)
     integer     :: sizes(2)
 
     sizes=0
-    sizes(1)=this%dimH(1)+this%dimH(2)
+    sizes(1)=this%dimH(1)*(size(this%op_l)+2)+this%dimH(2)*(size(this%op_r)+2)      !this size might actually be a bit excessive, check again
     Call work%set(sizes)
 end subroutine
 

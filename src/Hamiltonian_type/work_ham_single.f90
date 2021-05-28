@@ -1,9 +1,10 @@
 module m_work_ham_single
 !module for derived type which provides some arrays for temporary array when evaluating the Energy of Hamiltonians
 private
-public work_ham_single, work_size_single, N_work_single, work_mode
+public work_ham_single, work_size_single, N_work_single, work_mode, N_work
 
 integer,parameter   ::  N_work_single=2
+integer,parameter   ::  N_work=2
 
 type work_base
     !internal data arrays, DO NOT MODIFY UNLESS YOU KNOW WHAT YOU ARE DOING (pointers because targets in types does not work)
@@ -23,10 +24,20 @@ type,extends(work_base) ::  work_ham_single
 end type
 
 type,extends(work_base) ::  work_mode
+    integer     :: offset(N_work)=0 !offset if data is saved in previous data entries (take extra care to reset that after use)
+contains
+    procedure   :: reset
 end type
 
 
 contains
+
+subroutine reset(this)
+    !resets the offset, thus stating that the temporary array data is free to use again
+    class(work_mode),intent(inout)  ::  this 
+
+    this%offset=0
+end subroutine
 
 subroutine work_size_single(dim_single,line_max,sizes)
     !routine which defines the size of the work array

@@ -10,7 +10,7 @@ use m_derived_types, only: lattice,number_different_order_parameters
 use m_H_coo_based
 use m_cuda_H_interface
 use m_cuda_H_vec_interface
-use m_work_ham_single, only:  work_mode
+use m_work_ham_single, only:  work_mode, N_work
 use, intrinsic :: iso_c_binding
 
 private
@@ -180,9 +180,9 @@ subroutine mult_r(this,lat,res,work,alpha,beta)
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
-    real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
+    real(8),pointer,contiguous :: modes(:)
     real(8)                    :: alp, bet
+    integer                    :: work_size(N_work)
 
     if(present(alpha))then
         alp=alpha
@@ -195,10 +195,12 @@ subroutine mult_r(this,lat,res,work,alpha,beta)
     else
         bet=0.0d0
     endif
-    Call this%mode_r%get_mode(lat,modes,work)
+    Call this%mode_r%get_mode(lat,modes,work,work_size)
     Call cuda_fvec_set(this%rvec,modes)
     Call cuda_H_mult_r(this%H,this%rvec, this%lvec, alp, bet, this%buffer_r, handle)
     Call cuda_fvec_get(this%lvec,res)
+    nullify(modes)
+    work%offset=work%offset-work_size
 end subroutine 
 
 subroutine mult_l(this,lat,res,work,alpha,beta)
@@ -210,8 +212,9 @@ subroutine mult_l(this,lat,res,work,alpha,beta)
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
-    real(8),pointer            :: modes(:)
+    real(8),pointer,contiguous :: modes(:)
     real(8)                    :: alp, bet
+    integer                    :: work_size(N_work)
 
     if(present(alpha))then
         alp=alpha
@@ -224,10 +227,12 @@ subroutine mult_l(this,lat,res,work,alpha,beta)
     else
         bet=0.0d0
     endif
-    Call this%mode_l%get_mode(lat,modes,work)
+    Call this%mode_l%get_mode(lat,modes,work,work_size)
     Call cuda_fvec_set(this%lvec,modes)
     Call cuda_H_mult_l(this%H,this%lvec, this%rvec, alp, bet, this%buffer_l, handle)
     Call cuda_fvec_get(this%rvec,res)
+    nullify(modes)
+    work%offset=work%offset-work_size
 end subroutine 
 
 subroutine optimize(this)

@@ -146,8 +146,9 @@ subroutine mult_l(this,lat,res,work,alpha,beta)
     real(8),intent(in),optional     :: beta
 
     ! internal
-    real(8),pointer            :: modes(:)
+    real(8),pointer ,contiguous     :: modes(:)
     real(8)                    :: alp, bet
+    integer                    :: work_size(N_work)
 
     if(present(alpha))then
         alp=alpha
@@ -159,8 +160,10 @@ subroutine mult_l(this,lat,res,work,alpha,beta)
     else
         bet=0.0d0
     endif
-    Call this%mode_l%get_mode(lat,modes,work)
+    Call this%mode_l%get_mode(lat,modes,work,work_size)
     Call eigen_H_mult_r(this%HT,modes,res,alp,bet)
+    nullify(modes)
+    work%offset=work%offset-work_size
 end subroutine 
 
 subroutine optimize(this)

@@ -2,7 +2,7 @@ module m_mode_construction_rank1_point
 use m_type_lattice, only: dim_modes_inner
 use m_mode_construction
 use m_derived_types, only : lattice,number_different_order_parameters
-use m_work_ham_single, only:  work_mode
+use m_work_ham_single, only:  work_mode, N_work
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
 implicit none
 private
@@ -96,21 +96,24 @@ subroutine get_ind_site(this,comp,site,size_out,ind)
     ind=(site-1)*size_out+[(i,i=1,size_out)]
 end subroutine
 
-subroutine get_mode(this,lat,mode,work)
+subroutine get_mode(this,lat,mode,work,work_size)
     class(F_mode_rank1_point),intent(in)        :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
-    real(8),intent(out),pointer                 :: mode(:)   !pointer to required mode
+    real(8),intent(out),pointer,contiguous      :: mode(:)   !pointer to required mode
     type(work_mode),intent(inout)               :: work     !nothing to do for rank1
+    integer,intent(out)                         :: work_size(N_work)
 
     Call lat%set_order_point(this%order(1),mode)
+    work_size=0
 end subroutine
 
-subroutine get_mode_exc(this,lat,comp,vec)
+subroutine get_mode_exc(this,lat,comp,work,vec)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(F_mode_rank1_point),intent(in)        :: this
     type(lattice),intent(in)                    :: lat      !lattice type which knows about all states
     integer,intent(in)                          :: comp 
-    real(8),intent(inout)                       :: vec(:)
+    type(work_mode),intent(inout)               :: work     !nothing to do for rank1
+    real(8),intent(inout)                       :: vec(this%mode_size)
 #ifdef CPP_DEBUG
     if(comp/=1) ERROR STOP "get_mode_exc does only make sense for comp=1"
 #endif
