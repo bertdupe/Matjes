@@ -2,7 +2,7 @@ module m_H_type
 !module containing the basic polymorphic Hamiltonian class t_H_base
 use m_derived_types, only : lattice,number_different_order_parameters
 use m_mode_public, only: F_mode, get_mode_ident, set_mode_ident
-use m_work_ham_single, only:  work_ham_single
+use m_work_ham_single, only:  work_ham_single, work_mode
 use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
 implicit none
 
@@ -44,8 +44,9 @@ contains
     !routines acting on parts of the Hamiltonian
     procedure                               :: mult_l_disc,   mult_r_disc
 
-    !routines acting on parts of the Hamiltonian defined by a single site of an order-parameter
-    procedure                               :: set_work_single                     !sets the necessary sizes for the work arrays
+    !routines setting work array sizes
+    procedure                               :: set_work_single      !sets the necessary sizes for the work arrays
+    procedure                               :: set_work_mode        !sets the necessary sizes for higher rank modes
 
     !Utility functions
     procedure,NON_OVERRIDABLE               :: finish_setup_base
@@ -83,13 +84,14 @@ abstract interface
         class(t_H_base),intent(inout)    :: this
     end subroutine
 
-    subroutine int_mult(this,lat,res,alpha,beta)
-        import t_H_base,lattice
-        class(t_H_base),intent(in)  :: this
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: res(:)
-        real(8),intent(in),optional :: alpha
-        real(8),intent(in),optional :: beta
+    subroutine int_mult(this,lat,res,work,alpha,beta)
+        import t_H_base,lattice, work_mode
+        class(t_H_base),intent(in)      :: this
+        type(lattice),intent(in)        :: lat
+        real(8),intent(inout)           :: res(:)
+        type(work_mode),intent(inout)   :: work
+        real(8),intent(in),optional     :: alpha
+        real(8),intent(in),optional     :: beta
     end subroutine
 
     subroutine int_destroy(this)
@@ -175,49 +177,47 @@ contains
 !!!!!!!!!!!!!!                    MOST USEFULL ROUTINES                        !!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    subroutine eval_all(this,E,lat)
+    subroutine eval_all(this,E,lat,work)
         USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_DOUBLE
         use, intrinsic :: iso_fortran_env, only : error_unit
         !evaluates the energie summed for all sites
-        class(t_H_base),intent(in)       :: this
-        type(lattice), intent(in)   :: lat
-        real(8), intent(out)        :: E
+        class(t_H_base),intent(in)      :: this
+        type(lattice), intent(in)       :: lat
+        type(work_mode),intent(inout)   :: work
+        real(8), intent(out)            :: E
         ! internal
         real(C_DOUBLE)              :: tmp(this%dimH(1))
         real(8),pointer             :: modes_l(:)
-        real(8),allocatable,target  :: vec_l(:)
     
         if(.not.allocated(this%mode_l).or..not.allocated(this%mode_r))then
             write(error_unit,'(2/2A)') "Failed to evaluate Hamiltonian: ", this%desc
             ERROR STOP "IMPLEMENT mode_l/mode_r for all Hamiltonians"
         endif
 
-        Call this%mode_l%get_mode(lat,modes_l,vec_l)
-    
-        Call this%mult_r(lat,tmp)
+        !try to also save tmp in work (difficult because of overlap
+        Call this%mult_r(lat,tmp,work)
+        Call this%mode_l%get_mode(lat,modes_l,work)
         E=dot_product(modes_l,tmp)
-
-        if(allocated(vec_l)) deallocate(vec_l) 
     end subroutine 
 
-    subroutine energy_dist(this,lat,order,E)
+    subroutine energy_dist(this,lat,order,work,E)
         use m_type_lattice, only: dim_modes_inner
         !get the energy values per site for a given order
         !might be wrong for non-symmetrical Hamiltonians
         class(t_H_base),intent(in)       :: this
-        type(lattice), intent(in)   :: lat
-        integer,intent(in)          :: order
-        real(8),intent(out)         :: E(lat%Ncell*lat%site_per_cell(order))
+        type(lattice), intent(in)       :: lat
+        integer,intent(in)              :: order
+        type(work_mode),intent(inout)   :: work
+        real(8),intent(out)             :: E(lat%Ncell*lat%site_per_cell(order))
         ! internal
         real(8),pointer             :: modes(:)
-        real(8),allocatable,target  :: vec(:)
         real(8),allocatable         :: tmp(:)
         real(8),allocatable         :: red(:)
 
         if(any(this%op_l==order))then
             allocate(tmp(this%dimH(1)))
-            Call this%mult_r(lat,tmp)
-            Call this%mode_l%get_mode(lat,modes,vec)
+            Call this%mult_r(lat,tmp,work)
+            Call this%mode_l%get_mode(lat,modes,work)
             tmp=modes*tmp
             nullify(modes)
             if(size(this%op_l)>1)then
@@ -231,8 +231,8 @@ contains
             deallocate(tmp)
         elseif(any(this%op_r==order))then
             allocate(tmp(this%dimH(2)))
-            Call this%mult_l(lat,tmp)
-            Call this%mode_r%get_mode(lat,modes,vec)
+            Call this%mult_l(lat,tmp,work)
+            Call this%mode_r%get_mode(lat,modes,work)
             tmp=modes*tmp
             nullify(modes)
             if(size(this%op_r)>1)then
@@ -247,7 +247,6 @@ contains
         else
             E=0.0d0
         endif
-        if(allocated(vec)) deallocate(vec)
     end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -472,6 +471,17 @@ subroutine set_work_single(this,work,order)
     integer,intent(in)                      :: order
 
     ERROR STOP "IMPLEMENT"  !implement for local entries, then make deferred if I decide to keep that
+end subroutine
+
+subroutine set_work_mode(this,work)
+    class(t_H_base),intent(inout)   :: this
+    class(work_mode),intent(inout)  :: work 
+
+    integer     :: sizes(2)
+
+    sizes=0
+    sizes(1)=this%dimH(1)+this%dimH(2)
+    Call work%set(sizes)
 end subroutine
 
 

@@ -11,6 +11,7 @@ use m_H_dense_blas
 use m_H_dense
 
 use m_derived_types, only : lattice
+use m_work_ham_single, only:  work_mode
 implicit none
 
 public
@@ -183,29 +184,31 @@ contains
 #endif
     end subroutine
 
-    function energy_all(ham,lat)result(E)
+    function energy_all(ham,lat,work)result(E)
         !get all energies from an energy array
-        class(t_H),intent(in)       ::  ham(:)
-        class(lattice),intent(in)   ::  lat
-        real(8)                     ::  E
+        class(t_H),intent(in)           :: ham(:)
+        class(lattice),intent(in)       :: lat
+        type(work_mode),intent(inout)   :: work
+        real(8)                         :: E
 
         real(8)     ::  tmp_E(size(ham))
         
-        Call energy_resolved(ham,lat,tmp_E)
+        Call energy_resolved(ham,lat,work,tmp_E)
         E=sum(tmp_E)
     end function
 
-    subroutine energy_resolved(ham,lat,E)
+    subroutine energy_resolved(ham,lat,work,E)
         !get contribution-resolved energies from an energy array
-        class(t_H),intent(in)       ::  ham(:)
-        class(lattice),intent(in)   ::  lat
-        real(8),intent(out)         ::  E(size(ham))
+        class(t_H),intent(in)           :: ham(:)
+        class(lattice),intent(in)       :: lat
+        type(work_mode),intent(inout)   :: work
+        real(8),intent(out)             :: E(size(ham))
 
         integer     ::  i
 
         E=0.0d0
         do i=1,size(ham)
-            Call ham(i)%eval_all(E(i),lat)
+            Call ham(i)%eval_all(E(i),lat,work)
         enddo
     end subroutine
 

@@ -2,7 +2,7 @@ module m_deriv_rank2
 use m_deriv_base
 use m_derived_types,only : lattice
 use m_H_type, only: t_H_base
-use m_work_ham_single, only:  work_ham_single
+use m_work_ham_single, only:  work_ham_single, work_mode
 
 integer,parameter       ::  comp=1  !mode component always 1 for rank2 derivative
 private
@@ -10,48 +10,52 @@ public get_l1,get_r1,get_l1_sym, get_r1_sym
 public get_l1_single,get_r1_single, get_l1_sym_single
 
 contains
-    subroutine get_l1(this,H,lat,vec)
-        class(t_deriv),intent(in)   :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
-        real(8),parameter           :: alpha=1.0d0
-        real(8),parameter           :: beta=1.0d0
+    subroutine get_l1(this,H,lat,vec,work)
+        class(t_deriv),intent(in)       :: this
+        class(t_H_base),intent(in)      :: H
+        type(lattice),intent(in)        :: lat
+        real(8),intent(inout)           :: vec(:)
+        type(work_mode),intent(inout)   :: work
+        real(8),parameter               :: alpha=1.0d0
+        real(8),parameter               :: beta=1.0d0
 
-        Call H%mult_r(lat,vec,alpha,beta)
+        Call H%mult_r(lat,vec,work,alpha,beta)
     end subroutine
 
-    subroutine get_r1(this,H,lat,vec)
-        class(t_deriv),intent(in)   :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
-        real(8),parameter           :: alpha=1.0d0
-        real(8),parameter           :: beta=1.0d0
+    subroutine get_r1(this,H,lat,vec,work)
+        class(t_deriv),intent(in)       :: this
+        class(t_H_base),intent(in)      :: H
+        type(lattice),intent(in)        :: lat
+        type(work_mode),intent(inout)   :: work
+        real(8),intent(inout)           :: vec(:)
+        real(8),parameter               :: alpha=1.0d0
+        real(8),parameter               :: beta=1.0d0
 
-        Call H%mult_l(lat,vec,alpha,beta)
+        Call H%mult_l(lat,vec,work,alpha,beta)
     end subroutine
 
-    subroutine get_l1_sym(this,H,lat,vec)
-        class(t_deriv),intent(in)   :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
-        real(8),parameter           :: alpha=2.0d0
-        real(8),parameter           :: beta=1.0d0
+    subroutine get_l1_sym(this,H,lat,vec,work)
+        class(t_deriv),intent(in)       :: this
+        class(t_H_base),intent(in)      :: H
+        type(lattice),intent(in)        :: lat
+        type(work_mode),intent(inout)   :: work
+        real(8),intent(inout)           :: vec(:)
+        real(8),parameter               :: alpha=2.0d0
+        real(8),parameter               :: beta=1.0d0
 
-        Call H%mult_r(lat,vec,alpha,beta)
+        Call H%mult_r(lat,vec,work,alpha,beta)
     end subroutine
 
-    subroutine get_r1_sym(this,H,lat,vec)
-        class(t_deriv),intent(in)   :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
-        real(8),parameter           :: alpha=2.0d0
-        real(8),parameter           :: beta=1.0d0
+    subroutine get_r1_sym(this,H,lat,vec,work)
+        class(t_deriv),intent(in)       :: this
+        class(t_H_base),intent(in)      :: H
+        type(lattice),intent(in)        :: lat
+        type(work_mode),intent(inout)   :: work
+        real(8),intent(inout)           :: vec(:)
+        real(8),parameter               :: alpha=2.0d0
+        real(8),parameter               :: beta=1.0d0
 
-        Call H%mult_l(lat,vec,alpha,beta)
+        Call H%mult_l(lat,vec,work,alpha,beta)
     end subroutine
 
 

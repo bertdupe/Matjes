@@ -46,18 +46,18 @@ end type
 
 contains
 
-subroutine mult_l(this,lat,res,alpha,beta)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     !this implementation without the transpose is only very slightly faster thatn the operator on this%H with transpose
     !so that in most cases it is not worth it to use this class if only mult_l is supposed to be optimized
     class(t_H_mkl_csr_mem),intent(in)   :: this
     type(lattice), intent(in)           :: lat
     real(8), intent(inout)              :: res(:)
+    type(work_mode),intent(inout)       :: work
     real(8),intent(in),optional         :: alpha
     real(8),intent(in),optional         :: beta
     ! internal
     integer(C_int)             :: stat
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
     real(8)                    :: alp, bet
 
     if(present(alpha))then
@@ -70,11 +70,11 @@ subroutine mult_l(this,lat,res,alpha,beta)
     else
         bet=0.0d0
     endif
-    Call this%mode_l%get_mode(lat,modes,vec)
-    if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
+    Call this%mode_l%get_mode(lat,modes,work)
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alp,this%HT,this%descr,modes,bet,res)
+#ifdef CPP_MKL
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl_mem"
-    if(allocated(vec)) deallocate(vec)
+#endif
 end subroutine 
 
 

@@ -26,7 +26,6 @@ contains
 
     procedure :: optimize
     procedure :: mult_l
-    procedure :: mult_r_ind 
 
 
     procedure :: set_work_single
@@ -123,31 +122,31 @@ subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_
     enddo
 end subroutine 
 
-subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
-    class(t_H_eigen_mem),intent(in) :: this
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind_out(N)
-    real(8),intent(out)             :: vec_out(N)
+!subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
+!    class(t_H_eigen_mem),intent(in) :: this
+!    type(lattice),intent(in)        :: lat
+!    integer,intent(in)              :: N
+!    integer,intent(in)              :: ind_out(N)
+!    real(8),intent(out)             :: vec_out(N)
+!
+!    real(8),pointer            :: modes(:)
+!    real(8),allocatable,target :: vec(:)
+!
+!    Call this%mode_r%get_mode(lat,modes,vec)
+!    Call eigen_H_mult_l_ind(this%HT,modes,N,ind_out,vec_out)
+!end subroutine
 
-    real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
-
-    Call this%mode_r%get_mode(lat,modes,vec)
-    Call eigen_H_mult_l_ind(this%HT,modes,N,ind_out,vec_out)
-end subroutine
-
-subroutine mult_l(this,lat,res,alpha,beta)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     use m_derived_types, only: lattice
     class(t_H_eigen_mem),intent(in) :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
 
     ! internal
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
     real(8)                    :: alp, bet
 
     if(present(alpha))then
@@ -160,9 +159,8 @@ subroutine mult_l(this,lat,res,alpha,beta)
     else
         bet=0.0d0
     endif
-    Call this%mode_l%get_mode(lat,modes,vec)
+    Call this%mode_l%get_mode(lat,modes,work)
     Call eigen_H_mult_r(this%HT,modes,res,alp,bet)
-    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
 subroutine optimize(this)

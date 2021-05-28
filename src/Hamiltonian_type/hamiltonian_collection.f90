@@ -1,7 +1,7 @@
 module m_hamiltonian_collection
 use m_H_public, only: t_H, get_Htype_N
 use m_fft_H_public, only: fft_H
-use m_work_ham_single, only: work_ham_single
+use m_work_ham_single, only: work_ham_single, work_mode
 
 use m_H_type,only : len_desc
 use m_derived_types, only: lattice
@@ -16,6 +16,7 @@ type    ::  hamiltonian
     class(t_H),allocatable          :: H(:)
     class(fft_H),allocatable        :: H_fft(:)
     real(8),allocatable             :: H_fft_tmparr(:,:)   !temporary array for effective field from fft
+    type(work_mode)                 :: work
     
     logical                         :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
     type(mpi_type)                  :: com_global
@@ -29,6 +30,7 @@ type    ::  hamiltonian
 
     character(len=len_desc),allocatable ::  desc_master(:)
 contains
+    !creation routines
     procedure   ::  init_H_mv
     procedure   ::  init_H_cp
 
@@ -49,6 +51,7 @@ contains
 
     !utility routines
     procedure   :: get_single_work
+!    procedure   :: set_work_mode
 
     !small access routines
     procedure   :: size_H
@@ -126,6 +129,7 @@ subroutine distribute(this,com_in)
             do i=1,this%NH_local
                 Call this%H(i)%recv(0,i,com_outer%com)
             enddo
+            Call set_work_mode(this)
         endif
         this%is_set=.true.
     endif
@@ -171,6 +175,7 @@ subroutine bcast_hamil(this,comm)
     do i=1,this%NH_total
         Call this%H(i)%bcast(comm)
     enddo
+    if(.not.comm%ismas) Call set_work_mode(this)
 #else
     continue
 #endif
@@ -237,6 +242,7 @@ subroutine init_H_mv(this,lat,Harr,H_fft)
         endif
     endif
     this%N_total=this%NH_total+this%NHF_total
+    Call set_work_mode(this)
     this%is_set=.true.
 end subroutine
 
@@ -271,6 +277,7 @@ subroutine init_H_cp(this,lat,Harr,H_fft)
         endif
     endif
     this%N_total=this%NH_total+this%NHF_total
+    Call set_work_mode(this)
     this%is_set=.true.
 end subroutine
 
@@ -291,7 +298,7 @@ subroutine energy_distrib(this,lat,order,Edist)
     endif
     if(.not.allocated(Edist)) allocate(Edist(lat%Ncell*lat%site_per_cell(order),this%N_total),source=0.0d0)
     do iH=1,this%NH_local
-        Call this%H(iH)%energy_dist(lat,order,Edist(:,iH))
+        Call this%H(iH)%energy_dist(lat,order,this%work,Edist(:,iH))
     enddo
     if(this%is_para(2)) Call reduce_sum(Edist,this%com_inner)
     if(this%is_para(1))then
@@ -320,7 +327,7 @@ subroutine energy_resolved(this,lat,E)
 
     E=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%eval_all(E(iH),lat)
+        Call this%H(iH)%eval_all(E(iH),lat,this%work)
     enddo
     if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
@@ -380,7 +387,7 @@ subroutine get_eff_field(this,lat,B,Ham_type)
 
     B=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B)
+        Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B,this%work)
     enddo
 
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
@@ -447,6 +454,25 @@ subroutine get_single_work(this,order,work)
         Call this%H(iH)%set_work_single(work_arr(iH),order)
     enddo
     Call work%set_max(work_arr)
+    do iH=1,this%NH_local
+        Call work_arr(iH)%destroy()
+    enddo
 end subroutine
+
+subroutine set_work_mode(this)
+    class(hamiltonian),intent(inout)    :: this
+
+    type(work_mode)     :: work_arr(this%NH_local)
+    integer     :: iH
+
+    do iH=1,this%NH_local
+        Call this%H(iH)%set_work_mode(work_arr(iH))
+    enddo
+    Call this%work%set_max(work_arr)
+    do iH=1,this%NH_local
+        Call work_arr(iH)%destroy()
+    enddo
+end subroutine
+
 
 end module

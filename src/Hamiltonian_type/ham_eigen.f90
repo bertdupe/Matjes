@@ -140,15 +140,15 @@ type(t_H_eigen) function dummy_constructor()
     !continue 
 end function 
 
-subroutine mult_r(this,lat,res,alpha,beta)
+subroutine mult_r(this,lat,res,work,alpha,beta)
     class(t_H_eigen),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
     real(8)                    :: alp, bet
 
     if(present(alpha))then
@@ -162,49 +162,48 @@ subroutine mult_r(this,lat,res,alpha,beta)
         res=0.0d0  !prevents uninitialized runtime warnings
         bet=0.0d0
     endif
-    Call this%mode_r%get_mode(lat,modes,vec)
+    Call this%mode_r%get_mode(lat,modes,work)
     Call eigen_H_mult_r(this%H,modes,res,alp,bet)
-    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
-    class(t_H_eigen),intent(in)     :: this
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind_out(N)
-    real(8),intent(out)             :: vec_out(N)
+!subroutine mult_r_ind(this,lat,N,ind_out,vec_out)
+!    class(t_H_eigen),intent(in)     :: this
+!    type(lattice),intent(in)        :: lat
+!    integer,intent(in)              :: N
+!    integer,intent(in)              :: ind_out(N)
+!    real(8),intent(out)             :: vec_out(N)
+!
+!    real(8),pointer            :: modes(:)
+!    real(8),allocatable,target :: vec(:)
+!
+!    Call this%mode_r%get_mode(lat,modes,vec)
+!    Call eigen_H_mult_r_ind(this%H,modes,N,ind_out,vec_out)
+!end subroutine
+!
+!subroutine mult_l_ind(this,lat,N,ind_out,vec_out)
+!    class(t_H_eigen),intent(in)     :: this
+!    type(lattice),intent(in)        :: lat
+!    integer,intent(in)              :: N
+!    integer,intent(in)              :: ind_out(N)
+!    real(8),intent(out)             :: vec_out(N)
+!
+!    real(8),pointer            :: modes(:)
+!    real(8),allocatable,target :: vec(:)
+!
+!    Call this%mode_l%get_mode(lat,modes,vec)
+!    Call eigen_H_mult_l_ind(this%H,modes,N,ind_out,vec_out)
+!end subroutine
 
-    real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
-
-    Call this%mode_r%get_mode(lat,modes,vec)
-    Call eigen_H_mult_r_ind(this%H,modes,N,ind_out,vec_out)
-end subroutine
-
-subroutine mult_l_ind(this,lat,N,ind_out,vec_out)
-    class(t_H_eigen),intent(in)     :: this
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: N
-    integer,intent(in)              :: ind_out(N)
-    real(8),intent(out)             :: vec_out(N)
-
-    real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
-
-    Call this%mode_l%get_mode(lat,modes,vec)
-    Call eigen_H_mult_l_ind(this%H,modes,N,ind_out,vec_out)
-end subroutine
-
-subroutine mult_l(this,lat,res,alpha,beta)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     use m_derived_types, only: lattice
     class(t_H_eigen),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
     real(8)                    :: alp, bet
 
     if(present(alpha))then
@@ -218,9 +217,8 @@ subroutine mult_l(this,lat,res,alpha,beta)
         res=0.0d0  !prevents uninitialized runtime warnings
         bet=0.0d0
     endif
-    Call this%mode_l%get_mode(lat,modes,vec)
+    Call this%mode_l%get_mode(lat,modes,work)
     Call eigen_H_mult_l(this%H,modes,res,alp,bet)
-    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
 subroutine optimize(this)

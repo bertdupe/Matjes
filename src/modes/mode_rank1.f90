@@ -2,6 +2,7 @@ module m_mode_construction_rank1_point
 use m_type_lattice, only: dim_modes_inner
 use m_mode_construction
 use m_derived_types, only : lattice,number_different_order_parameters
+use m_work_ham_single, only:  work_mode
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit
 implicit none
 private
@@ -95,11 +96,11 @@ subroutine get_ind_site(this,comp,site,size_out,ind)
     ind=(site-1)*size_out+[(i,i=1,size_out)]
 end subroutine
 
-subroutine get_mode(this,lat,mode,tmp)
-    class(F_mode_rank1_point),intent(in)       :: this
-    type(lattice),intent(in)                   :: lat       !lattice type which knows about all states
-    real(8),intent(out),pointer                :: mode(:)   !pointer to required mode
-    real(8),allocatable,target,intent(inout)   :: tmp(:)    !not used here
+subroutine get_mode(this,lat,mode,work)
+    class(F_mode_rank1_point),intent(in)        :: this
+    type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
+    real(8),intent(out),pointer                 :: mode(:)   !pointer to required mode
+    type(work_mode),intent(inout)               :: work     !nothing to do for rank1
 
     Call lat%set_order_point(this%order(1),mode)
 end subroutine

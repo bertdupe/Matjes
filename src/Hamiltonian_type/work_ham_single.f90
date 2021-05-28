@@ -1,11 +1,11 @@
 module m_work_ham_single
 !module for derived type which provides some arrays for temporary array when evaluating the Energy of Hamiltonians
 private
-public work_ham_single, work_size_single, N_work_single
+public work_ham_single, work_size_single, N_work_single, work_mode
 
 integer,parameter   ::  N_work_single=2
 
-type work_ham_single
+type work_base
     !internal data arrays, DO NOT MODIFY UNLESS YOU KNOW WHAT YOU ARE DOING (pointers because targets in types does not work)
     real(8),pointer,contiguous, private :: real_dat(:)=>null()
     integer,pointer,contiguous, private :: int_dat(:)=>null()
@@ -18,6 +18,14 @@ contains
     procedure   :: set_max
     final       :: finalize
 end type
+
+type,extends(work_base) ::  work_ham_single
+end type
+
+type,extends(work_base) ::  work_mode
+end type
+
+
 contains
 
 subroutine work_size_single(dim_single,line_max,sizes)
@@ -32,14 +40,14 @@ end subroutine
 
 
 subroutine finalize(this)
-    type(work_ham_single),intent(inout)    ::  this
+    type(work_base),intent(inout)    ::  this
 
     Call this%destroy()
 end subroutine
 
 subroutine set(this,sizes)
-    class(work_ham_single),intent(inout)    :: this
-    integer,intent(in)                      :: sizes(2)
+    class(work_base),intent(inout)    :: this
+    integer,intent(in)                :: sizes(2)
 
     Call this%destroy()
     if(sizes(1)>0)then
@@ -53,8 +61,8 @@ subroutine set(this,sizes)
 end subroutine
 
 subroutine set_max(this,arr)
-    class(work_ham_single),intent(inout)    :: this
-    class(work_ham_single),intent(in)       :: arr(:)
+    class(work_base),intent(inout)    :: this
+    class(work_base),intent(in)       :: arr(:)
 
     integer                                 :: sizes(2)
     integer                                 :: size_dat(size(arr))
@@ -74,7 +82,7 @@ subroutine set_max(this,arr)
 end subroutine
 
 subroutine destroy(this)
-    class(work_ham_single),intent(inout)    ::  this
+    class(work_base),intent(inout)    ::  this
 
     if(associated(this%real_dat))then
         deallocate(this%real_dat)

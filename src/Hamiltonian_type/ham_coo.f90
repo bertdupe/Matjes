@@ -4,6 +4,7 @@ module m_H_coo
 use m_H_combined, only: t_H
 use m_H_type, only: t_H_base
 use m_derived_types, only: lattice, number_different_order_parameters,op_abbrev_to_int
+use m_work_ham_single, only:  work_mode
 use mpi_basic                
 
 type,extends(t_H) :: t_H_coo
@@ -38,20 +39,22 @@ private
 public t_H,t_H_coo
 contains 
 
-subroutine mult_r(this,lat,res,alpha,beta)
+subroutine mult_r(this,lat,res,work,alpha,beta)
     class(t_H_coo),intent(in)       :: this
     type(lattice),intent(in)        :: lat
     real(8),intent(inout)           :: res(:)
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
 
     STOP "IMPLEMENT mult_r FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
-subroutine mult_l(this,lat,res,alpha,beta)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     class(t_H_coo),intent(in)       :: this
     type(lattice),intent(in)        :: lat
     real(8),intent(inout)           :: res(:)
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
 

@@ -2,6 +2,7 @@ module m_H_dense
 !Hamiltonian type specifications using dense matrices and no external library
 use m_derived_types, only: lattice, number_different_order_parameters
 use m_H_coo_based
+use m_work_ham_single, only:  work_mode
 
 type,extends(t_H_coo_based) :: t_H_dense
     real(8),allocatable   :: H(:,:)
@@ -26,19 +27,20 @@ private
 public t_H,t_H_dense
 contains 
 
-subroutine mult_r(this,lat,res,alpha,beta)
+subroutine mult_r(this,lat,res,work,alpha,beta)
     !mult
     use m_derived_types, only: lattice
     class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer                 :: modes(:)
     real(8),allocatable,target      :: vec(:)
 
-    Call this%mode_r%get_mode(lat,modes,vec)
+    Call this%mode_r%get_mode(lat,modes,work)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
     if(present(alpha).and.present(beta))then
         res=alpha*matmul(this%H,modes)+beta*res
@@ -49,21 +51,20 @@ subroutine mult_r(this,lat,res,alpha,beta)
     else
         res=matmul(this%H,modes)
     endif
-    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine mult_l(this,lat,res,alpha,beta)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     use m_derived_types, only: lattice
     class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
 
-    Call this%mode_l%get_mode(lat,modes,vec)
+    Call this%mode_l%get_mode(lat,modes,work)
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
     if(present(alpha).and.present(beta))then
         res=alpha*matmul(modes,this%H)+beta*res
@@ -74,7 +75,6 @@ subroutine mult_l(this,lat,res,alpha,beta)
     else
         res=matmul(modes,this%H)
     endif
-    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
 

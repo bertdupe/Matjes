@@ -2,6 +2,7 @@ module m_mode_construction
 ! module that contains functions which combines the different sites on the left and the right of the Hamiltonians
 ! to transform Hamiltonians of ranks >2 to Hamiltonians of rank 2
 use m_derived_types, only : lattice, number_different_order_parameters
+use m_work_ham_single, only:  work_mode
 use, intrinsic :: iso_fortran_env, only : error_unit
 implicit none
 
@@ -100,13 +101,13 @@ abstract interface
         integer,intent(out)         :: dim_mode
     end subroutine
 
-    subroutine int_get_mode(this,lat,mode,tmp)
+    subroutine int_get_mode(this,lat,mode,work)
         !subroutine which return a pointer to the mode, either saved in the tmp array or at some other independent array (depending on the implementation)
-        import F_mode,lattice
-        class(F_mode),intent(in)                   :: this
-        type(lattice),intent(in)                   :: lat       !lattice type which knows about all states
-        real(8),intent(out),pointer                :: mode(:)   !pointer to required mode
-        real(8),allocatable,target,intent(inout)   :: tmp(:)    !possible temporary storage for mode pointer
+        import F_mode,lattice, work_mode
+        class(F_mode),intent(in)                    :: this
+        type(lattice),intent(in)                    :: lat      !lattice type which knows about all states
+        real(8),intent(out),pointer                 :: mode(:)  !pointer to required mode
+        type(work_mode),intent(inout)               :: work     !target to save pointer data, if rank >1
     end subroutine
 
     subroutine int_get_mode_exc(this,lat,comp,vec)
@@ -333,8 +334,9 @@ subroutine get_mode_disc(this,lat,N,ind,vec)
     real(8),pointer                         :: mode(:)   !pointer to required mode
     real(8),allocatable,target              :: tmp(:)    !possible temporary storage for mode pointer
 
-    Call this%get_mode(lat,mode,tmp)
-    vec=mode(ind)
+    ERROR STOP "IMPLEMENT IF NECESSARY"
+!    Call this%get_mode(lat,mode,tmp)
+!    vec=mode(ind)
 end subroutine
 
 

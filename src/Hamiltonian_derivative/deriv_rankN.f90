@@ -2,35 +2,37 @@ module m_deriv_rankN
 use m_derived_types,only : lattice, dim_modes_inner
 use m_deriv_base
 use m_H_type, only: t_H_base
-use m_work_ham_single, only:  work_ham_single
+use m_work_ham_single, only:  work_ham_single, work_mode
 
 private
 public get_lN, get_rN, get_lN_single, get_rN_single
 
 contains
-    subroutine get_lN(this,H,lat,vec)
+    subroutine get_lN(this,H,lat,vec,work)
         class(t_deriv),intent(in)       :: this
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
+        type(work_mode),intent(inout)   :: work
 
         real(8)                         :: tmp(H%dimH(1))   !multipied, but not reduced
         real(8),parameter               :: beta=1.0d0
     
-        Call H%mult_r(lat,tmp)
+        Call H%mult_r(lat,tmp,work)
         Call H%mode_l%reduce_other_exc(lat,this%order,tmp,beta,vec)
     end subroutine
 
-    subroutine get_rN(this,H,lat,vec)
+    subroutine get_rN(this,H,lat,vec,work)
         class(t_deriv),intent(in)       :: this
         class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
+        type(work_mode),intent(inout)   :: work
 
         real(8)                         :: tmp(H%dimH(2))   !multipied, but not reduced
         real(8),parameter               :: beta=1.0d0
     
-        Call H%mult_l(lat,tmp)
+        Call H%mult_l(lat,tmp,work)
         Call H%mode_r%reduce_other_exc(lat,this%order,tmp,beta,vec)
     end subroutine
 

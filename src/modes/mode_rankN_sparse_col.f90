@@ -2,6 +2,7 @@ module m_mode_construction_rankN_sparse_col
 use m_mode_construction
 use m_type_lattice, only: dim_modes_inner,  lattice,number_different_order_parameters
 use m_coo_mat
+use m_work_ham_single, only:  work_mode
 implicit none
 private
 public F_mode_rankN_sparse_col, col_mat
@@ -240,19 +241,18 @@ subroutine reduce_comp_add(this,lat,vec_in,comp,vec_out)
     !enddo
 end subroutine
 
-subroutine get_mode(this,lat,mode,tmp)
+subroutine get_mode(this,lat,mode,work)
     class(F_mode_rankN_sparse_col),intent(in)   :: this
     type(lattice),intent(in)                    :: lat       !lattice type which knows about all states
     real(8),intent(out),pointer                 :: mode(:)   !pointer to required mode
-    real(8),allocatable,target,intent(inout)    :: tmp(:)
+    type(work_mode),intent(inout)               :: work
 
     real(8)         :: tmp_internal(this%mode_size,size(this%dat))
     real(8),pointer :: mode_base(:)
 
     integer         :: i
 
-    allocate(tmp(this%mode_size),source=0.0d0)
-    mode=>tmp
+    mode(1:this%mode_size)=>work%real_arr(1:this%mode_size)
 
     tmp_internal=1.d0
     do i=1,size(this%dat)

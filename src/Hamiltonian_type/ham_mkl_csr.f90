@@ -79,16 +79,16 @@ type(t_H_mkl_csr) function dummy_constructor()
     !continue 
 end function 
 
-subroutine mult_r(this,lat,res,alpha,beta)
+subroutine mult_r(this,lat,res,work,alpha,beta)
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     integer(C_int)             :: stat
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
     real(8)                    :: alp, bet
 
     if(present(alpha))then
@@ -102,23 +102,23 @@ subroutine mult_r(this,lat,res,alpha,beta)
         bet=0.0d0
     endif
 
-    Call this%mode_r%get_mode(lat,modes,vec)
-    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
+    Call this%mode_r%get_mode(lat,modes,work)
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,alp,this%H,this%descr,modes,bet,res)
+#ifdef CPP_DEBUG
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_r of m_H_sparse_mkl"
-    if(allocated(vec)) deallocate(vec)
+#endif
 end subroutine 
 
-subroutine mult_l(this,lat,res,alpha,beta)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     class(t_H_mkl_csr),intent(in)   :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     integer(C_int)             :: stat
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
     real(8)                    :: alp, bet
 
     if(present(alpha))then
@@ -132,11 +132,11 @@ subroutine mult_l(this,lat,res,alpha,beta)
         bet=0.0d0
     endif
 
-    Call this%mode_l%get_mode(lat,modes,vec)
-    if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
+    Call this%mode_l%get_mode(lat,modes,work)
     stat=mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,alp,this%H,this%descr,modes,bet,res)
+#ifdef CPP_DEBUG
     if(stat/=SPARSE_STATUS_SUCCESS) STOP "failed MKL_SPBLAS routine in mult_l of m_H_sparse_mkl"
-    if(allocated(vec)) deallocate(vec)
+#endif
 end subroutine 
 
 subroutine optimize(this)

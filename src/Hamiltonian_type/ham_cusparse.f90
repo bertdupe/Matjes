@@ -10,6 +10,7 @@ use m_derived_types, only: lattice,number_different_order_parameters
 use m_H_coo_based
 use m_cuda_H_interface
 use m_cuda_H_vec_interface
+use m_work_ham_single, only:  work_mode
 use, intrinsic :: iso_c_binding
 
 private
@@ -170,11 +171,12 @@ end subroutine
 !    STOP
 !end subroutine 
 
-subroutine mult_r(this,lat,res,alpha,beta)
+subroutine mult_r(this,lat,res,work,alpha,beta)
     use m_derived_types, only: lattice
     class(t_H_cusparse),intent(in)  :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
@@ -193,23 +195,22 @@ subroutine mult_r(this,lat,res,alpha,beta)
     else
         bet=0.0d0
     endif
-    Call this%mode_r%get_mode(lat,modes,vec)
+    Call this%mode_r%get_mode(lat,modes,work)
     Call cuda_fvec_set(this%rvec,modes)
     Call cuda_H_mult_r(this%H,this%rvec, this%lvec, alp, bet, this%buffer_r, handle)
     Call cuda_fvec_get(this%lvec,res)
-    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
-subroutine mult_l(this,lat,res,alpha,beta)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     use m_derived_types, only: lattice
     class(t_H_cusparse),intent(in)  :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    type(work_mode),intent(inout)   :: work
     real(8),intent(in),optional     :: alpha
     real(8),intent(in),optional     :: beta
     ! internal
     real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
     real(8)                    :: alp, bet
 
     if(present(alpha))then
@@ -223,11 +224,10 @@ subroutine mult_l(this,lat,res,alpha,beta)
     else
         bet=0.0d0
     endif
-    Call this%mode_l%get_mode(lat,modes,vec)
+    Call this%mode_l%get_mode(lat,modes,work)
     Call cuda_fvec_set(this%lvec,modes)
     Call cuda_H_mult_l(this%H,this%lvec, this%rvec, alp, bet, this%buffer_l, handle)
     Call cuda_fvec_get(this%rvec,res)
-    if(allocated(vec)) deallocate(vec)
 end subroutine 
 
 subroutine optimize(this)

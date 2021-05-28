@@ -30,11 +30,11 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     ! it reads first the parameters of the simulation i.e. inp file
     ! then it reads the lattice
     ! this order aims at not taking care of too many neigbours if the Jij are set to 0
-    type(io_parameter), intent(out) :: io_simu
-    type(lattice), intent(inout) :: my_lattice
-    type(simulation_parameters),intent (inout) :: ext_param
-    class(t_H),intent(inout),allocatable      ::  Ham_res(:), Ham_comb(:)
-    type(hamiltonian),intent(out)           :: H_res,H_comb
+    type(io_parameter), intent(out)             :: io_simu
+    type(lattice), intent(inout)                :: my_lattice
+    type(simulation_parameters),intent (inout)  :: ext_param
+    class(t_H),intent(inout),allocatable        :: Ham_res(:), Ham_comb(:)
+    type(hamiltonian),intent(inout)             :: H_res,H_comb
 
     class(fft_H),allocatable    :: ffT_Ham_res(:)
     class(fft_H),allocatable    :: fft_Ham_comb(:)

@@ -2,7 +2,7 @@ module m_deriv_public
 use m_deriv_base, only: t_deriv
 use m_H_type, only: t_H_base
 use m_derived_types,only : lattice
-use m_work_ham_single, only:  work_ham_single
+use m_work_ham_single, only:  work_ham_single, work_mode
 use m_deriv_rank2
 use m_deriv_rankN
 implicit none
@@ -75,11 +75,12 @@ subroutine set_deriv(deriv,order,op_l,op_r)
     endif
 end subroutine
 
-subroutine get_null(this,H,lat,vec)
-    class(t_deriv),intent(in)   :: this
-    class(t_H_base),intent(in)  :: H
-    type(lattice),intent(in)    :: lat
-    real(8),intent(inout)       :: vec(:)
+subroutine get_null(this,H,lat,vec,work)
+    class(t_deriv),intent(in)       :: this
+    class(t_H_base),intent(in)      :: H
+    type(lattice),intent(in)        :: lat
+    real(8),intent(inout)           :: vec(:)
+    type(work_mode),intent(inout)   :: work
     
     continue
 end subroutine
