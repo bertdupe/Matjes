@@ -14,6 +14,7 @@ type extpar_input
     logical :: enable_T=.false.
     logical :: enable_M=.false.
     logical :: enable_u=.false.
+    logical :: enable_w=.false.
 end type
 
 type min_input

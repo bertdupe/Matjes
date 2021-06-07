@@ -17,6 +17,7 @@ use m_spindynamics
 use m_molecular_dynamics
 use m_montecarlo
 use m_entropic
+use m_wavefunc_evol
 use m_GNEB, only: GNEB
 use m_write_config, only: write_config
 use m_random_init, only: random_init
@@ -121,6 +122,9 @@ Implicit None
         call molecular_dynamics(all_lattices,io_simu,ext_param,H_comb,mpi_world)
     endif
 
+    if (my_simu%name == 'wavefunc_eval')then
+        call wavefunc_evolution(all_lattices,ext_param,H_comb,mpi_world)
+    endif
 
     if(mpi_world%ismas)then
         !---------------------------------

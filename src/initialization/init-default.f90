@@ -53,6 +53,8 @@ subroutine get_default_value(ordname,dim_mode,extpar_io,def_val)
             def_val=extpar_io%T(1)
         case('phonon')
             def_val=0.0
+        case('wavefunction')
+            def_val=0.0
         case default
             write(*,'(//2A)') "COULD NOT OBTAIN DEFAULT VALUE FOR ORDER: ",ordname
             write(*,'(A)') "IMPLEMENT A DEFAULT VALUE"

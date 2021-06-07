@@ -852,7 +852,8 @@ do
       if (nvar.eq.0) then
          write(6,'(/,a)') 'The simulation type was not found  '
          write(6,'(2a)') 'The code has read  ', str
-         write(6,*) 'possible choices are  ',type_simu
+         write(6,*) 'possible choices are:'
+         write(6,'(3XA)') type_simu
          stop
       endif
 

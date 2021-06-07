@@ -9,15 +9,17 @@ public lattice, number_different_order_parameters,op_name_to_int,op_int_to_abbre
 public :: dim_modes_inner
 
 
-integer,parameter :: number_different_order_parameters=5    !m,E,B,T,u
-character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T","U"]
+integer,parameter :: number_different_order_parameters=6    !m,E,B,T,u,w
+character(len=1),parameter :: order_parameter_abbrev(number_different_order_parameters)=["M","E","B","T","U","W"]
 character(len=*),parameter :: order_parameter_name(number_different_order_parameters)=[&
-                                &   'magnetic   ',&
-                                &   'Efield     ',&
-                                &   'Bfield     ',&
-                                &   'temperature',&
-                                &   'phonon     ']
-integer,parameter           :: dim_modes_inner(number_different_order_parameters)=[3,3,3,1,3]   !rank of single mode entry (don't confuse with dim_modes which is super-cell resolved)
+                                &   'magnetic    ',&
+                                &   'Efield      ',&
+                                &   'Bfield      ',&
+                                &   'temperature ',&
+                                &   'phonon      ',&
+                                &   'wavefunction']
+
+integer,parameter           :: dim_modes_inner(number_different_order_parameters)=[3,3,3,1,3,2]   !rank of single mode entry (don't confuse with dim_modes which is super-cell resolved)
 
 ! variable that defines the lattice
 type lattice
@@ -40,6 +42,7 @@ type lattice
      !convenience parameters 
      integer        :: nmag=0 !number of magnetic atoms in the unit-cell (can also be obtained from cell)
      integer        :: nph=0  !number of atoms with phonons in the unit-cell (can also be obtained from cell) 
+     integer        :: norb=0  !number of wave function orbitals per cell 
 !     integer        :: nat=0  !overall number of atoms in the unit-cell (can also be obtained from cell) IMPLEMENT
 !     integer        :: nattype=0  !overall number of different atom types (can also be obtained from cell) IMPLEMENT
 
@@ -51,6 +54,7 @@ type lattice
      type(order_par)  :: B !Magnetic field
      type(order_par)  :: T !Temperature
      type(order_par)  :: u !phonon
+     type(order_par)  :: w !wavefunction
 
 contains
     !initialization function
@@ -201,6 +205,7 @@ subroutine init_order(this,cell,extpar_io)
     this%cell=cell
     this%nmag=count(cell%atomic(:)%moment/=0.0d0)
     this%nph=count(cell%atomic(:)%use_ph)
+    this%norb=sum(cell%atomic(:)%orbitals)
     !obsolete orderparameter format
     if(extpar_io%enable_M.and.this%nmag<1)then
         WRITE(*,'(///A)') 'CONGRATULATIONS, you have specified "enable_M" but set no magnetic atom'
@@ -214,6 +219,8 @@ subroutine init_order(this,cell,extpar_io)
     if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) this%dim_modes(3)=3
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) this%dim_modes(4)=1
     this%dim_modes(5)=this%nph*3
+    if(                            extpar_io%enable_w) this%dim_modes(6)=this%norb*2    !requires to be enables manually because of separate TB-part no requireing the lattice, factor 2 because is complex
+!    this%dim_modes(6)=this%dim_modes(6)*2   !UNIFY WITH HAMILTONIAN(MAGNETIC ORDER)
     !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
     this%order_set=this%dim_modes>0
     if(this%order_set(1)) this%site_per_cell(1)=this%nmag
@@ -221,13 +228,15 @@ subroutine init_order(this,cell,extpar_io)
     if(this%order_set(3)) this%site_per_cell(3)=1
     if(this%order_set(4)) this%site_per_cell(4)=1
     if(this%order_set(5)) this%site_per_cell(5)=this%nph
+    if(this%order_set(6)) this%site_per_cell(6)=this%norb
 
     !new orderparameter format
-    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1),dim_modes_inner(1))
-    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2),dim_modes_inner(2))
-    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3),dim_modes_inner(3))
-    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4),dim_modes_inner(4))
-    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5),dim_modes_inner(5))
+    if(this%order_set(1)) Call this%M%init(this%dim_lat,this%dim_modes(1),dim_modes_inner(1),is_cmplx=.false.)
+    if(this%order_set(2)) Call this%E%init(this%dim_lat,this%dim_modes(2),dim_modes_inner(2),is_cmplx=.false.)
+    if(this%order_set(3)) Call this%B%init(this%dim_lat,this%dim_modes(3),dim_modes_inner(3),is_cmplx=.false.)
+    if(this%order_set(4)) Call this%T%init(this%dim_lat,this%dim_modes(4),dim_modes_inner(4),is_cmplx=.false.)
+    if(this%order_set(5)) Call this%u%init(this%dim_lat,this%dim_modes(5),dim_modes_inner(5),is_cmplx=.false.)
+    if(this%order_set(6)) Call this%w%init(this%dim_lat,this%dim_modes(6),dim_modes_inner(6),is_cmplx=.true. )
 end subroutine
 
 subroutine read_order(this,suffix_in,isinit_opt)
@@ -252,6 +261,7 @@ subroutine read_order(this,suffix_in,isinit_opt)
     if(this%order_set(3).and..not.isinit(3)) Call this%B%read_file(trim(order_parameter_name(3))//suffix,isinit(3))
     if(this%order_set(4).and..not.isinit(4)) Call this%T%read_file(trim(order_parameter_name(4))//suffix,isinit(4))
     if(this%order_set(5).and..not.isinit(5)) Call this%u%read_file(trim(order_parameter_name(5))//suffix,isinit(5))
+    if(this%order_set(6).and..not.isinit(6)) Call this%w%read_file(trim(order_parameter_name(6))//suffix,isinit(6))
     deallocate(suffix)
     if(present(isinit_opt)) isinit_opt=isinit
 end subroutine
@@ -439,6 +449,8 @@ subroutine set_order_point(this,order,point)
         point=>this%T%all_modes
     case(5)
         point=>this%u%all_modes
+    case(6)
+        point=>this%w%all_modes
     case default
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
@@ -465,6 +477,8 @@ subroutine set_order_point_single_inner(this,order,i_inner,point,bnd)
         point=>this%T%all_modes(bnd(1):bnd(2))
     case(5)
         point=>this%u%all_modes(bnd(1):bnd(2))
+    case(6)
+        point=>this%w%all_modes(bnd(1):bnd(2))
     case default
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
@@ -491,6 +505,8 @@ subroutine set_order_point_single(this,order,i_site,dim_bnd,dim_mode,point,bnd)
         point=>this%T%all_modes(bnd(1):bnd(2))
     case(5)
         point=>this%u%all_modes(bnd(1):bnd(2))
+    case(6)
+        point=>this%w%all_modes(bnd(1):bnd(2))
     case default
         write(*,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
