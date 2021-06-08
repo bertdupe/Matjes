@@ -118,7 +118,7 @@ subroutine get_coupling_ME_D(Ham,io,lat)
         enddo
         Ham%desc="antisymmetric magnetoelectric coupling"
         Call mode_set_rank1(Ham%mode_l,lat,"M")
-#if 0
+#if 1
         Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
 #else
         Call coo_full_unfold(2,lat%Ncell,dim_modes_r,mat)
