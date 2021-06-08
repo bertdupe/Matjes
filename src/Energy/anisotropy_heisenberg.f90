@@ -9,7 +9,7 @@ contains
 subroutine read_anisotropy_input(io_unit,fname,io)
     use m_io_utils
     use m_input_H_types, only: io_H_aniso
-    use, intrinsic :: iso_fortran_env, only : output_unit
+    use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
     integer,intent(in)              :: io_unit
     character(len=*), intent(in)    :: fname
     type(io_H_aniso),intent(out)    :: io
@@ -49,12 +49,18 @@ subroutine read_anisotropy_input(io_unit,fname,io)
                 if(norm2(vec)/=0.0d0) Nnonzero=Nnonzero+1
             enddo
             if(Nentry<1)then
-                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-                ERROR STOP "INPUT PROBABLY WRONG"
+                write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+                ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+                return
             endif
             if(Nnonzero<1)then
-                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-                ERROR STOP "INPUT PROBABLY WRONG"
+                write(error_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+                ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+                return
             endif
             write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
             io%is_set=.true.

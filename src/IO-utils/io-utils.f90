@@ -455,6 +455,7 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
     nread=0
     Call set_pos_entry(io,fname,var_name,success)
     if(success)then
+        success=.false.
         read(io,'(a)',iostat=stat) str
         Ntriple=0; Nnonzero=0
         nread=nread+1
@@ -467,12 +468,18 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
             if(val/=0.0d0) Nnonzero=Nnonzero+1
         enddo
         if(Ntriple<1)then
-            write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         if(Nnonzero<1)then
-            write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
         success=.true.
@@ -512,6 +519,7 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
                 endif
             enddo
         enddo
+        success=.true.
     endif
 
     Call check_further_entry(io,fname,var_name)
@@ -542,6 +550,7 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     read(io,'(a)',iostat=stat) str
     if(success)then
         !find out how many entries there are
+        success=.false.
         Npair=0; Nnonzero=0
         nread=nread+1
         do 
@@ -553,12 +562,18 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
             if(val/=0.0d0) Nnonzero=Nnonzero+1
         enddo
         if(Npair<1)then
-            write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         if(Nnonzero<1)then
-            write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
         !allocate correct size of entries and move IO to beginning of data
@@ -599,6 +614,7 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
                 endif
             enddo
         enddo
+        success=.true.
     endif
 
     Call check_further_entry(io,fname,var_name)
