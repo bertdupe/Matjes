@@ -59,6 +59,8 @@ subroutine EMwave_read_string(this,str)
         phi=phi*pi              !insert phi in units of pi
         omega=2.0d0*pi/omega    !insert omega as wavelength in 1/fs
 
+        this%t_start=max(this%t_start,t0(1)-10.0d0*tau(1))
+        this%t_end  =min(this%t_end  ,t0(1)-10.0d0*tau(1))
     end associate
 
     this%get_shape=>shape_EMwave

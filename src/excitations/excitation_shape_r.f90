@@ -1,60 +1,60 @@
-module m_excitation_norm
+module m_excitation_shape_r
 use m_type_lattice, only: dim_modes_inner,op_name_to_int
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 
 private
-public  ::  read_excitation_norms, excitation_norm
+public  ::  read_excitation_shape_r, excitation_shape_r
 
-type excitation_norm
+type excitation_shape_r
     character(len=30)                    :: name='plane' !name for identification     
     real(8)                              :: center(3)=0.0d0
     real(8)                              :: cutoff=1.0d0
-    procedure(int_norm), pointer,pass    :: norm=>norm_plane
+    procedure(int_shape_r), pointer,pass    :: shape_r=>shape_r_plane
 contains
     procedure   ::   read_string
 end type
 
 abstract interface
-    function int_norm(this,R)result(norm)
-        import excitation_norm
-        class(excitation_norm),intent(in)   :: this
+    function int_shape_r(this,R)result(shape_r)
+        import excitation_shape_r
+        class(excitation_shape_r),intent(in)   :: this
         real(8), intent(in)                 :: R(3)
-        real(8)                             :: norm
+        real(8)                             :: shape_r
     end function
 end interface
 
 contains
 
-subroutine read_excitation_norms(io,fname,norm)
+subroutine read_excitation_shape_r(io,fname,shape_r)
     use m_io_read_util
     integer,intent(in)                              :: io
     character(len=*),intent(in)                     :: fname
-    type(excitation_norm),intent(inout),allocatable :: norm(:)
+    type(excitation_shape_r),intent(inout),allocatable :: shape_r(:)
 
     character(len=*),parameter  :: var_name='excitation_shape_r'
     character(len=100)          :: str
     logical                     :: success
     integer                     :: nread
     integer                     :: stat
-    type(excitation_norm)       :: io_exc
+    type(excitation_shape_r)       :: io_exc
     integer                     :: i
 
 
     inquire(io,opened=success)
     if(.not.success)then
-        write(error_unit,'(A)') "Error reading the excitation norms"
+        write(error_unit,'(A)') "Error reading the excitation shape_r"
         write(error_unit,'(A)') "Input io-unit is not opened"
         STOP
     endif
 
     Call set_pos_entry(io,fname,var_name,success)
     if(.not.success)then
-        write(output_unit,'(/A/)') "No excitation_norm provided in input"
+        write(output_unit,'(/A/)') "No excitation_shape_r provided in input"
         write(output_unit,'(A)') "Setting only plane as default"
-        allocate(norm(1))
+        allocate(shape_r(1))
         return
     endif
-    read(io,'(a)',iostat=stat)! nothing to read in "excitation_norm" line, one could put the number there
+    read(io,'(a)',iostat=stat)! nothing to read in "excitation_shape_r" line, one could put the number there
 
     nread=0
     do 
@@ -72,68 +72,68 @@ subroutine read_excitation_norms(io,fname,norm)
     enddo
 
     if(nread>0)then
-        write(output_unit,'(/AI3A/)') "Found ",nread," excitation_norm entries which are read now"
+        write(output_unit,'(/AI3A/)') "Found ",nread," excitation_shape_r entries which are read now"
         !return do beginning of excitation data
         do i=1,Nread+1
             backspace(io)
         enddo
-        allocate(norm(nread))
+        allocate(shape_r(nread))
         do i=1,Nread
             read(io,'(a)',iostat=stat) str
-            Call norm(i)%read_string(str,success)
+            Call shape_r(i)%read_string(str,success)
             if(.not.success) ERROR STOP "PROGRAMMING MISTAKE, THIS SHOULD ALWAYS WORK"
         enddo
     else
-        write(error_unit,'(2/A/A/)') "WARNING, specified excitation_norm, but no excitation_norms are found", "CHECK INPUT"
+        write(error_unit,'(2/A/A/)') "WARNING, specified excitation_shape_r, but no excitation_shape_r are found", "CHECK INPUT"
     endif
 
 end subroutine
 
 subroutine read_string(this,string,success)
-    class(excitation_norm),intent(inout)    :: this
+    class(excitation_shape_r),intent(inout)    :: this
     character(len=*),intent(in)             :: string
     logical,intent(out)                     :: success
 
     integer     ::  stat
 
     character(len=100)                      :: dummy_name
-    character(len=100)                      :: norm_name
+    character(len=100)                      :: shape_r_name
     integer                                 :: size_value
     integer                                 :: pos
     integer                                 :: Nreal
 
     success=.false.
-    read(string,*,iostat=stat)  dummy_name, norm_name
+    read(string,*,iostat=stat)  dummy_name, shape_r_name
     if(stat/=0) return
 
     this%name=trim(dummy_name)
 
-    select case(trim(norm_name))
+    select case(trim(shape_r_name))
     case('plane')
         !no additional data has to be read for plane
         Nreal=0
-        this%norm => norm_plane
+        this%shape_r => shape_r_plane
     case('square')
         Nreal=4
-        read(string,*,iostat=stat)  dummy_name, norm_name, this%center,this%cutoff
-        this%norm => norm_square
+        read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center,this%cutoff
+        this%shape_r => shape_r_square
     case('cylinder')
         Nreal=4
-        read(string,*,iostat=stat)  dummy_name, norm_name, this%center,this%cutoff
-        this%norm => norm_cylinder
+        read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center,this%cutoff
+        this%shape_r => shape_r_cylinder
     case('gaussian')
         Nreal=4
-        read(string,*,iostat=stat)  dummy_name, norm_name, this%center,this%cutoff
-        this%norm => norm_gaussian
+        read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center,this%cutoff
+        this%shape_r => shape_r_gaussian
     case default
-        write(error_unit,'(A)') "Error reading excitation norm"
-        write(error_unit,'(2A)') "Norm identifier not implemented (second entry):", trim(norm_name)
+        write(error_unit,'(A)') "Error reading excitation_shape_r"
+        write(error_unit,'(2A)') "shape_r identifier not implemented (second entry):", trim(shape_r_name)
         write(error_unit,'(A)') "Error reading line:"
         write(error_unit,'(A)') string
         STOP
     end select
     if(stat/=0)then
-        write(error_unit,'(A)') "Error reading excitation norm"
+        write(error_unit,'(A)') "Error reading excitation_shape_r"
         write(error_unit,'(A)') "Failed to read all information from line:"
         write(error_unit,'(A)') string
         write(error_unit,'(A,I3,A)') "Two strings should be followed by ",Nreal," reals, which are not recognized"
@@ -143,46 +143,46 @@ subroutine read_string(this,string,success)
 end subroutine
 
 
-function norm_plane(this,R)result(norm)
-    class(excitation_norm),intent(in)   :: this
+function shape_r_plane(this,R)result(shape_r)
+    class(excitation_shape_r),intent(in)   :: this
     real(8), intent(in)                 :: R(3)
-    real(8)                             :: norm
-    norm=1.0d0
+    real(8)                             :: shape_r
+    shape_r=1.0d0
 
 end function
 
-function norm_square(this,R)result(norm)
-    class(excitation_norm),intent(in)   ::  this
+function shape_r_square(this,R)result(shape_r)
+    class(excitation_shape_r),intent(in)   ::  this
     real(8), intent(in)                 :: R(3)
-    real(8)                             :: norm
+    real(8)                             :: shape_r
 
-    norm=0.0d0
-    if (all(abs(R-this%center).lt.this%cutoff)) norm=1.0d0
+    shape_r=0.0d0
+    if (all(abs(R-this%center).lt.this%cutoff)) shape_r=1.0d0
 end function
 
-function norm_cylinder(this,R)result(norm)
+function shape_r_cylinder(this,R)result(shape_r)
     !actually a sphere, but I will not change the functionality at this point
-    class(excitation_norm),intent(in)   :: this
+    class(excitation_shape_r),intent(in)   :: this
     real(8), intent(in)                 :: R(3)
-    real(8)                             :: norm
+    real(8)                             :: shape_r
 !    real(8)     :: dist
     
-!    dist=norm2(R-R0)
-!    norm=0.5d0*(sign(1.0d0,cutoff-dist)+1.0d0)
-    norm=0.0d0
-    if (norm2(R-this%center).lt.this%cutoff) norm=1.0d0
+!    dist=shape_r2(R-R0)
+!    shape_r=0.5d0*(sign(1.0d0,cutoff-dist)+1.0d0)
+    shape_r=0.0d0
+    if (norm2(R-this%center).lt.this%cutoff) shape_r=1.0d0
 end function
 
-function norm_gaussian(this,R)result(norm)
-    class(excitation_norm),intent(in)   :: this
+function shape_r_gaussian(this,R)result(shape_r)
+    class(excitation_shape_r),intent(in)   :: this
     real(8), intent(in)                 :: R(3)
-    real(8)                             :: norm
+    real(8)                             :: shape_r
     real(8)     :: tmp
 
     tmp=norm2(R-this%center)
     tmp=tmp/this%cutoff
     tmp=-tmp*tmp
     tmp=max(tmp,-200.0d0)  !prevent exp(tmp) underflow 
-    norm=exp(tmp)
+    shape_r=exp(tmp)
 end function
 end module

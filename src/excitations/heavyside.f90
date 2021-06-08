@@ -30,7 +30,7 @@ subroutine heaviside_read_string(this,str)
     if(stat/=0)then
         write(error_unit,'(A)') "ERROR, Failed to read excitation shape from line:"
         write(error_unit,'(A)') str
-        write(error_unit,'(A)') "The error happens when reading the ", size(this%real_var)," reals after 2 strings, 2 reals, and 1 int"
+        write(error_unit,'(A,I3,A)') "The error happens when reading the ", size(this%real_var)," reals after 2 strings, 2 reals, and 1 int"
         STOP
     endif
     this%get_shape=>shape_heaviside

@@ -5,8 +5,8 @@ private
 public excitation_io, read_excitation_io
 type excitation_io
     integer             :: op   !operator index
-    character(len=100)  :: shape_name
-    character(len=100)  :: norm_name
+    character(len=100)  :: shape_t_name
+    character(len=100)  :: shape_r_name
 contains
     procedure   ::   read_string
 end type
@@ -85,7 +85,7 @@ subroutine read_string(this,string,success)
     character(len=100)  :: operator_name
 
     success=.false.
-    read(string,*,iostat=stat)  operator_name, this%shape_name, this%norm_name
+    read(string,*,iostat=stat)  operator_name, this%shape_t_name, this%shape_r_name
     if(stat/=0) return
     
     if(.not.any(operator_name==order_parameter_name))then
