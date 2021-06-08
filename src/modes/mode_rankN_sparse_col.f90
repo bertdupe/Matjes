@@ -119,7 +119,7 @@ subroutine get_mode_disc(this,lat,N,ind,vec)
     integer,intent(in)                          :: ind(N)
     real(8),intent(out)                         :: vec(N)
 
-    real(8),pointer :: mode_base(:)
+    real(8),pointer,contiguous :: mode_base(:)
     integer ::  i
 
     vec=1.0
@@ -139,7 +139,7 @@ subroutine get_mode_exc_disc(this,lat,comp,N,ind,vec)
     integer,intent(in)                          :: ind(N)
     real(8),intent(out)                         :: vec(N)
 
-    real(8),pointer :: mode_base(:)
+    real(8),pointer,contiguous :: mode_base(:)
     integer ::  i
 
     vec=1.0

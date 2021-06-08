@@ -38,7 +38,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_energyfield, only : write_energy_field 
     use m_createspinfile, only: CreateSpinFile
     use m_user_info, only: user_info
-    use m_excitations, only: update_ext_EM_fields, update_EMT_of_r,set_excitations
+    use m_excitations
     use m_solver_commun, only: get_integrator_field, get_propagator_field,select_propagator
     use m_topo_sd, only: get_charge_map
     use m_solver_order,only: get_dt_mode
@@ -83,13 +83,14 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     integer :: iomp, N_cell, N_loop, tag
     !integer :: io_test
     !! switch that controls the presence of magnetism, electric fields and magnetic fields
-    logical :: i_excitation
+    logical :: l_excitation
     logical :: used(number_different_order_parameters)
     ! dumy
     logical :: said_it_once,gra_topo
     integer,allocatable ::  Q_neigh(:,:)
     integer :: io_Eout_contrib
     integer :: dim_mode !dim_mode of the iterated order parameter
+    type(excitation_combined)   :: excitations
 
     real(8)     ::  time_init, time_final
 
@@ -185,7 +186,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! part of the excitations
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        call set_excitations('input',i_excitation,input_excitations)
+        Call read_all_excitations('input',excitations)
+        l_excitation=allocated(excitations%exc)
+!        call set_excitations('input',l_excitation,input_excitations)
     
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! do we use the update timestep
@@ -215,10 +218,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             ave_torque=0.0d0
             test_torque=0.0d0
             dt=timestep_int
-            !why is this outside of the integration order loop? time changes there
-            call update_ext_EM_fields(real_time,check)
+!            !why is this outside of the integration order loop? time changes there
+!            call update_ext_EM_fields(real_time,check)
         endif
-       
        !
        ! loop over the integration order
        !
@@ -228,12 +230,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 dt=get_dt_mode(timestep_int,i_loop)
                 
                 ! loop that get all the fields
-                if (i_excitation) then
-                    do iomp=1,N_cell
-                        !smarter to just copy relevant order parameters around, or even point all to the same array
-                        call update_EMT_of_r(iomp,mag_lattice)
-                        call update_EMT_of_r(iomp,lat_1)
-                    enddo
+                if (l_excitation) then
+                    Call update_exc(real_time+dt,mag_lattice,excitations)
+                    Call update_exc(real_time+dt,lat_1      ,excitations)
+
+!                    do iomp=1,N_cell
+!                        !smarter to just copy relevant order parameters around, or even point all to the same array
+!                        call update_EMT_of_r(iomp,mag_lattice)
+!                        call update_EMT_of_r(iomp,lat_1)
+!                    enddo
                 endif
             endif
 
@@ -359,12 +364,13 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         if(io_simu%io_energy_cont) close(io_Eout_contrib)
 
         write(6,'(a,2x,E20.12E3)') 'Final Total Energy (eV)',Edy
-        if ((dabs(check(2)).gt.1.0d-8).and.(kt/k_B.gt.1.0d-5)) then
-            write(6,'(a,2x,f16.6)') 'Final Temp (K)', check(1)/check(2)/2.0d0/k_B
-            write(6,'(a,2x,f14.7)') 'Kinetic energy (meV)', (check(1)/check(2)/2.0d0-kT)/k_B*1000.0d0
-        else
-            write(6,'(a)') 'the temperature measurement is not possible'
-        endif
+        ! TEMPERATURE MEASUREMENT HAS TO BE REIMPLAMENTED
+        !if ((dabs(check(2)).gt.1.0d-8).and.(kt/k_B.gt.1.0d-5)) then
+        !    write(6,'(a,2x,f16.6)') 'Final Temp (K)', check(1)/check(2)/2.0d0/k_B
+        !    write(6,'(a,2x,f14.7)') 'Kinetic energy (meV)', (check(1)/check(2)/2.0d0-kT)/k_B*1000.0d0
+        !else
+        !    write(6,'(a)') 'the temperature measurement is not possible'
+        !endif
     endif
     if(comm%ismas)then
         Call cpu_time(time_final)

@@ -87,7 +87,6 @@ field=0.0d0
 
 if ( (time.ge.EM_Pulse%t_start).and.(time.le.EM_Pulse%t_cut) ) then !during wave
 	field(3)=EM_Pulse%E_0 *cos(EM_Pulse%omega_l*time) * exp(-((time-EM_Pulse%t_0)/EM_Pulse%Tau)**2)
-	!if (field(3).lt.1.0d-8) field=0.0d0
 else !before and after wave
 	field(3)=0.0d0
 endif

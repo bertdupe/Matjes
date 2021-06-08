@@ -27,7 +27,7 @@ subroutine write_config_char(fname,lat)
 
     integer     :: io,i
     character(len=100) :: filename
-    real(8),pointer ::  ord(:)
+    real(8),pointer,contiguous ::  ord(:)
     logical         ::  used(size(order_parameter_name))
 
     Call lat%used_order(used)
