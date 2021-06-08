@@ -1,26 +1,17 @@
 module m_deriv_base
 use m_H_type, only: t_H_base
 use m_derived_types, only : lattice
+use m_work_ham_single, only:  work_ham_single, work_mode
 
 private
-public :: t_deriv_l, t_deriv_r, t_deriv_base 
+public t_deriv
 
-type,abstract    ::  t_deriv_l
-contains
-    procedure(int_deriv_l_get),deferred :: get
-    procedure(int_deriv_l_get_single),deferred :: get_single
-end type
-
-type,abstract    ::  t_deriv_r
-contains
-    procedure(int_deriv_r_get),deferred :: get
-    procedure(int_deriv_r_get_single),deferred :: get_single
-end type
-
-
-type    :: t_deriv_base
-    class(t_deriv_l),allocatable  :: l
-    class(t_deriv_r),allocatable  :: r
+type    :: t_deriv
+    integer :: order=0
+    procedure(int_deriv_get),pointer        :: l=>uninitialized
+    procedure(int_deriv_get),pointer        :: r=>uninitialized
+    procedure(int_deriv_get_single),pointer :: l_single=>uninitialized_single
+    procedure(int_deriv_get_single),pointer :: r_single=>uninitialized_single
 contains
     procedure :: copy
     procedure :: get => get_deriv
@@ -28,76 +19,82 @@ contains
 end type
 
 abstract interface
-    subroutine int_deriv_l_get(this,H,lat,vec)
-        import t_deriv_l, t_H_base, lattice
-        class(t_deriv_l),intent(in) :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
+    subroutine int_deriv_get(this,H,lat,vec,work)
+        import t_deriv, t_H_base, lattice, work_mode
+        class(t_deriv),intent(in)       :: this
+        class(t_H_base),intent(in)      :: H
+        type(lattice),intent(in)        :: lat
+        real(8),intent(inout)           :: vec(:)
+        type(work_mode),intent(inout)   :: work
     end subroutine
-    subroutine int_deriv_r_get(this,H,lat,vec)
-        import t_deriv_r, t_H_base, lattice
-        class(t_deriv_r),intent(in) :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        real(8),intent(inout)       :: vec(:)
-    end subroutine
-    subroutine int_deriv_l_get_single(this,H,lat,site,vec)
-        import t_deriv_l, t_H_base, lattice
-        class(t_deriv_l),intent(in) :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        integer,intent(in)          :: site
-        real(8),intent(inout)       :: vec(:)
-    end subroutine
-    subroutine int_deriv_r_get_single(this,H,lat,site,vec)
-        import t_deriv_r, t_H_base, lattice
-        class(t_deriv_r),intent(in) :: this
-        class(t_H_base),intent(in)  :: H
-        type(lattice),intent(in)    :: lat
-        integer,intent(in)          :: site
-        real(8),intent(inout)       :: vec(:)
+    subroutine int_deriv_get_single(this,H,lat,site,work,vec)
+        import  t_deriv,t_H_base, lattice, work_ham_single
+        class(t_deriv),intent(in)           :: this
+        class(t_H_base),intent(in)          :: H
+        type(lattice),intent(in)            :: lat
+        integer,intent(in)                  :: site
+        type(work_ham_single),intent(inout) ::  work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+        real(8),intent(inout)               :: vec(:)
     end subroutine
 end interface
 contains
 
-    subroutine copy(this,deriv_out)
-        class(t_deriv_base),intent(in)     :: this
-        class(t_deriv_base),intent(inout)  :: deriv_out
+subroutine copy(this,deriv_out)
+    class(t_deriv),intent(in)       :: this
+    class(t_deriv),intent(inout)    :: deriv_out
 
-        if(.not.allocated(this%l)) ERROR STOP "CANNOT COPY derivative type as left source is not allocated"
-        if(.not.allocated(this%r)) ERROR STOP "CANNOT COPY derivative type as right source is not allocated"
-        if(allocated(deriv_out%l)) deallocate(deriv_out%l)
-        if(allocated(deriv_out%r)) deallocate(deriv_out%r)
-        allocate(deriv_out%l,source=this%l)
-        allocate(deriv_out%r,source=this%r)
-    end subroutine
+    deriv_out%l=>this%l
+    deriv_out%r=>this%r
+    deriv_out%l_single=>this%l_single
+    deriv_out%r_single=>this%r_single
+end subroutine
 
-    subroutine get_deriv(this,H,lat,vec,tmp)
-        class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
-        class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
-        type(lattice),intent(in)        :: lat
-        real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
-        real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
+subroutine get_deriv(this,H,lat,vec,work)
+    class(t_deriv),intent(in)       :: this             !derive type with set procedure and order to derive with respect to
+    class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
+    type(lattice),intent(in)        :: lat
+    real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
+    type(work_mode),intent(inout)   :: work
 
-        Call this%l%get(H,lat,tmp)
-        vec=vec+tmp
-        Call this%r%get(H,lat,tmp)
-        vec=vec+tmp
-    end subroutine
+    Call this%l(H,lat,vec,work)
+    Call this%r(H,lat,vec,work)
+end subroutine
 
-    subroutine get_deriv_single(this,H,lat,site,vec,tmp)
-        class(t_deriv_base),intent(in)  :: this             !derive type with set procedure and order to derive with respect to
-        class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
-        type(lattice),intent(in)        :: lat
-        integer,intent(in)              :: site
-        real(8),intent(inout)           :: vec(:)           !add derivative to this vector (
-        real(8),intent(inout)           :: tmp(size(vec))   !to prevent constant allocation/deallocation
+subroutine get_deriv_single(this,H,lat,site,work,vec,tmp)
+    class(t_deriv),intent(in)           :: this             !derive type with set procedure and order to derive with respect to
+    class(t_H_base),intent(in)          :: H                !Hamiltonian that is derivated
+    type(lattice),intent(in)            :: lat
+    integer,intent(in)                  :: site
+    type(work_ham_single),intent(inout) :: work             !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    real(8),intent(inout)               :: vec(:)           !add derivative to this vector (
+    real(8),intent(inout)               :: tmp(size(vec))   !to prevent constant allocation/deallocation !also remove with beta=1 as in get_deriv-case?
 
-        Call this%l%get_single(H,lat,site,tmp)
-        vec=vec+tmp
-        Call this%r%get_single(H,lat,site,tmp)
-        vec=vec+tmp
-    end subroutine
+    Call this%l_single(H,lat,site,work,tmp)
+    vec=vec+tmp
+    Call this%r_single(H,lat,site,work,tmp)
+    vec=vec+tmp
+end subroutine
+
+subroutine uninitialized(this,H,lat,vec,work)
+    class(t_deriv),intent(in)       :: this
+    class(t_H_base),intent(in)      :: H
+    type(lattice),intent(in)        :: lat
+    real(8),intent(inout)           :: vec(:)
+    type(work_mode),intent(inout)   :: work
+   
+    ERROR STOP "DERIVATIVE POINTER HAS NOT BEEN SET"
+end subroutine
+
+subroutine uninitialized_single(this,H,lat,site,work,vec)
+    class(t_deriv),intent(in)           :: this
+    class(t_H_base),intent(in)          :: H
+    type(lattice),intent(in)            :: lat
+    integer,intent(in)                  :: site
+    type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+    real(8),intent(inout)               :: vec(:)
+    
+    ERROR STOP "SINGLE DERIVATIVE POINTER HAS NOT BEEN SET"
+end subroutine
+
 
 end module

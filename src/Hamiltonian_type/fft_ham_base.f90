@@ -6,25 +6,38 @@ module m_fft_H_base
 
 use m_type_lattice,only: lattice
 use m_H_type, only: len_desc
+use m_fft_H_internal, only: int_set_M, int_get_H
+use, intrinsic :: iso_c_binding, only: C_int, C_DOUBLE
 private
 public fft_H
 
 type            ::  fft_H
     private
-    logical,public  :: set=.false.  !all parameters have been initialized
-    integer,public  :: N_rep(3)=0   !size in each dimension of each considered field
-    logical,public  :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
+    logical,public          :: set=.false.  !all parameters have been initialized
+    integer(C_int),public   :: N_rep(3)=0   !size in each dimension of each considered field
+    integer(C_int),public   :: dim_mode=0   !dimension of considered operator field
+    logical,public          :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
                                             ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
     character(len=len_desc)     :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
+
+    real(C_DOUBLE),allocatable,public  ::  M_n(:,:)    !magnetization in normal-space, set by M_internal
+    real(C_DOUBLE),allocatable,public  ::  H_n(:,:)    !effective field normal-space, extract by H_internal
+
+    procedure(int_set_M), pointer,nopass,public    ::  M_internal => null()    !function to set internal magnetization depending on periodic/open boundaries
+    procedure(int_get_H), pointer,nopass,public    ::  H_internal => null()    !function to get effective field depending on periodic/open boundaries
 contains
+    !evaluation routines
     procedure,public    :: get_H            !get effective field
     procedure,public    :: get_H_single     !get effective field for a single site
     procedure,public    :: get_E            !get energy
     procedure,public    :: get_E_single     !get energy for a single site
     procedure,public    :: get_E_distrib    !get energy-distribution in Nmag*Ncell-space
-    procedure,public    :: is_set           !returns set
+
+    !initialization routines
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
+
+    procedure,public    :: is_set           !returns set
     procedure,public    :: get_desc         !get the description
     
     !utility functions
@@ -54,10 +67,11 @@ function same_space(this,comp)result(same)
     logical                 :: same
 
     if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as this is not set"
-    if(.not.this%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as comp is not set"
+    if(.not.comp%set) ERROR STOP "CANNOT CHECK IF fft_H is the same space as comp is not set"
 
     same=all(this%N_rep==comp%N_rep)
     same=same.and.all(this%periodic.eqv.comp%periodic)
+    same=same.and.this%dim_mode==comp%dim_mode
 end function
 
 subroutine add(this,H_in)
@@ -77,9 +91,20 @@ subroutine bcast_fft(this,comm)
     use mpi_util
     class(fft_H),intent(inout)  ::  this
     type(mpi_type),intent(in)   ::  comm
+    integer ::  shp(2)
 
     Call bcast(this%N_rep,comm)
     Call bcast(this%periodic,comm)
+    Call bcast(this%dim_mode,comm)
+    Call bcast(this%desc,comm)
+
+    if(comm%ismas) shp=shape(this%M_n)
+    Call bcast(shp,comm)
+    if(.not.comm%ismas)then
+        Call this%init_internal(this%periodic)
+        allocate(this%M_n(shp(1),shp(2))) 
+        allocate(this%H_n(shp(1),shp(2))) 
+    endif
 end subroutine
 
 subroutine mv(this,H_out)
@@ -90,8 +115,21 @@ subroutine mv(this,H_out)
         ERROR STOP "CANNOT MV UNINITIALIZED FFT_H"
     endif
 
+    if(H_out%set)then
+        ERROR STOP "CANNOT MV TO ALREADY INITIALIZED FFT_H"
+    endif
+
     H_out%N_rep=this%N_rep
     H_out%periodic=this%periodic
+    H_out%dim_mode=this%dim_mode
+    H_out%desc=this%desc
+
+    if(allocated(this%M_N)) call move_alloc(this%M_n,H_out%M_n)
+    if(allocated(this%H_N)) call move_alloc(this%H_n,H_out%H_n)
+
+    H_out%M_internal=>this%M_internal
+    H_out%H_internal=>this%H_internal
+
     H_out%set=this%set
 end subroutine
 
@@ -104,6 +142,14 @@ subroutine copy(this,H_out)
     endif
     H_out%N_rep=this%N_rep
     H_out%periodic=this%periodic
+    H_out%dim_mode=this%dim_mode
+    H_out%desc=this%desc
+
+    allocate(H_out%M_n,mold=this%M_n)
+    allocate(H_out%H_n,mold=this%H_n)
+
+    H_out%M_internal=>this%M_internal
+    H_out%H_internal=>this%H_internal
 
     H_out%set=this%set
 end subroutine
@@ -114,6 +160,13 @@ subroutine destroy(this)
     this%N_rep=0
     this%set=.false.
     this%periodic=.true.
+    this%dim_mode=0
+    this%desc=""
+
+    if(allocated(this%M_N)) deallocate(this%M_N)
+    if(allocated(this%H_N)) deallocate(this%H_N)
+
+    nullify(this%M_internal, this%M_internal)
 end subroutine
 
 pure function is_set(this)result(set)
@@ -128,7 +181,6 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     integer,intent(in)                      :: dim_mode
     real(8),intent(inout),allocatable       :: K_n(:,:,:)
     character(len=*),intent(in),optional    :: desc_in
-
 
     if(present(desc_in))then
         if(len(desc_in)<=len_desc) this%desc=desc_in
@@ -146,7 +198,7 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     integer,intent(out)         :: N_rep(3)
 
     integer         :: i
-    integer         :: Nk_tot           !number of state considered in FT (product of N_rep)
+    integer(C_int)  :: Nk_tot           !number of state considered in FT (product of N_rep)
 
     N_rep=dim_lat
     !set K-boundaries for periodic boundaries
@@ -161,8 +213,14 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     enddo
     this%N_rep=N_rep
     this%periodic=periodic
-end subroutine
+    this%dim_mode=dim_mode
 
+    Nk_tot=product(N_rep)
+    allocate(this%M_n(dim_mode,Nk_tot),source=0.0d0)
+    allocate(this%H_n(dim_mode,Nk_tot),source=0.0d0)
+
+    Call this%init_internal(periodic)
+end subroutine
 
 subroutine init_internal(this,periodic)
     !initialize internal procedures M_internal and H_internal
@@ -170,9 +228,61 @@ subroutine init_internal(this,periodic)
     class(fft_H),intent(inout)    :: this
     logical,intent(in)            :: periodic(3)  !T: periodic boundary, F: open boundary
 
-
-    ERROR STOP "init_internal not implemented in base class"
+    if(all(periodic))then
+        this%M_internal=>set_M_period_TTT
+        this%H_internal=>set_H_period_TTT
+    elseif(all(periodic(1:2)))then
+        this%M_internal=>set_M_period_TTF
+        this%H_internal=>set_H_period_TTF
+    elseif(all(periodic(1:1)))then
+        this%M_internal=>set_M_period_TFF
+        this%H_internal=>set_H_period_TFF
+    else
+        this%M_internal=>set_M_period_FFF
+        this%H_internal=>set_H_period_FFF
+    endif
 end subroutine
+
+subroutine get_E_distrib(this,lat,Htmp,E)
+    class(fft_H),intent(inout)    ::  this
+    type(lattice),intent(in)      ::  lat
+    real(8),intent(inout)         ::  Htmp(:,:)
+    real(8),intent(out)           ::  E(:)
+
+    Call this%get_H(lat,Htmp)
+    Htmp=Htmp*lat%M%modes_v
+    E=sum(reshape(Htmp,[3,lat%Nmag*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
+end subroutine
+
+subroutine get_E(this,lat,Htmp,E)
+    class(fft_H),intent(inout)    ::  this
+    type(lattice),intent(in)      ::  lat
+    real(8),intent(inout)         ::  Htmp(:,:)
+    real(8),intent(out)           ::  E
+
+    Call this%get_H(lat,Htmp)
+    Htmp=Htmp*lat%M%modes_v
+    E=sum(Htmp)
+end subroutine
+
+subroutine get_E_single(this,lat,site,E)
+    !get energy by getting the effective field caused by all sites and multiply the considered site's H with the moment there
+    !it might be faster to do the explicit folding in real space to get the effective field caused by the considered site and multiply then with the entire magnetization (might be worth testing)
+    class(fft_H),intent(inout)  :: this
+    type(lattice),intent(in)    :: lat
+    integer,intent(in)          :: site
+    real(8),intent(out)         :: E
+
+    real(8)                     :: Htmp(3)
+
+    Call this%get_H_single(lat,site,Htmp)
+    Htmp=Htmp*lat%M%modes_3(:,site)
+    E=sum(Htmp)*2.0d0
+end subroutine
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   Routines which have to be implemented locally    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine set_M(this,lat)
     !set this%M_n from lat%M%modes according to this%M_internal
@@ -199,42 +309,6 @@ subroutine get_H_single(this,lat,site,Hout)
     real(8),intent(inout)         ::  Hout(3)
 
     ERROR STOP "get_H_single not implemented in base class"
-end subroutine
-
-subroutine get_E_distrib(this,lat,Htmp,E)
-    class(fft_H),intent(inout)    ::  this
-    type(lattice),intent(in)      ::  lat
-    real(8),intent(inout)         ::  Htmp(:,:)
-    real(8),intent(out)           ::  E(:)
-
-    ERROR STOP "get_E_distrib not implemented in base class"
-end subroutine
-
-subroutine get_E(this,lat,Htmp,E)
-    class(fft_H),intent(inout)    ::  this
-    type(lattice),intent(in)      ::  lat
-    real(8),intent(inout)         ::  Htmp(:,:)
-    real(8),intent(out)           ::  E
-
-    ERROR STOP "get_E not implemented in base class"
-end subroutine
-
-subroutine get_E_single(this,lat,site,E)
-    !get energy by getting the effective field caused by all sites and multiply the considered site's H with the moment there
-    !it might be faster to do the explicit folding in real space to get the effective field caused by the considered site and multiply then with the entire magnetization (might be worth testing)
-    class(fft_H),intent(inout)  :: this
-    type(lattice),intent(in)    :: lat
-    integer,intent(in)          :: site
-    real(8),intent(out)         :: E
-
-
-    ERROR STOP "get_E_single not implemented in base class"
-end subroutine
-
-subroutine set_fftw_plans(this)
-    class(fft_H),intent(inout)  :: this
-    
-    ERROR STOP "set_fftw_plans not implemented in base class"
 end subroutine
 
 end module

@@ -1,4 +1,5 @@
 module m_shape_excitations
+implicit none
 
 ! variable that contains the shape of the fields
 type shape_field
@@ -26,7 +27,6 @@ contains
 ! subroutine that gets the shape of the field in the input file
 !
 subroutine get_shape(io,fname,name,norm)
-implicit none
 character(len=*), intent(in) :: fname,name
 integer, intent(in) :: io
 procedure(shape_norm), pointer, intent(out) :: norm
@@ -37,16 +37,16 @@ call read_shape(io,fname,'shape',shape_excitation)
 select case (trim(shape_excitation%name))
 
   case('plane')
-    norm => norm_0
+    norm => norm_plane
 
   case('square')
-    norm => norm_1
+    norm => norm_square
 
   case('cylinder')
-    norm => norm_2
+    norm => norm_cylinder
 
   case('gaussian')
-    norm => norm_3
+    norm => norm_gaussian
 
   case default
      stop 'The shape is not implemented'
@@ -61,45 +61,45 @@ end subroutine get_shape
 !
 ! The different norm functions
 !
-function norm_0(R,R0,cutoff)
-implicit none
+function norm_plane(R,R0,cutoff)result(norm)
 real(kind=8), intent(in) :: R(3),R0(3),cutoff
-real(kind=8) :: norm_0
+real(kind=8) :: norm
 
-norm_0=1.0d0
+norm=1.0d0
 
-end function norm_0
+end function
 
-function norm_1(R,R0,cutoff)
-implicit none
+function norm_square(R,R0,cutoff)result(norm)
 real(kind=8), intent(in) :: R(3),R0(3),cutoff
-real(kind=8) :: norm_1
+real(kind=8) :: norm
 
-norm_1=0.0d0
-if (all(abs(R-R0).lt.cutoff)) norm_1=1.0d0
+norm=0.0d0
+if (all(abs(R-R0).lt.cutoff)) norm=1.0d0
 
-end function norm_1
+end function
 
-function norm_2(R,R0,cutoff)
-use m_vector, only : norm
-implicit none
+function norm_cylinder(R,R0,cutoff)result(norm)
 real(kind=8), intent(in) :: R(3),R0(3),cutoff
-real(kind=8) :: norm_2
+real(kind=8) :: norm
 
-norm_2=0.0d0
-if (norm(R-R0).lt.cutoff) norm_2=1.0d0
+real(8)     :: dist
 
-end function norm_2
+dist=norm2(R-R0)
+norm=0.5d0*(sign(1.0d0,cutoff-dist)+1.0d0)
+!norm_2=0.0d0
+!if (norm2(R-R0).lt.cutoff) norm_2=1.0d0
+end function
 
-function norm_3(R,R0,cutoff)
-use m_vector, only : norm
-implicit none
-real(kind=8), intent(in) :: R(3),R0(3),cutoff
-real(kind=8) :: norm_3
+function norm_gaussian(R,R0,cutoff)result(norm)
+    real(kind=8), intent(in) :: R(3),R0(3),cutoff
+    real(kind=8) :: norm
 
-norm_3=exp(-(norm(R-R0)/cutoff)**2)
+    real(8) ::  tmp
 
-end function norm_3
+    tmp=norm2(R-R0)
+    tmp=tmp/cutoff
+    norm=exp(-tmp**2)
+end function
 
 
 

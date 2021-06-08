@@ -30,11 +30,11 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     ! it reads first the parameters of the simulation i.e. inp file
     ! then it reads the lattice
     ! this order aims at not taking care of too many neigbours if the Jij are set to 0
-    type(io_parameter), intent(out) :: io_simu
-    type(lattice), intent(inout) :: my_lattice
-    type(simulation_parameters),intent (inout) :: ext_param
-    class(t_H),intent(inout),allocatable      ::  Ham_res(:), Ham_comb(:)
-    type(hamiltonian),intent(out)           :: H_res,H_comb
+    type(io_parameter), intent(out)             :: io_simu
+    type(lattice), intent(inout)                :: my_lattice
+    type(simulation_parameters),intent (inout)  :: ext_param
+    class(t_H),intent(inout),allocatable        :: Ham_res(:), Ham_comb(:)
+    type(hamiltonian),intent(inout)             :: H_res,H_comb
 
     class(fft_H),allocatable    :: ffT_Ham_res(:)
     class(fft_H),allocatable    :: fft_Ham_comb(:)
@@ -110,16 +110,18 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     write(6,'(///)') 
     call user_info(6,time,'Start setting Hamiltonian',.false.)
     keep_resolved_H=io_simu%io_Energy_detail.or..True.  !need to change where all Hamiltonian data is kept
+    Call set_Ham_mode_io()
     Call set_Hamiltonians(Ham_res,Ham_comb,keep_resolved_H,H_io,my_lattice)
     call user_info(6,time,'finished setting Hamiltonian',.false.)
 
-    call user_info(6,time,'Start setting Hamiltonian',.false.)
+    Call set_fft_H_mode_io()
+    call user_info(6,time,'Start setting fft-Hamiltonian',.false.)
     Call set_fft_Hamiltonians(fft_Ham_res,fft_Ham_comb,keep_resolved_H,H_io,my_lattice)
-    call user_info(6,time,'finished setting Hamiltonian',.false.)
+    call user_info(6,time,'finished setting fft-Hamiltonian',.false.)
 
 
-    Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move, as certain the combult is the same (do it even in setup_simu?)
-    if(keep_resolved_H) Call H_res%init_H_cp(my_lattice,Ham_res,fft_Ham_res)   !later change to move, as certain the result is the same (do it even in setup_simu?)
+    Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move if the hamiltonian-type array is no longer necessary in main routine
+    if(keep_resolved_H) Call H_res%init_H_cp(my_lattice,Ham_res,fft_Ham_res)   !later change to move if the hamiltonian-type array is no longer necessary in main routine
 
     if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
     

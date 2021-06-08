@@ -61,7 +61,6 @@ subroutine minimize_run(lat,io_simu,io_min,H)
     use m_createspinfile
     use m_solver, only : minimization
     use m_vector, only : norm_cross,norm, calculate_damping
-    use m_eff_field, only: get_eff_field
     
     implicit none
     type(io_parameter), intent(in)  :: io_simu
@@ -72,7 +71,6 @@ subroutine minimize_run(lat,io_simu,io_min,H)
     real(8),allocatable, dimension(:,:)    :: velocity,predicator,force
     real(8),allocatable, dimension(:)      :: V_eff,F_temp
     real(8),allocatable,target             :: Feff(:)
-    real(8),allocatable,target             :: Ftmp(:)
     real(8),pointer     ::  Feff_vec(:,:)
     ! internal
     real(8)     :: dumy,force_norm,Energy,vmax,vtest,test_torque,max_torque
@@ -94,12 +92,11 @@ subroutine minimize_run(lat,io_simu,io_min,H)
     dim_mode=lat%M%dim_mode
     
     allocate(Feff(dim_mode*N_cell),source=0.0d0)
-    allocate(Ftmp(dim_mode*N_cell),source=0.0d0)
     Feff_vec(1:dim_mode,1:N_cell)=>Feff
     allocate(velocity(dim_mode,N_cell),predicator(dim_mode,N_cell),force(dim_mode,N_cell),source=0.0d0)
     allocate(V_eff(dim_mode),F_temp(dim_mode),source=0.0d0)
     
-    Call H%get_eff_field(lat,Feff,1,Ftmp)
+    Call H%get_eff_field(lat,Feff,1)
 
     do iomp=1,lat%Ncell
         force(:,iomp)=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
@@ -117,7 +114,7 @@ subroutine minimize_run(lat,io_simu,io_min,H)
         force_norm=0.0d0
         vmax=0.0d0
         
-        Call H%get_eff_field(lat,Feff,1,Ftmp)
+        Call H%get_eff_field(lat,Feff,1)
         do iomp=1,N_cell
             F_temp=calculate_damping(lat%M%modes_v(:,iomp),Feff_vec(:,iomp))
             call minimization(velocity(:,iomp),(force(:,iomp)+F_temp)/2.0d0,V_eff,io_min%dt,io_min%mass)
@@ -175,7 +172,6 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     use m_write_spin
     use m_createspinfile
     use m_vector, only : cross,norm
-    use m_eff_field, only: get_eff_field
     type(io_parameter), intent(in)  :: io_simu
     type(min_input), intent(in)     :: io_min
     type(lattice),intent(inout)     :: lat
@@ -188,7 +184,6 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     integer                     :: gra_int
     integer                     :: N_cell,N_dim,N_mag
     real(8),allocatable,target  :: F_eff(:)
-    real(8),allocatable         :: F_tmp(:)
     real(8),allocatable         :: F_norm(:),torque(:)
     real(8),pointer             :: M3(:,:),F_eff3(:,:)
     logical                     :: conv
@@ -201,7 +196,6 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     
     allocate(F_norm(N_mag),source=0.0d0)
     allocate(F_eff(N_dim*N_cell),torque(N_dim*N_cell),source=0.0d0)
-    allocate(F_tmp(N_dim*N_cell),source=0.0d0)
     F_eff3(1:3,1:N_mag)=>F_eff
     M3(1:3,1:N_mag)=>lat%M%all_modes
     
@@ -223,7 +217,7 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     do iter=1,io_min%N_minimization
         max_torque=0.0d0
 
-        Call H%get_eff_field(lat,F_eff,1,F_tmp)
+        Call H%get_eff_field(lat,F_eff,1)
         F_norm=norm2(F_eff3,1)
         if(any(F_norm.lt.1.0d-8)) stop 'problem in the infinite damping minimization routine' !avoid divide by 0
         torque=cross(lat%M%all_modes,F_eff,1,N_dim*N_cell)

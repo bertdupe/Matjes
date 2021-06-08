@@ -65,6 +65,7 @@ contains
     procedure :: bcast_val
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point
+    procedure :: set_order_point_inner
     procedure :: set_order_comb
     procedure :: set_order_comb_exc
     procedure :: set_order_comb_exc_single
@@ -97,7 +98,7 @@ end type lattice
 
 type point_arr
     !private type used only here
-    real(8),pointer     ::  v(:)
+    real(8),pointer,contiguous     ::  v(:)
 end type
 
 
@@ -120,16 +121,20 @@ subroutine init_geo(this,areal_in,alat,dim_lat,boundary)
     integer         :: j,l,i_vec
 
     real(8)         ::  areal(3,3)
+    real(8)         ::  a_sc(3,3)
 
+    areal=transpose(areal_in)
     do i=1,3
-       this%areal(i,:)=areal_in(i,:)*alat(i)
+       areal(:,i)=areal(:,i)*alat(i)
     enddo
-    areal=transpose(this%areal)
+    this%areal=transpose(areal)
+
     this%dim_lat=dim_lat
     this%ncell=product(dim_lat)
     do i=1,3
-       this%a_sc(i,:)=this%areal(i,:)*dim_lat(i)
+       a_sc(:,i)=areal(:,i)*dim_lat(i)
     enddo
+    this%a_sc=transpose(a_sc)
 
     this%periodic=boundary
 
@@ -140,10 +145,10 @@ subroutine init_geo(this,areal_in,alat,dim_lat,boundary)
     this%astar(3,:) = cross(areal(:,1),areal(:,2))/volume
     this%astar=2.0d0*pi*this%astar
 
-    this%a_sc_inv(1,:)= cross(this%a_sc(2,:),this%a_sc(3,:))
-    this%a_sc_inv(2,:)= cross(this%a_sc(3,:),this%a_sc(1,:))
-    this%a_sc_inv(3,:)= cross(this%a_sc(1,:),this%a_sc(2,:))
-    this%a_sc_inv=this%a_sc_inv/dot_product(this%a_sc(1,:),cross(this%a_sc(2,:),this%a_sc(3,:)))   
+    this%a_sc_inv(1,:)= cross(a_sc(:,2),a_sc(:,3))
+    this%a_sc_inv(2,:)= cross(a_sc(:,3),a_sc(:,1))
+    this%a_sc_inv(3,:)= cross(a_sc(:,1),a_sc(:,2))
+    this%a_sc_inv=this%a_sc_inv/dot_product(a_sc(:,1),cross(a_sc(:,2),a_sc(:,3)))   
 
     !write lattice information
     write(6,'(/a)') 'real space lattice vectors (in nm)'
@@ -420,9 +425,9 @@ function index_4_1(this,ind4)result(ind1)
 end function
 
 subroutine set_order_point(this,order,point)
-    class(lattice),intent(in)   ::  this
-    integer,intent(in)          ::  order
-    real(8),pointer,intent(out) ::  point(:)
+    class(lattice),intent(in)               ::  this
+    integer,intent(in)                      ::  order
+    real(8),pointer,contiguous,intent(out)  ::  point(:)
 
     select case(order)
     case(1)
@@ -440,6 +445,29 @@ subroutine set_order_point(this,order,point)
         STOP 'failed to associate pointer in set_order_point'
     end select
 end subroutine
+
+subroutine set_order_point_inner(this,order,point)
+    class(lattice),intent(in)               ::  this
+    integer,intent(in)                      ::  order
+    real(8),pointer,contiguous,intent(out)  ::  point(:,:)
+
+    select case(order)
+    case(1)
+        point=>this%M%modes_in
+    case(2)
+        point=>this%E%modes_in
+    case(3)
+        point=>this%B%modes_in
+    case(4)
+        point=>this%T%modes_in
+    case(5)
+        point=>this%u%modes_in
+    case default
+        write(*,*) 'order:',order
+        STOP 'failed to associate pointer in set_order_point'
+    end select
+end subroutine
+
 
 subroutine set_order_point_single_inner(this,order,i_inner,point,bnd)
     !sets the pointer point to the 
@@ -768,7 +796,7 @@ subroutine point_order_onsite(lat,op,dimH,modes,vec)
     class(lattice), intent(in)              :: lat
     integer,intent(in)                      :: op(:)
     integer,intent(in)                      :: dimH
-    real(8),pointer,intent(out)             :: modes(:)
+    real(8),pointer,intent(out),contiguous  :: modes(:)
     real(8),allocatable,target,intent(out)  :: vec(:)
 
     if(size(op)==1)then

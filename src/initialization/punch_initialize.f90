@@ -23,7 +23,7 @@ subroutine punch_lattice(lat,fname_in)
     logical :: exists
     integer :: i
     integer :: dim_mode
-    real(8),pointer ::  state(:)
+    real(8),pointer,contiguous ::  state(:)
 
     if(present(fname_in))then
         fname=fname_in

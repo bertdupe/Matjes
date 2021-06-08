@@ -61,7 +61,7 @@ subroutine get_exchange_D(Ham,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                Hmag=io%trip(i_attrip)%val(i_dist)
+                Hmag=-io%trip(i_attrip)%val(i_dist)  !flip sign corresponding to previous implementation
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1
@@ -82,7 +82,6 @@ subroutine get_exchange_D(Ham,io,lat)
                         Htmp(offset_mag(1)+2,offset_mag(2)+1)=-DMI(3) * Hmag
                         Htmp(offset_mag(1)+1,offset_mag(2)+3)=-DMI(2) * Hmag
                         Htmp(offset_mag(1)+3,offset_mag(2)+2)=-DMI(1) * Hmag
-                        Htmp=-Htmp !flip sign corresponding to previous implementation
 
                         Call get_coo(Htmp,val_tmp,ind_tmp)
 
@@ -172,7 +171,7 @@ subroutine get_exchange_D_fft(H_fft,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                Hmag=io%trip(i_attrip)%val(i_dist)  !very weird that this does not need negative sign, but seems equivalent with t_H implementation
+                Hmag=-io%trip(i_attrip)%val(i_dist)  !flip sign corresponding to previous implementation
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1

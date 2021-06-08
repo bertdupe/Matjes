@@ -23,6 +23,7 @@ use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
 
 use m_mpi_start_end  !also includes mpi_basic
+use m_bcast_global, only: bcast_global_var
 use m_fftw3,only: fftw_init
 
 Implicit None
@@ -68,6 +69,7 @@ Implicit None
     !     Start main procedures:
     !     *****************************************************************
     Call my_simu%bcast(mpi_world)
+    Call bcast_global_var(mpi_world)    !broadcasts the few global and module parameters
  
 
     !---------------------------------
@@ -111,6 +113,13 @@ Implicit None
         call minimize_infdamp(all_lattices,io_simu,H_comb,mpi_world)  !no parallelization implemented
     endif
 
+    !---------------------------------
+    !  Part which does the molecular dynamics
+    !---------------------------------
+    
+    if (my_simu%name == 'molecular_dynamics')then
+        call molecular_dynamics(all_lattices,io_simu,ext_param,H_comb,mpi_world)
+    endif
 
 
     if(mpi_world%ismas)then
@@ -142,20 +151,12 @@ Implicit None
             call diag_llg(all_lattices,io_simu,H_comb)
         endif
         
-        !---------------------------------
-        !  Part which does the molecular dynamics
-        !---------------------------------
-        
-        if (my_simu%name == 'molecular_dynamics')then
-            write(6,'(a)') 'entering into the molecular dynamics routines'
-            call molecular_dynamics(all_lattices,io_simu,ext_param,Ham_comb)
-        endif
         
         !---------------------------------
         !---------------------------------
         
         Call write_config('end',all_lattices)
-    
+   
         call cpu_time(computation_time)
         write(*,*) 'computation time:',computation_time,'seconds'
         Write(*,*) 'The program has reached the end.'

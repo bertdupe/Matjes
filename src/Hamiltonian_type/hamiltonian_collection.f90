@@ -1,6 +1,7 @@
 module m_hamiltonian_collection
 use m_H_public, only: t_H, get_Htype_N
 use m_fft_H_public, only: fft_H
+use m_work_ham_single, only: work_ham_single, work_mode
 
 use m_H_type,only : len_desc
 use m_derived_types, only: lattice
@@ -15,6 +16,7 @@ type    ::  hamiltonian
     class(t_H),allocatable          :: H(:)
     class(fft_H),allocatable        :: H_fft(:)
     real(8),allocatable             :: H_fft_tmparr(:,:)   !temporary array for effective field from fft
+    type(work_mode)                 :: work
     
     logical                         :: is_para(2)=.false. !signifies if any of the internal mpi-parallelizations have been initialized
     type(mpi_type)                  :: com_global
@@ -28,6 +30,7 @@ type    ::  hamiltonian
 
     character(len=len_desc),allocatable ::  desc_master(:)
 contains
+    !creation routines
     procedure   ::  init_H_mv
     procedure   ::  init_H_cp
 
@@ -45,6 +48,10 @@ contains
     procedure   :: is_master
     procedure   :: bcast => bcast_hamil        !allows to bcast the Hamiltonian along one communicator before internal parallelization is done
     procedure   :: distribute   !distributes the different Hamiltonian entries to separate threads
+
+    !utility routines
+    procedure   :: get_single_work
+!    procedure   :: set_work_mode
 
     !small access routines
     procedure   :: size_H
@@ -122,6 +129,7 @@ subroutine distribute(this,com_in)
             do i=1,this%NH_local
                 Call this%H(i)%recv(0,i,com_outer%com)
             enddo
+            Call set_work_mode(this)
         endif
         this%is_set=.true.
     endif
@@ -167,6 +175,7 @@ subroutine bcast_hamil(this,comm)
     do i=1,this%NH_total
         Call this%H(i)%bcast(comm)
     enddo
+    if(.not.comm%ismas) Call set_work_mode(this)
 #else
     continue
 #endif
@@ -233,6 +242,7 @@ subroutine init_H_mv(this,lat,Harr,H_fft)
         endif
     endif
     this%N_total=this%NH_total+this%NHF_total
+    Call set_work_mode(this)
     this%is_set=.true.
 end subroutine
 
@@ -267,6 +277,7 @@ subroutine init_H_cp(this,lat,Harr,H_fft)
         endif
     endif
     this%N_total=this%NH_total+this%NHF_total
+    Call set_work_mode(this)
     this%is_set=.true.
 end subroutine
 
@@ -287,7 +298,7 @@ subroutine energy_distrib(this,lat,order,Edist)
     endif
     if(.not.allocated(Edist)) allocate(Edist(lat%Ncell*lat%site_per_cell(order),this%N_total),source=0.0d0)
     do iH=1,this%NH_local
-        Call this%H(iH)%energy_dist(lat,order,Edist(:,iH))
+        Call this%H(iH)%energy_dist(lat,order,this%work,Edist(:,iH))
     enddo
     if(this%is_para(2)) Call reduce_sum(Edist,this%com_inner)
     if(this%is_para(1))then
@@ -316,7 +327,7 @@ subroutine energy_resolved(this,lat,E)
 
     E=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%eval_all(E(iH),lat)
+        Call this%H(iH)%eval_all(E(iH),lat,this%work)
     enddo
     if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
@@ -338,48 +349,45 @@ function energy(this,lat)result(E)
     E=sum(tmp_E)
 end function
 
-function energy_single(this,i_m,dim_bnd,lat)result(E)
+subroutine energy_single(this,i_m,order,lat,work,E)
     use m_derived_types, only: number_different_order_parameters
     use mpi_distrib_v
     !returns the total energy caused by a single entry !needs some updating 
-    class(hamiltonian),intent(inout):: this
+    class(hamiltonian),intent(in)   :: this
     integer,intent(in)              :: i_m
     type (lattice),intent(in)       :: lat
-    integer, intent(in)             :: dim_bnd(2,number_different_order_parameters)  !probably obsolete, needs something which specified in which space i_m is thoguh
-    real(8)                         :: E
+    integer,intent(in)              :: order
+    type(work_ham_single),intent(inout) ::  work
+    real(8),intent(out)             :: E
 
     real(8)     ::  tmp_E(this%N_total)
     integer     ::  iH
-
-    if(any(this%is_para)) ERROR STOP "IMPLEMENT"
+#ifdef CPP_DEBUG 
+    if(any(this%is_para)) ERROR STOP "IMPLEMENT" !I is rather unlikely that a parallelization here can make this faster
+#endif
     E=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%eval_single(tmp_E(iH),i_m,dim_bnd,lat)
+        Call this%H(iH)%eval_single(order)%calc(this%H(iH),tmp_E(iH),i_m,lat,work)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
-    if(this%is_para(2)) Call reduce_sum(tmp_E,this%com_inner)
-    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(tmp_E,this%com_outer)
 
-    do iH=1,this%NHF_local
-         Call this%H_fft(iH)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
-    enddo
+    if(this%NHF_local>0) STOP "IMPLEMENT THIS FOR FFT"
 
     E=sum(tmp_E)
-end function
+end subroutine 
 
-subroutine get_eff_field(this,lat,B,Ham_type,tmp)
+subroutine get_eff_field(this,lat,B,Ham_type)
     !calculates the effective internal magnetic field acting on the magnetization for the dynamics
     class(hamiltonian),intent(inout)    :: this
     type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
     real(8),intent(out)                 :: B(:)
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
-    real(8),intent(out)                 :: tmp(size(B))
 
     integer     :: iH, ierr
 
     B=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B,tmp)
+        Call this%H(iH)%deriv(Ham_type)%get(this%H(iH),lat,B,this%work)
     enddo
 
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
@@ -391,19 +399,20 @@ subroutine get_eff_field(this,lat,B,Ham_type,tmp)
     enddo
 end subroutine
 
-subroutine get_eff_field_single(this,lat,site,B,Ham_type,tmp)
+subroutine get_eff_field_single(this,lat,site,B,work,Ham_type,tmp)
     !calculates the effective internal field acting on a single site
     class(hamiltonian),intent(inout)    :: this
     type (lattice),intent(in)           :: lat    !lattice containing current order-parameters 
     integer,intent(in)                  :: site
     real(8),intent(out)                 :: B(:)
+    type(work_ham_single),intent(inout) :: work     !work arrays
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
-    real(8),intent(out)                 :: tmp(size(B))
+    real(8),intent(inout)               :: tmp(size(B))
 
     integer     :: iH, ierr
     B=0.0d0
     do iH=1,this%NH_local
-        Call this%H(iH)%deriv(Ham_type)%get_single(this%H(iH),lat,site,B,tmp)
+        Call this%H(iH)%deriv(Ham_type)%get_single(this%H(iH),lat,site,work,B,tmp)
     enddo
 
     if(any(this%is_para)) Call reduce_sum(B,this%com_global)
@@ -432,5 +441,38 @@ function is_master(this)result(master)
         endif
     endif
 end function
+
+subroutine get_single_work(this,order,work)
+    class(hamiltonian),intent(inout)    :: this
+    integer,intent(in)                  :: order
+    type(work_ham_single),intent(inout) :: work
+
+    type(work_ham_single)               :: work_arr(this%NH_local)
+    integer     :: iH
+
+    do iH=1,this%NH_local
+        Call this%H(iH)%set_work_single(work_arr(iH),order)
+    enddo
+    Call work%set_max(work_arr)
+    do iH=1,this%NH_local
+        Call work_arr(iH)%destroy()
+    enddo
+end subroutine
+
+subroutine set_work_mode(this)
+    class(hamiltonian),intent(inout)    :: this
+
+    type(work_mode)     :: work_arr(this%NH_local)
+    integer     :: iH
+
+    do iH=1,this%NH_local
+        Call this%H(iH)%set_work_mode(work_arr(iH))
+    enddo
+    Call this%work%set_max(work_arr)
+    do iH=1,this%NH_local
+        Call work_arr(iH)%destroy()
+    enddo
+end subroutine
+
 
 end module

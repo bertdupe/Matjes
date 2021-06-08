@@ -132,9 +132,6 @@ subroutine add_delta_k_scf(H_inp,k,h_io,del)
     integer                     :: j,iE
     real(8)                     :: temp !temperature
     logical                     :: vanish
-#ifdef CPP_BLAS
-    complex(8)          :: arr(size(del%delta,1),2)
-#endif
 
     nspin=h_io%nspin
     nBdG =h_io%norb*h_io%nspin*h_io%ncell

@@ -25,7 +25,6 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_Mag_Biq, only: get_Mag_Biq
     use m_4spin, only: get_4spin
     use m_dipolar_magnetic, only: get_dipolar
-    use m_deriv_public, only: set_deriv
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -116,14 +115,14 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     do i_H=1,N_ham
         if(.not. Ham_res(i_h)%is_set()) STOP "not all Hamiltonians are set"
         Call Ham_res(i_h)%optimize()
+        Call Ham_res(i_h)%finish_setup()
     enddo
 
     Call combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
     do i_H=1,size(Ham_comb)
         Call Ham_comb(i_h)%optimize()
+        Call Ham_comb(i_h)%finish_setup()
     enddo
-    Call set_deriv(Ham_comb)
-    if(keep_res) Call set_deriv(Ham_res)
 end subroutine
 
 subroutine combine_Hamiltonians(keep_in,H_in,H_comb)

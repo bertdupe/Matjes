@@ -48,6 +48,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_mc_therm_val
     use m_get_table_nn,only :get_table_nn
+    use m_work_ham_single, only: work_ham_single
 
     type(lattice), intent(inout)            :: lat
     type(MC_input), intent(in)              :: io_MC        !input parameters for MonteCarlo calculation
@@ -79,6 +80,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     integer,parameter           :: io_status=output_unit
     integer                     :: filen_kt_acc(2)  !some control about file-output name
 
+    type(work_ham_single)       :: work !type containing work arrays for single energy evaluation
     ! initialize the variables
     N_spin=lat%Ncell*lat%nmag
     NT_global=io_MC%n_Tsteps
@@ -120,7 +122,9 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     !intialize tracking variables (total energy, magnetization sum)
     !Call state_prop%init(lat,H,io_MC) 
     Call state_prop%init(lat,H,io_MC) 
-    
+
+    Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
+
     Do i_kT=1,NT_local
         Call measure_bcast(measure(i_kt),com_inner)
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
@@ -129,14 +133,14 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
             allocate(measure(i_kt)%MjpMim_ij(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
         endif
 
-        call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,Q_neigh)
+        call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,Q_neigh,work)
         !Monte Carlo steps, calculate the values
         do i_MC=1,io_MC%Total_MC_Steps
             !Monte Carlo steps for independency
             Do i_relax=1,io_MC%T_auto*N_spin
-                Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H)
+                Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,work)
             End do
-            Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H) ! at least one step
+            Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,work) ! at least one step
             Call measure_add(measure(i_kt),lat,state_prop,Q_neigh,fluct_val) 
         end do ! over i_MC
 
