@@ -4,6 +4,8 @@ use m_type_lattice, only: dim_modes_inner,op_name_to_int
 use m_heaviside,only:  heaviside_read_string
 use m_rampe    ,only:      rampe_read_string
 use m_EMwave   ,only:     EMwave_read_string
+use m_gauss    ,only:      gauss_read_string
+use m_algebraic,only:  algebraic_read_string
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 
 private
@@ -100,15 +102,19 @@ subroutine shape_read_string(this,string,success)
         Call rampe_read_string(this,string)
     case('EMwave')
         Call Emwave_read_string(this,string)
+    case('gauss')
+        Call gauss_read_string(this,string)
+    case('algebraic')
+        Call algebraic_read_string(this,string)
     case default
-        write(error_unit,'(A)') "Error reading excitation shape"
+        write(error_unit,'(A)') "Error reading excitation shape_t"
         write(error_unit,'(2A)') "Shape identifier not implemented:",trim(shape_name)
         write(error_unit,'(A)') "Error reading line (second entry):"
         write(error_unit,'(A)') string
         STOP
     end select
     if(stat/=0)then
-        write(error_unit,'(A)') "Error reading excitation norm"
+        write(error_unit,'(A)') "Error reading excitation_shape_t"
         write(error_unit,'(A)') "Failed to read all information from line:"
         write(error_unit,'(A)') string
         write(error_unit,'(A,I3,A)') "Two strings should be followed by ",Nreal," reals, which are not recognized"

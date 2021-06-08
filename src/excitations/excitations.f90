@@ -8,7 +8,7 @@ use m_shape_excitations
 use m_get_position
 use m_convert
 use m_type_lattice
-use m_excitation_norm
+use m_excitation_shape_r
 use m_excitation_shape
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
@@ -29,7 +29,7 @@ type excitation_order_parameter
   real(kind=8), allocatable :: field(:)
 ! name of the shape in field
   character(len=30)         :: name
-! pointer towards the norm of the field
+! pointer towards the shape_r of the field
   procedure(shape_norm), pointer, nopass :: norm => null()
 end type excitation_order_parameter
 
@@ -46,12 +46,12 @@ end type cycle_excitations
 type excitation
     integer     ::  op=0
     integer     ::  int_shape=0
-    integer     ::  int_norm=0
+    integer     ::  int_shape_r=0
 end type
 
 type excitation_combined
     type(excitation),allocatable        :: exc(:)
-    type(excitation_norm),allocatable   :: norms(:)
+    type(excitation_shape_r),allocatable   :: shape_r(:)
     type(excitation_shape),allocatable  :: shapes(:)
 
     real(8), allocatable :: position(:,:)
@@ -87,8 +87,8 @@ subroutine read_all_excitations(fname,excitations)
     integer             :: i,j, Nexc, io
    
     open(newunit=io,file=fname)
-    !get different excitation norms
-    Call read_excitation_norms(io,fname,excitations%norms)
+    !get different excitation shape_r
+    Call read_excitation_shape_r(io,fname,excitations%shape_r)
     
     !get different excitation shapes
     Call read_excitation_shape(io,fname,excitations%shapes)
@@ -102,7 +102,7 @@ subroutine read_all_excitations(fname,excitations)
         !no excitations inserted
         !clean up and leave
         if(allocated(excitations%shapes)) deallocate(excitations%shapes)
-        if(allocated(excitations%norms )) deallocate(excitations%norms )
+        if(allocated(excitations%shape_r )) deallocate(excitations%shape_r )
         return  
     else
         !check allocations
@@ -111,8 +111,8 @@ subroutine read_all_excitations(fname,excitations)
             write(error_unit,'(A)') "CHECK INPUT"
             STOP
         endif
-        if(.not.allocated(excitations%norms))then
-            write(error_unit,'(A)') "ERROR, Found some excitations, but 'excitation_norm' is not set"
+        if(.not.allocated(excitations%shape_r))then
+            write(error_unit,'(A)') "ERROR, Found some excitations, but 'excitation_shape_r' is not set"
             write(error_unit,'(A)') "CHECK INPUT"
             STOP
         endif
@@ -124,7 +124,7 @@ subroutine read_all_excitations(fname,excitations)
         excitations%exc(i)%op=io_exc(i)%op
         !find associated shape entry
         do j=1,size(excitations%shapes)
-            if(io_exc(i)%shape_name==excitations%shapes(j)%name)then
+            if(io_exc(i)%shape_t_name==excitations%shapes(j)%name)then
                 if(excitations%shapes(j)%dim_mode/=dim_modes_inner(io_exc(i)%op))then
                     write(error_unit,'(A)') "ERROR, Excitation operator dimension does not fit associated excitation shape"
                     write(error_unit,'(2(AI3))') "Error associating excitation ",i,"with shape number",j
@@ -135,23 +135,23 @@ subroutine read_all_excitations(fname,excitations)
             endif
         enddo
         if(excitations%exc(i)%int_shape==0)then
-            write(error_unit,'(A)') "ERROR, Excitation operator shape name not found in exitation shapes"
-            write(error_unit,'(2A)') "Failed to find name: ", io_exc(i)%shape_name
+            write(error_unit,'(A)') "ERROR, Excitation operator shape_t name not found in exitation shapes"
+            write(error_unit,'(2A)') "Failed to find name: ", io_exc(i)%shape_t_name
             write(error_unit,'(A)') "CHECK INPUT"
             STOP
         endif
 
 
-        !find associated norm entry
-        do j=1,size(excitations%norms)
-            if(io_exc(i)%norm_name==excitations%norms(j)%name)then
-                excitations%exc(i)%int_norm=j
+        !find associated shape_r entry
+        do j=1,size(excitations%shape_r)
+            if(io_exc(i)%shape_r_name==excitations%shape_r(j)%name)then
+                excitations%exc(i)%int_shape_r=j
                 exit
             endif
         enddo
-        if(excitations%exc(i)%int_norm==0)then
-            write(error_unit,'(A)') "ERROR, Excitation operator norm name not found in exitation norms"
-            write(error_unit,'(2A)') "Failed to find name: ", io_exc(i)%norm_name
+        if(excitations%exc(i)%int_shape_r==0)then
+            write(error_unit,'(A)') "ERROR, Excitation operator shape_r name not found in exitation shape_r"
+            write(error_unit,'(2A)') "Failed to find name: ", io_exc(i)%shape_r_name
             write(error_unit,'(A)') "CHECK INPUT"
             STOP
         endif
@@ -251,25 +251,36 @@ subroutine read_all_excitations(fname,excitations)
 end subroutine 
 
 subroutine update_exc(time,lat,dat)
+    !routine which updated all order-parameters for which an exciatation in dat is specified
     real(8), intent(in)                     :: time
     type(lattice), intent(inout)            :: lat
     type(excitation_combined),intent(in)    :: dat
     ! internal
-    real(8),pointer,contiguous :: opvec(:,:)
-    real(8) :: r(3)
-    integer :: i,j
-    integer :: dim_mode
-    integer :: op
-    real(8) :: shp(maxval(dim_modes_inner))
+    real(8),pointer,contiguous :: opvec(:,:)        !pointer to locally considered mode
+    real(8) :: r(3)                                 !local position
+    real(8) :: shape_t(maxval(dim_modes_inner))     !prefactor defined by the time (constant in space)
+    !help indices
+    integer :: op       !index for considered operator as in lattice
+    integer :: dim_mode !dimension of considered mode
+    integer :: i_r, i_t !integer identifier for the considered shape in real- of time-space 
+    integer :: i,j      !loop variables
   
     do j=1,size(dat%exc)
+        !set help parameters
+        i_r=dat%exc(j)%int_shape_r
+        i_t=dat%exc(j)%int_shape
         op=dat%exc(j)%op
-        Call lat%set_order_point_inner(op,opvec)
         dim_mode=dim_modes_inner(op)
-        shp(1:dim_mode)=dat%shapes(dat%exc(j)%int_shape)%get_shape(time)
+        
+        !get time-shape 
+        shape_t(1:dim_mode)=dat%shapes(i_t)%get_shape(time)
+!        if(all(shape_t(1:dim_mode)==0.0d0)) cycle   !nothing to do for this excitation, it is necessarily zero (can to this as soon as it is additive)
+
+        !apply real-space shapes
+        Call lat%set_order_point_inner(op,opvec)
         do i=1,size(dat%position,2)
             r=dat%position(:,i)
-            opvec(:,i)= shp(1:dim_mode) * dat%norms(dat%exc(j)%int_norm)%norm(r)
+            opvec(:,i)= shape_t(1:dim_mode) * dat%shape_r(i_r)%shape_r(r)
         enddo
     enddo
     nullify(opvec)
