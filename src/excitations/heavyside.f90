@@ -35,7 +35,7 @@ subroutine heaviside_read_string(this,str)
     endif
     this%get_shape=>shape_heaviside
 end subroutine
-!
+
 function shape_heaviside(this,time) result(val)
     class (excitation_shape),intent(in) :: this
     real(8),intent(in)                  :: time
@@ -48,7 +48,7 @@ function shape_heaviside(this,time) result(val)
                   this%real_var(1              :  this%dim_mode),&
                   this%real_var(this%dim_mode+1:2*this%dim_mode))
 end function
-!
+
 function heaviside(time,dim_mode,t_start,t_end,val_start,val_end)result(val)
     real(8), intent(in) :: time,t_start,t_end
     integer,intent(in)  :: dim_mode
@@ -59,6 +59,8 @@ function heaviside(time,dim_mode,t_start,t_end,val_start,val_end)result(val)
     if ((time.ge.t_start).and.(time.le.t_end)) val=val_start
     if (time.gt.t_end) val=val_end(:)
 end function
+
+
 
 subroutine update_heavyside(time,field,t_start,t_end,start_value,end_value,counter)
     implicit none

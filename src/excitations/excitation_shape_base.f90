@@ -11,7 +11,8 @@ type excitation_shape
     integer                             :: Nvar=0
     real(8),allocatable                 :: real_var(:)
     procedure(int_shape),pointer,pass   :: get_shape=>uninit
-!contains
+contains
+    procedure   :: unset
 !    procedure   ::   read_string
 end type
 
@@ -25,6 +26,20 @@ abstract interface
 end interface
 
 contains
+
+subroutine unset(this)
+    class(excitation_shape),intent(inout)   :: this
+
+    this%name='uninit'
+    this%t_start=0.0d0
+    this%t_end=100.0d0
+    this%dim_mode=0
+    this%Nvar=0
+    deallocate(this%real_var)
+    this%get_shape=>uninit
+end subroutine
+
+
 function uninit(this,time)result(val)
     class(excitation_shape),intent(in)  :: this
     real(8), intent(in)                 :: time

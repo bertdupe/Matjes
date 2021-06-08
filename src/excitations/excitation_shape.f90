@@ -2,6 +2,8 @@ module m_excitation_shape
 use m_excitation_shape_base, only: excitation_shape
 use m_type_lattice, only: dim_modes_inner,op_name_to_int
 use m_heaviside,only:  heaviside_read_string
+use m_rampe    ,only:      rampe_read_string
+use m_EMwave   ,only:     EMwave_read_string
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 
 private
@@ -15,7 +17,7 @@ subroutine read_excitation_shape(io,fname,shapes)
     character(len=*),intent(in)                         :: fname
     type(excitation_shape),intent(inout),allocatable    :: shapes(:)
 
-    character(len=*),parameter  :: var_name='excitation_shape'
+    character(len=*),parameter  :: var_name='excitation_shape_t'
     character(len=1000)         :: str
     logical                     :: success
     integer                     :: nread
@@ -48,6 +50,7 @@ subroutine read_excitation_shape(io,fname,shapes)
         Call shape_read_string(io_exc,str,success)
         if(success)then
             nread=nread+1   
+            Call io_exc%unset()
         else
             exit
         endif
@@ -93,6 +96,10 @@ subroutine shape_read_string(this,string,success)
     select case(trim(shape_name))
     case('heaviside')
         Call heaviside_read_string(this,string)
+    case('rampe')
+        Call rampe_read_string(this,string)
+    case('EMwave')
+        Call Emwave_read_string(this,string)
     case default
         write(error_unit,'(A)') "Error reading excitation shape"
         write(error_unit,'(2A)') "Shape identifier not implemented:",trim(shape_name)

@@ -31,7 +31,7 @@ subroutine read_excitation_norms(io,fname,norm)
     character(len=*),intent(in)                     :: fname
     type(excitation_norm),intent(inout),allocatable :: norm(:)
 
-    character(len=*),parameter  :: var_name='excitation_norm'
+    character(len=*),parameter  :: var_name='excitation_shape_r'
     character(len=100)          :: str
     logical                     :: success
     integer                     :: nread
