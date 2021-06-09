@@ -1,17 +1,16 @@
-module m_heaviside
+module m_exc_t_heaviside
 !this contains the heaviside function for the excitation shape
 !it is not really a heaviside function, but the name was chosen like that and I won't change it at this point
-use m_excitation_shape_base, only: excitation_shape
+use m_exc_t_base, only: excitation_t
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 private
-public :: update_heavyside
-public :: shape_heaviside, heaviside_read_string
+public :: heaviside_read_string
 
 contains
 
 subroutine heaviside_read_string(this,str)
-    class(excitation_shape),intent(inout)   :: this
+    class(excitation_t),intent(inout)   :: this
     character(len=*),intent(in)             :: str
 
     integer             :: stat
@@ -37,7 +36,7 @@ subroutine heaviside_read_string(this,str)
 end subroutine
 
 function shape_heaviside(this,time) result(val)
-    class (excitation_shape),intent(in) :: this
+    class (excitation_t),intent(in) :: this
     real(8),intent(in)                  :: time
     real(8)                             :: val(this%dim_mode)
 
@@ -56,25 +55,8 @@ function heaviside(time,dim_mode,t_start,t_end,val_start,val_end)result(val)
     real(8)             :: val(dim_mode)
 
     val=0.d0
-    if ((time.ge.t_start).and.(time.le.t_end)) val=val_start
-    if (time.gt.t_end) val=val_end(:)
+    if ((time>=t_start).and.(time<t_end)) val=val_start
+    if (time>=t_end) val=val_end(:)
 end function
-
-
-
-subroutine update_heavyside(time,field,t_start,t_end,start_value,end_value,counter)
-    implicit none
-    real(kind=8), intent(in) :: time,t_start,t_end
-    real(kind=8), intent(in) :: start_value(:),end_value(:)
-    integer, intent(inout) :: counter
-    real(kind=8), intent(inout) :: field(:)
-    ! internal
-    
-    if ((time.ge.t_start).and.(time.le.t_end)) field=start_value(:)
-    
-    
-    if (time.gt.t_end) field=end_value(:)
-
-end subroutine update_heavyside
 
 end module 

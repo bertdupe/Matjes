@@ -1,8 +1,8 @@
-module m_algebraic
+module m_exc_t_algebraic
 !this contains the algebraic-decay function for the excitation shape
 ! the equation is:
 ! val= I0 /(t-t_0)**k
-use m_excitation_shape_base, only: excitation_shape
+use m_exc_t_base, only: excitation_t
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 private
@@ -11,7 +11,7 @@ public :: algebraic_read_string
 contains
 
 subroutine algebraic_read_string(this,str)
-    class(excitation_shape),intent(inout)   :: this
+    class(excitation_t),intent(inout)   :: this
     character(len=*),intent(in)             :: str
 
     integer             :: stat
@@ -50,7 +50,7 @@ subroutine algebraic_read_string(this,str)
 end subroutine
 
 function shape_algebraic(this,time) result(val)
-    class (excitation_shape),intent(in) :: this
+    class (excitation_t),intent(in) :: this
     real(8),intent(in)                  :: time
     real(8)                             :: val(this%dim_mode)
 
@@ -75,7 +75,7 @@ function algebraic(time,dim_mode,t_start,t_end,I0,t0,k)result(val)
     real(8)     :: tmp
 
     val=0.0d0
-    if ((time.ge.t_start).and.(time.le.t_end))then
+    if ((time>=t_start).and.(time<t_end))then
         val=I0/(time-t0)**k
     endif
 end function

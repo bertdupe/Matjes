@@ -74,8 +74,6 @@ subroutine read_excitation_io(io,fname,excitations)
     endif
 end subroutine
 
-
-
 subroutine read_string(this,string,success)
     class(excitation_io),intent(inout)      :: this
     character(len=*),intent(in)             :: string
@@ -98,5 +96,4 @@ subroutine read_string(this,string,success)
         success=.true.
     endif
 end subroutine
-
 end module
