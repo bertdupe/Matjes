@@ -22,15 +22,15 @@ void eigen_H_init(
     const double arr_in[],
     SpMat* &Ham){
 
-	typedef Eigen::Triplet<double> T;
+	typedef Eigen::Triplet<double,int> T;
 	std::vector<T> tripletList;
-	tripletList.reserve(Nentry);
-	for(int i=0; i < Nentry; i++ ){
-		tripletList.push_back(T(rows[i],cols[i],arr_in[i]));
-	}
-
+    tripletList.reserve(Nentry);
+    for(int i=0; i < Nentry; i++ ){
+    	tripletList.push_back(T(rows[i],cols[i],arr_in[i]));
+    }
+    
     Ham =new SpMat{Hdim[0],Hdim[1]};
-  	Ham->setFromTriplets(tripletList.begin(), tripletList.end());
+    Ham->setFromTriplets(tripletList.begin(), tripletList.end());
 }
 
 void eigen_get_transpose(

@@ -33,6 +33,7 @@ subroutine heaviside_read_string(this,str)
         STOP
     endif
     this%get_shape=>shape_heaviside
+    this%print_t=>print_t_heaviside
 end subroutine
 
 function shape_heaviside(this,time) result(val)
@@ -58,5 +59,19 @@ function heaviside(time,dim_mode,t_start,t_end,val_start,val_end)result(val)
     if ((time>=t_start).and.(time<t_end)) val=val_start
     if (time>=t_end) val=val_end(:)
 end function
+
+subroutine print_t_heaviside(this,io)
+    class(excitation_t),intent(in)  :: this
+    integer,intent(in)              :: io
+    character(len=10)   ::  dim_mode
+
+    write(dim_mode,'(I10)') this%dim_mode
+    write(io,'(3X,A)') "Time-shape: heaviside (obsolete)"
+    write(io,'(6X,A)') "Obsolete shape which has a constant I0 within time range and a constant I1 aftter the time-window"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,2(F14.4,A))') "time range:    : [",this%t_start,",",this%t_end," ) fs"
+    write(io,'(9X,A,'//dim_mode//'(E16.8))') "const. I0      : ",this%real_var(1:this%dim_mode)
+    write(io,'(9X,A,'//dim_mode//'(E16.8))') "const. I1      : ",this%real_var(1+this%dim_mode:this%dim_mode*2)
+end subroutine
 
 end module 

@@ -8,6 +8,8 @@ contains
 subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_input_H_types 
     use m_derived_types
+    use m_H_type, only: len_desc
+    use, intrinsic :: iso_fortran_env, only : output_unit
 
     use m_exchange_heisenberg_J, only: get_exchange_J_fft
     use m_exchange_heisenberg_D, only: get_exchange_D_fft
@@ -18,9 +20,9 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     logical,intent(in)                      :: keep_res ! keeps the Ham_res terms allocated
     type(io_h),intent(in)                   :: H_io
     type(lattice), intent(in)               :: lat
-
-    integer :: i_H,N_ham
-    logical :: use_Ham(4)
+    character(len=len_desc)     :: desc=""
+    integer                     :: i_H,N_ham
+    logical                     :: use_Ham(4)
 
     use_ham(1)=H_io%J%is_set.and.H_io%J%fft
     use_ham(2)=H_io%D%is_set.and.H_io%D%fft
@@ -51,6 +53,13 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_dipolar_fft(Ham_res(i_H),H_io%dip,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
+
+    write(output_unit,'(//A,I3,A)') "The following ",N_ham," Hamiltonians in fourier-space have been set:"
+    do i_H=1,N_ham
+        Call Ham_res(i_H)%get_desc(desc)
+        write(output_unit,'(3XA)') trim(desc)
+    enddo
+    write(output_unit,'(//)')
 
     Call combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
 end subroutine

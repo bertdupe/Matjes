@@ -50,8 +50,10 @@ subroutine read_all_excitations(fname,excitations)
 
     type(excitation_io),allocatable     :: io_exc(:)
 
-    integer             :: i,j, Nexc, io
-   
+    integer             :: i,j,ii, Nexc, io
+
+    write(output_unit,'(//A)') "Start excitation setup routine."
+
     open(newunit=io,file=fname)
     !get different excitation shape_r
     Call read_excitation_shape_r(io,fname,excitations%shape_r)
@@ -69,6 +71,7 @@ subroutine read_all_excitations(fname,excitations)
         !clean up and leave
         if(allocated(excitations%shape_t)) deallocate(excitations%shape_t)
         if(allocated(excitations%shape_r)) deallocate(excitations%shape_r)
+        write(output_unit,'(A//)') "No excitations found, exiting excitation setup routine."
         return  
     else
         !check allocations
@@ -85,6 +88,7 @@ subroutine read_all_excitations(fname,excitations)
     endif
 
     !set excitation entries
+    write(output_unit,'(A)') "Start combining excitation entries."
     allocate(excitations%exc(Nexc))
     do i=1,Nexc
         excitations%exc(i)%op=io_exc(i)%op
@@ -92,8 +96,8 @@ subroutine read_all_excitations(fname,excitations)
         do j=1,size(excitations%shape_t)
             if(io_exc(i)%shape_t_name==excitations%shape_t(j)%name)then
                 if(excitations%shape_t(j)%dim_mode/=dim_modes_inner(io_exc(i)%op))then
-                    write(error_unit,'(A)') "ERROR, Excitation operator dimension does not fit associated excitation shape"
-                    write(error_unit,'(2(AI3))') "Error associating excitation ",i,"with shape number",j
+                    write(error_unit,'(A)') "ERROR, Excitation operator dimension does not fit associated excitation shape_t (wrong dimensions)"
+                    write(error_unit,'(2(AI3))') "Error associating excitation ",i," with shape_t number",j
                     STOP
                 endif
                 excitations%exc(i)%int_shape_t=j
@@ -122,15 +126,39 @@ subroutine read_all_excitations(fname,excitations)
             STOP
         endif
     enddo
+    write(output_unit,'(A)') "Finished combining excitation entries."
 
     do i=1,size(excitations%exc)
         excitations%op_used(excitations%exc%op)=.true.
     enddo
 
+    write(output_unit,'(/A)') "Start printing found excitations."
+    do i=1,number_different_order_parameters
+        if(excitations%op_used(i))then
+            write(output_unit,'(/A,I3,X,2A)') "Found ",count(excitations%exc(:)%op==i), trim(order_parameter_name(i))," excitation entries."
+            write(output_unit,'(2A/)') "Start printing the excitations for: ", order_parameter_name(i)
+            ii=0
+            do j=1,size(excitations%exc)
+                if(excitations%exc(j)%op==i)then
+                    ii=ii+1
+                    write(output_unit,'(3X,2AI4)') trim(order_parameter_name(i))," excitation no.:",ii
+                    Call excitations%shape_r(excitations%exc(j)%int_shape_r)%print_r(output_unit)
+                    Call excitations%shape_t(excitations%exc(j)%int_shape_t)%print_t(output_unit)
+                    write(output_unit,*)
+                endif
+            enddo
+            write(output_unit,'(2A//)') "Finish printing the excitations for: ", order_parameter_name(i)
+        endif
+    enddo
+    write(output_unit,'(A/)') "All found excitations are printed."
+
     !terrible position-get
     i=get_lines('positions.dat')
     allocate(excitations%position(3,i),source=0.0d0)
     call get_position(excitations%position,'positions.dat')
+
+    write(output_unit,'(A//)') "Finished reading excitations"
+
 end subroutine 
 
 subroutine update_exc(time,lat,dat)

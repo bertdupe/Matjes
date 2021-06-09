@@ -10,6 +10,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_derived_types
     use m_input_H_types 
     use m_get_position,only :get_position_ND_to_1D 
+    use, intrinsic :: iso_fortran_env, only : output_unit
     
     use m_symmetry_operators
     use m_anisotropy_heisenberg,only: get_anisotropy_H
@@ -111,6 +112,12 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_dipolar(Ham_res(i_H),H_io%dip,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
+
+    write(output_unit,'(//A,I3,A)') "The following ",N_ham," Hamiltonians in real-space have been set:"
+    do i_H=1,N_ham
+        write(output_unit,'(3XA)') trim(Ham_res(i_H)%desc)
+    enddo
+    write(output_unit,'(//)')
 
     do i_H=1,N_ham
         if(.not. Ham_res(i_h)%is_set()) STOP "not all Hamiltonians are set"

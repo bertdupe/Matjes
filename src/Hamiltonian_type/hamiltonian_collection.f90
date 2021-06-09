@@ -383,7 +383,7 @@ subroutine get_eff_field(this,lat,B,Ham_type)
     real(8),intent(out)                 :: B(:)
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
 
-    integer     :: iH, ierr
+    integer     :: iH
 
     B=0.0d0
     do iH=1,this%NH_local
@@ -409,7 +409,7 @@ subroutine get_eff_field_single(this,lat,site,B,work,Ham_type,tmp)
     integer,intent(in)                  :: Ham_type   !integer that decides with respect to which mode the Hamiltonians derivative shall be obtained [1,number_different_order_parameters]
     real(8),intent(inout)               :: tmp(size(B))
 
-    integer     :: iH, ierr
+    integer     :: iH
     B=0.0d0
     do iH=1,this%NH_local
         Call this%H(iH)%deriv(Ham_type)%get_single(this%H(iH),lat,site,work,B,tmp)
@@ -428,8 +428,6 @@ end subroutine
 function is_master(this)result(master)
     class(hamiltonian),intent(in)       :: this
     logical                             :: master
-
-    integer :: ierr
 
     if(this%is_para(1))then
         master=this%com_outer%ismas

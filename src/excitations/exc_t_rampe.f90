@@ -33,6 +33,7 @@ subroutine rampe_read_string(this,str)
         STOP
     endif
     this%get_shape=>shape_rampe
+    this%print_t=>print_t_rampe
 end subroutine
 
 
@@ -63,5 +64,20 @@ function rampe(time,dim_mode,t_start,t_end,val_start,val_end)result(val)
         val=val_start+(val_end-val_start)*t_local/(t_end-t_start)
     endif
 end function
+
+subroutine print_t_rampe(this,io)
+    class(excitation_t),intent(in)  :: this
+    integer,intent(in)              :: io
+    character(len=10)   ::  dim_mode
+
+    write(dim_mode,'(I10)') this%dim_mode
+    write(io,'(3X,A)') "Time-shape: rampe"
+    write(io,'(6X,A)') "Linear shape for I0 to I1 in the time_range"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,2(F14.4,A))') "time range:    : [",this%t_start,",",this%t_end," ) fs"
+    write(io,'(9X,A,'//dim_mode//'(E16.8))') "start val (I0) : ", this%real_var(1:this%dim_mode)
+    write(io,'(9X,A,'//dim_mode//'(E16.8))') "end val   (I1) : ", this%real_var(1+this%dim_mode:this%dim_mode*2)
+end subroutine
+
 
 end module
