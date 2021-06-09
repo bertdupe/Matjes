@@ -1,17 +1,16 @@
-module m_rampe
+module m_exc_t_rampe
 use m_convert
-use m_excitation_shape_base, only: excitation_shape
+use m_exc_t_base, only: excitation_t
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 
 private
-public :: update_rampe
-public :: shape_rampe, rampe_read_string
+public :: rampe_read_string
 
 contains
 
 
 subroutine rampe_read_string(this,str)
-    class(excitation_shape),intent(inout)   :: this
+    class(excitation_t),intent(inout)   :: this
     character(len=*),intent(in)             :: str
 
     integer             :: stat
@@ -38,7 +37,7 @@ end subroutine
 
 
 function shape_rampe(this,time) result(val)
-    class (excitation_shape),intent(in) :: this
+    class (excitation_t),intent(in) :: this
     real(8),intent(in)                  :: time
     real(8)                             :: val(this%dim_mode)
 
@@ -59,33 +58,10 @@ function rampe(time,dim_mode,t_start,t_end,val_start,val_end)result(val)
     real(8)             :: t_local
 
     val=0.0d0
-    if ((time.ge.t_start).and.(time.le.t_end))then
+    if ((time>=t_start).and.(time<t_end))then
         t_local=time-t_start
-        val=(val_end-val_start)*t_local/(t_end-t_start)
+        val=val_start+(val_end-val_start)*t_local/(t_end-t_start)
     endif
 end function
 
-
-subroutine update_rampe(time,field,t_start,t_end,start_value,end_value,counter)
-implicit none
-real(kind=8), intent(in) :: time,t_start,t_end
-real(kind=8), intent(in) :: end_value(:),start_value(:)
-integer, intent(inout) :: counter
-real(kind=8), intent(inout) :: field(:)
-! internal
-character(len=30) :: form
-integer :: n
-
-n=size(field)
-
-if ((time.ge.t_start).and.(time.le.t_end)) then
-
-   field=field+(end_value-start_value)/real(t_end-t_start,8)
-
-   form=convert('(a,',n,'f14.6)')
-   write(6,form) 'field value ',field
-endif
-
-end subroutine update_rampe
-
-end module m_rampe
+end module

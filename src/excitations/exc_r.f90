@@ -1,4 +1,4 @@
-module m_excitation_shape_r
+module m_exc_r
 use m_type_lattice, only: dim_modes_inner,op_name_to_int
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 
