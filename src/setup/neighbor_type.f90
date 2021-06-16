@@ -256,9 +256,17 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     do while(ii<size(dist_start))
         i=i+1
         if(i>size(all_dist))then
-            write(error_unit,'(2/A)') "Failed to get sufficiently many neighboring distances as required by input"
-            success=.false.
-            return
+            if(ii==size(all_dist))then
+                dist_start(ii+1)=i
+                write(error_unit,'(2/A)') "Warning, no larger distance for neighbors found in search setup."
+                write(error_unit,'(A)')   "  Assuming the last entry is the final entry of the shell"
+                write(error_unit,'(A)')   "  This should only happen for very small systems without periodic boundaries"
+                exit
+            else
+                write(error_unit,'(2/A)') "Failed to get sufficiently many neighboring distances as required by input"
+                success=.false.
+                return
+            endif
         endif
         if(all_dist(i)>vmax+eps)then
             ii=ii+1
