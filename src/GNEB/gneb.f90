@@ -8,15 +8,32 @@ use m_createspinfile, only: CreateSpinFile
 use m_derived_types, only: lattice,io_parameter
 use m_initialize_path, only: path_initialization
 use m_spline, only: hermite_fit,spline_hermite_val
+use, intrinsic :: iso_fortran_env, only : error_unit 
+use mpi_basic
+use m_hamiltonian_collection, only: hamiltonian
 implicit none
 private
 public GNEB
 
 contains
-subroutine GNEB(my_lattice,io_simu,Ham)
+subroutine GNEB(my_lattice,io_simu,H,com)
+    type(lattice), intent(inout)        :: my_lattice
+    type(io_parameter), intent(inout)   :: io_simu
+    type(hamiltonian),intent(inout)     :: H
+    type(mpi_type),intent(in)           :: com
+    write(6,'(a)') 'entering into the GNEB routine'
+
+    if(com%ismas)then
+        if(com%Np>1) write(error_unit,'(//A/A//)') "WARNING, USING MPI-PARALLELIZATION WHICH IS NOT IMPLEMENTED FOR GNEB CALCULATION","this calculation will only run the the master thread" 
+        Call GNEB_run(my_lattice,io_simu,H)
+    endif
+
+end subroutine
+
+subroutine GNEB_run(my_lattice,io_simu,H)
     type(lattice), intent(in)       :: my_lattice
     type(io_parameter), intent(in)  :: io_simu
-    class(t_H),intent(in)      :: Ham(:)
+    type(hamiltonian),intent(inout) :: H
     !internal variable
     type(GNEB_input)            :: io_gneb
     type(lattice),allocatable   :: images(:)
@@ -44,7 +61,7 @@ subroutine GNEB(my_lattice,io_simu,Ham)
     !!!! initialization of the path
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
-    call path_initialization(images,io_simu,io_gneb,Ham)
+    call path_initialization(images,io_simu,io_gneb,H)
     call write_path(images)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -53,12 +70,12 @@ subroutine GNEB(my_lattice,io_simu,Ham)
 
     if (io_gneb%do_gneb) then
        write (6,'(a)') "GNEB calculation in progress..."
-       call find_path(nim,N_cell,io_gneb%mepftol,rx,ene,dene,images,io_gneb,Ham)
+       call find_path(nim,N_cell,io_gneb%mepftol,rx,ene,dene,images,io_gneb,H)
        write (6,'(a)') "Done!"
     end if
     if (io_gneb%do_gneb_ci) then
        write (6,'(a)') "CI-GNEB calculation in progress..."
-       call find_path(nim,N_cell,io_gneb%mepftol_ci,rx,ene,dene,images,io_gneb,Ham,ci)
+       call find_path(nim,N_cell,io_gneb%mepftol_ci,rx,ene,dene,images,io_gneb,H,ci)
        write(6,'(a,I3)') 'ci:',ci
        write (6,'(a)') "Done!"
     end if
@@ -94,5 +111,5 @@ subroutine GNEB(my_lattice,io_simu,Ham)
     call CreateSpinFile(spinsp,'povray-GNEB-saddlepoint.dat')
     
     deallocate(rx,ene,dene,xx,yy,dyy,c)
-end subroutine GNEB 
+end subroutine GNEB_run 
 end module

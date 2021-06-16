@@ -83,8 +83,8 @@ end type
 
 ! this target is for the boolean variable type
 type bool_var
-     logical :: value
-     character(len=30) :: name
+     logical :: value=.false.
+     character(len=30) :: name =""
      contains
      procedure :: bcast => bool_var_bcast
 end type bool_var

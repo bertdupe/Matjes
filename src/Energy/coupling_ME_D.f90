@@ -1,7 +1,6 @@
 module m_coupling_ME_D
 use m_input_H_types, only: io_H_ME_D
 use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
-use m_coo_mat
 implicit none
 
 private
@@ -24,6 +23,7 @@ subroutine get_coupling_ME_D(Ham,io,lat)
     use m_setH_util,only: get_coo,ind
     use m_neighbor_type, only: neighbors
     use m_mode_public
+    use m_coo_mat
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_ME_D),intent(in)  :: io
@@ -119,8 +119,10 @@ subroutine get_coupling_ME_D(Ham,io,lat)
         Ham%desc="antisymmetric magnetoelectric coupling"
         Call mode_set_rank1(Ham%mode_l,lat,"M")
 #if 0
-        Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
+!this is an obsolete implementation to describe the rank2 mode
+!        Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
 #else
+!this implementation to construct the rank2 mode should be faster
         Call coo_full_unfold(2,lat%Ncell,dim_modes_r,mat)
         Call mode_set_rankN_sparse(Ham%mode_r,"ME",lat,mat,1)
 #endif

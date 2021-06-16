@@ -27,7 +27,10 @@ contains
     procedure :: delete => delete_order_par
     procedure :: read_file
     procedure :: truncate
+
+    !MPI STUFF
     procedure :: bcast
+    procedure :: bcast_val
     final :: final_order_par
 end type
 contains
@@ -63,6 +66,21 @@ use mpi_basic
     continue
 #endif
 end subroutine
+
+subroutine bcast_val(this,comm)
+use mpi_basic                
+    class(order_par),intent(inout)  ::  this
+    class(mpi_type),intent(in)      ::  comm
+
+#ifdef CPP_MPI
+    integer     :: ierr
+
+    Call MPI_Bcast(this%modes, size(this%modes), MPI_REAL8, comm%mas, comm%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
 
 subroutine truncate(this,eps_in)
     class(order_par),intent(inout)      :: this

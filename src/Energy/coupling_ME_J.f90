@@ -93,7 +93,8 @@ subroutine get_coupling_ME_J(Ham,io,lat)
         Ham%desc="symmetric magnetoelectric coupling"
         Call mode_set_rank1(Ham%mode_l,lat,"M")
 #if 0
-        Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
+!this is an obsolete implementation to describe the rank2 mode
+!        Call mode_set_rankN(Ham%mode_r,"ME",lat,1)
 #else
         Call coo_full_unfold(2,lat%Ncell,dim_modes_r,mat)
         Call mode_set_rankN_sparse(Ham%mode_r,"ME",lat,mat,1)

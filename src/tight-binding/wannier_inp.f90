@@ -120,7 +120,6 @@ subroutine rearrange_spin(this)
     integer                         :: irpts,i
     integer                         :: wan_half
 
-
     if(this%spin_rearranged) STOP "Cannot rearrange spin of wannier, since this has already be done"
     this%spin_rearranged=.true.
     shp=shape(this%H)
@@ -128,15 +127,15 @@ subroutine rearrange_spin(this)
     allocate(tmp(shp(1),shp(2)))
     do irpts=1,shp(3)
         tmp=this%H(:,:,irpts)
-        do i=2,wan_half,2
-            this%H(:,i,irpts)=tmp(:,i+wan_half)
-            this%H(:,i+wan_half,irpts)=tmp(:,i)
-        enddo
+        do i=1,shp(1),2
+            this%H(:,i  ,irpts)=tmp(:,(i+1)/2         )
+            this%H(:,i+1,irpts)=tmp(:,(i+1)/2+wan_half)
+        enddo 
         tmp=transpose(this%H(:,:,irpts))
-        do i=2,wan_half,2
-            this%H(i,:,irpts)=tmp(:,i+wan_half)
-            this%H(i+wan_half,:,irpts)=tmp(:,i)
-        enddo
+        do i=1,shp(1),2
+            this%H(i  ,:,irpts)=tmp(:,(i+1)/2         )
+            this%H(i+1,:,irpts)=tmp(:,(i+1)/2+wan_half)
+        enddo 
     enddo
 end subroutine
 

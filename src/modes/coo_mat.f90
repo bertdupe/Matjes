@@ -49,7 +49,7 @@ subroutine coo_full_unfold(rank,Ncell,dim_mode,mat)
                 col(ii)=ind
             enddo
         enddo
-        Call mat(i_mode)%init([Nmode,dim_mode(i_mode)],Nmode,row,col,val)
+        Call mat(i_mode)%init([Nmode,dim_mode(i_mode)*Ncell],Nmode,row,col,val)
     enddo
     deallocate(val,row,col)
 

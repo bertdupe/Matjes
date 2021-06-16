@@ -1,11 +1,28 @@
 module m_parallel_tempering
 use m_paratemp
+use mpi_basic
+use mpi_util
+use m_hamiltonian_collection, only: hamiltonian
+use m_derived_types, only : lattice, io_parameter, simulation_parameters
 implicit none
 contains
-subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
+subroutine parallel_tempering(my_lattice,io_simu,ext_param,H,com)
+    type(lattice), intent(inout)                :: my_lattice
+    type(io_parameter), intent(inout)           :: io_simu
+    type(simulation_parameters), intent(inout)  :: ext_param
+    type(hamiltonian), intent(inout)            :: H
+    class(mpi_type), intent(in)                 :: com
+
+    Call my_lattice%bcast(com)
+    Call io_simu%bcast(com)
+    Call ext_param%bcast(com)
+    Call H%bcast(com)
+
+    Call parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
+end subroutine
+
+subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     use mpi_distrib_v
-    use mpi_basic
-    use mpi_util
     use m_H_public
     use m_topocharge_all
     use m_set_temp
@@ -15,8 +32,6 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     use m_store_relaxation
     use m_check_restart
     use m_createspinfile
-    use m_derived_types, only : t_cell,io_parameter,simulation_parameters
-    use m_derived_types, only : lattice
     use m_topo_commons, only : neighbor_Q,get_charge
     use m_convert
     use m_io_files_utils
@@ -28,11 +43,12 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_write_config
     use m_io_files_utils, only: close_file
+    use m_work_ham_single, only: work_ham_single
 
     type(lattice), intent(inout) :: my_lattice
     type(io_parameter), intent(in) :: io_simu
     type(simulation_parameters), intent(in) :: ext_param
-    class(t_H), intent(in)                  :: Hams(:)
+    type(hamiltonian),intent(inout)         :: H
     class(mpi_type),intent(in)              :: com
     ! internal variable
     type(MC_input)             :: io_MC
@@ -73,6 +89,8 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
     type(fluct_parameters)  :: fluct_val
     integer,allocatable     :: Q_neigh(:,:)
     type(paratemp_track)    :: para_track
+
+    type(work_ham_single)       :: work !type containing work arrays for single energy evaluation
     
     !input parameters that most probably need some external input, which was not supplied in the version this modification is based on
     i_optTset=.True.
@@ -127,16 +145,17 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
    
     !broadcast and calculate locally necessary values for further calculations
     Call bcast_alloc(Q_neigh,com)
-    Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct)  !check if this can be bcasted as well
+    Call init_fluct_parameter(fluct_val,my_lattice,io_MC%do_fluct,io_MC%fluct_dir)  !check if this can be bcasted as well
 
     !Scatter the measure-tasks to all treads
-    Call scatterv(measure,com_outer)
+    Call measure_scatterv(measure,com_outer)
 
     !initialize all local values
     do i_temp=1,NT_local
-        Call state_prop(i_temp)%init(lattices(i_temp),Hams,io_MC)
+        Call state_prop(i_temp)%init(lattices(i_temp),H,io_MC)
     enddo
 
+    Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!   START THE ACTUAL CALCULATION LOOP
@@ -154,11 +173,10 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
                 kt=measure(i_temp)%kt
 
                 !does it make more sense to do big relaxation step at the very beginning?
-
                 Do i_MC=1,autocor_steps*N_spin
-                    Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,Hams)
+                    Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)
                 enddo
-                Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,Hams)! In case autocor_steps set to zero at least one MCstep is done
+                Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)! In case autocor_steps set to zero at least one MCstep is done
 
                 Call measure_add(measure(i_temp),lattices(i_temp),state_prop(i_temp),Q_neigh,fluct_val) !add up relevant observable
                 E_temp(i_temp)=state_prop(i_temp)%E_total !save the total energy of each replicas
@@ -198,12 +216,12 @@ subroutine parallel_tempering(my_lattice,io_simu,ext_param,Hams,com)
                 write(6,'(a,I10,a,I10,/)') '#-------- number of relaxation steps goes from', n_swapT ,' --- to --- ', n_swapT*2
             endif
             n_swapT=n_swapT*2
-            Call scatterv(measure,com_outer)    !update remote temperatures
+            Call measure_scatterv(measure,com_outer)    !update remote temperatures
         endif
     enddo !over j_MC->N_adjT
     if (com%ismas)then
         write(6,'(a)') 'parallel tempering is done'
         call close_file('EM.dat',io_EM)
     endif
-end subroutine parallel_tempering
+end subroutine parallel_tempering_run
 end module

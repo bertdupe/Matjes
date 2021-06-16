@@ -1,31 +1,30 @@
 module m_relaxation
 use m_mc_track_val, only: track_val
+use m_hamiltonian_collection, only: hamiltonian
 implicit none
+
 contains
 !
 ! ===============================================================
-SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,kt,Hams,Q_neigh)
-    use mtprng
+SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,kt,H,Q_neigh,work)
     use m_Corre
     use m_constants, only : k_b
-    use m_topocharge_all
-    use m_store_relaxation
     use m_derived_types, only : lattice
-    use m_H_public
     use m_topo_commons
-    use m_io_utils
     use m_io_files_utils
     use m_convert
     use m_MCstep
     use m_MC_io,only: MC_input
+    use m_work_ham_single, only: work_ham_single
     ! input
     type(lattice),intent(inout)     :: lat
     real(kind=8), intent(in)        :: kT
     type(track_val),intent(inout)   :: state_prop
     type(MC_input),intent(in)       :: io_MC 
     integer, intent(in)             :: N_cell
-    class(t_H), intent(in)          :: Hams(:)
+    type(hamiltonian),intent(inout) :: H
     integer,intent(in)              :: Q_neigh(:,:) 
+    type(work_ham_single),intent(inout) :: work
     !internal
     real(kind=8)                    :: qeulerp,qeulerm
     ! a big table
@@ -51,10 +50,10 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,kt,Hams,Q_neigh)
     !         the step to an unordered structure
                 !Relaxation of the System
         Do i_MC=1,io_MC%T_relax*N_cell
-            Call MCStep(lat,io_MC,N_cell,state_prop,kt,Hams)
+            Call MCStep(lat,io_MC,N_cell,state_prop,kt,H,work)
         enddo
         !In case T_relax set to zero at least one MCstep is done
-        Call MCStep(lat,io_MC,N_cell,state_prop,kt,Hams)
+        Call MCStep(lat,io_MC,N_cell,state_prop,kt,H,work)
     
     
     ! Write the Equilibrium files
@@ -98,5 +97,6 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,kt,Hams,Q_neigh)
     
     endif
 
-END SUBROUTINE Relaxation
+END SUBROUTINE
+
 end module

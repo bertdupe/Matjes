@@ -13,9 +13,10 @@ type        ::   mpi_type
     logical(c_bool) :: ismas=.true.     !is master
 contains
     procedure   :: set
+    procedure   :: set_from_distv
 end type
 
-type,extends(mpi_type)  ::   mpi_distv
+type,extends(mpi_type)  :: mpi_distv
     integer,allocatable :: cnt(:)       !how many are at each thread
     integer,allocatable :: displ(:)     !displacement for each thread
 contains
@@ -26,6 +27,18 @@ private :: init_mpi_distv
 type(mpi_type)  ::  mpi_world
 
 contains
+
+subroutine set_from_distv(this,distv)
+    class(mpi_type),intent(out)   :: this
+    type(mpi_distv),intent(in)    :: distv
+
+    this%id   =distv%id
+    this%Np   =distv%Np
+    this%com  =distv%com
+    this%mas  =distv%mas
+    this%ismas=distv%ismas
+end subroutine
+
 
 subroutine init_mpi_distv(this,ref)
     class(mpi_distv),intent(inout)      :: this
@@ -111,6 +124,7 @@ subroutine set_MPI_type(blocks,bnd_real,bnd_cmplx,bnd_int,val_out)
     continue
 #endif
 end subroutine
+
 
 
 end module

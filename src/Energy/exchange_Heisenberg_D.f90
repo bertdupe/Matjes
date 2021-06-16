@@ -2,7 +2,10 @@ module m_exchange_heisenberg_D
 use m_input_H_types, only: io_H_D
 implicit none
 private
-public read_D_input, get_exchange_D
+public read_D_input, get_exchange_D, get_exchange_D_fft
+
+character(len=*),parameter  :: ham_desc="antisymmetric magnetic exchange"
+
 contains
 subroutine read_D_input(io_param,fname,io)
     use m_io_utils
@@ -11,6 +14,7 @@ subroutine read_D_input(io_param,fname,io)
     type(io_H_D),intent(out)        :: io
 
     Call get_parameter(io_param,fname,'magnetic_D',io%trip,io%is_set) 
+    Call get_parameter(io_param,fname,'magnetic_D_fft',io%fft) 
 end subroutine
 
 
@@ -44,7 +48,6 @@ subroutine get_exchange_D(Ham,io,lat)
     integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
     real(8)         :: DMI(3)           !local DMI vector
-    logical         :: is_set           
 
     if(io%is_set)then
         Call get_Htype(Ham_tmp)
@@ -58,7 +61,7 @@ subroutine get_exchange_D(Ham,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                Hmag=io%trip(i_attrip)%val(i_dist)
+                Hmag=-io%trip(i_attrip)%val(i_dist)  !flip sign corresponding to previous implementation
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1
@@ -79,7 +82,6 @@ subroutine get_exchange_D(Ham,io,lat)
                         Htmp(offset_mag(1)+2,offset_mag(2)+1)=-DMI(3) * Hmag
                         Htmp(offset_mag(1)+1,offset_mag(2)+3)=-DMI(2) * Hmag
                         Htmp(offset_mag(1)+3,offset_mag(2)+2)=-DMI(1) * Hmag
-                        Htmp=-Htmp !flip sign corresponding to previous implementation
 
                         Call get_coo(Htmp,val_tmp,ind_tmp)
 
@@ -94,7 +96,7 @@ subroutine get_exchange_D(Ham,io,lat)
             enddo
         enddo
 
-        Ham%desc="antisymmetric magnetic exchange"
+        Ham%desc=ham_desc
         if(.not.Ham%is_set())then
             write(*,'(/A)') "DID NOT FIND A SINGLE DMI CONTRIBUTION, LEAVE THE DMI OUT IF YOU EXPECT THE DMI TO VANISH OR FIND A MISTAKE IN THIS CALCULATION"
             !continuing will give problems since the t_H-type Ham is not set but most probably will be assumed to be set in routine calling this subroutine
@@ -105,6 +107,104 @@ subroutine get_exchange_D(Ham,io,lat)
         Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
 end subroutine 
+
+
+subroutine get_exchange_D_fft(H_fft,io,lat)
+    !get heisenberg anti-symmetric exchange in fft_H Hamiltonian format
+    !Since the anisotropy is localized localized in normal space this makes absolutely no sense unless used in combination with a delocalized Hamiltonian (dipolar-interaction) so that the evaluation is for free 
+    use m_fft_H_base, only: fft_H
+    use m_derived_types, only: lattice
+    use m_setH_util, only: get_coo
+    use m_neighbor_type, only: neighbors
+
+    class(fft_H),intent(inout)  :: H_fft 
+    type(io_H_D),intent(in)     :: io
+    type(lattice),intent(in)    :: lat
+
+    !fft parameters
+    integer         :: Nmag             !number of magnetic atoms per unit-cell
+    logical         :: period(3)        !consider as periodic or open boundary condition along each direction (T:period, F:open)
+                                        ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
+    integer         :: N_rep(3)         !number of states in each direction in the fourier transformation
+    integer         :: Nk_tot           !number of state considered in FT (product of N_rep)
+    integer         :: Kbd(2,3)         !boundaries of the K-operator
+
+    real(8),allocatable :: Karr(:,:,:)  !K-operator to be FT'd (1:3*Nmag,1:3*Nmag,1:Nk_tot)
+
+
+    integer         :: i_attrip,N_attrip    !loop parameters which atom-type connection are considered (different neighbor types)
+    integer         :: i_dist,N_dist        !loop parameters which  connection are considered (different neighbor types)
+    integer         :: i_trip           !loop keeping track which unique connection between the same atom types is considered (indexes "number shells" in neighbors-type)
+    integer         :: i_shell          !counting the number of unique connection for given atom types and a distance
+    integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
+    type(neighbors) :: neigh            !all neighbor information for a given atom-type trip
+    real(8)         :: Hmag             !magnitude of Hamiltonian parameter
+    integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
+    integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
+    real(8)         :: DMI(3)           !local DMI vector
+
+    integer         :: ind              !index in Karr space for given cell difference
+    integer         :: ind3(3)          !index to calculate Karr position in each dimension
+    integer         :: ind_mult(3)      !constant multiplicator to calculate ind from ind3 
+    integer         :: i
+
+
+    if(io%is_set)then
+        !set some initial parameters locally for convencience
+        Nmag=lat%nmag
+        period=lat%periodic.or.lat%dim_lat==1
+
+        !set shape-dependent quantities of fft_H and get Kdb,N_rep
+        Call H_fft%init_shape(3*lat%nmag,period,lat%dim_lat,Kbd,N_rep)
+        Nk_tot=product(N_rep)
+
+        !set local Hamiltonian 
+        allocate(Karr(3*Nmag,3*Nmag,Nk_tot),source=0.0d0)
+        ind_mult=[(product(N_rep(:i-1)),i=1,3)]
+        N_attrip=size(io%trip)
+
+        do i_attrip=1,N_attrip
+            !loop over different connected atom types
+            Call neigh%get(io%trip(i_attrip)%attype(1:2),io%trip(i_attrip)%dist,lat)
+            N_dist=size(io%trip(i_attrip)%dist)
+            i_trip=0
+            connect_bnd=1 !initialization for lower bound
+            do i_dist=1,N_dist
+                !loop over distances (nearest, next nearest,... neighbor)
+                Hmag=-io%trip(i_attrip)%val(i_dist)  !flip sign corresponding to previous implementation
+                do i_shell=1,neigh%Nshell(i_dist)
+                    !loop over all different connections with the same distance
+                    i_trip=i_trip+1
+                    Call get_DMI(neigh%at_pair(:,i_trip),neigh%pairs(:,connect_bnd(1)),io%trip(i_attrip)%attype(3),lat,DMI)
+                    Call print_DMI(DMI,neigh%at_pair(:,i_trip),neigh%pairs(:,connect_bnd(1)),io%trip(i_attrip)%attype(3),io%trip(i_attrip)%dist(i_dist),lat)
+                    connect_bnd(2)=neigh%ishell(i_trip)
+                    if(norm2(DMI)>1.0d-8)then 
+                                !    !set local Hamiltonian in basis of magnetic orderparameter
+                        !find out which index in the Karr this entry corresponds to
+                        atind_mag(1)=lat%cell%ind_mag(neigh%at_pair(1,i_trip))
+                        atind_mag(2)=lat%cell%ind_mag(neigh%at_pair(2,i_trip))
+                        offset_mag=(atind_mag-1)*3    !offset for magnetic index 
+                        ind3=neigh%diff_cell(:,i_trip)
+                        ind3=ind3-N_rep*floor(real(ind3,8)/lat%dim_lat)
+                        ind3=ind3*ind_mult
+                        ind=1+sum(ind3)
+
+                        Karr(offset_mag(1)+1,offset_mag(2)+2,ind)= DMI(3) * Hmag
+                        Karr(offset_mag(1)+3,offset_mag(2)+1,ind)= DMI(2) * Hmag
+                        Karr(offset_mag(1)+2,offset_mag(2)+3,ind)= DMI(1) * Hmag
+
+                        Karr(offset_mag(1)+2,offset_mag(2)+1,ind)=-DMI(3) * Hmag
+                        Karr(offset_mag(1)+1,offset_mag(2)+3,ind)=-DMI(2) * Hmag
+                        Karr(offset_mag(1)+3,offset_mag(2)+2,ind)=-DMI(1) * Hmag
+                    endif
+                    connect_bnd(1)=connect_bnd(2)+1
+                enddo 
+            enddo
+        enddo
+        Call H_fft%init_op(3*Nmag,Karr,ham_desc)
+    endif
+end subroutine 
+
 
 
 subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
