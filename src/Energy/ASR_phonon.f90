@@ -1,8 +1,10 @@
 module m_ASR_phonon
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_U_ASR
 use m_forces_from_file, only: get_ASR_file
 
 implicit none
+character(len=*),parameter  :: ham_desc="ASR phonon"
 logical :: read_from_file = .False.
 
 private :: read_from_file
@@ -61,6 +63,7 @@ subroutine get_ASR_Ph(Ham,io,lat)
 
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
         !set local Hamiltonian
@@ -71,6 +74,10 @@ subroutine get_ASR_Ph(Ham,io,lat)
             do i_atpair=1,N_atpair
                 !loop over different connected atom types
                 Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+                !write information out
+                Call io%pair(i_atpair)%prt(output_unit,'2X')
+                Call neigh%prt(output_unit,'2X')
+                write(output_unit,*)
                 N_dist=size(io%pair(i_atpair)%dist)
                 connect_bnd=1 !initialization for lower bound
                 connect_bnd(2)=neigh%ishell(i_atpair)
@@ -161,7 +168,7 @@ subroutine get_ASR_Ph(Ham,io,lat)
             enddo
           enddo
         endif
-        Ham%desc="ASR phonon"
+        Ham%desc=ham_desc
         !set modes
         Call mode_set_rank1(Ham%mode_l,lat,"U")
         Call mode_set_rank1(Ham%mode_r,lat,"U")

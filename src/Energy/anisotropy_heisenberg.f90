@@ -1,4 +1,5 @@
 module m_anisotropy_heisenberg
+use, intrinsic :: iso_fortran_env, only : output_unit
 private
 public :: get_anisotropy_H,read_anisotropy_input, get_anisotropy_fft
 
@@ -110,6 +111,7 @@ subroutine get_anisotropy_H(Ham,io,lat)
     integer,allocatable :: connect(:,:)
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         !set local Hamiltonian 
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode),source=0.d0)
         do i=1,size(io%attype)
@@ -165,6 +167,7 @@ subroutine get_anisotropy_fft(H_fft,io,lat)
     integer             :: ind_mag      !atom index in space of magnetic atoms
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         !set some initial parameters locally for convencience
         Nmag=lat%nmag
         period=lat%periodic.or.lat%dim_lat==1

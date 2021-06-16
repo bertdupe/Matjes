@@ -1,7 +1,9 @@
 module m_harmonic_phonon
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_Ph
 implicit none
 
+character(len=*),parameter  :: ham_desc="harmonic phonon"
 logical :: read_from_file = .False.
 character(len=30), parameter :: fname_phonon = 'phonon_harmonic.in'
 
@@ -59,6 +61,7 @@ subroutine get_Forces_F(Ham,io,lat)
     real(8), parameter  :: HaBohrsq_to_Evnmsq = 9717.38d0
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
         allocate(Htmp(lat%u%dim_mode,lat%u%dim_mode))!local Hamiltonian modified for each shell/neighbor
@@ -66,6 +69,9 @@ subroutine get_Forces_F(Ham,io,lat)
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+            !write information out
+            Call io%pair(i_atpair)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound
@@ -104,7 +110,7 @@ subroutine get_Forces_F(Ham,io,lat)
                 enddo 
             enddo
         enddo
-        Ham%desc="harmonic phonon"
+        Ham%desc=ham_desc
         !set modes
         Call mode_set_rank1(Ham%mode_l,lat,"U")
         Call mode_set_rank1(Ham%mode_r,lat,"U")
