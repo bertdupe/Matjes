@@ -270,7 +270,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             if (mod(j-1,io_dyn%Efreq).eq.0) then
                 !get values to plot (Mavg,topo)
                 Mdy=sum(mag_lattice%M%modes_3,2)/real(N_cell,8)  !sums over all magnetic atoms in unit cell ( not sure if this is wanted)
-                if(mag_lattice%nmag>1) ERROR STOP "TOPO CHARGE WILL PROBABLY NOT WORK FOR nmag>1"
+                if(mag_lattice%nmag>1) write(*,*) "TOPO CHARGE WILL PROBABLY NOT WORK FOR nmag>1"
                 dumy=get_charge(lat_1,Q_neigh)
                 q_plus=dumy(1)/pi/4.0d0
                 q_moins=dumy(2)/pi/4.0d0
