@@ -50,7 +50,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     use m_solver_order,only : get_Dmode_int
     use m_dyna_io, only: rw_dyna
-    use,intrinsic :: iso_fortran_env, only : output_unit
+    use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 !$  use omp_lib
     
     ! input
@@ -136,10 +136,14 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!! Prepare Q_neigh for topological neighbor calculation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
-        call user_info(6,time,'topological operators',.false.)
-        Call neighbor_Q(mag_lattice,Q_neigh)
-        call user_info(6,time,'done',.true.)
+       
+        if(io_simu%calc_topo)then
+            call user_info(6,time,'topological operators',.false.)
+            Call neighbor_Q(mag_lattice,Q_neigh)
+            call user_info(6,time,'done',.true.)
+        else
+            write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
+        endif
         
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!! allocate the element of integrations and associate the pointers to them
@@ -270,11 +274,21 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             if (mod(j-1,io_dyn%Efreq).eq.0) then
                 !get values to plot (Mavg,topo)
                 Mdy=sum(mag_lattice%M%modes_3,2)/real(N_cell,8)  !sums over all magnetic atoms in unit cell ( not sure if this is wanted)
-                if(mag_lattice%nmag>1) ERROR STOP "TOPO CHARGE WILL PROBABLY NOT WORK FOR nmag>1"
-                dumy=get_charge(lat_1,Q_neigh)
-                q_plus=dumy(1)/pi/4.0d0
+                if(io_simu%calc_topo)then
+                    if(mag_lattice%nmag>1)then
+                        write(error_unit,'(2/A)') "Trying to calculate topological charge which is not implemented for nmag>1"
+                        write(error_unit,'(A)') "Try it with 'calc_topo= T'?"
+                        ERROR STOP
+                    endif
+                    dumy=get_charge(lat_1,Q_neigh)
+                else
+                    dumy=1.2345789d+98*pi*4.0d0   !set to some obviously weird parameter
+                    dumy(3:5)=1.2345789d+98*3.0*sqrt(3.0d0)   !set to some obviously weird parameter
+                endif
+                q_plus =dumy(1)/pi/4.0d0
                 q_moins=dumy(2)/pi/4.0d0
-                vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
+                vortex =dumy(3:5)/3.0d0/sqrt(3.0d0)
+
                 !write data files
                 Write(7,'(I12,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
                  &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &

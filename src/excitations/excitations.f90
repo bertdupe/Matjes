@@ -51,10 +51,16 @@ subroutine read_all_excitations(fname,excitations)
     type(excitation_io),allocatable     :: io_exc(:)
 
     integer             :: i,j,ii, Nexc, io
+    logical             :: has_exc
 
     write(output_unit,'(//A)') "Start excitation setup routine."
 
     open(newunit=io,file=fname)
+    Call check_excitation_io(io,fname,has_exc)
+    if(.not.has_exc)then
+        close(io)
+        return
+    endif
     !get different excitation shape_r
     Call read_excitation_shape_r(io,fname,excitations%shape_r)
     
@@ -64,6 +70,7 @@ subroutine read_all_excitations(fname,excitations)
     !read excitation combinations
     Call read_excitation_io(io,fname,io_exc)
 
+    close(io)
     Nexc=0
     if(allocated(io_exc)) Nexc=size(io_exc) 
     if(Nexc==0)then

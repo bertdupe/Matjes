@@ -24,6 +24,7 @@ void eigen_H_init(
 
 	typedef Eigen::Triplet<double,int> T;
 	std::vector<T> tripletList;
+#if 1    
     tripletList.reserve(Nentry);
     for(int i=0; i < Nentry; i++ ){
     	tripletList.push_back(T(rows[i],cols[i],arr_in[i]));
@@ -31,6 +32,10 @@ void eigen_H_init(
     
     Ham =new SpMat{Hdim[0],Hdim[1]};
     Ham->setFromTriplets(tripletList.begin(), tripletList.end());
+#else
+    std::cerr << "ERROR eigen_H initialization temporarily disabled.\nThere is some problem with the debug compilation, but the release works so it could be used there"<< std::endl;
+    throw 4;
+#endif
 }
 
 void eigen_get_transpose(
