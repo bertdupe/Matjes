@@ -33,6 +33,8 @@ subroutine tightbinding_k(lat,tb_par)
         Call print_reduced_kmesh(Hk_inp,tb_par%io_H,tb_par%io_kmesh,lat)
     endif
 
+    if(tb_par%flow%proj_energy) Call proj_energy(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
+
     if(tb_par%flow%dos_k)then
         if(tb_par%is_sc)then
             Call write_dos_sc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
@@ -58,6 +60,52 @@ subroutine tightbinding_k(lat,tb_par)
         Call highsym_clear_path()
     endif
 end subroutine 
+
+subroutine proj_energy(Hk_inp,h_io,lat,io_dos)
+    use m_dos, only: dos_nc, dos_bnd_nc, dos_orb_nc
+    use m_constants, only : pi
+    use m_derived_types, only: k_grid_t
+    type(Hk_inp_t),intent(in)               :: Hk_inp
+    type(parameters_TB_IO_H),intent(in)     :: h_io
+    type(lattice), intent(in)               :: lat
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+
+
+    !parameters to describe integration k-grid
+    class(kmesh_t),allocatable              :: k_grid 
+    integer                                 :: ik,Nk
+    real(8)                                 :: k(3)
+
+    real(8),allocatable                     :: eval(:)
+    complex(8),allocatable                  :: evec(:,:)
+
+
+    real(8),allocatable                     :: state_sum(:)
+    integer                                 :: N_state
+
+    integer     ::  i,iE,i_state
+
+    Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh)
+    Nk=k_grid%get_NK()
+
+    N_state=h_io%dimH
+    allocate(state_sum(N_state),source=0.0d0)
+
+    do ik=1,Nk
+        if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        k=k_grid%get_K(ik)
+        Call Hk_evec(Hk_inp,k,h_io,eval,evec)
+        do iE=1,size(eval)
+            if(eval(iE)>0.0d0) exit !T=0
+            state_sum=state_sum+real(conjg(evec(:,ie))*evec(:,ie))*eval(ie)
+        enddo
+        deallocate(eval,evec)   !really need to implement Hamiltonian evaluation assuming size of eigenvalues
+    enddo
+    state_sum=state_sum/Nk
+    open(newunit=i,file='proj_energy.dat')
+    write(i,'(F16.8)') state_sum
+    close(i)
+end subroutine
 
 subroutine write_dos_nc(Hk_inp,h_io,lat,io_dos)
     use m_dos, only: dos_nc, dos_bnd_nc, dos_orb_nc

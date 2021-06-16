@@ -150,6 +150,7 @@ type parameters_TB_IO_FLOW
     logical         ::  highs_k=.False.
     logical         ::  fermi_k=.False.
     logical         ::  fermi_dos_k=.False. !plot fermi surface at Fermi energy
+    logical         ::  proj_energy=.false. 
 end type
 
 type parameters_TB
