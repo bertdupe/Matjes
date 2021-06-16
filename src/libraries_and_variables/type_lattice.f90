@@ -2,6 +2,7 @@ module m_type_lattice
 use m_basic_types
 use m_order_parameter
 use m_cell,only : t_cell
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
 implicit none
 
 private
@@ -66,17 +67,13 @@ contains
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point
     procedure :: set_order_point_inner
-    procedure :: set_order_comb
-    procedure :: set_order_comb_exc
-    procedure :: set_order_comb_exc_single
-    procedure :: point_order => point_order_onsite
-    procedure :: point_order_single => point_order_onsite_single
-    procedure :: set_order_point_single_inner
+!    procedure :: set_order_comb
+!    procedure :: set_order_comb_exc
+!    procedure :: point_order => point_order_onsite
     !!reduce that order parameter again
-    procedure :: reduce
-!    procedure :: reduce_single
+!    procedure :: reduce
     !!reduce vector in order parameter space to the site(e.g. energy Ncell resolution )
-    procedure :: reduce_cell
+!    procedure :: reduce_cell
     !real space position functions
     procedure :: get_pos_mag => lattice_get_position_mag
     procedure :: get_pos_center
@@ -441,7 +438,7 @@ subroutine set_order_point(this,order,point)
     case(5)
         point=>this%u%all_modes
     case default
-        write(*,*) 'order:',order
+        write(error_unit,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
     end select
 end subroutine
@@ -463,117 +460,117 @@ subroutine set_order_point_inner(this,order,point)
     case(5)
         point=>this%u%modes_in
     case default
-        write(*,*) 'order:',order
+        write(error_unit,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
     end select
 end subroutine
 
 
-subroutine set_order_point_single_inner(this,order,i_inner,point,bnd)
-    !sets the pointer point to the 
-    class(lattice),intent(in)   :: this
-    integer,intent(in)          :: order,i_inner
-    real(8),pointer,intent(out) :: point(:)
-    integer,intent(out)         :: bnd(2)
+!subroutine set_order_point_single_inner(this,order,i_inner,point,bnd)
+!    !sets the pointer point to the 
+!    class(lattice),intent(in)   :: this
+!    integer,intent(in)          :: order,i_inner
+!    real(8),pointer,intent(out) :: point(:)
+!    integer,intent(out)         :: bnd(2)
+!
+!    bnd=[1+(i_inner-1)*dim_modes_inner(order),i_inner*dim_modes_inner(order)]
+!
+!    select case(order)
+!    case(1)
+!        point=>this%M%all_modes(bnd(1):bnd(2))
+!    case(2)
+!        point=>this%E%all_modes(bnd(1):bnd(2))
+!    case(3)
+!        point=>this%B%all_modes(bnd(1):bnd(2))
+!    case(4)
+!        point=>this%T%all_modes(bnd(1):bnd(2))
+!    case(5)
+!        point=>this%u%all_modes(bnd(1):bnd(2))
+!    case default
+!        write(*,*) 'order:',order
+!        STOP 'failed to associate pointer in set_order_point'
+!    end select
+!end subroutine
 
-    bnd=[1+(i_inner-1)*dim_modes_inner(order),i_inner*dim_modes_inner(order)]
+!subroutine set_order_point_single(this,order,i_site,dim_bnd,dim_mode,point,bnd)
+!    class(lattice),intent(in)   :: this
+!    integer,intent(in)          :: order,i_site,dim_mode
+!    integer, intent(in)         :: dim_bnd(2,number_different_order_parameters)  
+!    real(8),pointer,intent(out) :: point(:)
+!    integer,intent(out)         :: bnd(2)
+!
+!    Call get_bnd_single_1(this,order,i_site,dim_bnd,bnd)
+!    !this select case might be ultra slow, make another indexable pointer array in lattice?
+!    select case(order)
+!    case(1)
+!        point=>this%M%all_modes(bnd(1):bnd(2))
+!    case(2)
+!        point=>this%E%all_modes(bnd(1):bnd(2))
+!    case(3)
+!        point=>this%B%all_modes(bnd(1):bnd(2))
+!    case(4)
+!        point=>this%T%all_modes(bnd(1):bnd(2))
+!    case(5)
+!        point=>this%u%all_modes(bnd(1):bnd(2))
+!    case default
+!        write(*,*) 'order:',order
+!        STOP 'failed to associate pointer in set_order_point'
+!    end select
+!end subroutine
 
-    select case(order)
-    case(1)
-        point=>this%M%all_modes(bnd(1):bnd(2))
-    case(2)
-        point=>this%E%all_modes(bnd(1):bnd(2))
-    case(3)
-        point=>this%B%all_modes(bnd(1):bnd(2))
-    case(4)
-        point=>this%T%all_modes(bnd(1):bnd(2))
-    case(5)
-        point=>this%u%all_modes(bnd(1):bnd(2))
-    case default
-        write(*,*) 'order:',order
-        STOP 'failed to associate pointer in set_order_point'
-    end select
-end subroutine
-
-subroutine set_order_point_single(this,order,i_site,dim_bnd,dim_mode,point,bnd)
-    class(lattice),intent(in)   :: this
-    integer,intent(in)          :: order,i_site,dim_mode
-    integer, intent(in)         :: dim_bnd(2,number_different_order_parameters)  
-    real(8),pointer,intent(out) :: point(:)
-    integer,intent(out)         :: bnd(2)
-
-    Call get_bnd_single_1(this,order,i_site,dim_bnd,bnd)
-    !this select case might be ultra slow, make another indexable pointer array in lattice?
-    select case(order)
-    case(1)
-        point=>this%M%all_modes(bnd(1):bnd(2))
-    case(2)
-        point=>this%E%all_modes(bnd(1):bnd(2))
-    case(3)
-        point=>this%B%all_modes(bnd(1):bnd(2))
-    case(4)
-        point=>this%T%all_modes(bnd(1):bnd(2))
-    case(5)
-        point=>this%u%all_modes(bnd(1):bnd(2))
-    case default
-        write(*,*) 'order:',order
-        STOP 'failed to associate pointer in set_order_point'
-    end select
-end subroutine
-
-subroutine reduce_cell(this,vec_in,order,vec_out)
-    !adds all parts of a vectors parts of a vector together, that correspond to the same lattice cell
-    class(lattice),intent(in)       ::  this
-    real(8),intent(in)              ::  vec_in(:)
-    integer,intent(in)              ::  order(:)
-    real(8),intent(inout)           ::  vec_out(:)
-
-    integer                 :: dim_mode_sum
-    integer                 :: i
-
-    dim_mode_sum=product(this%dim_modes(order))
-
-    if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=this%Ncell) ERROR STOP "vec_out of reduce has wrong dimension"
-
-    vec_out=0.0d0
-    do i=1,this%Ncell
-       !probably not very efficient...
-       vec_out(i)=sum(vec_in((i-1)*dim_mode_sum+1:i*dim_mode_sum))
-    enddo
-end subroutine
-
-subroutine reduce(this,vec_in,order,ind_keep,vec_out)
-    class(lattice),intent(in)       :: this
-    real(8),intent(in)              :: vec_in(:)
-    integer,intent(in)              :: order(:)
-    integer,intent(in)              :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
-    real(8),intent(inout)           :: vec_out(:)
-
-    integer                 :: dim_mode_sum,dim_mode_keep
-    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
-
-    integer                 :: ind_div
-    integer                 :: i
-    integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
-    integer                 :: dir
-
-    dim_modes=this%dim_modes(order)
-    dim_mode_sum=product(dim_modes)
-    dim_mode_keep=dim_modes(ind_keep)
-    ind_div=product(dim_modes(:ind_keep-1))
-
-    if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
-    if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
-
-    vec_out=0.0d0
-    do i=1,size(vec_in)
-        site=(i-1)/dim_mode_sum
-        dir=i-site*dim_mode_sum
-        dir=modulo((dir-1)/ind_div,dim_mode_keep)+1
-        vec_out(dir+site*dim_mode_keep)=vec_out(dir+site*dim_mode_keep)+vec_in(i)
-    enddo
-end subroutine
+!subroutine reduce_cell(this,vec_in,order,vec_out)
+!    !adds all parts of a vectors parts of a vector together, that correspond to the same lattice cell
+!    class(lattice),intent(in)       ::  this
+!    real(8),intent(in)              ::  vec_in(:)
+!    integer,intent(in)              ::  order(:)
+!    real(8),intent(inout)           ::  vec_out(:)
+!
+!    integer                 :: dim_mode_sum
+!    integer                 :: i
+!
+!    dim_mode_sum=product(this%dim_modes(order))
+!
+!    if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
+!    if(size(vec_out)/=this%Ncell) ERROR STOP "vec_out of reduce has wrong dimension"
+!
+!    vec_out=0.0d0
+!    do i=1,this%Ncell
+!       !probably not very efficient...
+!       vec_out(i)=sum(vec_in((i-1)*dim_mode_sum+1:i*dim_mode_sum))
+!    enddo
+!end subroutine
+!
+!subroutine reduce(this,vec_in,order,ind_keep,vec_out)
+!    class(lattice),intent(in)       :: this
+!    real(8),intent(in)              :: vec_in(:)
+!    integer,intent(in)              :: order(:)
+!    integer,intent(in)              :: ind_keep !index in dim_modes to keep (corresponding to index of points in set_order_comb)
+!    real(8),intent(inout)           :: vec_out(:)
+!
+!    integer                 :: dim_mode_sum,dim_mode_keep
+!    integer                 :: dim_modes(size(order))   !dimension of modes supplied in order
+!
+!    integer                 :: ind_div
+!    integer                 :: i
+!    integer                 :: site !actually site-1 for convenience for adding with site*dim_mode_sum
+!    integer                 :: dir
+!
+!    dim_modes=this%dim_modes(order)
+!    dim_mode_sum=product(dim_modes)
+!    dim_mode_keep=dim_modes(ind_keep)
+!    ind_div=product(dim_modes(:ind_keep-1))
+!
+!    if(size(vec_in)/=this%Ncell*dim_mode_sum) ERROR STOP "vec_in of reduce has wrong dimension"
+!    if(size(vec_out)/=this%Ncell*dim_modes(ind_keep)) STOP "vec_out of reduce has wrong dimension"
+!
+!    vec_out=0.0d0
+!    do i=1,size(vec_in)
+!        site=(i-1)/dim_mode_sum
+!        dir=i-site*dim_mode_sum
+!        dir=modulo((dir-1)/ind_div,dim_mode_keep)+1
+!        vec_out(dir+site*dim_mode_keep)=vec_out(dir+site*dim_mode_keep)+vec_in(i)
+!    enddo
+!end subroutine
 
 !subroutine reduce_single(this,i_site,vec_in,order,order_keep,vec_out)
 !    class(lattice),intent(in)       :: this
@@ -616,246 +613,246 @@ end subroutine
 !    enddo
 !end subroutine
 
-subroutine set_order_comb_single(this,order,i_site,dim_bnd_in,vec,bnd)
-    !fills the combination of several order parameters according to order
-    !probably quite slow implementation, but should at least work for any reasonable size of order
-    !I SHOULD CHECK HOW SLOW THIS IS
-    !vec should already be allocated to the size of the final vector ->product(dim_modes)
-    class(lattice),intent(in)   :: this
-    integer,intent(in)          :: order(:) !order integers (1:rank reduce operator)->(1:number_different_order_parameters)
-    integer,intent(in)          :: i_site   !site index (1:Ncell)
-    integer, intent(in)         :: dim_bnd_in(2,number_different_order_parameters)  
-    real(8),intent(inout)       :: vec(:)
-    integer,intent(out)         :: bnd(2)
+!subroutine set_order_comb_single(this,order,i_site,dim_bnd_in,vec,bnd)
+!    !fills the combination of several order parameters according to order
+!    !probably quite slow implementation, but should at least work for any reasonable size of order
+!    !I SHOULD CHECK HOW SLOW THIS IS
+!    !vec should already be allocated to the size of the final vector ->product(dim_modes)
+!    class(lattice),intent(in)   :: this
+!    integer,intent(in)          :: order(:) !order integers (1:rank reduce operator)->(1:number_different_order_parameters)
+!    integer,intent(in)          :: i_site   !site index (1:Ncell)
+!    integer, intent(in)         :: dim_bnd_in(2,number_different_order_parameters)  
+!    real(8),intent(inout)       :: vec(:)
+!    integer,intent(out)         :: bnd(2)
+!
+!    !local instance of dim_bnd to only have reduce bnd for the first occurance of the order-parameter (multiple M on one site?, biquadratic?)
+!    !(NOT TESTED SINCE NO SUCH HAMILTIONIAN EXISTS YES)
+!    integer                 :: dim_bnd(2,number_different_order_parameters)
+!    type(point_arr)         :: points(size(order))      !pointers to the respective order parameter
+!    integer                 :: dim_modes(size(order))   !overall dim_mode  (1:size(order))-> dim_mode of this order parameter
+!    integer                 :: dim_mode_all             !product of all considered order parameters
+!    integer                 :: ind_site(size(order))    !index offset to entries of sites for all considered order-parameters
+!    integer                 :: ind(size(order))         !index of considered component in space of respective order parameter
+!    integer                 :: ind_div(size(order))     !temp. values to get all indices as vector operation 
+!    integer                 :: bnd_loc(2,size(order))   !bondaries locally used for each 
+!
+!    integer                 :: i,i_ord
+!    
+!    dim_bnd=dim_bnd_in
+!    do i=1,size(order)
+!        Call this%set_order_point(order(i),points(i)%v)
+!        dim_modes(i)=this%get_order_dim(order(i))
+!        bnd_loc(:,i)=dim_bnd(:,order(i))
+!        dim_bnd(:,order(i))=[1,dim_modes(i)]
+!    enddo
+!    dim_mode_all=product(dim_modes)
+!    do i=1,size(order)
+!        ind_div(i)=product(dim_modes(:i-1))
+!    enddo
+!    vec=1.0d0
+!    ind_site=(i_site-1)*dim_modes
+!    do i=1,dim_mode_all
+!        ind=(i-1)/ind_div
+!        ind=modulo(ind,dim_modes)+1
+!        if(any(bnd_loc(1,:)>ind).or.any(bnd_loc(2,:)<ind))then   !probably rather slow and certainly could be solved quicker
+!            vec(i)=0.0d0
+!            cycle
+!        endif
+!        ind=ind+ind_site
+!        do i_ord=1,size(order)
+!            vec(i)=vec(i)*points(i_ord)%v(ind(i_ord))
+!        enddo
+!    enddo
+!    bnd=(i_site-1)*dim_mode_all+[1,dim_mode_all]    !return full array, could be optimizes especially if the boundary order parameter is the slowly varying parameter
+!end subroutine
 
-    !local instance of dim_bnd to only have reduce bnd for the first occurance of the order-parameter (multiple M on one site?, biquadratic?)
-    !(NOT TESTED SINCE NO SUCH HAMILTIONIAN EXISTS YES)
-    integer                 :: dim_bnd(2,number_different_order_parameters)
-    type(point_arr)         :: points(size(order))      !pointers to the respective order parameter
-    integer                 :: dim_modes(size(order))   !overall dim_mode  (1:size(order))-> dim_mode of this order parameter
-    integer                 :: dim_mode_all             !product of all considered order parameters
-    integer                 :: ind_site(size(order))    !index offset to entries of sites for all considered order-parameters
-    integer                 :: ind(size(order))         !index of considered component in space of respective order parameter
-    integer                 :: ind_div(size(order))     !temp. values to get all indices as vector operation 
-    integer                 :: bnd_loc(2,size(order))   !bondaries locally used for each 
+!subroutine set_order_comb(this,order,vec)
+!    !fills the combination of several order parameters according to order
+!    !probably quite slow implementation, but should at least work for any reasonable size of order
+!    !I SHOULD CHECK HOW SLOW THIS IS
+!    !vec should already be allocated to the size of the final vector ->dimH
+!    class(lattice),intent(in)         ::  this
+!    integer,intent(in)                ::  order(:)
+!    real(8),intent(inout)             ::  vec(:)
+!    !internal
+!    type(point_arr)         :: points(size(order))
+!    integer                 :: dim_modes(size(order))
+!    integer                 :: dim_mode_all
+!    integer                 :: i_site,i,i_entry,i_ord
+!    integer                 :: ind_site(size(order))
+!    integer                 :: ind(size(order))
+!    integer                 :: ind_div(size(order))
+!    
+!    do i=1,size(order)
+!        Call this%set_order_point(order(i),points(i)%v)
+!        dim_modes(i)=this%get_order_dim(order(i))
+!    enddo
+!    dim_mode_all=product(dim_modes)
+!    do i=1,size(order)
+!        ind_div(i)=product(dim_modes(:i-1))
+!    enddo
+!    vec=1.0d0
+!    do i_site=1,this%ncell
+!        ind_site=(i_site-1)*dim_modes
+!        do i=1,dim_mode_all
+!            ind=(i-1)/ind_div
+!            ind=modulo(ind,dim_modes)+1+ind_site
+!            i_entry=i+(i_site-1)*dim_mode_all
+!            do i_ord=1,size(order)
+!                vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
+!            enddo
+!        enddo
+!    enddo
+!end subroutine
+!
+!subroutine set_order_comb_exc(this,order,vec,order_exc)
+!    !fills the combination of several order parameters according to order
+!    !probably quite slow implementation, but should at least work for any reasonable size of order
+!    !TODO: I SHOULD CHECK HOW SLOW THIS IS
+!    !vec should already be allocated to the size of the final vector ->dimH
+!    class(lattice),intent(in)         ::  this
+!    integer,intent(in)                ::  order(:)
+!    logical,intent(in)                ::  order_exc(:)
+!    real(8),intent(inout)             ::  vec(:)
+!
+!    type(point_arr)         :: points(size(order))
+!    integer                 :: dim_modes(size(order))
+!    integer                 :: dim_mode_sum
+!    integer                 :: i_site,i,i_entry,i_ord
+!    integer                 :: ind_site(size(order))
+!    integer                 :: ind(size(order))
+!    integer                 :: ind_div(size(order))
+!
+!    if(size(order_exc)/=size(order)) STOP 'set_order_comb_exc input array shape wrong'
+!    do i=1,size(order)
+!        Call this%set_order_point(order(i),points(i)%v)
+!        dim_modes(i)=this%get_order_dim(order(i))
+!    enddo
+!    dim_mode_sum=product(dim_modes)
+!    do i=1,size(order)
+!        ind_div(i)=product(dim_modes(:i-1))
+!    enddo
+!    vec=1.0d0
+!    do i_site=1,this%ncell
+!        ind_site=(i_site-1)*dim_modes
+!        do i=1,product(dim_modes)
+!            ind=(i-1)/ind_div
+!            ind=modulo(ind,dim_modes)+1+ind_site
+!            i_entry=i+(i_site-1)*dim_mode_sum
+!            do i_ord=1,size(order)
+!                if(.not.order_exc(i_ord)) vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord)) 
+!            enddo
+!        enddo
+!    enddo
+!end subroutine
 
-    integer                 :: i,i_ord
-    
-    dim_bnd=dim_bnd_in
-    do i=1,size(order)
-        Call this%set_order_point(order(i),points(i)%v)
-        dim_modes(i)=this%get_order_dim(order(i))
-        bnd_loc(:,i)=dim_bnd(:,order(i))
-        dim_bnd(:,order(i))=[1,dim_modes(i)]
-    enddo
-    dim_mode_all=product(dim_modes)
-    do i=1,size(order)
-        ind_div(i)=product(dim_modes(:i-1))
-    enddo
-    vec=1.0d0
-    ind_site=(i_site-1)*dim_modes
-    do i=1,dim_mode_all
-        ind=(i-1)/ind_div
-        ind=modulo(ind,dim_modes)+1
-        if(any(bnd_loc(1,:)>ind).or.any(bnd_loc(2,:)<ind))then   !probably rather slow and certainly could be solved quicker
-            vec(i)=0.0d0
-            cycle
-        endif
-        ind=ind+ind_site
-        do i_ord=1,size(order)
-            vec(i)=vec(i)*points(i_ord)%v(ind(i_ord))
-        enddo
-    enddo
-    bnd=(i_site-1)*dim_mode_all+[1,dim_mode_all]    !return full array, could be optimizes especially if the boundary order parameter is the slowly varying parameter
-end subroutine
+!subroutine set_order_comb_exc_single(this,i_site,order,vec,order_exc)
+!    !fills the combination of several order parameters according to order
+!    !probably quite slow implementation, but should at least work for any reasonable size of order
+!    !TODO: I SHOULD CHECK HOW SLOW THIS IS
+!    !vec should already be allocated to the size of the final vector ->dimH
+!    class(lattice),intent(in)         ::  this
+!    integer,intent(in)                ::  order(:),i_site
+!    logical,intent(in)                ::  order_exc(:)
+!    real(8),intent(inout)             ::  vec(:)
+!    !internal
+!    type(point_arr)         :: points(size(order))
+!    integer                 :: dim_modes(size(order))
+!    integer                 :: dim_mode_sum
+!    integer                 :: i,i_entry,i_ord
+!    integer                 :: ind_site(size(order))
+!    integer                 :: ind(size(order))
+!    integer                 :: ind_div(size(order))
+!
+!    if(size(order_exc)/=size(order)) STOP 'set_order_comb_exc input array shape wrong'
+!    do i=1,size(order)
+!        Call this%set_order_point(order(i),points(i)%v)
+!        dim_modes(i)=this%get_order_dim(order(i))
+!    enddo
+!    dim_mode_sum=product(dim_modes)
+!    do i=1,size(order)
+!        ind_div(i)=product(dim_modes(:i-1))
+!    enddo
+!    vec=1.0d0
+!    ind_site=(i_site-1)*dim_modes
+!    do i=1,product(dim_modes)
+!        ind=(i-1)/ind_div
+!        ind=modulo(ind,dim_modes)+1+ind_site
+!        i_entry=i
+!        do i_ord=1,size(order)
+!            if(.not.order_exc(i_ord)) vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord)) 
+!        enddo
+!    enddo
+!end subroutine
 
-subroutine set_order_comb(this,order,vec)
-    !fills the combination of several order parameters according to order
-    !probably quite slow implementation, but should at least work for any reasonable size of order
-    !I SHOULD CHECK HOW SLOW THIS IS
-    !vec should already be allocated to the size of the final vector ->dimH
-    class(lattice),intent(in)         ::  this
-    integer,intent(in)                ::  order(:)
-    real(8),intent(inout)             ::  vec(:)
-    !internal
-    type(point_arr)         :: points(size(order))
-    integer                 :: dim_modes(size(order))
-    integer                 :: dim_mode_all
-    integer                 :: i_site,i,i_entry,i_ord
-    integer                 :: ind_site(size(order))
-    integer                 :: ind(size(order))
-    integer                 :: ind_div(size(order))
-    
-    do i=1,size(order)
-        Call this%set_order_point(order(i),points(i)%v)
-        dim_modes(i)=this%get_order_dim(order(i))
-    enddo
-    dim_mode_all=product(dim_modes)
-    do i=1,size(order)
-        ind_div(i)=product(dim_modes(:i-1))
-    enddo
-    vec=1.0d0
-    do i_site=1,this%ncell
-        ind_site=(i_site-1)*dim_modes
-        do i=1,dim_mode_all
-            ind=(i-1)/ind_div
-            ind=modulo(ind,dim_modes)+1+ind_site
-            i_entry=i+(i_site-1)*dim_mode_all
-            do i_ord=1,size(order)
-                vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord))
-            enddo
-        enddo
-    enddo
-end subroutine
+!subroutine point_order_onsite(lat,op,dimH,modes,vec)
+!    !Subroutine that points modes to the order parameter vector according to op and dimH input
+!    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
+!    !, and points modes
+!    !This only works if the unfolded order paramters are only considered on the same site
+!    class(lattice), intent(in)              :: lat
+!    integer,intent(in)                      :: op(:)
+!    integer,intent(in)                      :: dimH
+!    real(8),pointer,intent(out),contiguous  :: modes(:)
+!    real(8),allocatable,target,intent(out)  :: vec(:)
+!
+!    if(size(op)==1)then
+!        Call lat%set_order_point(op(1),modes)
+!    else
+!        allocate(vec(dimH),source=0.0d0)
+!        Call lat%set_order_comb(op,vec)
+!        modes=>vec
+!    endif
+!end subroutine
 
-subroutine set_order_comb_exc(this,order,vec,order_exc)
-    !fills the combination of several order parameters according to order
-    !probably quite slow implementation, but should at least work for any reasonable size of order
-    !TODO: I SHOULD CHECK HOW SLOW THIS IS
-    !vec should already be allocated to the size of the final vector ->dimH
-    class(lattice),intent(in)         ::  this
-    integer,intent(in)                ::  order(:)
-    logical,intent(in)                ::  order_exc(:)
-    real(8),intent(inout)             ::  vec(:)
+!subroutine point_order_onsite_single(lat,op,i_site,dim_bnd,dim_mode,modes,vec,bnd)
+!    !Subroutine that points modes to the order parameter vector according to op and dimH input
+!    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
+!    !, and points modes
+!    !This only works if the unfolded order paramters are only considered on the same site
+!    class(lattice), intent(in)              :: lat
+!    integer,intent(in)                      :: op(:)
+!    integer,intent(in)                      :: dim_mode,i_site
+!    integer, intent(in)                     :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
+!    real(8),pointer,intent(out)             :: modes(:)
+!    real(8),allocatable,target,intent(out)  :: vec(:)   !space to allocate array if not single operator
+!    integer,intent(out)                     :: bnd(2)   !boundary indices in (1:dim_mode*N_cell)-basis
+!
+!    if(size(op)==1)then
+!        Call set_order_point_single(lat,op(1),i_site,dim_bnd,dim_mode,modes,bnd)
+!    else
+!        allocate(vec(dim_mode),source=0.0d0)
+!        Call set_order_comb_single(lat,op,i_site,dim_bnd,vec,bnd)
+!        modes=>vec
+!    endif
+!end subroutine
 
-    type(point_arr)         :: points(size(order))
-    integer                 :: dim_modes(size(order))
-    integer                 :: dim_mode_sum
-    integer                 :: i_site,i,i_entry,i_ord
-    integer                 :: ind_site(size(order))
-    integer                 :: ind(size(order))
-    integer                 :: ind_div(size(order))
-
-    if(size(order_exc)/=size(order)) STOP 'set_order_comb_exc input array shape wrong'
-    do i=1,size(order)
-        Call this%set_order_point(order(i),points(i)%v)
-        dim_modes(i)=this%get_order_dim(order(i))
-    enddo
-    dim_mode_sum=product(dim_modes)
-    do i=1,size(order)
-        ind_div(i)=product(dim_modes(:i-1))
-    enddo
-    vec=1.0d0
-    do i_site=1,this%ncell
-        ind_site=(i_site-1)*dim_modes
-        do i=1,product(dim_modes)
-            ind=(i-1)/ind_div
-            ind=modulo(ind,dim_modes)+1+ind_site
-            i_entry=i+(i_site-1)*dim_mode_sum
-            do i_ord=1,size(order)
-                if(.not.order_exc(i_ord)) vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord)) 
-            enddo
-        enddo
-    enddo
-end subroutine
-
-subroutine set_order_comb_exc_single(this,i_site,order,vec,order_exc)
-    !fills the combination of several order parameters according to order
-    !probably quite slow implementation, but should at least work for any reasonable size of order
-    !TODO: I SHOULD CHECK HOW SLOW THIS IS
-    !vec should already be allocated to the size of the final vector ->dimH
-    class(lattice),intent(in)         ::  this
-    integer,intent(in)                ::  order(:),i_site
-    logical,intent(in)                ::  order_exc(:)
-    real(8),intent(inout)             ::  vec(:)
-    !internal
-    type(point_arr)         :: points(size(order))
-    integer                 :: dim_modes(size(order))
-    integer                 :: dim_mode_sum
-    integer                 :: i,i_entry,i_ord
-    integer                 :: ind_site(size(order))
-    integer                 :: ind(size(order))
-    integer                 :: ind_div(size(order))
-
-    if(size(order_exc)/=size(order)) STOP 'set_order_comb_exc input array shape wrong'
-    do i=1,size(order)
-        Call this%set_order_point(order(i),points(i)%v)
-        dim_modes(i)=this%get_order_dim(order(i))
-    enddo
-    dim_mode_sum=product(dim_modes)
-    do i=1,size(order)
-        ind_div(i)=product(dim_modes(:i-1))
-    enddo
-    vec=1.0d0
-    ind_site=(i_site-1)*dim_modes
-    do i=1,product(dim_modes)
-        ind=(i-1)/ind_div
-        ind=modulo(ind,dim_modes)+1+ind_site
-        i_entry=i
-        do i_ord=1,size(order)
-            if(.not.order_exc(i_ord)) vec(i_entry)=vec(i_entry)*points(i_ord)%v(ind(i_ord)) 
-        enddo
-    enddo
-end subroutine
-
-subroutine point_order_onsite(lat,op,dimH,modes,vec)
-    !Subroutine that points modes to the order parameter vector according to op and dimH input
-    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
-    !, and points modes
-    !This only works if the unfolded order paramters are only considered on the same site
-    class(lattice), intent(in)              :: lat
-    integer,intent(in)                      :: op(:)
-    integer,intent(in)                      :: dimH
-    real(8),pointer,intent(out),contiguous  :: modes(:)
-    real(8),allocatable,target,intent(out)  :: vec(:)
-
-    if(size(op)==1)then
-        Call lat%set_order_point(op(1),modes)
-    else
-        allocate(vec(dimH),source=0.0d0)
-        Call lat%set_order_comb(op,vec)
-        modes=>vec
-    endif
-end subroutine
-
-subroutine point_order_onsite_single(lat,op,i_site,dim_bnd,dim_mode,modes,vec,bnd)
-    !Subroutine that points modes to the order parameter vector according to op and dimH input
-    !If size(op)>1 (i.e. dimension is folded from higher rank) allocates vec, sets it correctly
-    !, and points modes
-    !This only works if the unfolded order paramters are only considered on the same site
-    class(lattice), intent(in)              :: lat
-    integer,intent(in)                      :: op(:)
-    integer,intent(in)                      :: dim_mode,i_site
-    integer, intent(in)                     :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
-    real(8),pointer,intent(out)             :: modes(:)
-    real(8),allocatable,target,intent(out)  :: vec(:)   !space to allocate array if not single operator
-    integer,intent(out)                     :: bnd(2)   !boundary indices in (1:dim_mode*N_cell)-basis
-
-    if(size(op)==1)then
-        Call set_order_point_single(lat,op(1),i_site,dim_bnd,dim_mode,modes,bnd)
-    else
-        allocate(vec(dim_mode),source=0.0d0)
-        Call set_order_comb_single(lat,op,i_site,dim_bnd,vec,bnd)
-        modes=>vec
-    endif
-end subroutine
-
-subroutine get_bnd_single_1(lat,op,i_site,dim_bnd,bnd)
-    class(lattice), intent(in)  :: lat
-    integer,intent(in)          :: op
-    integer,intent(in)          :: i_site
-    integer,intent(in)          :: dim_bnd(2,number_different_order_parameters)
-    integer,intent(out)         :: bnd(2)
-
-    bnd=dim_bnd(:,op)+(i_site-1)*lat%dim_modes(op)
-end subroutine
-
-subroutine get_bnd_single(lat,op,i_site,dim_bnd,bnd)
-    class(lattice), intent(in)   :: lat
-    integer,intent(in)          :: op(:)
-    integer,intent(in)          :: i_site
-    integer,intent(in)          :: dim_bnd(2,number_different_order_parameters)
-    integer,intent(out)         :: bnd(2)
-
-    integer     ::  dim_mode
-
-    if(size(op)==1)then
-        Call get_bnd_single_1(lat,op(1),i_site,dim_bnd,bnd)
-    else
-        STOP "IMPLEMENT FOR RANK2 and higher parameters"
-    endif
-
-end subroutine
+!subroutine get_bnd_single_1(lat,op,i_site,dim_bnd,bnd)
+!    class(lattice), intent(in)  :: lat
+!    integer,intent(in)          :: op
+!    integer,intent(in)          :: i_site
+!    integer,intent(in)          :: dim_bnd(2,number_different_order_parameters)
+!    integer,intent(out)         :: bnd(2)
+!
+!    bnd=dim_bnd(:,op)+(i_site-1)*lat%dim_modes(op)
+!end subroutine
+!
+!subroutine get_bnd_single(lat,op,i_site,dim_bnd,bnd)
+!    class(lattice), intent(in)   :: lat
+!    integer,intent(in)          :: op(:)
+!    integer,intent(in)          :: i_site
+!    integer,intent(in)          :: dim_bnd(2,number_different_order_parameters)
+!    integer,intent(out)         :: bnd(2)
+!
+!    integer     ::  dim_mode
+!
+!    if(size(op)==1)then
+!        Call get_bnd_single_1(lat,op(1),i_site,dim_bnd,bnd)
+!    else
+!        STOP "IMPLEMENT FOR RANK2 and higher parameters"
+!    endif
+!
+!end subroutine
 
 
 function get_order_dim(this,order,ignore) result(dim_mode)
@@ -867,8 +864,11 @@ function get_order_dim(this,order,ignore) result(dim_mode)
 #ifdef CPP_DEBUG
     !this could spot a programming mistake
     if(order<1.or.order>number_different_order_parameters)then
-        write(*,*) "order=",order
-        STOP "trying to get dim_mode for unset orderparameter"
+        write(error_unit,'(//A)') "Error trying to get order-dimension of unimplemented integer identifier."
+        write(error_unit,'(A,I6)') "Order identifier:",order
+        write(error_unit,'(A,I6)') "max. identifier :",number_different_order_parameters
+        write(error_unit,'(A)') "This error is most probably caused by a badly implemented Hamiltonian"
+        Error STOP "Check code"
     endif
 #endif
     dim_mode=this%dim_modes(order)
@@ -876,8 +876,10 @@ function get_order_dim(this,order,ignore) result(dim_mode)
         if(present(ignore))then
             if(ignore) return
         endif
-        write(*,*) 'trying to get dim_mode for order=',order 
-        ERROR STOP "dim_mode not positive, requested order parameter not set?"
+        write(error_unit,'(//2A)') "Error trying to access dimension of order parameter: ",trim(order_parameter_name(order))
+        write(error_unit,'(AI6)') "Its current order dimension is:", dim_mode
+        if(dim_mode==0) write(error_unit,'(AI6)') "Check input if the wanted order-parameter has been enabled"
+        ERROR STOP "Check input"
     endif
 end function
 
@@ -1007,7 +1009,7 @@ function op_name_to_int(name_in)result(int_out)
             return
         endif
     enddo
-    write(*,*) 'inserted name:',name_in
+    write(error_unit,'(//2A)') 'inserted name:',name_in
     STOP "Failed to identify name with operator"
 end function
 
@@ -1023,7 +1025,7 @@ function op_abbrev_to_int(abbrev_in)result(int_out)
                 cycle outer
             endif
         enddo
-        write(*,*) "failing to get operator integer for ",abbrev_in(i:i)
+        write(error_unit,'(//A,I6)') "failing to get operator integer for ",abbrev_in(i:i)
         STOP "DID NOT FIND ABBREVIATION"
     enddo outer
 end function

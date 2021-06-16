@@ -59,7 +59,6 @@ subroutine set_work_single(this,work,order)
     class(work_ham_single),intent(inout)    :: work 
     integer,intent(in)                      :: order
     integer     :: sizes(2)
-    integer     :: dim_mode
 
     if(.not.this%is_set()) ERROR STOP "cannot set work size of hamiltonian if it is not set"
     if(this%row_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if row_max==0"
@@ -480,9 +479,9 @@ subroutine distribute(this,comm)
     use mpi_util!,only: bcast_util => bcast
     class(t_H_mkl_csr),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm
+#ifdef CPP_MPI
     real(C_DOUBLE),pointer          :: val_base(:)
     integer(C_INT),pointer          :: ia_base(:),ja_base(:)
-#ifdef CPP_MPI
     integer                         :: nnz_base
     integer     ::  cnt(comm%Np),displ(comm%Np)
 
@@ -549,9 +548,9 @@ subroutine distribute(this,comm)
     use mpi_util!,only: bcast_util => bcast
     class(t_H_mkl_csr),intent(inout)        ::  this
     type(mpi_type),intent(in)       ::  comm
+#ifdef CPP_MPI
     real(C_DOUBLE),pointer          :: val_base(:)
     integer(C_INT),pointer          :: ia_base(:),ja_base(:)
-#ifdef CPP_MPI
     integer                         :: nnz_base
     integer     ::  cnt(comm%Np),displ(comm%Np)
 

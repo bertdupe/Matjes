@@ -57,8 +57,6 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     integer,intent(out)         :: N_rep(3)
 
 #ifdef CPP_CUDA
-    integer         :: i
-
     if(c_associated(this%M))then
         write(error_unit,'(///A)') "Trying to initialize shape of fft_H, but the fourier-transform has already been set"
         write(error_unit,'(A)') "init_shape shall only be called once"
@@ -101,8 +99,6 @@ subroutine bcast_fft(this,comm)
     use mpi_util
     class(fft_H_cufft),intent(inout)    ::  this
     type(mpi_type),intent(in)           ::  comm
-
-    integer ::  shp(2)
 
     Call this%fft_H%bcast(comm)
 
@@ -197,7 +193,6 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     integer(C_int)  ::  length
 
     integer(C_int)  :: shape_test(3)
-    integer     :: i
 
     !some initial tests
     length=int(size(K_n),C_int)
@@ -262,7 +257,6 @@ subroutine get_H(this,lat,Hout)
     type(lattice),intent(in)      ::  lat
     real(8),intent(inout)         ::  Hout(:,:)
 #ifdef CPP_CUDA
-    integer ::  i,j,l
     integer(C_int)  ::  length
 
     length=int(size(this%m_n),C_int)
@@ -286,7 +280,6 @@ subroutine get_H_single(this,lat,site,Hout)
     real(8),intent(inout)               ::  Hout(3)
 
 #ifdef CPP_CUDA
-    integer ::  i,j,l
     integer(C_int)  ::  length
 
     length=int(size(this%m_n),C_int)

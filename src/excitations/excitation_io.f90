@@ -1,8 +1,10 @@
 module m_excitation_io
 use m_type_lattice, only: order_parameter_name, op_name_to_int
+use m_io_read_util
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
+
 private
-public excitation_io, read_excitation_io
+public excitation_io, read_excitation_io, check_excitation_io
 type excitation_io
     integer             :: op   !operator index
     character(len=100)  :: shape_t_name
@@ -11,15 +13,29 @@ contains
     procedure   ::   read_string
 end type
 
+character(len=*),parameter  :: var_name='excitations'
+
 contains
 
+subroutine check_excitation_io(io,fname,found)
+    integer,intent(in)              :: io
+    character(len=*),intent(in)     :: fname
+    logical,intent(out)             :: found 
+    inquire(io,opened=found)
+    if(.not.found)then
+        write(error_unit,'(A)') "Error reading the excitations"
+        write(error_unit,'(A)') "Input io-unit is not opened"
+        STOP
+    endif
+
+    Call set_pos_entry(io,fname,var_name,found)
+    if(.not.found) write(output_unit,'(/A/)') "No excitations provided in input"
+end subroutine
 subroutine read_excitation_io(io,fname,excitations)
-    use m_io_read_util
     integer,intent(in)                              :: io
     character(len=*),intent(in)                     :: fname
     type(excitation_io),intent(inout),allocatable   :: excitations(:)
 
-    character(len=*),parameter  :: var_name='excitations'
     character(len=1000)         :: str
     logical                     :: success
     integer                     :: nread

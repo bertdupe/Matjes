@@ -33,7 +33,6 @@ subroutine algebraic_read_string(this,str)
         write(error_unit,'(AI3,A)') "The error happens when reading the ", size(this%real_var)," reals after 2 strings, 2 reals and 1 int"
         STOP
     endif
-    this%get_shape=>shape_algebraic
 
     associate( I0     => this%real_var(1                :  this%dim_mode  ),&
                t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
@@ -47,6 +46,9 @@ subroutine algebraic_read_string(this,str)
             ERROR STOP
         endif
     end associate
+
+    this%get_shape=>shape_algebraic
+    this%print_t=>print_t_algebraic
 end subroutine
 
 function shape_algebraic(this,time) result(val)
@@ -56,7 +58,7 @@ function shape_algebraic(this,time) result(val)
 
     associate( I0     => this%real_var(1                :  this%dim_mode  ),&
                t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
-               k      => this%real_var(1+this%dim_mode  :  this%dim_mode+2))
+               k      => this%real_var(2+this%dim_mode  :  this%dim_mode+2))
     val=algebraic(time,&
                   this%dim_mode,&
                   this%t_start,&
@@ -72,11 +74,31 @@ function algebraic(time,dim_mode,t_start,t_end,I0,t0,k)result(val)
     real(8), intent(in) :: t0,k
     real(8)             :: val(dim_mode)
 
-    real(8)     :: tmp
-
     val=0.0d0
     if ((time>=t_start).and.(time<t_end))then
         val=I0/(time-t0)**k
     endif
 end function
+
+subroutine print_t_algebraic(this,io)
+    use m_constants, only: pi
+    class(excitation_t),intent(in)  :: this
+    integer,intent(in)              :: io
+    character(len=10)   ::  dim_mode
+
+    write(dim_mode,'(I10)') this%dim_mode
+    associate( I0     => this%real_var(1                :  this%dim_mode  ),&
+               t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
+               k      => this%real_var(2+this%dim_mode  :  this%dim_mode+2))
+    write(io,'(3X,A)') "Time-shape: algebraic"
+    write(io,'(6X,A)') "Algebraic increase/decay"
+    write(io,'(6X,A)') "Equation: I0/(t-t0)**k"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,2(F14.4,A))')            "time range:    : [",this%t_start,",",this%t_end," ) fs"
+    write(io,'(9X,A,'//dim_mode//'(E16.8))') "amplitude (I0) : ", I0
+    write(io,'(9X,A,(F16.4),A)')             "center    (t0) : ", t0(1) , " in fs"
+    write(io,'(9X,A,(F16.4))')               "decay      (k) : ", k(1) 
+    end associate
+end subroutine
+
 end module 

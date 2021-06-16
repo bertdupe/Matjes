@@ -33,6 +33,7 @@ subroutine const_read_string(this,str)
         STOP
     endif
     this%get_shape=>shape_const
+    this%print_t=>print_t_const
 end subroutine
 
 function shape_const(this,time) result(val)
@@ -56,5 +57,18 @@ function const(time,dim_mode,t_start,t_end,val_in)result(val)
     val=0.d0
     if ((time>=t_start).and.(time<t_end)) val=val_in
 end function
+
+subroutine print_t_const(this,io)
+    class(excitation_t),intent(in)  :: this
+    integer,intent(in)              :: io
+    character(len=10)   ::  dim_mode
+
+    write(dim_mode,'(I10)') this%dim_mode
+    write(io,'(3X,A)') "Time-shape: const"
+    write(io,'(6X,A)') "Constant value within time range"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,2(F14.4,A))') "time range:    : [",this%t_start,",",this%t_end," ) fs"
+    write(io,'(9X,A,'//dim_mode//'(E16.8))') "const. value   : ",this%real_var(1:this%dim_mode)
+end subroutine
 
 end module 

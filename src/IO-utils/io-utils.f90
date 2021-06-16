@@ -444,6 +444,7 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
     logical,intent(out)                         :: success
     ! internal variable
     type(Hr_triple_single),allocatable   :: Htriple_tmp(:)
+    type(Hr_triple), allocatable         :: Htriples_tmp(:)
     integer :: attype(3),dist
     real(8) :: val
 
@@ -519,6 +520,24 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
                 endif
             enddo
         enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        if(any(Htriples%attype(1)/=Htriples%attype(2)))then
+            Call move_alloc(Htriples,Htriples_tmp)
+            allocate(Htriples(size(Htriples_tmp)+count(Htriples_tmp%attype(1)/=Htriples_tmp%attype(2))))
+            ii=0
+            do i=1,size(Htriples_tmp)
+                ii=ii+1
+                Htriples(ii)=Htriples_tmp(i)
+                if(Htriples_tmp(i)%attype(1)/=Htriples_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Htriples(ii)=Htriples_tmp(i)
+                    Htriples(ii)%attype(1:2)=[Htriples_tmp(i)%attype(2),Htriples_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Htriples_tmp)
+        endif
+
         success=.true.
     endif
 
@@ -536,7 +555,8 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     type(Hr_pair), intent(out), allocatable     :: Hpairs(:)
     logical,intent(out)                         :: success
     ! internal variable
-    type(Hr_pair_single),allocatable   :: Hpair_tmp(:)
+    type(Hr_pair_single),allocatable            :: Hpair_tmp(:)
+    type(Hr_pair), allocatable                  :: Hpairs_tmp(:)
     integer :: attype(2),dist
     real(8) :: val
 
@@ -614,6 +634,24 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
                 endif
             enddo
         enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        if(any(Hpairs%attype(1)/=Hpairs%attype(2)))then
+            Call move_alloc(Hpairs,Hpairs_tmp)
+            allocate(Hpairs(size(Hpairs_tmp)+count(Hpairs_tmp%attype(1)/=Hpairs_tmp%attype(2))))
+            ii=0
+            do i=1,size(Hpairs_tmp)
+                ii=ii+1
+                Hpairs(ii)=Hpairs_tmp(i)
+                if(Hpairs_tmp(i)%attype(1)/=Hpairs_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Hpairs(ii)=Hpairs_tmp(i)
+                    Hpairs(ii)%attype=[Hpairs_tmp(i)%attype(2),Hpairs_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Hpairs_tmp)
+        endif
+
         success=.true.
     endif
 

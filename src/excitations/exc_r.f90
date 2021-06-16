@@ -9,7 +9,8 @@ type excitation_shape_r
     character(len=30)                    :: name='plane' !name for identification     
     real(8)                              :: center(3)=0.0d0
     real(8)                              :: cutoff=1.0d0
-    procedure(int_shape_r), pointer,pass    :: shape_r=>shape_r_plane
+    procedure(int_shape_r), pointer,pass :: shape_r=>shape_r_plane
+    procedure(int_print_r), pointer,pass :: print_r=>print_r_plane
 contains
     procedure   ::   read_string
 end type
@@ -17,10 +18,15 @@ end type
 abstract interface
     function int_shape_r(this,R)result(shape_r)
         import excitation_shape_r
-        class(excitation_shape_r),intent(in)   :: this
-        real(8), intent(in)                 :: R(3)
-        real(8)                             :: shape_r
+        class(excitation_shape_r),intent(in)    :: this
+        real(8), intent(in)                     :: R(3)
+        real(8)                                 :: shape_r
     end function
+    subroutine int_print_r(this,io)
+        import excitation_shape_r
+        class(excitation_shape_r),intent(in)    :: this
+        integer,intent(in)                      :: io
+    end subroutine 
 end interface
 
 contains
@@ -90,7 +96,7 @@ subroutine read_excitation_shape_r(io,fname,shape_r)
 end subroutine
 
 subroutine read_string(this,string,success)
-    class(excitation_shape_r),intent(inout)    :: this
+    class(excitation_shape_r),intent(inout) :: this
     character(len=*),intent(in)             :: string
     logical,intent(out)                     :: success
 
@@ -113,18 +119,22 @@ subroutine read_string(this,string,success)
         !no additional data has to be read for plane
         Nreal=0
         this%shape_r => shape_r_plane
+        this%print_r => print_r_plane
     case('square')
         Nreal=4
         read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center,this%cutoff
         this%shape_r => shape_r_square
+        this%print_r => print_r_square
     case('cylinder')
         Nreal=4
         read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center,this%cutoff
-        this%shape_r => shape_r_cylinder
+        this%shape_r => shape_r_sphere
+        this%print_r => print_r_sphere
     case('gaussian')
         Nreal=4
         read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center,this%cutoff
         this%shape_r => shape_r_gaussian
+        this%print_r => print_r_gaussian
     case default
         write(error_unit,'(A)') "Error reading excitation_shape_r"
         write(error_unit,'(2A)') "shape_r identifier not implemented (second entry):", trim(shape_r_name)
@@ -144,27 +154,46 @@ end subroutine
 
 
 function shape_r_plane(this,R)result(shape_r)
-    class(excitation_shape_r),intent(in)   :: this
-    real(8), intent(in)                 :: R(3)
-    real(8)                             :: shape_r
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r
     shape_r=1.0d0
-
 end function
 
+subroutine print_r_plane(this,io)
+    class(excitation_shape_r),intent(in)    :: this
+    integer,intent(in)                      :: io
+
+    write(io,'(3X,A)') "Real-space shape: plane"
+    write(io,'(6X,A)') "No necessary parameters"
+end subroutine
+    
+
 function shape_r_square(this,R)result(shape_r)
-    class(excitation_shape_r),intent(in)   ::  this
-    real(8), intent(in)                 :: R(3)
-    real(8)                             :: shape_r
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r
 
     shape_r=0.0d0
     if (all(abs(R-this%center).lt.this%cutoff)) shape_r=1.0d0
 end function
 
-function shape_r_cylinder(this,R)result(shape_r)
+subroutine print_r_square(this,io)
+    class(excitation_shape_r),intent(in)    :: this
+    integer,intent(in)                      :: io
+
+    write(io,'(3X,A)') "Real-space shape: square"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,3F16.8,A)') "center position: ",this%center," nm"
+    write(io,'(9X,A,F16.8,A)')  "half width     : ",this%cutoff," nm"
+end subroutine
+
+
+function shape_r_sphere(this,R)result(shape_r)
     !actually a sphere, but I will not change the functionality at this point
-    class(excitation_shape_r),intent(in)   :: this
-    real(8), intent(in)                 :: R(3)
-    real(8)                             :: shape_r
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r
 !    real(8)     :: dist
     
 !    dist=shape_r2(R-R0)
@@ -173,10 +202,21 @@ function shape_r_cylinder(this,R)result(shape_r)
     if (norm2(R-this%center).lt.this%cutoff) shape_r=1.0d0
 end function
 
+subroutine print_r_sphere(this,io)
+    class(excitation_shape_r),intent(in)    :: this
+    integer,intent(in)                      :: io
+
+    write(io,'(3X,A)') "Real-space shape: sphere (called cylinder)"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,3F16.8,A)') "center position: ",this%center," nm"
+    write(io,'(9X,A,F16.8,A)')  "radius         : ",this%cutoff," nm"
+end subroutine
+
+
 function shape_r_gaussian(this,R)result(shape_r)
-    class(excitation_shape_r),intent(in)   :: this
-    real(8), intent(in)                 :: R(3)
-    real(8)                             :: shape_r
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r
     real(8)     :: tmp
 
     tmp=norm2(R-this%center)
@@ -185,4 +225,16 @@ function shape_r_gaussian(this,R)result(shape_r)
     tmp=max(tmp,-200.0d0)  !prevent exp(tmp) underflow 
     shape_r=exp(tmp)
 end function
+
+subroutine print_r_gaussian(this,io)
+    class(excitation_shape_r),intent(in)    :: this
+    integer,intent(in)                      :: io
+
+    write(io,'(3X,A)') "Real-space shape: gaussian"
+    write(io,'(6X,A)') "Equation: e^(-((pos-center)/w)^2)"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,3F16.8,A)') "center position: ",this%center," nm"
+    write(io,'(9X,A,F16.8,A)')  "width (w)      : ",this%cutoff," nm"
+end subroutine
+
 end module

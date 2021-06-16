@@ -31,7 +31,6 @@ subroutine gauss_read_string(this,str)
         write(error_unit,'(AI3,A)') "The error happens when reading the ", size(this%real_var)," reals after 2 strings,2 reals and 1 int"
         STOP
     endif
-    this%get_shape=>shape_gauss
 
     associate( I0     => this%real_var(1                :  this%dim_mode  ),&
                t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
@@ -40,6 +39,9 @@ subroutine gauss_read_string(this,str)
         this%t_start=max(this%t_start,t0(1)-10.0d0*tau(1))
         this%t_end  =min(this%t_end  ,t0(1)+10.0d0*tau(1))
     end associate
+
+    this%get_shape=>shape_gauss
+    this%print_t=>print_t_gauss
 end subroutine
 
 function shape_gauss(this,time) result(val)
@@ -47,9 +49,9 @@ function shape_gauss(this,time) result(val)
     real(8),intent(in)                  :: time
     real(8)                             :: val(this%dim_mode)
 
-    associate( I0     => this%real_var(1                  :  this%dim_mode*1  ),&
-               t0     => this%real_var(1+this%dim_mode*2  :  this%dim_mode*2+1),&
-               tau    => this%real_var(1+this%dim_mode*2+1:  this%dim_mode*2+2)) 
+    associate( I0     => this%real_var(1                :  this%dim_mode  ),&
+               t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
+               tau    => this%real_var(1+this%dim_mode+1:  this%dim_mode+2)) 
     val=gauss(time,&
                   this%dim_mode,&
                   this%t_start,&
@@ -76,4 +78,26 @@ function gauss(time,dim_mode,t_start,t_end,I0,t0,tau)result(val)
         val=val+I0*tmp
     endif
 end function
+
+subroutine print_t_gauss(this,io)
+    use m_constants, only: pi
+    class(excitation_t),intent(in)  :: this
+    integer,intent(in)              :: io
+    character(len=10)   ::  dim_mode
+
+    write(dim_mode,'(I10)') this%dim_mode
+    associate( I0     => this%real_var(1                  :  this%dim_mode  ),&
+               t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
+               tau    => this%real_var(1+this%dim_mode+1:  this%dim_mode+2)) 
+    write(io,'(3X,A)') "Time-shape: gauss"
+    write(io,'(6X,A)') "Gaussian shape"
+    write(io,'(6X,A)') "Equation: I0*exp(-(t-t0)^2/tau^2)"
+    write(io,'(6X,A)') "Parameters:"
+    write(io,'(9X,A,2(F14.4,A))') "time range:    : [",this%t_start,",",this%t_end," ) fs"
+    write(io,'(9X,A,'//dim_mode//'(E16.8))') "amplitude (I0) : ", I0
+    write(io,'(9X,A,(F16.4),A)') "center    (t0) : ", t0(1) , " in fs"
+    write(io,'(9X,A,(F16.4),A)') "decay    (tau) : ", tau(1) , " in fs"
+    end associate
+end subroutine
+
 end module 

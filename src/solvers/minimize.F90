@@ -75,8 +75,8 @@ subroutine minimize_run(lat,io_simu,io_min,H)
     ! internal
     real(8)     :: dumy,force_norm,Energy,vmax,vtest,test_torque,max_torque
     ! the computation time
-    integer(8)  :: i_min
-    integer     :: gra_freq,gra_int
+    integer(8)  :: i_min, gra_freq
+    integer     :: gra_int
     logical :: gra_log
     integer :: iomp,dim_mode,N_cell
 
