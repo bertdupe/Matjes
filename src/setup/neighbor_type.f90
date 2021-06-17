@@ -212,7 +212,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     integer                 :: multi(5) !size of each index part
     integer                 :: prod_multi(5) !size of each index part
 
-    success=.true.
+    if(present(success)) success=.true.
     ii=0
     do i2=1,size(atpos2,2)
         do i1=1,size(atpos1,2)
@@ -274,7 +274,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
                 exit
             else
                 write(error_unit,'(2/A)') "Failed to get sufficiently many neighboring distances as required by input"
-                success=.false.
+                if(present(success)) success=.false.
                 return
             endif
         endif
