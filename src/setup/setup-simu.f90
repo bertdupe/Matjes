@@ -108,16 +108,16 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     call close_file('positions.dat',io)
 
     write(6,'(///)') 
-    call user_info(6,time,'Start setting Hamiltonian',.false.)
+    call user_info(6,time,'Start setting Hamiltonians',.false.)
     keep_resolved_H=io_simu%io_Energy_detail.or..True.  !need to change where all Hamiltonian data is kept
     Call set_Ham_mode_io()
     Call set_Hamiltonians(Ham_res,Ham_comb,keep_resolved_H,H_io,my_lattice)
-    call user_info(6,time,'finished setting Hamiltonian',.false.)
+    call user_info(6,time,'finished setting Hamiltonians',.false.)
 
     Call set_fft_H_mode_io()
-    call user_info(6,time,'Start setting fft-Hamiltonian',.false.)
+    call user_info(6,time,'Start setting fft-Hamiltonians',.false.)
     Call set_fft_Hamiltonians(fft_Ham_res,fft_Ham_comb,keep_resolved_H,H_io,my_lattice)
-    call user_info(6,time,'finished setting fft-Hamiltonian',.false.)
+    call user_info(6,time,'finished setting fft-Hamiltonians',.false.)
 
 
     Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move if the hamiltonian-type array is no longer necessary in main routine

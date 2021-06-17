@@ -1,7 +1,9 @@
 module m_Mag_Biq
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_Mag_Biq
 use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 implicit none
+character(len=*),parameter  :: ham_desc="Biquadratic magnetic exchange"
 private
 public :: get_Mag_Biq, read_Mag_Biq_input
 contains
@@ -60,6 +62,9 @@ subroutine get_Mag_Biq(Ham,io,lat)
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+            !write information out
+            Call io%pair(i_atpair)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound
@@ -91,7 +96,7 @@ subroutine get_Mag_Biq(Ham,io,lat)
                 enddo
             enddo
         enddo
-        Ham%desc="Biquadratic magnetic exchange"
+        Ham%desc=ham_desc
 
         !first, quicker varying mode
         dim_mat=[Nmag*9*lat%Ncell,lat%M%dim_mode*lat%Ncell]

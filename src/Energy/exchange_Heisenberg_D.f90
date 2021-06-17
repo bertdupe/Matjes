@@ -1,4 +1,5 @@
 module m_exchange_heisenberg_D
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_D
 implicit none
 private
@@ -50,12 +51,16 @@ subroutine get_exchange_D(Ham,io,lat)
     real(8)         :: DMI(3)           !local DMI vector
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N_attrip=size(io%trip)
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
         do i_attrip=1,N_attrip
             !loop over different connected atom types
             Call neigh%get(io%trip(i_attrip)%attype(1:2),io%trip(i_attrip)%dist,lat)
+            !write information out
+            Call io%trip(i_attrip)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
             N_dist=size(io%trip(i_attrip)%dist)
             i_trip=0
             connect_bnd=1 !initialization for lower bound
@@ -151,6 +156,7 @@ subroutine get_exchange_D_fft(H_fft,io,lat)
 
     if(io%is_set)then
         !set some initial parameters locally for convencience
+        write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         Nmag=lat%nmag
         period=lat%periodic.or.lat%dim_lat==1
 
@@ -166,6 +172,13 @@ subroutine get_exchange_D_fft(H_fft,io,lat)
         do i_attrip=1,N_attrip
             !loop over different connected atom types
             Call neigh%get(io%trip(i_attrip)%attype(1:2),io%trip(i_attrip)%dist,lat)
+            !write information out
+            Call io%trip(i_attrip)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
+            !write information out
+            Call io%trip(i_attrip)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
+            N_dist=size(io%trip(i_attrip)%dist)
             N_dist=size(io%trip(i_attrip)%dist)
             i_trip=0
             connect_bnd=1 !initialization for lower bound

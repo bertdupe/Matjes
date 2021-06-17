@@ -1,7 +1,9 @@
 module m_coupling_ME_D
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_ME_D
 use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 implicit none
+character(len=*),parameter  :: ham_desc="antisymmetric magnetoelectric coupling"
 
 private
 public :: get_coupling_ME_D, read_ME_D_input
@@ -54,6 +56,7 @@ subroutine get_coupling_ME_D(Ham,io,lat)
     real(8)         :: diff_pos(3)  !normalized difference vector between both considered atoms
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         if(lat%E%dim_mode==0) STOP "E-field has to be set when using coupling_ME"
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
@@ -62,6 +65,10 @@ subroutine get_coupling_ME_D(Ham,io,lat)
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+            !write information out
+            Call io%pair(i_atpair)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
+            write(output_unit,*)
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound
@@ -116,7 +123,7 @@ subroutine get_coupling_ME_D(Ham,io,lat)
                 enddo 
             enddo
         enddo
-        Ham%desc="antisymmetric magnetoelectric coupling"
+        Ham%desc=ham_desc
         Call mode_set_rank1(Ham%mode_l,lat,"M")
 #if 0
 !this is an obsolete implementation to describe the rank2 mode

@@ -22,6 +22,7 @@ module m_dipolar_magnetic
 !This corresponds to the conventional DDI Hamiltonian definitions, replacing the M_{\alpha} M_{\beta} with the compenents only.
 
 
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_dipole
 use m_derived_types, only: lattice
 implicit none
@@ -102,6 +103,7 @@ subroutine get_dipolar_fft(dip,io,lat)
     integer         :: i_add(3) !position in N_rep(:) array for considered entry
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         !set some initial parameters locally for convencience
         Nmag=lat%nmag
         period=lat%periodic.or.lat%dim_lat==1
@@ -210,6 +212,7 @@ subroutine get_dipolar(Ham,io,lat)
 
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         Nmag=lat%nmag
         N=Nmag*lat%Ncell
 

@@ -1,8 +1,10 @@
 module m_coupling_ME_J
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_ME_J
 use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 use m_coo_mat
 implicit none
+character(len=*),parameter  :: ham_desc="symmetric magnetoelectric coupling"
 private
 public :: get_coupling_ME_J, read_ME_J_input
 contains
@@ -51,6 +53,7 @@ subroutine get_coupling_ME_J(Ham,io,lat)
 
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         if(lat%E%dim_mode==0) STOP "E-field has to be set when using coupling_ME"
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
@@ -59,6 +62,9 @@ subroutine get_coupling_ME_J(Ham,io,lat)
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+            !write information out
+            Call io%pair(i_atpair)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound
@@ -90,7 +96,7 @@ subroutine get_coupling_ME_J(Ham,io,lat)
                 enddo 
             enddo
         enddo
-        Ham%desc="symmetric magnetoelectric coupling"
+        Ham%desc=ham_desc
         Call mode_set_rank1(Ham%mode_l,lat,"M")
 #if 0
 !this is an obsolete implementation to describe the rank2 mode
