@@ -2,7 +2,6 @@ module m_H_tb_dense
 use m_H_tb_base
 use m_H_tb_coo
 private
-public H_zheev, H_zheevd, H_zheevr, H_feast_den
 
 type,extends(H_TB_coo_based),abstract :: H_tb_dense
     private
@@ -15,6 +14,8 @@ type,extends(H_TB_coo_based),abstract :: H_tb_dense
     procedure   :: mv
 end type
 
+#ifdef CPP_LAPACK
+public H_zheev, H_zheevd, H_zheevr
 type,extends(H_tb_dense)  ::  H_zheev
     contains
     procedure   :: get_eval => eval_zheev
@@ -32,11 +33,15 @@ type,extends(H_tb_dense)  ::  H_zheevr
     procedure   :: get_eval => eval_zheevr
     procedure   :: get_evec => evec_zheevr
 end type
+#endif
 
+#ifdef CPP_MKL
+public H_feast_den
 type,extends(H_tb_dense)  ::  H_feast_den
     contains
     procedure   :: get_evec => evec_feast
 end type
+#endif
 
 
 contains
@@ -115,10 +120,10 @@ subroutine destroy_child(this)
     if(allocated(this%H)) deallocate(this%H)
 end subroutine
 
+#ifdef CPP_LAPACK
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!  ZHEEV ROUTINES
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 subroutine eval_zheev(this,eval)
     class(H_zheev),intent(in)       ::  this
     real(8),intent(out),allocatable ::  eval(:)
@@ -300,10 +305,13 @@ subroutine evec_zheevr(this,eval,evec)
     allocate(evec,source=z(1:this%dimH,1:Nev))
 end subroutine
 
+#endif
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!  FEAST ROUTINES
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+#ifdef CPP_MKL
 subroutine evec_feast(this,eval,evec)
     class(H_feast_den),intent(in)       ::  this
     real(8),intent(out),allocatable     ::  eval(:)
@@ -331,5 +339,6 @@ subroutine evec_feast(this,eval,evec)
     allocate(evec,source=x(1:this%dimH,1:m))
     deallocate(x,e)
 end subroutine
+#endif
 
 end module

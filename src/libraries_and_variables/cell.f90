@@ -19,6 +19,7 @@ type t_cell
     procedure :: ind_M_all
     procedure :: get_M_phonon
     procedure :: bcast
+    procedure :: copy
 end type
 contains
 
@@ -39,6 +40,14 @@ subroutine ind_attype(this,id,ind)
     ind=pack([(i,i=1,size(this%atomic))],this%atomic(:)%type_id==id)
 end subroutine
     
+subroutine copy(this,cell_out)
+use mpi_basic                
+    class(t_cell),intent(in)        ::  this
+    class(t_cell),intent(inout)     ::  cell_out
+
+    cell_out%n_attype=this%n_attype
+    allocate(cell_out%atomic,source=this%atomic)
+end subroutine
 
 subroutine bcast(this,comm)
 use mpi_basic                

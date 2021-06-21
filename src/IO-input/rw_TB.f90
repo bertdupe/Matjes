@@ -78,6 +78,7 @@ subroutine read_TB_flow(io,fname,flow)
     call get_parameter(io,fname,'do_fermi_k',flow%fermi_k)
     call get_parameter(io,fname,'do_fermi_dos_k',flow%fermi_dos_k)
     call get_parameter(io,fname,'do_highs_k',flow%highs_k)
+    call get_parameter(io,fname,'do_proj_energy.',flow%proj_energy)
 end subroutine
 
 subroutine read_TB_dos(io,fname,io_dos)
@@ -195,7 +196,7 @@ subroutine read_TB_H(io,fname,TB_params)
     if(N>0)then
         allocate(TB_params%hop_io(N))
         Call read_Hpar(io,fname,'TB_hopping',TB_params%hop_io)
-    else
+    elseif(.not.TB_params%wann_io%is_set)then
         STOP "FAILED TO READ tight-binding hopping Hamiltonian (TB_hopping), but orbitals are set"
     endif
 

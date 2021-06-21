@@ -198,7 +198,7 @@ subroutine dump_config_matrix_N_1D_real(io,N,matrix)
     ! internale variables
     character(len=30) :: rw_format
     
-    write(rw_format,'( "(", I4, "f14.8,2x)" )') N
+    write(rw_format,'( "(", I4, "E24.16,2x)" )') N
     write(io,rw_format) matrix
 end subroutine 
 
@@ -248,7 +248,7 @@ character(len=100) :: rw_format
 
 N(1:3)=lat%dim_lat
 
-write(rw_format,'( "(", I4, "f14.8,2x)" )') lat%M%dim_mode
+write(rw_format,'( "(", I4, "E24.16,2x)" )') lat%M%dim_mode
 
 do i_z=1,N(3)
   do i_y=1,N(2)
@@ -448,70 +448,66 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
     real(8) :: val
 
     integer :: Ntriple,Nnonzero
-    integer :: nread,check,i,ii,j, length_string
+    integer :: nread,i,ii,j
     integer :: stat
     character(len=100) :: str
-    
+
     nread=0
-    length_string=len_trim(var_name)
-    success=.false.
-    rewind(io)
-    do
-        read (io,'(a)',iostat=stat) str
-        if (stat /= 0) exit
-        str= trim(adjustl(str))
-        if (len_trim(str)==0) cycle
-        if (str(1:1) == '#' ) cycle
-
-        !We start to read the input
-        if ( str(1:length_string) == var_name(1:length_string)) then
-            Ntriple=0; Nnonzero=0
-            nread=nread+1
-            do 
-                read(io,'(a)',iostat=stat) str
-                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-                read(str,*,iostat=stat) attype,dist,val
-                if (stat /= 0) exit
-                Ntriple=Ntriple+1
-                if(val/=0.0d0) Nnonzero=Nnonzero+1
-            enddo
-            if(Ntriple<1)then
-                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-                ERROR STOP "INPUT PROBABLY WRONG"
-            endif
-            if(Nnonzero<1)then
-                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-                ERROR STOP "INPUT PROBABLY WRONG"
-            endif
-            write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
-            success=.true.
-            allocate(Htriple_tmp(Nnonzero))
-            do i=1,Ntriple+1
-                backspace(io)
-            enddo
-            ii=1
-            do i=1,Ntriple
-                read(io,*,iostat=stat) attype,dist,val
-                if(val==0.0d0) cycle
-                if(attype(2)<attype(1))then
-                    j        =attype(2)
-                    attype(2)=attype(1)
-                    attype(1)=j
-                endif
-                Htriple_tmp(ii)%attype=attype
-                Htriple_tmp(ii)%dist=dist
-                Htriple_tmp(ii)%val=val
-                write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
-                write(output_unit,'(A,3I6)')    '  atom types:', Htriple_tmp(ii)%attype
-                write(output_unit,'(A,2I6)')    '  distance  :', Htriple_tmp(ii)%dist
-                write(output_unit,'(A,E16.8/)') '  energy    :', Htriple_tmp(ii)%val
-                ii=ii+1
-            enddo 
-        endif
-    enddo
-
+    Call set_pos_entry(io,fname,var_name,success)
     if(success)then
-        Call reduce_Hr_triple(Htriple_tmp,Htriples) !combines single entries into arrays with same atom types
+        success=.false.
+        read(io,'(a)',iostat=stat) str
+        Ntriple=0; Nnonzero=0
+        nread=nread+1
+        do 
+            read(io,'(a)',iostat=stat) str
+            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) attype,dist,val
+            if (stat /= 0) exit
+            Ntriple=Ntriple+1
+            if(val/=0.0d0) Nnonzero=Nnonzero+1
+        enddo
+        if(Ntriple<1)then
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        if(Nnonzero<1)then
+            write(error_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+        success=.true.
+        allocate(Htriple_tmp(Nnonzero))
+        do i=1,Ntriple+1
+            backspace(io)
+        enddo
+        ii=1
+        do i=1,Ntriple
+            read(io,*,iostat=stat) attype,dist,val
+            if(val==0.0d0) cycle
+            if(attype(2)<attype(1))then
+                j        =attype(2)
+                attype(2)=attype(1)
+                attype(1)=j
+            endif
+            Htriple_tmp(ii)%attype=attype
+            Htriple_tmp(ii)%dist=dist
+            Htriple_tmp(ii)%val=val
+            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+            write(output_unit,'(A,3I6)')    '  atom types:', Htriple_tmp(ii)%attype
+            write(output_unit,'(A,2I6)')    '  distance  :', Htriple_tmp(ii)%dist
+            write(output_unit,'(A,E16.8/)') '  energy    :', Htriple_tmp(ii)%val
+            ii=ii+1
+        enddo 
+
+        !combines single entries into arrays with same atom types
+        Call reduce_Hr_triple(Htriple_tmp,Htriples) 
         !check if any entry appears more than once
         do i=1,size(Htriples)
             do j=2,size(Htriples(i)%dist)
@@ -523,9 +519,10 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
                 endif
             enddo
         enddo
+        success=.true.
     endif
 
-    check=check_read(nread,var_name,fname)
+    Call check_further_entry(io,fname,var_name)
 end subroutine 
 
 
@@ -544,70 +541,68 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     real(8) :: val
 
     integer :: Npair,Nnonzero
-    integer :: nread,check,i,ii,j, length_string
+    integer :: nread,i,ii,j
     integer :: stat
     character(len=100) :: str
     
     nread=0
-    length_string=len_trim(var_name)
-    success=.false.
-    rewind(io)
-    do
-        read (io,'(a)',iostat=stat) str
-        if (stat /= 0) exit
-        str= trim(adjustl(str))
-        if (len_trim(str)==0) cycle
-        if (str(1:1) == '#' ) cycle
-
-        !We start to read the input
-        if ( str(1:length_string) == var_name(1:length_string)) then
-            Npair=0; Nnonzero=0
-            nread=nread+1
-            do 
-                read(io,'(a)',iostat=stat) str
-                if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-                read(str,*,iostat=stat) attype,dist,val
-                if (stat /= 0) exit
-                Npair=Npair+1
-                if(val/=0.0d0) Nnonzero=Nnonzero+1
-            enddo
-            if(Npair<1)then
-                write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-                ERROR STOP "INPUT PROBABLY WRONG"
-            endif
-            if(Nnonzero<1)then
-                write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-                ERROR STOP "INPUT PROBABLY WRONG"
-            endif
-            write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
-            success=.true.
-            allocate(Hpair_tmp(Nnonzero))
-            do i=1,Npair+1
-                backspace(io)
-            enddo
-            ii=1
-            do i=1,Npair
-                read(io,*,iostat=stat) attype,dist,val
-                if(val==0.0d0) cycle
-                if(attype(2)<attype(1))then
-                    j        =attype(2)
-                    attype(2)=attype(1)
-                    attype(1)=j
-                endif
-                Hpair_tmp(ii)%attype=attype
-                Hpair_tmp(ii)%dist=dist
-                Hpair_tmp(ii)%val=val
-                write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
-                write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
-                write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
-                write(output_unit,'(A,E16.8/)') '  energy    :', Hpair_tmp(ii)%val
-                ii=ii+1
-            enddo 
-        endif
-    enddo
-
+    Call set_pos_entry(io,fname,var_name,success)
+    read(io,'(a)',iostat=stat) str
     if(success)then
-        Call reduce_Hr_pair(Hpair_tmp,Hpairs) !combines single entries into arrays with same atom types
+        !find out how many entries there are
+        success=.false.
+        Npair=0; Nnonzero=0
+        nread=nread+1
+        do 
+            read(io,'(a)',iostat=stat) str
+            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) attype,dist,val
+            if (stat /= 0) exit
+            Npair=Npair+1
+            if(val/=0.0d0) Nnonzero=Nnonzero+1
+        enddo
+        if(Npair<1)then
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        if(Nnonzero<1)then
+            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+        !allocate correct size of entries and move IO to beginning of data
+        allocate(Hpair_tmp(Nnonzero))
+        do i=1,Npair+1
+            backspace(io)
+        enddo
+        !read in data
+        ii=1
+        do i=1,Npair
+            read(io,*,iostat=stat) attype,dist,val
+            if(val==0.0d0) cycle
+            if(attype(2)<attype(1))then
+                j        =attype(2)
+                attype(2)=attype(1)
+                attype(1)=j
+            endif
+            Hpair_tmp(ii)%attype=attype
+            Hpair_tmp(ii)%dist=dist
+            Hpair_tmp(ii)%val=val
+            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+            write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
+            write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
+            write(output_unit,'(A,E16.8/)') '  energy    :', Hpair_tmp(ii)%val
+            ii=ii+1
+        enddo 
+
+        !combines single entries into arrays with same atom types
+        Call reduce_Hr_pair(Hpair_tmp,Hpairs) 
         !check if any entry appears more than once
         do i=1,size(Hpairs)
             do j=2,size(Hpairs(i)%dist)
@@ -619,9 +614,10 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
                 endif
             enddo
         enddo
+        success=.true.
     endif
 
-    check=check_read(nread,var_name,fname)
+    Call check_further_entry(io,fname,var_name)
 end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

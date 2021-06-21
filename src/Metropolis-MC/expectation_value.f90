@@ -141,7 +141,7 @@ subroutine measure_reduce(this,com)
             Call MPI_Reduce(MPI_IN_PLACE,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
         else
             Call MPI_Reduce(this%E      ,this%E     ,nsize(1),MPI_DOUBLE_PRECISION,MPI_SUM,com%mas,com%com,ierr)
-            Call MPI_Reduce(this%MipMim ,this%MjpMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
+            Call MPI_Reduce(this%MipMim ,this%MipMip,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
             Call MPI_Reduce(this%N_add  ,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
         endif
     endif
@@ -200,7 +200,7 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     type(lattice),intent(in)                :: lat
     type(track_val),intent(in)              :: state_prop
     integer,intent(in)                      :: Q_neigh(:,:)
-    type(fluct_parameters),intent(in)      :: fluct_val
+    type(fluct_parameters),intent(in)       :: fluct_val
 
     !put that into state_prop as well?
     real(8)     :: dumy(5),qeulerp,qeulerm

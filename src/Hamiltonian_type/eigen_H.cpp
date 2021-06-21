@@ -1,6 +1,8 @@
 #include <iostream>
 #include <Eigen/Sparse>
 #include <vector>
+#include <numeric>
+
 #ifdef CPP_MPI
 #include <mpi.h>
 #endif
@@ -14,394 +16,329 @@ extern "C"{
 
 void eigen_H_init(
     int Nentry,
-    int Hdim[2],
-    int rows[],
-    int cols[],
-    double arr_in[],
-    SpMat **Ham){
+    const int Hdim[2],
+    const int rows[],
+    const int cols[],
+    const double arr_in[],
+    SpMat* &Ham){
 
-	typedef Eigen::Triplet<double> T;
+	typedef Eigen::Triplet<double,int> T;
 	std::vector<T> tripletList;
-	tripletList.reserve(Nentry);
-	for(int i=0; i < Nentry; i++ ){
-		tripletList.push_back(T(rows[i],cols[i],arr_in[i]));
-	}
-
-    *Ham =new SpMat{Hdim[0],Hdim[1]};
-  	(*Ham)->setFromTriplets(tripletList.begin(), tripletList.end());
+#if 1    
+    tripletList.reserve(Nentry);
+    for(int i=0; i < Nentry; i++ ){
+    	tripletList.push_back(T(rows[i],cols[i],arr_in[i]));
+    }
+    
+    Ham =new SpMat{Hdim[0],Hdim[1]};
+    Ham->setFromTriplets(tripletList.begin(), tripletList.end());
+#else
+    std::cerr << "ERROR eigen_H initialization temporarily disabled.\nThere is some problem with the debug compilation, but the release works so it could be used there"<< std::endl;
+    throw 4;
+#endif
 }
 
 void eigen_get_transpose(
-    SpMat **Ham,
-    SpMat **Ham_T){
+    const SpMat* &Ham,
+    SpMat* &Ham_T){
 
-    int col=(*Ham)->cols();
-    int row=(*Ham)->rows();
+    int col=Ham->cols();
+    int row=Ham->rows();
 
-    *Ham_T =new SpMat{col,row};
-  	(**Ham_T)=(*Ham)->transpose().eval();
+    Ham_T =new SpMat{col,row};
+  	*Ham_T=Ham->transpose().eval();
 }
-
-
-void eigen_H_get_ind_mult_r(
-    // find out which indices of the right side (ind_out) are necessary to get all contributions
-    // for the ind_in indices of the left vector when applying the Hamiltonian to the right vector
-    SpMat **Ham,
-    int N_in,       // number of indices of the left vector
-    int ind_in[],   // indices of the left vector
-    int &N_out,     // in: size of ind_out , out: size of relevant indices in ind_out
-    int ind_out[]){
-
-    std::vector<int> out_vec{};
-    out_vec.reserve(N_out);
-    SpVec vec;
-    for (int i=0;i<N_in;i++){
-        vec = (**Ham).col(ind_in[i]-1);
-        out_vec.insert(out_vec.end(),vec.innerIndexPtr(),vec.innerIndexPtr()+vec.nonZeros());
-    }
-
-    std::sort(out_vec.begin(), out_vec.end());
-    auto new_end= std::unique(out_vec.begin(), out_vec.end());
-    out_vec.erase(new_end, out_vec.end());
-    out_vec.shrink_to_fit();
-
-    if(out_vec.size()<(std::vector<int>::size_type) N_out){
-        N_out=out_vec.size();
-        std::memcpy(ind_out,out_vec.data(),N_out*sizeof(int));
-    }
-    else{
-        std::cerr << "\n\n eigen_H_get_ind_mult_r N_out too small"<< std::endl;
-        std::abort();
-    }
-}
-
-void eigen_H_get_ind_mult_l(
-    // find out which indices of the left side (ind_out) are necessary to get all contributions
-    // for the ind_in indices of the right vector when applying the Hamiltonian to the left vector
-    // slower than eigen_H_get_ind_mult_r
-    SpMat **Ham,
-    int N_in,       // number of indices of the right vector
-    int ind_in[],   // indices of the right vector
-    int &N_out,     // in: size of ind_out , out: size of relevant indices in ind_out
-    int ind_out[]){
-
-    std::vector<int> out_vec{};
-    out_vec.reserve(N_out);
-    SpVec vec;
-    for (int i=0;i<N_in;i++){
-        vec = (**Ham).row(ind_in[i]-1);     // this is slow!
-        out_vec.insert(out_vec.end(),vec.innerIndexPtr(),vec.innerIndexPtr()+vec.nonZeros());
-    }
-
-    std::sort(out_vec.begin(), out_vec.end());
-    auto new_end= std::unique(out_vec.begin(), out_vec.end());
-    out_vec.erase(new_end, out_vec.end());
-    out_vec.shrink_to_fit();
-
-    if(out_vec.size()<(std::vector<int>::size_type) N_out){
-        N_out=out_vec.size();
-        std::memcpy(ind_out,out_vec.data(),N_out*sizeof(int));
-    }
-    else{
-        std::cerr << "\n\n eigen_H_get_ind_mult_r N_out too small"<< std::endl;
-        std::abort();
-    }
-}
-
-
-void eigen_mult_r_disc_disc(
-    // slower than eigen_mult_l_disc_disc
-    SpMat **Ham,
-    int N_r,
-    int ind_r[],
-    double  vec_r[],
-    int N_l,
-    int ind_l[],
-    double  vec_out[]){
-
-    SpVec r_vec((**Ham).cols());
-    r_vec.reserve(N_r); 
-    for(int i=0; i < N_r; i++ ){
-        r_vec.coeffRef(ind_r[i]-1)=vec_r[i];   
-    }
-    for(int i=0; i < N_l; i++ ){
-        vec_out[i]=(**Ham).row(ind_l[i]-1).dot(r_vec); //this is very slow, as .row() is not contiguous in memory
-    }
-}
-
-void eigen_mult_l_disc_disc(
-    SpMat **Ham,
-    int N_l,
-    int ind_l[],
-    double  vec_l[],
-    int N_r,
-    int ind_r[],
-    double  vec_out[]){
-
-    SpVec l_vec((**Ham).rows());
-    l_vec.reserve(N_l); 
-    for(int i=0; i < N_l; i++ ){
-        l_vec.coeffRef(ind_l[i]-1)=vec_l[i];   
-    }
-    for(int i=0; i < N_r; i++ ){
-        vec_out[i]=(**Ham).col(ind_r[i]-1).dot(l_vec);
-    }
-}
-
 
 #ifdef CPP_MPI
+void eigen_H_send(
+    const int& id,
+    const int& tag,
+    const SpMat* &Ham,
+    const MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    long shape[3], rows, cols, nnz;
+    Ham->makeCompressed();
+    rows=Ham->rows();
+    cols=Ham->cols();
+    nnz=Ham->nonZeros();
+    shape[0]=rows, shape[1]=cols, shape[2]=nnz;
+
+    int ierr;
+    ierr=MPI_Send(shape, 3, MPI_LONG, id, tag,  comm);
+    ierr=MPI_Send(Ham->valuePtr(),      nnz,  MPI_DOUBLE, id, tag, comm);
+    ierr=MPI_Send(Ham->innerIndexPtr(), nnz,  MPI_INT,    id, tag, comm);
+    ierr=MPI_Send(Ham->outerIndexPtr(), cols, MPI_INT,    id, tag, comm);
+}
+
+void eigen_H_recv(
+    const int& id,
+    const int& tag,
+    SpMat* &Ham,
+    const MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    MPI_Status status;
+    int ierr;
+    long shape[3], rows, cols, nnz;
+
+    
+    ierr=MPI_Recv(shape, 3, MPI_LONG, id, tag,  comm, &status);
+    rows=shape[0], cols=shape[1], nnz=shape[2];
+    Ham =new SpMat{rows,cols};
+    Ham->reserve(nnz);
+    ierr=MPI_Recv(Ham->valuePtr(),      nnz,  MPI_DOUBLE, id, tag, comm, &status);
+    ierr=MPI_Recv(Ham->innerIndexPtr(), nnz,  MPI_INT,    id, tag, comm, &status);
+    ierr=MPI_Recv(Ham->outerIndexPtr(), cols, MPI_INT,    id, tag, comm, &status);
+    Ham->outerIndexPtr()[cols] = nnz;
+}
+
+
 void eigen_H_bcast(
-    int id,
-    int mas,
-    bool ismas,
-    SpMat **Ham,
-    MPI_Fint* comm_in){
+    const int &id,
+    const int &mas,
+    const bool &ismas,
+    SpMat* &Ham,
+    const MPI_Fint* comm_in){
 
     MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
     long shape[3], rows, cols, nnz;
     if(ismas){
-        (**Ham).makeCompressed();
-        rows=(**Ham).rows();
-        cols=(**Ham).cols();
-        nnz=(**Ham).nonZeros();
+        Ham->makeCompressed();
+        rows=Ham->rows();
+        cols=Ham->cols();
+        nnz= Ham->nonZeros();
         shape[0]=rows, shape[1]=cols, shape[2]=nnz;
     }
     MPI_Bcast(shape, 3, MPI_LONG,mas, comm);
     rows=shape[0], cols=shape[1], nnz=shape[2];
     if(not ismas){
-        *Ham =new SpMat{rows,cols};
-        (*Ham)->reserve(nnz);
+        Ham =new SpMat{rows,cols};
+        Ham->reserve(nnz);
     }
     int ierr;
-    ierr=MPI_Bcast((**Ham).valuePtr(),nnz ,MPI_DOUBLE,mas, comm);
-    ierr=MPI_Bcast((**Ham).innerIndexPtr(),nnz ,MPI_INT,mas, comm);
-    ierr=MPI_Bcast((**Ham).outerIndexPtr(),cols ,MPI_INT,mas, comm);
-    (**Ham).outerIndexPtr()[cols] = nnz;
+    ierr=MPI_Bcast(Ham->valuePtr(),nnz ,MPI_DOUBLE,mas, comm);
+    ierr=MPI_Bcast(Ham->innerIndexPtr(),nnz ,MPI_INT,mas, comm);
+    ierr=MPI_Bcast(Ham->outerIndexPtr(),cols ,MPI_INT,mas, comm);
+    Ham->outerIndexPtr()[cols] = nnz;
+}
+
+#if 1
+void eigen_H_distribute(
+    const int& id,
+    const int& mas,
+    const bool& ismas,
+    SpMat* &Ham,
+    const MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    long shape[3], rows, cols, nnz;
+    int ierr;
+    if(ismas){
+        Ham->makeCompressed();
+        rows=Ham->rows();
+        cols=Ham->cols();
+        nnz=Ham->nonZeros();
+        shape[0]=rows, shape[1]=cols, shape[2]=nnz;
+    }
+    MPI_Bcast(shape, 3, MPI_LONG,mas, comm);
+    rows=shape[0], cols=shape[1], nnz=shape[2];
+    int Np;
+    MPI_Comm_size(comm, &Np);
+
+    //get array with aim number of entries per matrix
+    std::vector<int> nnz_count;
+    nnz_count.resize(Np);
+    std::fill(nnz_count.begin(), nnz_count.end(), nnz/Np);
+    for( int i = 0; i<nnz%Np; i++) nnz_count[i]++;
+    std::vector<int> displ;
+    displ.resize(Np);
+    std::partial_sum(nnz_count.begin(), nnz_count.end()-1, displ.begin()+1);
+
+    if(not ismas){
+        *Ham =new SpMat{rows,cols};
+        (*Ham)->reserve(nnz_count[id]);
+    }
+    ierr=MPI_Bcast(Ham->outerIndexPtr(),cols ,MPI_INT,mas, comm);
+    auto point=Ham->outerIndexPtr();
+    for(int i=0;i<cols; i++){
+        point[i]=point[i]-displ[id];
+        point[i]=std::max(point[i],0);
+        point[i]=std::min(point[i],nnz_count[id]);
+    }
+
+    if(ismas){
+        SpMat* tmp =new SpMat{rows,cols};
+        (tmp)->reserve(nnz_count[id]);
+        ierr=MPI_Scatterv(Ham->innerIndexPtr(), nnz_count.data(), displ.data(), MPI_INT,    (*tmp).innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        ierr=MPI_Scatterv(Ham->valuePtr(),      nnz_count.data(), displ.data(), MPI_DOUBLE, (*tmp).valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+        std::memcpy((*tmp).outerIndexPtr(),Ham->outerIndexPtr(),cols*sizeof(Eigen::SparseMatrix<double>::StorageIndex));
+        delete *Ham;
+        *Ham=tmp;
+    }
+    else{
+        ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_INT,    Ham->innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_DOUBLE, Ham->valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+    }
+    Ham->outerIndexPtr()[cols] = nnz_count[id];
+    Ham->makeCompressed();
+}
+#else
+void eigen_H_distribute(
+    // intermediate csc state which distributes the matrices differently ( fewer entries per row instead of empty rows)
+    const int& id,
+    const int& mas,
+    const bool& ismas,
+    SpMat* &Ham,
+    MPI_Fint* comm_in){
+
+    MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
+    long shape[3], rows, cols, nnz;
+    int ierr;
+    if(ismas){
+        Ham->makeCompressed();
+        rows=Ham->rows();
+        cols=Ham->cols();
+        nnz=Ham->nonZeros();
+        shape[0]=rows, shape[1]=cols, shape[2]=nnz;
+    }
+    MPI_Bcast(shape, 3, MPI_LONG,mas, comm);
+    rows=shape[0], cols=shape[1], nnz=shape[2];
+    int Np;
+    MPI_Comm_size(comm, &Np);
+
+    //get array with aim number of entries per matrix
+    std::vector<int> nnz_count;
+    nnz_count.resize(Np);
+    std::fill(nnz_count.begin(), nnz_count.end(), nnz/Np);
+    for( int i = 0; i<nnz%Np; i++) nnz_count[i]++;
+    std::vector<int> displ;
+    displ.resize(Np);
+    std::partial_sum(nnz_count.begin(), nnz_count.end()-1, displ.begin()+1);
+
+    Eigen::SparseMatrix<double,RowMajor> mat_row{rows,cols}; 
+    mat_row.reserve(nnz_count[id]);
+    Eigen::SparseMatrix<double,RowMajor> mat_tmp; 
+    if(ismas){
+        mat_tmp=Eigen::SparseMatrix<double,RowMajor>((*Ham));
+        delete *Ham;
+        std::memcpy(mat_row.outerIndexPtr(),mat_tmp.outerIndexPtr(),cols*sizeof(Eigen::SparseMatrix<double>::StorageIndex));
+    }
+
+    ierr=MPI_Bcast(mat_row.outerIndexPtr(),cols ,MPI_INT,mas, comm);
+
+    auto point=(mat_row).outerIndexPtr();
+    for(int i=0;i<cols; i++){
+        point[i]=point[i]-displ[id];
+        point[i]=std::max(point[i],0);
+        point[i]=std::min(point[i],nnz_count[id]);
+    }
+
+    if(ismas){
+        ierr=MPI_Scatterv(mat_tmp.innerIndexPtr(), nnz_count.data(), displ.data(), MPI_INT,    mat_row.innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        ierr=MPI_Scatterv(mat_tmp.valuePtr(),      nnz_count.data(), displ.data(), MPI_DOUBLE, mat_row.valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+    }
+    else{
+        ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_INT,    mat_row.innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_DOUBLE, mat_row.valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+    }
+    mat_row.outerIndexPtr()[rows] = nnz_count[id];
+    mat_row.makeCompressed();
+
+    *Ham =new SpMat(mat_row);
+    Ham->makeCompressed();
 }
 #endif
 
+#endif
+
 void eigen_H_add(
-    SpMat **Ham_sum,
-    SpMat **Ham_add){
+    SpMat* &Ham_sum,
+    const SpMat* &Ham_add){
 
-    **Ham_sum=**Ham_sum+**Ham_add;
+    *Ham_sum=*Ham_sum+*Ham_add;
 }
 
-void eigen_H_mult_mat_vec(
-    SpMat **mat,
-    double vec_in[],
-    double vec_out[]){
+void eigen_H_mult_r(
+    const SpMat*  &mat,
+    const double  vec_in[],
+    double        vec_out[],
+    const double  &alpha,
+    const double  &beta){
 
-    Map<VectorXd> vec(vec_in,(*mat)->cols());
-    Map<VectorXd> res(vec_out,(*mat)->rows());
-    res= (**mat) * vec;
-}
-
-void eigen_H_mult_mat_vec_single(
-    SpMat **mat,
-    int bnd_min,
-    int bnd_max,
-    double vec_in[],
-    double vec_out[]){
-
-    int cols =(*mat)->cols();
-    int size_out = bnd_max-bnd_min+1;
-    Map<VectorXd> vec(vec_in,cols);
-    Map<VectorXd> res(vec_out,size_out);
-
-    res = ((*mat)->block(bnd_min,0,size_out,cols) * vec);
-}
-
-void eigen_H_mult_mat_vec_cont(
-    SpMat **mat,
-    int bnd_min,
-    int bnd_max,
-    double vec_in[],
-    double vec_out[]){
-
-    int size_in = bnd_max-bnd_min+1;
-    Map<VectorXd> res(vec_out,(**mat).rows());
-
-    SpVec vec((**mat).cols());
-    vec.reserve(size_in);
-    for(int i=0; i < size_in; i++ ){
-        vec.coeffRef(bnd_min+i)=vec_in[i];   
-    }
-
-    res = **mat * vec;
-}
-
-void eigen_H_mult_vec_mat_cont(
-    SpMat **mat,
-    int bnd_min,
-    int bnd_max,
-    double vec_in[],
-    double vec_out[]){
-
-    int size_in = bnd_max-bnd_min+1;
-    Map<VectorXd> res(vec_out,(**mat).cols());
-
-    SpVec vec((**mat).rows());
-    vec.reserve(size_in);
-    for(int i=0; i < size_in; i++ ){
-        vec.coeffRef(bnd_min+i)=vec_in[i];   
-    }
-
-    res= (*mat)->transpose() * vec ;
-}
-
-
-void eigen_H_mult_mat_vec_disc(
-    SpMat **mat,
-    int N,
-    int ind[0],
-    double val[],
-    double vec_out[]){
-
-    Map<VectorXd> res(vec_out,(**mat).rows());
-    SpVec vec((**mat).cols());
-    vec.reserve(N);
-    for(int i=0; i < N ; i++ ){
-        vec.coeffRef(ind[i]-1)=val[i];   
-    }
-    res = **mat * vec;
-}
-
-void eigen_H_mult_vec_mat_disc(
-    SpMat **mat,
-    int N,
-    int ind[0],
-    double val[],
-    double vec_out[]){
-
-    Map<VectorXd> res(vec_out,(**mat).cols());
-    SpVec vec((**mat).rows());
-    vec.reserve(N);
-    for(int i=0; i < N ; i++ ){
-        vec.coeffRef(ind[i]-1)=val[i];   
-    }
-    res= (**mat).transpose() * vec ;
+    Map<const VectorXd> vec(vec_in,mat->cols());
+    Map<VectorXd> res(vec_out,mat->rows());
+    res= alpha * ((*mat) * vec) + beta * res;
 }
 
 
 void eigen_H_mult_l_ind(
-    SpMat **mat,
-    double vec_in[],
-    int& N,
-    int ind_out[],
+    const SpMat* &mat,
+    const double vec_in[],
+    const int& N,
+    const int ind_out[],
     double vec_out[]){
 
-    Map<VectorXd> vec(vec_in,(*mat)->rows());
+    Map<const VectorXd> vec(vec_in,mat->rows());
     for(std::vector<SpMat>::size_type i=0; i < (std::vector<SpMat>::size_type) N ; i++ ){
-        vec_out[i]=(**mat).col(ind_out[i]-1).dot(vec);
+        vec_out[i]=mat->col(ind_out[i]-1).dot(vec);
     }
 }
 
 void eigen_H_mult_r_ind(
-    SpMat **mat,
-    double vec_in[],
-    int& N,
-    int ind_out[],
+    const SpMat* &mat,
+    const double vec_in[],
+    const int& N,
+    const int ind_out[],
     double vec_out[]){
 
-    Map<VectorXd> vec(vec_in,(*mat)->cols());
+    Map<const VectorXd> vec(vec_in,mat->cols());
     for(std::vector<SpMat>::size_type i=0; i < (std::vector<SpMat>::size_type) N ; i++ ){
-        vec_out[i]=(**mat).row(ind_out[i]-1).dot(vec);
+        vec_out[i]=mat->row(ind_out[i]-1).dot(vec);
     }
 }
 
-void eigen_H_mult_mat_disc_disc(
-    SpMat **mat,
-    int N_in,
-    int ind_in[0],
-    double vec_in[],
-    int& N_out,  // in: size of ind_out , out: size of relevant indices in ind_out
-    int ind_out[],
-    double vec_out[]){
-
-    int rows =(*mat)->rows();
-
-    SpVec vec((**mat).cols());
-    vec.reserve(N_in);
-    for(int i=0; i < N_in ; i++ ){
-        vec.coeffRef(ind_in[i]-1)=vec_in[i];
-    }
-    SpVec res(rows);
-    res= (**mat) * vec ;
-    if(res.nonZeros()<(std::vector<int>::size_type) N_out){
-        N_out=res.nonZeros();
-        std::memcpy(vec_out,res.valuePtr(),N_out*sizeof(double));
-        std::memcpy(ind_out,res.innerIndexPtr(),N_out*sizeof(int));
-        for(int i=0;i < N_out;i++) ind_out[i]++;
-    }
-    else{
-        std::cerr << "\n\n eigen_H_mult_mat_disc_disc N_out too small"<< std::endl;
-        std::cerr << "initial N_out "<< N_out<<std::endl;
-        std::cerr << "size output   "<< res.nonZeros()<<std::endl;
-        std::abort();
-    }
-
+void eigen_get_dat(
+    //pass the data array pointers to the outside
+    SpMat* &mat,
+    int &nnz,
+    int size[2],
+    int* &col,
+    int* &row,
+    double* &val){
+    if(! mat->isCompressed()) mat->makeCompressed();
+    nnz=mat->nonZeros();
+    size[0]=mat->rows();
+    size[1]=mat->cols();
+    val=mat->valuePtr();
+    row=mat->innerIndexPtr();
+    col=mat->outerIndexPtr();
 }
 
+void eigen_H_mult_l(
+    const SpMat* &mat,
+    const double vec_in[],
+    double vec_out[],
+    const double  &alpha,
+    const double  &beta){
 
-
-void eigen_H_mult_vec_mat_single(
-    SpMat **mat,
-    int bnd_min,
-    int bnd_max,
-    double vec_in[],
-    double vec_out[]){
-
-    int rows =(*mat)->rows();
-    int size_out = bnd_max-bnd_min+1;
-    Map<VectorXd> vec(vec_in,rows);
-    Map<VectorXd> res(vec_out,size_out);
-    // might be worth checking out if it is better to input vec as colvec instead
-
-    auto slice=(*mat)->block(0,bnd_min,rows,size_out);
-    res=slice.transpose() * vec ;
-}
-
-
-void eigen_H_mult_vec_mat(
-    SpMat **mat,
-    double vec_in[],
-    double vec_out[]){
-
-    Map<VectorXd> vec(vec_in,(*mat)->rows());
-    Map<VectorXd> res(vec_out,(*mat)->cols());
-    res=(*mat)->transpose() * vec ;
+    Map<const VectorXd> vec(vec_in,mat->rows());
+    Map<VectorXd> res(vec_out,mat->cols());
+    res=alpha* (mat->transpose() * vec) + beta * res;
 }
 
 void eigen_H_copy(
-    SpMat **Ham_in,
-    SpMat **Ham_out){
+    const SpMat* &Ham_in,
+    SpMat* &Ham_out){
 
-    *Ham_out=new SpMat{(*Ham_in)->rows(),(*Ham_in)->cols()};
-    **Ham_out=**Ham_in;
-}
-
-void eigen_H_eval_single(
-    int ind,
-    int dim_mode,
-    double vec_l[],
-    double vec_r[],
-    SpMat **mat,
-    double *E){
-
-    int rows=(*mat)->rows();
-    Map<Matrix<double,1,Dynamic>> l_vec(vec_l,rows);
-    SpVec r_vec(dim_mode);
-    for(int i=0; i < dim_mode; i++ ){
-        r_vec.coeffRef(i)=vec_r[i];   
-    }
-    *E = l_vec * (((*mat)->block(0,ind,rows,dim_mode) * r_vec).pruned());
+    Ham_out=new SpMat{Ham_in->rows(),Ham_in->cols()};
+    *Ham_out=*Ham_in;
 }
 
 void eigen_H_destroy(
-    SpMat **Ham){
+    SpMat* &Ham){
 
-    delete *Ham;
+    delete Ham;
     Ham=NULL;
 }
 }

@@ -21,6 +21,7 @@ subroutine get_exchange_TJ(Ham,io,lat)
     use m_setH_util,only: get_coo
     use m_neighbor_type, only: neighbors
     use m_mode_public
+    use m_coo_mat
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_TJ),intent(in)    :: io
@@ -43,6 +44,7 @@ subroutine get_exchange_TJ(Ham,io,lat)
     real(8)         :: J                !magnitude of Hamiltonian parameter
     integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)A
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
+    type(coo_mat)   :: mat(3)       !mode construction matrices for rank3 part of Hamiltonian
 
     if(io%is_set)then
         if(lat%T%dim_mode==0) STOP "T-field has to be set when using TJ-exchange"
@@ -86,7 +88,13 @@ subroutine get_exchange_TJ(Ham,io,lat)
         enddo
         Ham%desc="T^2 M^2 exchange"
         Call mode_set_rank1(Ham%mode_l,lat,"M")
-        Call mode_set_rankN(Ham%mode_r,"MTT",lat,1)
+#if 0
+    !obsolete
+!        Call mode_set_rankN(Ham%mode_r,"MTT",lat,1)
+#else
+        Call coo_full_unfold(3,lat%Ncell,[lat%M%dim_mode,lat%T%dim_mode,lat%T%dim_mode],mat)
+        Call mode_set_rankN_sparse(Ham%mode_r,"MTT",lat,mat,1)
+#endif
     endif
 end subroutine 
 

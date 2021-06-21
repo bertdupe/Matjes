@@ -1,7 +1,11 @@
 module m_H_coo
 !Hamiltonian type only for calculating coo parameters without external library
 !hence evaluation does not work <- don't use in ham_type_gen 
-use m_H_type
+use m_H_combined, only: t_H
+use m_H_type, only: t_H_base
+use m_derived_types, only: lattice, number_different_order_parameters,op_abbrev_to_int
+use m_work_ham_single, only:  work_mode
+use mpi_basic                
 
 type,extends(t_H) :: t_H_coo
     private
@@ -10,19 +14,22 @@ type,extends(t_H) :: t_H_coo
     integer,allocatable :: rowind(:),colind(:)
 contains
     !necessary t_H routines
-    procedure :: eval_single
     procedure :: init_connect
     procedure :: init_mult_connect_2
+    procedure :: init_coo
 
-    procedure :: bcast_child
     procedure :: destroy_child
     procedure :: copy_child
     procedure :: add_child
 
     procedure :: optimize
     procedure :: mult_l,mult_r
-    procedure :: mult_l_cont,mult_r_cont
-    procedure :: mult_l_disc,mult_r_disc
+
+    !MPI
+    procedure :: send
+    procedure :: recv
+    procedure :: distribute
+    procedure :: bcast
 
     !routine to get all coo parameters 
     !WARNING, DESTROYS INSTANCE
@@ -32,60 +39,24 @@ private
 public t_H,t_H_coo
 contains 
 
-
-subroutine mult_r_cont(this,bnd,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: bnd(2)
-    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_l_cont(this,bnd,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: bnd(2)
-    real(8),intent(in)           :: vec(bnd(2)-bnd(1)+1)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_r_disc(this,N,ind,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: N
-    integer,intent(in)           :: ind(N)
-    real(8),intent(in)           :: vec(N)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-subroutine mult_l_disc(this,N,ind,vec,res)
-    class(t_H_coo),intent(in)    :: this
-    integer,intent(in)           :: N
-    integer,intent(in)           :: ind(N)
-    real(8),intent(in)           :: vec(N)
-    real(8),intent(inout)        :: res(:)   !result matrix-vector product
-
-    STOP "IMPLEMENT if necessary"
-end subroutine 
-
-
-subroutine mult_r(this,lat,res)
-    use m_derived_types, only: lattice
-    class(t_H_coo),intent(in)    :: this
-    type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: res(:)
+subroutine mult_r(this,lat,res,work,alpha,beta)
+    class(t_H_coo),intent(in)       :: this
+    type(lattice),intent(in)        :: lat
+    real(8),intent(inout)           :: res(:)
+    type(work_mode),intent(inout)   :: work
+    real(8),intent(in),optional     :: alpha
+    real(8),intent(in),optional     :: beta
 
     STOP "IMPLEMENT mult_r FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
-subroutine mult_l(this,lat,res)
-    use m_derived_types, only: lattice
-    class(t_H_coo),intent(in)    :: this
-    type(lattice),intent(in)     :: lat
-    real(8),intent(inout)        :: res(:)
+subroutine mult_l(this,lat,res,work,alpha,beta)
+    class(t_H_coo),intent(in)       :: this
+    type(lattice),intent(in)        :: lat
+    real(8),intent(inout)           :: res(:)
+    type(work_mode),intent(inout)   :: work
+    real(8),intent(in),optional     :: alpha
+    real(8),intent(in),optional     :: beta
 
     STOP "IMPLEMENT mult_l FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
@@ -96,34 +67,35 @@ subroutine optimize(this)
     STOP "IMPLEMENT optimize FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
 
-subroutine bcast_child(this,comm)
-    use mpi_basic                
-    class(t_H_coo),intent(inout)        ::  this
-    type(mpi_type),intent(in)       ::  comm
-
-    STOP "IMPLEMENT bcast_child FOR t_H_coo in m_H_coo if really necessary"
-end subroutine 
-
 
 subroutine destroy_child(this)
     class(t_H_coo),intent(inout)    :: this
 
     this%dimH=0
     this%nnz=0
-    deallocate(this%val,this%rowind,this%colind)
+    if(allocated(this%val   )) deallocate(this%val   )
+    if(allocated(this%rowind)) deallocate(this%rowind)
+    if(allocated(this%colind)) deallocate(this%colind)
 end subroutine 
 
 subroutine copy_child(this,Hout)
-    class(t_H_coo),intent(in)    :: this
-    class(t_H),intent(inout)     :: Hout
+    class(t_H_coo),intent(in)       :: this
+    class(t_H_base),intent(inout)   :: Hout
 
-    STOP "IMPLEMENT copy FOR t_H_coo in m_H_coo if really necessary"
-
+    select type(Hout)
+    class is(t_H_coo)
+        Hout%nnz=this%nnz
+        allocate(Hout%val   ,source=this%val   )
+        allocate(Hout%rowind,source=this%rowind)
+        allocate(Hout%colind,source=this%colind)
+    class default
+        STOP "Cannot copy t_H_coo type with Hamiltonian that is not a class of t_H_coo"
+    end select
 end subroutine 
 
 subroutine add_child(this,H_in)
     class(t_H_coo),intent(inout)    :: this
-    class(t_H),intent(in)           :: H_in
+    class(t_H_base),intent(in)           :: H_in
 
     STOP "IMPLEMENT ADDIND FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
@@ -145,10 +117,46 @@ subroutine pop_par(this,dimH,nnz,val,rowind,colind)
 
 end subroutine
 
+subroutine init_coo(this,rowind,colind,val,dim_mode,op_l,op_r,lat,mult_M_single)
+    !constructs a Hamiltonian based directly on the coo-arrays, which are moved into the type
+    class(t_H_coo),intent(inout)        :: this
+    real(8),allocatable,intent(inout)   :: val(:)
+    integer,allocatable,intent(inout)   :: rowind(:),colind(:)
+    integer,intent(in)                  :: dim_mode(2)
+    character(len=*),intent(in)         :: op_l         !which order parameters are used at left  side of local Hamiltonian-matrix
+    character(len=*),intent(in)         :: op_r         !which order parameters are used at right side of local Hamiltonian-matrix
+    type(lattice),intent(in)            :: lat
+    integer,intent(in)                  :: mult_M_single !gives the multiple with which the energy_single calculation has to be multiplied (1 for on-site terms, 2 for eg. magnetic exchange)
+
+
+    integer,allocatable :: order_l(:),order_r(:)
+
+    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
+
+    allocate(order_l(len(op_l)),source=0)
+    allocate(order_r(len(op_r)),source=0)
+    order_l=op_abbrev_to_int(op_l)
+    order_r=op_abbrev_to_int(op_r)
+
+    if(.not.allocated(rowind)) ERROR STOP "valind has to be allocated to initialize t_H_coo though init_coo"
+    if(.not.allocated(colind)) ERROR STOP "rowind has to be allocated to initialize t_H_coo though init_coo"
+    if(.not.allocated(val   )) ERROR STOP "val    has to be allocated to initialize t_H_coo though init_coo"
+
+    this%nnz=size(val)
+
+    Call move_alloc(rowind,this%rowind)
+    Call move_alloc(colind,this%colind)
+    Call move_alloc(val,   this%val   )
+
+    Call this%init_base(lat,order_l,order_r)
+    this%dimH=lat%Ncell*dim_mode
+    this%mult_M_single=mult_M_single
+    Call check_H(this)
+end subroutine 
+
 
 subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
     !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
-    use m_derived_types, only: lattice,op_abbrev_to_int
     class(t_H_coo),intent(inout)    :: this
 
     type(lattice),intent(in)        :: lat
@@ -272,19 +280,51 @@ subroutine check_H(this)
 
 end subroutine
 
-subroutine eval_single(this,E,i_m,dim_bnd,lat)
-    use m_derived_types, only: lattice, number_different_order_parameters
-    ! input
-    class(t_H_coo),intent(in)    :: this
-    type(lattice), intent(in)    :: lat
-    integer, intent(in)          :: i_m
-    integer, intent(in)          :: dim_bnd(2,number_different_order_parameters)    !starting/final index in respective dim_mode of the order parameter (so that energy of single magnetic atom can be be calculated
-    ! output
-    real(kind=8), intent(out)       :: E
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    STOP "CANNOT EVALUATE t_H_coo"
-    !alternatively add some evaluation without a library
+subroutine send(this,ithread,tag,com)
+    class(t_H_coo),intent(in)      :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
 
+#ifdef CPP_MPI
+    Call this%send_base(ithread,tag,com)
+    ERROR STOP "IMPLEMENT if really necessary"
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv(this,ithread,tag,com)
+    class(t_H_coo),intent(inout)   :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    Call this%recv_base(ithread,tag,com)
+    ERROR STOP "IMPLEMENT if really necessary"
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast(this,comm)
+    class(t_H_coo),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    STOP "IMPLEMENT bcast FOR t_H_coo in m_H_coo if really necessary"
 end subroutine 
+
+subroutine distribute(this,comm)
+    class(t_H_coo),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    STOP "IMPLEMENT disbribute FOR t_H_coo in m_H_coo if really necessary"
+end subroutine 
+
 
 end module

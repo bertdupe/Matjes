@@ -37,7 +37,10 @@ subroutine read_sp4_input(io_param,fname,io)
     enddo
     if(N<1)then
         write(error_unit,'(2/A)') 'Found entry "'//var_name//'" in file "'//fname//'", but no corresponding data was supplied'
-        ERROR STOP "CHECK INPUT"
+#ifndef CPP_SCRIPT            
+        ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+        return
     endif
     allocate(io%at_type(N),source=-1)
     allocate(io%val(N),source=0.0d0)
@@ -49,6 +52,14 @@ subroutine read_sp4_input(io_param,fname,io)
         read(str,*) io%at_type(i),io%val(i)
     enddo
     Call check_further_entry(io_param,fname,var_name)
+
+    if(all(io%val==0))then
+        write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+        ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+        return
+    endif
 
     io%is_set=.true.
 end subroutine

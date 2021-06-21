@@ -1,120 +1,164 @@
 module m_deriv_rankN
 use m_derived_types,only : lattice, dim_modes_inner
-use m_H_type
+use m_deriv_base
+use m_H_type, only: t_H_base
+use m_work_ham_single, only:  work_ham_single, work_mode
 
 private
-public :: t_deriv_l_N, t_deriv_r_N
-
-type,extends(t_deriv_l)   :: t_deriv_l_N
-    integer ::  order=0
-contains
-    procedure   :: get          => get_lN
-    procedure   :: get_single   => get_lN_single
-end type
-
-type,extends(t_deriv_r)   :: t_deriv_r_N
-    integer ::  order=0
-contains
-    procedure   :: get          => get_rN
-    procedure   :: get_single   => get_rN_single
-end type
+public get_lN, get_rN, get_lN_single, get_rN_single
 
 contains
-    subroutine get_lN(this,H,lat,vec)
-        class(t_deriv_l_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+    subroutine get_lN(this,H,lat,vec,work)
+        class(t_deriv),intent(in)       :: this
+        class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
+        type(work_mode),intent(inout)   :: work
 
-        Call H%mult_r_red(lat,vec,this%order) 
+        real(8),parameter               :: beta=1.0d0
+
+!        real(8)                         :: tmp(H%dimH(1))   !multipied, but not reduced
+        real(8),pointer,contiguous      :: tmp(:)
+        tmp(1:H%dimH(1))=>work%real_arr(1+work%offset(1):H%dimH(1)+work%offset(1))
+        work%offset(1)=work%offset(1)+H%dimH(1)
+
+        Call H%mult_r(lat,tmp,work)
+        Call H%mode_l%reduce_other_exc(lat,this%order,tmp,beta,work,vec)
+
+        nullify(tmp)
+        work%offset(1)=work%offset(1)-H%dimH(1)
     end subroutine
 
-    subroutine get_rN(this,H,lat,vec)
-        class(t_deriv_r_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
+    subroutine get_rN(this,H,lat,vec,work)
+        class(t_deriv),intent(in)       :: this
+        class(t_H_base),intent(in)      :: H
         type(lattice),intent(in)        :: lat
         real(8),intent(inout)           :: vec(:)
+        type(work_mode),intent(inout)   :: work
 
-        Call H%mult_l_red(lat,vec,this%order) 
+        real(8),parameter               :: beta=1.0d0
+        !real(8)                         :: tmp(H%dimH(2))   !multipied, but not reduced
+
+        real(8),pointer,contiguous      :: tmp(:)
+        tmp(1:H%dimH(2))=>work%real_arr(1+work%offset(1):H%dimH(2)+work%offset(1))
+        work%offset(1)=work%offset(1)+H%dimH(2)
+    
+        Call H%mult_l(lat,tmp,work)
+        Call H%mode_r%reduce_other_exc(lat,this%order,tmp,beta,work,vec)
+        nullify(tmp)
+        work%offset(1)=work%offset(1)-H%dimH(2)
     end subroutine
 
-    subroutine get_lN_single(this,H,lat,site,vec)
-        class(t_deriv_l_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
-        type(lattice),intent(in)        :: lat
-        integer,intent(in)              :: site
-        real(8),intent(inout)           :: vec(:)
+    subroutine get_lN_single(this,H,lat,site,work,vec)
+        class(t_deriv),intent(in)           :: this
+        class(t_H_base),intent(in)          :: H
+        type(lattice),intent(in)            :: lat
+        integer,intent(in)                  :: site
+        type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+        real(8),intent(inout)               :: vec(:)
 
-        integer                         :: ind_vec(dim_modes_inner(this%order))
+        integer     :: comp   !should this be saved in the type
+#define _dim_  H%dim_l_single(this%order)
+#define _max_  H%col_max
+#ifdef CPP_USE_WORK
+        !temporary data slices
+        integer,pointer,contiguous          :: ind_out(:)    !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
+        integer,pointer,contiguous          :: ind_sum(:)    !ind_mult index where the a vec-entry start and end
+        integer,pointer,contiguous          :: ind_mult(:)   !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+        real(8),pointer,contiguous          :: mat_mult(:)   !matrix entries corresponding to ind_mult
+        real(8),pointer,contiguous          :: vec_mult(:)   !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
+        real(8),pointer,contiguous          :: mv_vec  (:)   !result vector matrix product without reduction
+        real(8),pointer,contiguous          :: vec_red (:)   !right mode without reduction
+        !associate temporary arrays
+        !!int vector slices
+        ind_out (1:_dim_      )=>work%int_arr (1          :_dim_            )
+        ind_sum (1:_dim_+1    )=>work%int_arr (1+_dim_    :_dim_* 2       +1)
+        ind_mult(1:_dim_*_max_)=>work%int_arr (1+_dim_*2+1:_dim_*(2+_max_)+1)
+        !!real vector slices
+        mat_mult(1:_dim_*_max_)=>work%real_arr(1                  :_dim_*_max_  )
+        vec_mult(1:_dim_*_max_)=>work%real_arr(1+_dim_*(  _max_  ):_dim_*_max_*2)
+        mv_vec  (1:_dim_      )=>work%real_arr(1+_dim_*(2*_max_  ):_dim_*(_max_*2+1))
+        vec_red (1:_dim_      )=>work%real_arr(1+_dim_*(2*_max_+1):_dim_*(_max_*2+2))
+#else
+        !temporary arrays
+        integer                     :: ind_out (_dim_      )     !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
+        integer                     :: ind_sum (_dim_+1    )     !ind_mult index where the a vec-entry start and end
+        integer                     :: ind_mult(_dim_*_max_)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+        real(8)                     :: mat_mult(_dim_*_max_)     !matrix entries corresponding to ind_mult
+        real(8)                     :: vec_mult(_dim_*_max_)     !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
 
-        integer,allocatable             :: ind_l(:)   !indices of considered mode that have to be reduced
-        integer,allocatable             :: ind_r(:)   !indices of considered mode on which H has to be applied
-        integer                         :: N_r
+        real(8)                     :: mv_vec  (_dim_)           !result vector matrix product without reduction
+        real(8)                     :: vec_red (_dim_)           !right mode without reduction
+#endif
 
-        real(8),allocatable             :: vec_l(:)
-        real(8),allocatable             :: vec_r(:)
-        real(8),allocatable             :: vec_applied(:)
-        integer     :: comp_l   !should this be saved in the type
-        integer     :: i
-
-        comp_l=H%mode_l%get_comp(this%order)
-        ind_vec=[((site-1)*dim_modes_inner(this%order)+i,i=1,dim_modes_inner(this%order))]
-        !get all vector indices on the left side that contribute in the reduction to ind_vec
-        Call H%mode_l%get_ind_site(comp_l,site,ind_l)   
-        !get all vector indices on the right side that have contributions at ind_l after applying H
-        N_r=size(ind_l)*10 !arbitrary, and think of something better with external work arrays
-        allocate(ind_r(N_r),source=0)
-        Call H%get_ind_mult_r(ind_l,N_r,ind_r)
-        !get the mode components for ind_r
-        Call H%mode_r%get_mode_disc(lat,ind_r(:N_r),vec_r)
-        !apply H on the right side only considering ind_l and ind_r
-        allocate(vec_applied(size(ind_l)))
-        Call H%mult_r_disc_disc(ind_r(:N_r),vec_r,ind_l,vec_applied)
-        !get left mode for ind_l
-        allocate(vec_l(size(ind_l)))
-        Call H%mode_l%get_mode_exc_disc(lat,comp_l,ind_l,vec_l)
-        !multiply left mode and applied right mode and reduce to wanted mode
-        vec_applied=vec_l*vec_applied
-        Call H%mode_l%mode_reduce_comp_disc(ind_l,vec_applied,comp_l,ind_vec,vec)
+        comp=H%mode_l%get_comp(this%order)
+        !get indices of left mode which has components of site site at component comp
+        Call H%mode_l%get_ind_site(comp,site,_dim_,ind_out)  
+        !get Hamiltonian.right_mode product for all left mode indices ind_out
+        Call H%mult_r_disc(site,lat,_dim_,ind_out,mv_vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        !get left mode indices ind_out excluding mode number comp
+        Call H%mode_l%get_mode_exc_disc(lat,comp,_dim_,ind_out,vec_red)
+        !mutliply Hamiltonian.right_mode values with left mode exluding comp values
+        mv_vec=mv_vec*vec_red
+        !reduce resulting vector according to rules of left mode
+        Call H%mode_l%reduce_site_vec(comp,mv_vec,vec)
+#undef _max_
+#undef _dim_
     end subroutine
 
-    subroutine get_rN_single(this,H,lat,site,vec)
-        class(t_deriv_r_N),intent(in)   :: this
-        class(t_H),intent(in)           :: H
-        type(lattice),intent(in)        :: lat
-        integer,intent(in)              :: site
-        real(8),intent(inout)           :: vec(:)
+    subroutine get_rN_single(this,H,lat,site,work,vec)
+        class(t_deriv),intent(in)           :: this
+        class(t_H_base),intent(in)          :: H
+        type(lattice),intent(in)            :: lat
+        integer,intent(in)                  :: site
+        type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
+        real(8),intent(inout)               :: vec(:)
 
-        integer                         :: ind_vec(dim_modes_inner(this%order))
+        integer     :: comp   !should this be saved in the type
+#define _dim_  H%dim_r_single(this%order)
+#define _max_  H%row_max
+#ifdef CPP_USE_WORK
+        !temporary data slices
+        integer,pointer,contiguous          :: ind_out(:)    !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
+        integer,pointer,contiguous          :: ind_sum(:)    !ind_mult index where the a vec-entry start and end
+        integer,pointer,contiguous          :: ind_mult(:)   !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+        real(8),pointer,contiguous          :: mat_mult(:)   !matrix entries corresponding to ind_mult
+        real(8),pointer,contiguous          :: vec_mult(:)   !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
+        real(8),pointer,contiguous          :: mv_vec  (:)   !result vector matrix product without reduction
+        real(8),pointer,contiguous          :: vec_red (:)   !right mode without reduction
+        !associate temporary arrays
+        !!int vector slices
+        ind_out (1:_dim_      )=>work%int_arr (1          :_dim_            )
+        ind_sum (1:_dim_+1    )=>work%int_arr (1+_dim_    :_dim_* 2       +1)
+        ind_mult(1:_dim_*_max_)=>work%int_arr (1+_dim_*2+1:_dim_*(2+_max_)+1)
+        !!real vector slices
+        mat_mult(1:_dim_*_max_)=>work%real_arr(1                  :_dim_*_max_  )
+        vec_mult(1:_dim_*_max_)=>work%real_arr(1+_dim_*(  _max_  ):_dim_*_max_*2)
+        mv_vec  (1:_dim_      )=>work%real_arr(1+_dim_*(2*_max_  ):_dim_*(_max_*2+1))
+        vec_red (1:_dim_      )=>work%real_arr(1+_dim_*(2*_max_+1):_dim_*(_max_*2+2))
+#else
+        !temporary arrays
+        integer                     :: ind_out (_dim_      )     !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
+        integer                     :: ind_sum (_dim_+1    )     !ind_mult index where the a vec-entry start and end
+        integer                     :: ind_mult(_dim_*_max_)     !indices of the left array which have non-vanishing contributions to get the ind entries of the vec/mat product
+        real(8)                     :: mat_mult(_dim_*_max_)     !matrix entries corresponding to ind_mult
+        real(8)                     :: vec_mult(_dim_*_max_)     !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
 
-        integer,allocatable             :: ind_l(:)  !indices of considered mode on which H has to be applied 
-        integer,allocatable             :: ind_r(:)  !indices of considered mode that have to be reduced
-        integer                         :: N_l
-
-        real(8),allocatable             :: vec_l(:)
-        real(8),allocatable             :: vec_r(:)
-        real(8),allocatable             :: vec_applied(:)
-        integer     :: comp_r   !should this be saved in the type
-        integer     :: i
-
-        comp_r=H%mode_r%get_comp(this%order)
-        ind_vec=[((site-1)*dim_modes_inner(this%order)+i,i=1,dim_modes_inner(this%order))]
-        !get all vector indices on the right side that contribute in the reduction to ind_vec
-        Call H%mode_r%get_ind_site(comp_r,site,ind_r)   
-        !get all vector indices on the left  side that have contributions at ind_r after applying H
-        N_l=size(ind_r)*10 !arbitrary, and think of something better with external work arrays
-        allocate(ind_l(N_l),source=0)
-        Call H%get_ind_mult_l(ind_r,N_l,ind_l)
-        !get the mode components for ind_l
-        Call H%mode_l%get_mode_disc(lat,ind_l(:N_l),vec_l)
-        !apply H on the left side only considering ind_r and ind_l
-        allocate(vec_applied(size(ind_r)))
-        Call H%mult_l_disc_disc(ind_l(:N_l),vec_l,ind_r,vec_applied)
-        !get left mode for ind_r
-        allocate(vec_r(size(ind_r)))
-        Call H%mode_r%get_mode_exc_disc(lat,comp_r,ind_r,vec_r)
-        !multiply right mode and applied left mode and reduce to wanted mode
-        vec_applied=vec_r*vec_applied
-        Call H%mode_r%mode_reduce_comp_disc(ind_r,vec_applied,comp_r,ind_vec,vec)
+        real(8)                     :: mv_vec  (_dim_)           !result vector matrix product without reduction
+        real(8)                     :: vec_red (_dim_)           !right mode without reduction
+#endif
+        comp=H%mode_r%get_comp(this%order)
+        !get indices of right mode which has components of site site at component comp
+        Call H%mode_r%get_ind_site(comp,site,_dim_,ind_out)
+        !get left_mode.Hamiltonian product for all right mode indices ind_out
+        Call H%mult_l_disc(site,lat,_dim_,ind_out,mv_vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        !get right mode indices ind_out excluding mode number comp
+        Call H%mode_r%get_mode_exc_disc(lat,comp,_dim_,ind_out,vec_red)
+        !mutliply left_mode.Hamiltonian values with right mode exluding comp values
+        mv_vec=mv_vec*vec_red
+        !reduce resulting vector according to rules of right mode
+        Call H%mode_r%reduce_site_vec(comp,mv_vec,vec)
+#undef _max_
+#undef _dim_
     end subroutine
 end module

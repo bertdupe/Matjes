@@ -1,20 +1,42 @@
 !
 !subroutine that carries out molecular dynamics
-
 module m_molecular_dynamics
+use m_derived_types, only : lattice,number_different_order_parameters
+use m_derived_types, only : io_parameter,simulation_parameters
+use m_hamiltonian_collection, only: hamiltonian
+use mpi_basic, only: mpi_type
+use m_H_public
+use,intrinsic :: iso_fortran_env, only : error_unit, output_unit
 
 implicit none
 contains
 
-subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
+subroutine molecular_dynamics(my_lattice,io_simu,ext_param,H,comm)
+   type(lattice), intent(inout)                 :: my_lattice
+   type(io_parameter), intent(inout)            :: io_simu
+   type(simulation_parameters), intent(inout)   :: ext_param
+   type(hamiltonian),intent(inout)              :: H
+   type(mpi_type),intent(in)                    :: comm
+
+   !molecular dynamics so far only implemented without mpi_parallelization
+   if(comm%ismas)then
+       write(output_unit,'(a)') 'entering into the molecular dynamics routines'
+       if(comm%Np>1)then
+          write(error_unit,'(//A)') "WARNING, running Molecular dynamics with MPI parallelization which is not implemented."
+          write(error_unit,'(A)')   "         Only one thead will to anything."
+       endif
+       Call molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
+   endif
+end subroutine
+
+
+subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    use m_derived_types, only : lattice,io_parameter,number_different_order_parameters,simulation_parameters
    use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
    use m_constants, only : k_b,pi
    use m_energyfield, only : write_energy_field
    use m_solver_order
-   use m_H_public
    use m_solver_commun
-   use m_eff_field, only : get_eff_field
    use m_createspinfile
    use m_update_time
    use m_write_config
@@ -32,12 +54,12 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    ! arguments
    !!!!!!!!!!!!!!!!!!!!!!!
 
-   type(lattice), intent(inout) :: my_lattice
-   type(io_parameter), intent(in) :: io_simu
-   type(simulation_parameters), intent(in) :: ext_param
-   class(t_H), intent(in) :: Hams(:)
+   type(lattice), intent(inout)             :: my_lattice
+   type(io_parameter), intent(in)           :: io_simu
+   type(simulation_parameters), intent(in)  :: ext_param
+   type(hamiltonian),intent(inout)          :: H
    ! lattices that are used during the calculations
-   type(lattice)                         :: lat_1,lat_2
+   type(lattice)    :: lat_1,lat_2
 
    !!!!!!!!!!!!!!!!!!!!!!!
    ! internal variables
@@ -74,8 +96,10 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
    real(8) :: time = 0.0d0
 
    ! prepare the matrices for integration
+
    call rw_dyna_MD(timestep_int,Efreq,duration,file,damp_S,damp_F,ensemble)
-   N_cell=product(my_lattice%dim_lat)
+   N_cell=my_lattice%Ncell
+
    Call my_lattice%used_order(used)
    dim_mode=my_lattice%u%dim_mode
    if(modulo(dim_mode,3)/=0) STOP "dynamics will only work if the considered order-parameter can be described as 3-vector"
@@ -92,8 +116,6 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
 
    Call my_lattice%copy(lat_1)
    Call my_lattice%copy(lat_2)
-
-   E_potential=energy_all(Hams,my_lattice)
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !!!! allocate the element of integrations and associate the pointers to them
@@ -163,7 +185,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
     ! initialize Energy
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    E_potential=energy_all(Hams,my_lattice)/real(N_cell,8)
+    E_potential=H%energy(my_lattice)/real(N_cell,8)
     E_kinetic=uamnmfs_to_eV*0.5d0*sum(masses_3*V_1**2)/real(N_cell,8)
     Eold=E_potential+E_kinetic
 
@@ -196,7 +218,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         !!!!!!!!!!!!!!!!!!!
 
            !get forces on the phonon lattice
-           Call get_eff_field(Hams,lat_1,Feff,5)
+           Call H%get_eff_field(lat_1,Feff,5)
            if (kt.gt.1.0d-8) call Bolzmann(kt,damp_F,masses,FT_eff)
            acceleration=(uamnmfs_to_eVnm*(Feff_3+FT_eff_3)-damp_F*V_1)/masses_3
 
@@ -204,9 +226,9 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
            lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )
 
            !get forces on the phonon lattice
-           Call get_eff_field(Hams,lat_2,Feff,5)
 
-           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses_3
+           Call H%get_eff_field(lat_2,Feff,5)
+           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses
            V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )
 
         !!!!!!!!!!!!!!!!!!!
@@ -223,7 +245,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,Hams)
         if(mod(j-1,gra_freq)==0)then
             tag=j/gra_freq
 
-            E_potential=energy_all(Hams,lat_1)/real(N_cell,8)
+            E_potential=H%energy(lat_1)/real(N_cell,8)
             E_kinetic=uamnmfs_to_eV*0.5d0*sum(masses_3*V_1**2)/real(N_cell,8)
             E_total=E_potential+E_kinetic
             temperature=2.0d0*E_kinetic/3.0d0/real(N_cell,8)/k_b

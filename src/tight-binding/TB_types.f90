@@ -52,7 +52,7 @@ type parameters_TB_IO_H
     integer             ::  i_diag=1  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
     logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
-    real(8)             ::  Ebnd(2)=[0.0d0,0.0d0]     !minimal and maximal energy values to consider in restricted eigensolver routines
+    real(8)             ::  Ebnd(2)=[-1.0d+99,1.0d+99]     !minimal and maximal energy values to consider in restricted eigensolver routines
     integer             ::  estNe=0                       !estimated number of eigenvalues in interval
     real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 
@@ -150,6 +150,7 @@ type parameters_TB_IO_FLOW
     logical         ::  highs_k=.False.
     logical         ::  fermi_k=.False.
     logical         ::  fermi_dos_k=.False. !plot fermi surface at Fermi energy
+    logical         ::  proj_energy=.false. 
 end type
 
 type parameters_TB

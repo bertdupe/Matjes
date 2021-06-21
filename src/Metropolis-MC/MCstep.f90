@@ -4,93 +4,72 @@ use m_mc_track_val, only: track_val
 use m_sampling, only: sphereft,equirep
 use m_choose_spin, only: choose_spin
 use m_relaxtyp,only: underrelax,overrelax
-use m_H_public, only: t_H,energy_single
+use m_hamiltonian_collection, only: hamiltonian
+Implicit none
 
 private
 public :: MCstep
+
 contains
 !
 ! ===============================================================
 !
-SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,Hams)
+SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H,work)
     use m_constants, only : k_b,pi
     use m_MC_io,only: MC_input
-    Implicit none
+    use m_work_ham_single, only: work_ham_single
     ! input
-    type(lattice),intent(inout)     :: lat
-    type(MC_input),intent(in)       :: io_MC 
-    real(8), intent(in)             :: kt
-    integer, intent(in)             :: N_spin
-    type(track_val),intent(inout)   :: state_prop
-    class(t_H), intent(in)          :: Hams(:)
+    type(lattice),intent(inout)         :: lat
+    type(MC_input),intent(in)           :: io_MC 
+    real(8), intent(in)                 :: kt
+    integer, intent(in)                 :: N_spin
+    type(track_val),intent(inout)       :: state_prop
+    type(hamiltonian), intent(inout)    :: H
+    type(work_ham_single),intent(inout) :: work
     
     ! internal variable
-    !     Energy difference Delta E and -DE/kT, Dmag and Dq
-    real(8) :: DE,E_new,E_old,Dmag(3)
-    !     flipped Spin
-    real(8) :: S_new(3),S_old(3)
-    integer :: i_spin   !chosen spin index (1:N_cell*nmag)
-    integer :: i_site   !unit cell index of chosen spin index
-    integer :: i_spin_uc    !spin index in unit-cell
-    
-    call choose_spin(i_spin,N_spin)
-    i_site=(i_spin-1)/lat%nmag+1
-    i_spin_uc= modulo((i_spin-1),lat%nmag)+1
-    state_prop%dim_bnd(:,1)=[(i_spin_uc-1)*3+1,i_spin_uc*3]  !1 has to be magnetic moment order parameter
+    real(8) :: E_old        !energy caused by the i_spin-site with S_old 
+    real(8) :: E_new        !energy caused by the i_spin-site with S_new
+    real(8) :: S_old(3)     !old spin direction at chosen state
+    real(8) :: S_new(3)     !new spin direction at chosen state
+    real(8) :: Dmag(3)      !change of magnetization caused by S_new at i_spin 
+    real(8) :: DE           !Energy difference caused by changes spin
+    integer :: i_spin       !chosen spin index (1:N_cell*site_per_cell(order))
 
-    !---------------------------------------
-    ! here are the different sampling
-    ! first the sphere sampling
-    !---------------------------------------
-#if 1
-    !this looks nicer, but is actually slower, I can't decide what to keep
-    S_new=state_prop%spin_sample(i_spin,lat,Hams)
-#else
-    if(io_MC%ising)then
-        S_new=-lat%M%modes_3(:,i_spin)
-    elseif(io_MC%underrelax)then
-        S_new=underrelax(i_spin,lat,Hams)
-    elseif(io_MC%overrelax)then
-        S_new=overrelax(i_spin,lat,Hams)
-    elseif(io_MC%equi)then
-        Call cone_update(state_prop%cone,state_prop%rate)
-        S_new=equirep(lat%M%modes_3(:,i_spin),state_prop%cone)
-    elseif(io_MC%sphere)then
-        Call cone_update(state_prop%cone,state_prop%rate)
-        S_new=sphereft(lat%M%modes_3(:,i_spin),state_prop%cone)
-    else
-        STOP "Invalid MC sampling method"
-    endif
-#endif
+    !choose the spin-site which is to be modified
+    call choose_spin(i_spin,state_prop%Nsite)
 
     !----------------------------------
     !       Calculate the energy difference if this was flipped
     !       and decider, if the Spin flip will be performed
     !----------------------------------
-    !Energy of old configuration
-    E_old=energy_single(Hams,i_site,state_prop%dim_bnd,lat)
+    !get Energy of old configuration
     S_old=lat%M%modes_3(:,i_spin)
+    Call H%energy_single(i_spin,state_prop%order,lat,work,E_old)
     
-    !Energy of the new configuration
-    lat%M%modes_3(:,i_spin)=S_new
-    E_new=energy_single(Hams,i_site,state_prop%dim_bnd,lat)
-    lat%M%modes_3(:,i_spin)=S_old
-    !! variation of the energy for this step
+    !get Energy of the new configuration
+    S_new=state_prop%spin_sample(i_spin,lat,work,H)  !choose new magnetic direction
+    lat%M%modes_3(:,i_spin)=S_new               !set new configuration
+    Call H%energy_single(i_spin,state_prop%order,lat,work,E_new)
+    lat%M%modes_3(:,i_spin)=S_old   !revert for now to old state
+
+    ! get energy difference
     DE=E_new-E_old
     
     state_prop%nb=state_prop%nb+1.0d0
     if ( accept(kt,DE) ) then
-        Dmag=-S_old+S_new
-    ! update the spin
+        Dmag=-S_old+S_new   !change of magnetization
+        ! update the spin
         lat%M%modes_3(:,i_spin)=S_new
-    ! update the quantities
+        ! update the quantities
         state_prop%E_total=state_prop%E_total+DE
         state_prop%Magnetization=state_prop%Magnetization+Dmag
         state_prop%acc=state_prop%acc+1.0d0
     endif
    
     state_prop%rate=state_prop%acc/state_prop%nb
-END SUBROUTINE MCstep
+END SUBROUTINE 
+
 ! ===============================================================
 
 function accept(kt,DE)
@@ -109,19 +88,4 @@ function accept(kt,DE)
         accept=Choice.lt.exp(tmp)
     endif
 end function
-
-pure subroutine  cone_update(cone,rate)
-    !REMOVE when removing old if-clause
-    use m_constants, only : pi
-    real(8),intent(inout)   :: cone
-    real(8),intent(in)      :: rate
-
-    ! cone angle update and maximal magnetic moment change
-    if ((rate.gt.0.5d0).and.(cone.lt.pi))then
-         cone=cone+0.0001d0
-    elseif ((rate.lt.0.50d0).and.(cone.gt.0.01d0)) then
-         cone=cone-0.0001d0
-    endif
-end subroutine
-
 end module

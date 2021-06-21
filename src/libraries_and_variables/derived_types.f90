@@ -39,6 +39,8 @@ type io_parameter
      integer :: io_writing
 ! frequency for writting the plotting data (magnetization density and so one)
      integer :: io_frequency
+! calculate topological charged
+    logical :: calc_topo=.true.
 contains
     procedure :: bcast => io_parameter_bcast
 end type io_parameter
@@ -105,6 +107,7 @@ subroutine io_parameter_bcast(this,comm)
     Call MPI_Bcast(this%io_energy_cont   , 1, MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%io_Force         , 1, MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%io_tracker       , 1, MPI_LOGICAL, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%calc_topo        , 1, MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%io_writing       , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%io_frequency     , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
     !could be done more elegantly with custom MPI_type

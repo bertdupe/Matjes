@@ -2,7 +2,7 @@ module m_set_Hamiltonians
 use m_H_public
 implicit none
 private
-public :: set_Hamiltonians,combine_Hamiltonians
+public :: set_Hamiltonians
 
 contains
 
@@ -10,6 +10,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_derived_types
     use m_input_H_types 
     use m_get_position,only :get_position_ND_to_1D 
+    use, intrinsic :: iso_fortran_env, only : output_unit
     
     use m_symmetry_operators
     use m_anisotropy_heisenberg,only: get_anisotropy_H
@@ -24,20 +25,20 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_ASR_phonon, only: get_ASR_Ph
     use m_Mag_Biq, only: get_Mag_Biq
     use m_4spin, only: get_4spin
-    use m_deriv_set, only: set_deriv
+    use m_dipolar_magnetic, only: get_dipolar
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
     type(io_h),intent(in)               :: H_io
-    type(lattice), intent(inout) :: lat
+    type(lattice), intent(in)           :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(11)
+    logical :: use_Ham(12)
 
 
-    use_ham(1)=H_io%J%is_set
-    use_ham(2)=H_io%D%is_set
-    use_ham(3)=H_io%aniso%is_set
+    use_ham(1)=H_io%J%is_set.and..not.H_io%J%fft
+    use_ham(2)=H_io%D%is_set.and..not.H_io%D%fft
+    use_ham(3)=H_io%aniso%is_set.and..not.H_io%aniso%fft
     use_ham(4)=H_io%zeeman%is_set
     use_ham(5)=H_io%ME_J%is_set
     use_ham(6)=H_io%ME_D%is_set
@@ -46,6 +47,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(9)=H_io%ASR_Ph%is_set
     use_ham(10)=H_io%M_biq%is_set
     use_ham(11)=H_io%sp4%is_set
+    use_ham(12)=H_io%dip%is_set.and..not.H_io%dip%fft
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
@@ -105,18 +107,29 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_4spin(Ham_res(i_H),H_io%sp4,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
+    !direct calculation of dipolar interaction
+    if(use_ham(12))then
+        Call get_dipolar(Ham_res(i_H),H_io%dip,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+
+    write(output_unit,'(//A,I3,A)') "The following ",N_ham," Hamiltonians in real-space have been set:"
+    do i_H=1,N_ham
+        write(output_unit,'(3XA)') trim(Ham_res(i_H)%desc)
+    enddo
+    write(output_unit,'(//)')
 
     do i_H=1,N_ham
         if(.not. Ham_res(i_h)%is_set()) STOP "not all Hamiltonians are set"
         Call Ham_res(i_h)%optimize()
+        Call Ham_res(i_h)%finish_setup()
     enddo
 
     Call combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
     do i_H=1,size(Ham_comb)
         Call Ham_comb(i_h)%optimize()
+        Call Ham_comb(i_h)%finish_setup()
     enddo
-    Call set_deriv(Ham_comb)
-    if(keep_res) Call set_deriv(Ham_res)
 end subroutine
 
 subroutine combine_Hamiltonians(keep_in,H_in,H_comb)
