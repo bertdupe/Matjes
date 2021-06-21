@@ -56,7 +56,9 @@ subroutine get_Forces_F(Ham,io,lat)
     integer         :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
 
     ! conversion factor Ha/Bohr2 to eV/nm2
+    ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
     real(8), parameter  :: HaBohrsq_to_Evnmsq = 9717.38d0
+    real(8), parameter  :: HaBohr_to_Evnm = 514.2208619083232d0
 
     if(io%is_set)then
         Call get_Htype(Ham_tmp)
