@@ -40,7 +40,6 @@ TPulse%forme='exponential'
 
 
 call get_parameter(io,fname,'T0',TPulse%T0)
-write(*,*) TPulse%T0
 call get_parameter(io,fname,'t_start_pulse',TPulse%t_start)
 call get_parameter(io,fname,'alpha',TPulse%alpha)
 call get_parameter(io,fname,'I_exp',TPulse%I_exp)

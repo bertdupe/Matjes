@@ -1,6 +1,8 @@
 module m_exchange_TJ
 use m_input_H_types, only: io_H_TJ
+use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
+character(len=*),parameter  :: ham_desc="T^2 M^2 exchange"
 private
 public read_TJ_input, get_exchange_TJ
 contains
@@ -47,6 +49,7 @@ subroutine get_exchange_TJ(Ham,io,lat)
     type(coo_mat)   :: mat(3)       !mode construction matrices for rank3 part of Hamiltonian
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         if(lat%T%dim_mode==0) STOP "T-field has to be set when using TJ-exchange"
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
@@ -55,6 +58,9 @@ subroutine get_exchange_TJ(Ham,io,lat)
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+            !write information out
+            Call io%pair(i_atpair)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound
@@ -86,7 +92,7 @@ subroutine get_exchange_TJ(Ham,io,lat)
                 enddo 
             enddo
         enddo
-        Ham%desc="T^2 M^2 exchange"
+        Ham%desc=ham_desc
         Call mode_set_rank1(Ham%mode_l,lat,"M")
 #if 0
     !obsolete

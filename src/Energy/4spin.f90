@@ -1,10 +1,12 @@
 module m_4spin
+use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_sp4
 use m_derived_types, only: lattice
 use m_neighbor_pair, only: pair_dat_t, get_pair_dat
 
 !use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 implicit none
+character(len=*),parameter  :: ham_desc="4-spin interaction"
 private
 public :: read_sp4_input, get_4spin
 
@@ -37,7 +39,10 @@ subroutine read_sp4_input(io_param,fname,io)
     enddo
     if(N<1)then
         write(error_unit,'(2/A)') 'Found entry "'//var_name//'" in file "'//fname//'", but no corresponding data was supplied'
-        ERROR STOP "CHECK INPUT"
+#ifndef CPP_SCRIPT            
+        ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+        return
     endif
     allocate(io%at_type(N),source=-1)
     allocate(io%val(N),source=0.0d0)
@@ -49,6 +54,14 @@ subroutine read_sp4_input(io_param,fname,io)
         read(str,*) io%at_type(i),io%val(i)
     enddo
     Call check_further_entry(io_param,fname,var_name)
+
+    if(all(io%val==0))then
+        write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+        ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+        return
+    endif
 
     io%is_set=.true.
 end subroutine
@@ -98,6 +111,7 @@ subroutine get_4spin(Ham,io,lat)
     integer,allocatable :: pos_offset(:,:)
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N4spin=size(io%val)
         Call get_pair_dat(lat,io%at_type,[1,2],pair_dat)    !get all pairs of same atom type for nearest and next-nearest neighbor
@@ -178,7 +192,7 @@ subroutine get_4spin(Ham,io,lat)
         Call mat(2)%init(dim_mat,nnz,row(:,2),col(:,2),val(:,2))
         Call mode_set_rankN_sparse(Ham%mode_r,"MM",lat,mat,1)
         !END SET STATES
-        Ham%desc="4-spin interaction"
+        Ham%desc=ham_desc
     endif
 end subroutine
 

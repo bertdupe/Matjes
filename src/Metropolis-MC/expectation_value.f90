@@ -200,7 +200,7 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     type(lattice),intent(in)                :: lat
     type(track_val),intent(in)              :: state_prop
     integer,intent(in)                      :: Q_neigh(:,:)
-    type(fluct_parameters),intent(in)      :: fluct_val
+    type(fluct_parameters),intent(in)       :: fluct_val
 
     !put that into state_prop as well?
     real(8)     :: dumy(5),qeulerp,qeulerm

@@ -444,6 +444,7 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
     logical,intent(out)                         :: success
     ! internal variable
     type(Hr_triple_single),allocatable   :: Htriple_tmp(:)
+    type(Hr_triple), allocatable         :: Htriples_tmp(:)
     integer :: attype(3),dist
     real(8) :: val
 
@@ -455,6 +456,7 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
     nread=0
     Call set_pos_entry(io,fname,var_name,success)
     if(success)then
+        success=.false.
         read(io,'(a)',iostat=stat) str
         Ntriple=0; Nnonzero=0
         nread=nread+1
@@ -467,12 +469,18 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
             if(val/=0.0d0) Nnonzero=Nnonzero+1
         enddo
         if(Ntriple<1)then
-            write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         if(Nnonzero<1)then
-            write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
         success=.true.
@@ -512,6 +520,25 @@ subroutine get_H_triple(io,fname,var_name,Htriples,success)
                 endif
             enddo
         enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        if(any(Htriples%attype(1)/=Htriples%attype(2)))then
+            Call move_alloc(Htriples,Htriples_tmp)
+            allocate(Htriples(size(Htriples_tmp)+count(Htriples_tmp%attype(1)/=Htriples_tmp%attype(2))))
+            ii=0
+            do i=1,size(Htriples_tmp)
+                ii=ii+1
+                Htriples(ii)=Htriples_tmp(i)
+                if(Htriples_tmp(i)%attype(1)/=Htriples_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Htriples(ii)=Htriples_tmp(i)
+                    Htriples(ii)%attype(1:2)=[Htriples_tmp(i)%attype(2),Htriples_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Htriples_tmp)
+        endif
+
+        success=.true.
     endif
 
     Call check_further_entry(io,fname,var_name)
@@ -528,7 +555,8 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     type(Hr_pair), intent(out), allocatable     :: Hpairs(:)
     logical,intent(out)                         :: success
     ! internal variable
-    type(Hr_pair_single),allocatable   :: Hpair_tmp(:)
+    type(Hr_pair_single),allocatable            :: Hpair_tmp(:)
+    type(Hr_pair), allocatable                  :: Hpairs_tmp(:)
     integer :: attype(2),dist
     real(8) :: val
 
@@ -542,6 +570,7 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     read(io,'(a)',iostat=stat) str
     if(success)then
         !find out how many entries there are
+        success=.false.
         Npair=0; Nnonzero=0
         nread=nread+1
         do 
@@ -553,12 +582,18 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
             if(val/=0.0d0) Nnonzero=Nnonzero+1
         enddo
         if(Npair<1)then
-            write(output_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         if(Nnonzero<1)then
-            write(output_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-            ERROR STOP "INPUT PROBABLY WRONG"
+            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
         endif
         write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
         !allocate correct size of entries and move IO to beginning of data
@@ -599,6 +634,25 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
                 endif
             enddo
         enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        if(any(Hpairs%attype(1)/=Hpairs%attype(2)))then
+            Call move_alloc(Hpairs,Hpairs_tmp)
+            allocate(Hpairs(size(Hpairs_tmp)+count(Hpairs_tmp%attype(1)/=Hpairs_tmp%attype(2))))
+            ii=0
+            do i=1,size(Hpairs_tmp)
+                ii=ii+1
+                Hpairs(ii)=Hpairs_tmp(i)
+                if(Hpairs_tmp(i)%attype(1)/=Hpairs_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Hpairs(ii)=Hpairs_tmp(i)
+                    Hpairs(ii)%attype=[Hpairs_tmp(i)%attype(2),Hpairs_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Hpairs_tmp)
+        endif
+
+        success=.true.
     endif
 
     Call check_further_entry(io,fname,var_name)

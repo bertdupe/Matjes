@@ -77,7 +77,7 @@ subroutine get_mode_disc(this,lat,N,ind,vec)
     integer,intent(in)                      :: ind(N)
     real(8),intent(out)                     :: vec(N)
 
-    real(8),pointer :: mode_base(:)
+    real(8),pointer,contiguous  :: mode_base(:)
 
     Call lat%set_order_point(this%order(1),mode_base)
     vec=mode_base(ind)

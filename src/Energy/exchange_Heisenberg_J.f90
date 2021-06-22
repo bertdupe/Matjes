@@ -1,5 +1,6 @@
 module m_exchange_heisenberg_J
 use m_input_H_types, only: io_H_J
+use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
 private
 public read_J_input, get_exchange_J, get_exchange_J_fft
@@ -49,12 +50,19 @@ subroutine get_exchange_J(Ham,io,lat)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
         do i_atpair=1,N_atpair
             !loop over different connected atom types
+            !get neighbors
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+            !write information out
+            Call io%pair(i_atpair)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
+            write(output_unit,*)
+            !initialize variables
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound
@@ -131,6 +139,7 @@ subroutine get_exchange_J_fft(H_fft,io,lat)
     integer         :: i
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         !set some initial parameters locally for convencience
         Nmag=lat%nmag
         period=lat%periodic.or.lat%dim_lat==1
@@ -146,6 +155,9 @@ subroutine get_exchange_J_fft(H_fft,io,lat)
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+            !write information out
+            Call io%pair(i_atpair)%prt(output_unit,'2X')
+            Call neigh%prt(output_unit,'2X')
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound

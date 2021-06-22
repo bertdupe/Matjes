@@ -1,6 +1,7 @@
 module m_zeeman
 implicit none
 private
+character(len=*),parameter  :: ham_desc="Zeeman energy"
 public :: get_zeeman_H,read_zeeman_input
 
 contains
@@ -63,7 +64,7 @@ subroutine get_zeeman_H(Ham,io,lat)
             connect(:,i)=i
         enddo
         Call Ham%init_connect(connect,val_tmp,ind_tmp,"BM",lat,1)
-        Ham%desc="Zeeman energy"
+        Ham%desc=ham_desc
         !set modes
         Call mode_set_rank1(Ham%mode_l,lat,"B")
         Call mode_set_rank1(Ham%mode_r,lat,"M")

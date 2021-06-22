@@ -1,5 +1,6 @@
 module m_neighbor_type
 use m_derived_types
+use,intrinsic :: iso_fortran_env, only : output_unit,error_unit
 implicit none
 private
 public :: neighbors, get_neigh_distances
@@ -22,10 +23,11 @@ type :: neighbors
 end type
 
 contains
-subroutine prt(neigh,io_in)
-    use,intrinsic :: iso_fortran_env, only : output_unit,error_unit
+subroutine prt(neigh,io_in,fmt_pre)
     class(neighbors),intent(in) :: neigh
     integer,intent(in),optional :: io_in
+    character(len=*),intent(in),optional    :: fmt_pre
+    character(len=:),allocatable            :: pre
 
     integer     :: io
     logical     :: isopen
@@ -33,24 +35,32 @@ subroutine prt(neigh,io_in)
     integer     :: i_dist
     integer     :: i_shell,shell
 
+    if(present(fmt_pre))then    
+        pre=fmt_pre
+    else
+        pre=""
+    endif
+
     io=output_unit
-    if(present(io_in)) io=io_in
+    if(present(io_in))then
+        io=io_in
+    else
+        io=output_unit
+    endif
     inquire(unit=io,opened=isopen)
     if(.not.isopen)then
         write(error_unit,'(AI6)') "Warning, trying to write the neighbor parameters to unopenend unit:",io
         write(error_unit,'(A)') "Aborting printing of neighbor parameters"
         return
     endif
-    write(io,'(//A,2I6,A,I3,A)') "Neighbors for atom types:",neigh%atid," with ", size(neigh%dist)," distances"
+    write(io,'('//pre//'A,2I6,A,I3,A)') "Neighbors for atom types:",neigh%atid," with ", size(neigh%dist)," distances"
     do i_dist=1,size(neigh%dist)
-        write(io,'(AI3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
+        write(io,'('//pre//'AI3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
         do i_shell=1,neigh%Nshell(i_dist)
             shell=i_shell+sum(neigh%Nshell(:i_dist-1))
-            write(io,'(A,2I4,A,3F10.6)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)
+            write(io,'('//pre//'A,2I4,A,3F10.6)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)
         enddo
-        write(io,*)
     enddo
-!    write(io,*)
 end subroutine
 
 subroutine unset(neigh)
@@ -65,11 +75,12 @@ subroutine unset(neigh)
     if(allocated(neigh%diff_vec )) deallocate(neigh%diff_vec )
 end subroutine
 
-subroutine get_neighbors(neigh,atid,neighval_in,lat)
+subroutine get_neighbors(neigh,atid,neighval_in,lat,success)
     class(neighbors),intent(out)    :: neigh
     integer,intent(in)              :: atid(2)          !atom type index of the atom types whose neighbors shall be found
     integer,intent(in)              :: neighval_in(:)   !every entry means that this neighbor is requires (2= second nearest neighbor etc.)
     type(lattice),intent(in)        :: lat              !the all-knowing lattice providing all required information
+    logical,intent(out),optional    :: success
 
     integer                 :: neighval(size(neighval_in))
     integer,allocatable     :: id1(:),id2(:)
@@ -79,6 +90,7 @@ subroutine get_neighbors(neigh,atid,neighval_in,lat)
     real(8)                 :: distance(size(neighval))
     integer,allocatable     :: pairs(:,:)
     integer,allocatable     :: Nshell(:)
+    logical                 :: success_int
 
     neigh%atid=atid
     allocate(neigh%dist,source=neighval_in)
@@ -98,7 +110,18 @@ subroutine get_neighbors(neigh,atid,neighval_in,lat)
     enddo
     !get all neighbor connections(pair_ind,Nshell) and the distances
 
-    Call get_neigh_distances(atpos1, atpos2, neighval, lat, pairs, Nshell, distance, neigh%diff_vec)
+    Call get_neigh_distances(atpos1, atpos2, neighval, lat, pairs, Nshell, distance, neigh%diff_vec,success_int)
+    if(present(success)) success=success_int
+    if(.not.success_int)then
+        if(present(success))then
+            return
+        else
+            write(error_unit,'(A)') "Aborting since the neighbor-type could not be set."
+            write(error_unit,'(A)') "Check input if all sought interactions make sense with the lattice geometry."
+            ERROR STOP "Check input"
+       endif
+    endif
+
     Call move_alloc(Nshell,neigh%Nshell)
     !set pair_ind atom indices to real cell atomic indices
     pairs(1,:)=id1(pairs(1,:))
@@ -157,7 +180,7 @@ subroutine unfold_neighbors(neigh,pairs_in,lat)
     allocate(neigh%pairs,source=pairs(:,:ii))
 end subroutine
 
-subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_out,diff_vec)
+subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_out,diff_vec,success)
     !get the neighval's distances between the atoms in atpos1 and atpos2
     use m_sort
     !subroutine which gets the neighval's distances between the atoms in atpos1 and atpos2
@@ -168,6 +191,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     type(lattice),intent(in)    :: lat          !the all-knowing lattice providing all required information
     real(8),intent(out)         :: dist_out(size(neighval))
     real(8),intent(out),allocatable,optional    ::  diff_vec(:,:)
+    logical,optional            :: success
 
     integer,allocatable     :: pair_ind(:,:) !integer array containing the information how which atoms are corrected by the distance([[ia1,ia2,ix,iy,iz],[:]])
                                              ! distance corresponds to atpos1(ia1)-atpos2(ia2)+lat1*ix+lat2*iy+lat3*iz
@@ -188,7 +212,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     integer                 :: multi(5) !size of each index part
     integer                 :: prod_multi(5) !size of each index part
 
-
+    if(present(success)) success=.true.
     ii=0
     do i2=1,size(atpos2,2)
         do i1=1,size(atpos1,2)
@@ -214,6 +238,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
         ind3=[0]
     endif
     allocate(all_dist(size(atpos1,2)*size(atpos2,2)*size(ind1)*size(ind2)*size(ind3)),source=0.0d0)
+
     ii=0
     do i3=1,size(ind3)
         lat_diff(:,3)=lat%areal(3,:)*real(ind3(i3),8)
@@ -240,6 +265,19 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     vmax=-10.0d0*eps    !include 0 for conveniance (change dist_start(offset))
     do while(ii<size(dist_start))
         i=i+1
+        if(i>size(all_dist))then
+            if(ii==size(all_dist))then
+                dist_start(ii+1)=i
+                write(error_unit,'(2/A)') "Warning, no larger distance for neighbors found in search setup."
+                write(error_unit,'(A)')   "  Assuming the last entry is the final entry of the shell"
+                write(error_unit,'(A)')   "  This should only happen for very small systems without periodic boundaries"
+                exit
+            else
+                write(error_unit,'(2/A)') "Failed to get sufficiently many neighboring distances as required by input"
+                if(present(success)) success=.false.
+                return
+            endif
+        endif
         if(all_dist(i)>vmax+eps)then
             ii=ii+1
             dist_start(ii)=i

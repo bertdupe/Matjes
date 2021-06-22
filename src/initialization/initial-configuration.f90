@@ -21,7 +21,7 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
     character(:), allocatable           :: fname
     logical :: exists
     integer :: i
-    real(8),pointer ::  state(:)
+    real(8),pointer,contiguous ::  state(:)
 
     if(present(fname_in))then
         fname=fname_in

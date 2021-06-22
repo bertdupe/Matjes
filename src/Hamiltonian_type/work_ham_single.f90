@@ -78,14 +78,16 @@ subroutine set_max(this,arr)
     integer                                 :: sizes(2)
     integer                                 :: size_dat(size(arr))
     integer     ::  i
-    
+   
+    size_dat=0
     do i=1,size(arr)
-        size_dat(i)=size(arr(i)%real_dat)
+        if(associated(arr(i)%real_dat)) size_dat(i)=size(arr(i)%real_dat)
     enddo
     sizes(1)=maxval(size_dat)
 
+    size_dat=0
     do i=1,size(arr)
-        size_dat(i)=size(arr(i)%int_dat)
+        if(associated(arr(i)%int_dat )) size_dat(i)=size(arr(i)%int_dat )
     enddo
     sizes(2)=maxval(size_dat)
 
