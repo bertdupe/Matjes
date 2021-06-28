@@ -12,6 +12,7 @@ type,extends(H_TB_coo_based),abstract :: H_tb_dense
     procedure   :: copy_child
     procedure   :: destroy_child
     procedure   :: mv
+    procedure   :: mult_r
 end type
 
 #ifdef CPP_LAPACK
@@ -119,6 +120,28 @@ subroutine destroy_child(this)
 
     if(allocated(this%H)) deallocate(this%H)
 end subroutine
+
+subroutine mult_r(this,vec,res,alpha,beta)
+    class(H_tb_dense),intent(in)    :: this
+    complex(8),intent(in   )        :: vec(this%dimH)
+    complex(8),intent(inout)        :: res(this%dimH)
+    complex(8),intent(in),optional     :: alpha
+    complex(8),intent(in),optional     :: beta
+    complex(8) :: alp, bet
+
+    if(present(alpha))then
+        alp=alpha
+    else
+        alp=cmplx(1.0d0,0.0d0,8)
+    endif
+    if(present(beta))then
+        bet=beta
+    else
+        bet=cmplx(0.0d0,0.0d0,8)
+    endif
+    Call zgemv( "N", this%dimH, this%dimH, alp, this%H, this%dimH, vec, 1, bet, res, 1) 
+end subroutine
+
 
 #ifdef CPP_LAPACK
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

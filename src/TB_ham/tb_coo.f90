@@ -32,6 +32,7 @@ contains
 
     procedure   :: to_BdG
 
+    procedure   :: mult_r
     procedure   :: get_eval
     procedure   :: get_evec
 end type
@@ -272,6 +273,16 @@ subroutine destroy_child(this)
         if(allocated(this%colind)) deallocate(this%colind)
         if(allocated(this%rowind)) deallocate(this%rowind)
     endif
+end subroutine
+
+
+subroutine mult_r(this,vec,res,alpha,beta)
+    class(H_tb_coo),intent(in)      :: this
+    complex(8),intent(in   )        :: vec(this%dimH)
+    complex(8),intent(inout)        :: res(this%dimH)
+    complex(8),intent(in),optional     :: alpha
+    complex(8),intent(in),optional     :: beta
+    ERROR STOP "Multiply_r from H_TB_coo type is not implemented"
 end subroutine
 
 subroutine get_eval(this,eval)
