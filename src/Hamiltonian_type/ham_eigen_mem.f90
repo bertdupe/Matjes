@@ -59,7 +59,7 @@ subroutine set_work_single(this,work,order)
     class(t_H_eigen_mem),intent(inout)      :: this
     class(work_ham_single),intent(inout)    :: work 
     integer,intent(in)                      :: order
-    integer     :: sizes(2)
+    integer     :: sizes(N_work)
     integer     :: dim_mode
 
     Call this%t_H_eigen%set_work_single(work,order)

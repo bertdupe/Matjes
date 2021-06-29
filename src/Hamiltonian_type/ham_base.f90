@@ -486,7 +486,7 @@ subroutine set_work_mode(this,work)
     class(t_H_base),intent(inout)   :: this
     class(work_mode),intent(inout)  :: work 
 
-    integer     :: sizes(2)
+    integer     :: sizes(N_work)
 
     sizes=0
     sizes(1)=this%dimH(1)*(size(this%op_l)+2)+this%dimH(2)*(size(this%op_r)+2)      !this size might actually be a bit excessive, check again

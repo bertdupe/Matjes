@@ -57,7 +57,7 @@ subroutine get_kmesh(kgrid,lat,grid,fname)
             STOP
         endif
     type is (k_grid_t)
-        write(output_unit,'(/A3I6)') "Initializing kgrid with following repetitions:", grid
+        write(output_unit,'(/A,3I6)') "Initializing kgrid with following repetitions:", grid
         Call kgrid%set(lat%a_sc_inv,grid)
     class default
         ERROR STOP "THIS SHOULD NEVER BE REACHED"

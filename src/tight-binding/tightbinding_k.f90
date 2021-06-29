@@ -34,8 +34,9 @@ subroutine tightbinding_k(lat,tb_par)
     endif
 
     if(tb_par%flow%proj_energy) Call proj_energy(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
-
+    
     if(tb_par%flow%dos_k)then
+        Call get_kgrid_adapt(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
         if(tb_par%is_sc)then
             Call write_dos_sc(Hk_inp,tb_par%io_H,lat,tb_par%io_dos)
         else
@@ -190,6 +191,62 @@ subroutine write_dos_nc(Hk_inp,h_io,lat,io_dos)
         Call dos_orb(idos)%print("dos_k_nc_orb_"//dos_id//".dat")
     enddo
 end subroutine
+
+subroutine get_kgrid_adapt(Hk_inp,h_io,lat,io_dos)
+    use m_dos, only: dos_sc,dos_bnd_sc, dos_orb_sc
+    use m_constants, only : pi
+    use m_derived_types, only: k_grid_t
+    type(Hk_inp_t),intent(in)               :: Hk_inp
+    type(parameters_TB_IO_H),intent(in)     :: h_io
+    type(lattice), intent(in)               :: lat
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+
+    type(dos_sc)                            :: dos
+    real(8),allocatable                     :: eval(:)
+
+    !parameters to describe integration k-grid
+!    type(k_grid_t)                          :: k_grid
+    class(kmesh_t),allocatable              :: k_grid 
+    integer                                 :: ik,Nk
+    real(8)                                 :: k(3)
+    integer                                 :: io
+
+    integer                                 :: idos
+    character(len=3)                        :: dos_id
+
+    type(dos_bnd_sc),allocatable            :: dos_bnd(:)
+    integer                                 :: Ndos_bnd
+    logical                                 :: use_bnd
+
+    type(dos_orb_sc),allocatable            :: dos_orb(:)
+    integer                                 :: Ndos_orb
+    logical                                 :: use_orb
+    real(8),allocatable                     :: min_eval(:)
+
+    Call dos%init(io_dos)
+    Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh)
+
+    Nk=k_grid%get_NK()
+    allocate(min_eval(Nk),source=0.0d0)
+
+
+    !calculate eigenvalues for each k and add to dos
+    do ik=1,Nk
+        if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        k=k_grid%get_K(ik)
+        Call Hk_eval(Hk_inp,k,h_io,eval) 
+        min_eval(ik)=minval(abs(eval))
+        deallocate(eval)
+    enddo
+    open(newunit=io,file='dos_emin.dat')
+    do ik=1,Nk
+        write(io,'(4E16.8)') k_grid%get_k(ik),min_eval(ik)
+    enddo
+    close(io)
+    ERROR STOP "CONTINUE KGRID ADAPT"
+
+end subroutine
+
 
 subroutine write_dos_sc(Hk_inp,h_io,lat,io_dos)
     use m_dos, only: dos_sc,dos_bnd_sc, dos_orb_sc

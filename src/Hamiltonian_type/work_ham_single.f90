@@ -1,18 +1,20 @@
 module m_work_ham_single
 !module for derived type which provides some arrays for temporary array when evaluating the Energy of Hamiltonians
 private
-public work_ham_single, work_size_single, N_work_single, work_mode, N_work
+public work_ham_single, work_size_single, N_work_single, work_mode, N_work, work_ham
 
-integer,parameter   ::  N_work_single=2
-integer,parameter   ::  N_work=2
+integer,parameter   ::  N_work_single=3
+integer,parameter   ::  N_work=3
 
 type work_base
     !internal data arrays, DO NOT MODIFY UNLESS YOU KNOW WHAT YOU ARE DOING (pointers because targets in types does not work)
-    real(8),pointer,contiguous, private :: real_dat(:)=>null()
-    integer,pointer,contiguous, private :: int_dat(:)=>null()
+    real(8),pointer,contiguous, private     :: real_dat(:)=>null()
+    integer,pointer,contiguous, private     :: int_dat(:)=>null()
+    complex(8),pointer,contiguous, private  :: cmplx_dat(:)=>null()
     !data arrays to be used externally
-    real(8),pointer,contiguous, public  :: real_arr(:)=>null()
-    integer,pointer,contiguous, public  :: int_arr(:)=>null()
+    real(8),pointer,contiguous, public      :: real_arr(:)=>null()
+    integer,pointer,contiguous, public      :: int_arr(:)=>null()
+    complex(8),pointer,contiguous, public   :: cmplx_arr(:)=>null()
 contains
     procedure   :: destroy
     procedure   :: set
@@ -21,6 +23,9 @@ contains
 end type
 
 type,extends(work_base) ::  work_ham_single
+end type
+
+type,extends(work_base) ::  work_ham
 end type
 
 type,extends(work_base) ::  work_mode
@@ -47,6 +52,7 @@ subroutine work_size_single(dim_single,line_max,sizes)
 
     sizes(1)=dim_single*(2*line_max+2)       !real array size
     sizes(2)=dim_single*(  line_max+2)+1     !integer array size
+    sizes(3)=0                               !complex array size
 end subroutine
 
 
@@ -58,16 +64,20 @@ end subroutine
 
 subroutine set(this,sizes)
     class(work_base),intent(inout)    :: this
-    integer,intent(in)                :: sizes(2)
+    integer,intent(in)                :: sizes(N_work)
 
     Call this%destroy()
     if(sizes(1)>0)then
-        allocate(this%real_dat(sizes(1)),source=0.0d0)
+        allocate(this%real_dat (sizes(1)),source=0.0d0)
         this%real_arr=>this%real_dat
     endif
     if(sizes(2)>0)then
-        allocate(this%int_dat (sizes(2)),source=0)
+        allocate(this%int_dat  (sizes(2)),source=0)
         this%int_arr=>this%int_dat
+    endif
+    if(sizes(3)>0)then
+        allocate(this%cmplx_dat(sizes(3)),source=(0.0d0,0.0d0))
+        this%cmplx_arr=>this%cmplx_dat
     endif
 end subroutine
 
@@ -75,21 +85,27 @@ subroutine set_max(this,arr)
     class(work_base),intent(inout)    :: this
     class(work_base),intent(in)       :: arr(:)
 
-    integer                                 :: sizes(2)
+    integer                                 :: sizes(N_work)
     integer                                 :: size_dat(size(arr))
     integer     ::  i
    
     size_dat=0
     do i=1,size(arr)
-        if(associated(arr(i)%real_dat)) size_dat(i)=size(arr(i)%real_dat)
+        if(associated(arr(i)%real_dat )) size_dat(i)=size(arr(i)%real_dat )
     enddo
     sizes(1)=maxval(size_dat)
 
     size_dat=0
     do i=1,size(arr)
-        if(associated(arr(i)%int_dat )) size_dat(i)=size(arr(i)%int_dat )
+        if(associated(arr(i)%int_dat  )) size_dat(i)=size(arr(i)%int_dat  )
     enddo
     sizes(2)=maxval(size_dat)
+
+    size_dat=0
+    do i=1,size(arr)
+        if(associated(arr(i)%cmplx_dat)) size_dat(i)=size(arr(i)%cmplx_dat)
+    enddo
+    sizes(3)=maxval(size_dat)
 
     Call this%set(sizes)
 end subroutine
@@ -104,6 +120,10 @@ subroutine destroy(this)
     if(associated(this%int_dat))then
         deallocate(this%int_dat)
         nullify(this%int_dat)
+    endif
+    if(associated(this%cmplx_dat))then
+        deallocate(this%cmplx_dat)
+        nullify(this%cmplx_dat)
     endif
 end subroutine
 end module
