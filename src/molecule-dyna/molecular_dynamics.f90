@@ -228,7 +228,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
            !get forces on the phonon lattice
 
            Call H%get_eff_field(lat_2,Feff,5)
-           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses
+           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses_3
            V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )
 
         !!!!!!!!!!!!!!!!!!!
@@ -272,6 +272,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
                 & ERROR STOP "FORCES HAVE TO BE REIMPLEMENTED"
 
             write(6,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
+            write(6,'(a,2x,I8,2x,E20.12E3,/)') 'step and time (in fs)',j,real_time+timestep_int
         endif
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
