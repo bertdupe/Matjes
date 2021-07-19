@@ -1,5 +1,5 @@
 module m_H_tb_base
-use m_TB_types, only: parameters_ham_init 
+use m_ham_init_type, only: parameters_ham_init 
 private
 public H_TB
 type,abstract :: H_TB   !

@@ -19,7 +19,7 @@ subroutine tightbinding_r(lat,tb_par)
     type(lattice), intent(in)               :: lat
     type(parameters_TB),intent(in)          :: tb_par
 
-    type(parameters_TB_Hsolve)              :: h_par
+    type(parameters_TB_IO_H)                :: h_par
 
     real(8),allocatable         ::  eigval(:)
     complex(8),allocatable      ::  eigvec(:,:)
@@ -33,7 +33,7 @@ subroutine tightbinding_r(lat,tb_par)
 
     procedure(int_distrib),pointer  :: dist_ptr => null()
 
-    h_par=tb_par%H
+    h_par=tb_par%io_H
 
     !check what to calculate (eigenvalue/eigenvector)
     calc_eigval=tb_par%flow%dos_r.or.tb_par%flow%occ_r.or.tb_par%flow%spec_r.or.tb_par%flow%fermi_r
@@ -78,7 +78,7 @@ subroutine tightbinding_r(lat,tb_par)
         if(tb_par%is_sc)then
             STOP "calculation of Fermi energy doesn't work when using superconductivity"
         else
-            Call calc_fermi(eigval, tb_par%io_EF%N_electrons*h_par%ncell, tb_par%io_ef%kt, E_f)
+            Call calc_fermi(eigval, tb_par%io_EF%N_electrons*lat%ncell, tb_par%io_ef%kt, E_f)
         endif
     endif
 

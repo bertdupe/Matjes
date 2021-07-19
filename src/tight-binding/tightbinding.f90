@@ -21,9 +21,11 @@ subroutine tightbinding(lat,comm)
     Call lat%bcast(comm)
 
     !read tight-binding io parameter from input and set TB_params(m_tb_params)
-    !!read on all threads might get slow, make bcast for parameters_TB if that gets problematic
-    call rw_TB(tb_par,'input')
-    Call tb_par%init(lat)
+    if(comm%ismas)then
+        call tb_par%read_file('input')
+        Call tb_par%init(lat)
+    endif
+    Call tb_par%bcast(comm)
 
     !do real-space tight-binding stuff
     if(comm%ismas)then

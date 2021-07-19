@@ -14,9 +14,25 @@ contains
     procedure :: set_scf
     procedure :: print_file
     procedure :: read_file
+    procedure :: bcast => bcast_local
 end type
 
 contains
+
+subroutine bcast_local(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(Hdelta),intent(inout) :: this
+    type(mpi_type),intent(in)   :: comm
+#ifdef CPP_MPI
+    Call bcast_alloc(this%orb  ,comm)
+    Call bcast_alloc(this%delta,comm)
+    Call bcast_alloc(this%V    ,comm)
+#else
+    continue
+#endif
+end subroutine 
+
 subroutine set(this,delta,lat,norb_at_off)
     class(Hdelta),intent(inout)     :: this
     type(TB_delta),intent(in)       :: delta(:)       !delta parameter supplied input

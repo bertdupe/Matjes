@@ -17,9 +17,31 @@ contains
     procedure :: combine_updn
     procedure :: rearrange_spin
     procedure :: destroy
+    procedure :: bcast => bcast_local
 end type
 
 contains
+
+subroutine bcast_local(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(wann_dat),intent(inout)   :: this 
+    type(mpi_type),intent(in)       :: comm
+#ifdef CPP_MPI
+    Call bcast(this%is_set,comm)
+    if(this%is_set)then
+        Call bcast      (this%num_wann       ,comm)
+        Call bcast      (this%nrpts          ,comm)
+        Call bcast      (this%spin_rearranged,comm)
+        Call bcast_alloc(this%irvec          ,comm)
+        Call bcast_alloc(this%ndegen         ,comm)
+        Call bcast_alloc(this%H              ,comm)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
 subroutine destroy(this)
     class(wann_dat),intent(inout)  ::  this
 

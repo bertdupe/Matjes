@@ -10,7 +10,13 @@ end interface
 interface bcast_alloc
     module procedure bcast_alloc_int
     module procedure bcast_alloc_int2
+    module procedure bcast_alloc_real1
+    module procedure bcast_alloc_real2
+    module procedure bcast_alloc_cmplx2
     module procedure bcast_alloc_cmplx3
+    module procedure bcast_alloc_character
+    module procedure bcast_alloc_character0
+    module procedure bcast_alloc_character_len
 end interface
 
 interface bcast
@@ -20,6 +26,7 @@ interface bcast
     module procedure bcast_logical1
     module procedure bcast_real
     module procedure bcast_real1
+    module procedure bcast_complex
     module procedure bcast_character
     module procedure bcast_MC
 end interface
@@ -147,12 +154,77 @@ subroutine bcast_alloc_int2(arr,com)
     integer     :: ierr
     integer     :: shp(2)
 
-    if(com%ismas.and..not.allocated(arr)) ERROR STOP "FAILED TO BCAST SINCE INITIAL ARRAY IS NOT ALLOCATED"
-    if(com%ismas) shp=shape(arr)
+    shp=0
+    if(com%ismas.and.allocated(arr)) shp=shape(arr)
     Call bcast(shp,com)
-    if(.not.allocated(arr)) allocate(arr(shp(1),shp(2)))
+    if(all(shp>0))then
+        if(.not.allocated(arr)) allocate(arr(shp(1),shp(2)))
 
-    Call MPI_BCAST(arr(1,1),size(arr),MPI_INTEGER,com%mas,com%com,ierr)
+        Call MPI_BCAST(arr(1,1),size(arr),MPI_INTEGER,com%mas,com%com,ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_alloc_real1(arr,com)
+    use mpi_basic
+    real(8),intent(inout),allocatable   :: arr(:)
+    class(mpi_type),intent(in)          :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+    integer     :: shp
+
+    shp=0
+    if(com%ismas.and.allocated(arr)) shp=size(arr)
+    Call bcast(shp,com)
+    if(shp>0)then
+        if(.not.allocated(arr)) allocate(arr(shp))
+
+        Call MPI_BCAST(arr,size(arr),MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_alloc_real2(arr,com)
+    use mpi_basic
+    real(8),intent(inout),allocatable   :: arr(:,:)
+    class(mpi_type),intent(in)          :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+    integer     :: shp(2)
+
+    shp=0
+    if(com%ismas.and.allocated(arr)) shp=shape(arr)
+    Call bcast(shp,com)
+    if(all(shp>0))then
+        if(.not.allocated(arr)) allocate(arr(shp(1),shp(2)))
+
+        Call MPI_BCAST(arr(1,1),size(arr),MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_alloc_cmplx2(arr,com)
+    use mpi_basic
+    complex(8),intent(inout),allocatable   :: arr(:,:)
+    class(mpi_type),intent(in)          :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+    integer     :: shp(2)
+
+    shp=0
+    if(com%ismas.and.allocated(arr)) shp=shape(arr)
+    Call bcast(shp,com)
+    if(all(shp>0))then
+        if(.not.allocated(arr)) allocate(arr(shp(1),shp(2)))
+
+        Call MPI_BCAST(arr,size(arr),MPI_DOUBLE_COMPLEX,com%mas,com%com,ierr)
+    endif
 #else
     continue
 #endif
@@ -169,14 +241,38 @@ subroutine bcast_alloc_cmplx3(arr,com)
     if(com%ismas.and..not.allocated(arr)) ERROR STOP "FAILED TO BCAST SINCE INITIAL ARRAY IS NOT ALLOCATED"
     if(com%ismas) shp=shape(arr)
     Call bcast(shp,com)
-    if(.not.allocated(arr)) allocate(arr(shp(1),shp(2),shp(3)))
+    if(all(shp>0))then
+        if(.not.allocated(arr)) allocate(arr(shp(1),shp(2),shp(3)))
 
-    Call MPI_BCAST(arr(1,1,1),size(arr),MPI_DOUBLE_COMPLEX,com%mas,com%com,ierr)
+        Call MPI_BCAST(arr(1,1,1),size(arr),MPI_DOUBLE_COMPLEX,com%mas,com%com,ierr)
+    endif
 #else
     continue
 #endif
 end subroutine
 
+subroutine bcast_alloc_character_len(arr,len_in,com)
+    use mpi_basic
+    integer,intent(in)                              :: len_in
+    character(len=len_in),intent(inout),allocatable :: arr(:)
+    class(mpi_type),intent(in)                      :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+    integer     :: shp
+
+    shp=0
+    if(com%ismas.and.allocated(arr)) shp=size(arr)
+
+    Call bcast(shp,com)
+    if(shp>0)then
+        if(.not.allocated(arr)) allocate(arr(shp))
+
+        Call MPI_BCAST(arr,size(arr)*len(arr),MPI_CHARACTER,com%mas,com%com,ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
 
 subroutine bcast_alloc_int(arr,com)
     use mpi_basic
@@ -186,16 +282,68 @@ subroutine bcast_alloc_int(arr,com)
     integer     :: ierr
     integer     :: shp
 
-    if(com%ismas.and..not.allocated(arr)) ERROR STOP "FAILED TO BCAST SINCE INITIAL ARRAY IS NOT ALLOCATED"
-    if(com%ismas) shp=size(arr)
+    shp=0
+    if(com%ismas.and.allocated(arr)) shp=size(arr)
     Call bcast(shp,com)
-    if(.not.allocated(arr)) allocate(arr(shp))
+    if(shp>0)then
+        if(.not.allocated(arr)) allocate(arr(shp))
 
-    Call MPI_BCAST(arr(1),shp,MPI_INTEGER,com%mas,com%com,ierr)
+        Call MPI_BCAST(arr(1),shp,MPI_INTEGER,com%mas,com%com,ierr)
+    endif
 #else
     continue
 #endif
 end subroutine
+
+
+subroutine bcast_alloc_character0(arr,com)
+    use mpi_basic
+    character(len=:),intent(inout),allocatable      :: arr
+    class(mpi_type),intent(in)                      :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+    integer     :: shp
+
+    shp=0
+    if(com%ismas)  shp=len(arr)
+
+    Call bcast(shp,com)
+    if(shp>0)then
+        if(.not.allocated(arr)) allocate(character(len=shp) :: arr)
+
+        Call MPI_BCAST(arr,len(arr),MPI_CHARACTER,com%mas,com%com,ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_alloc_character(arr,com)
+    use mpi_basic
+    character(len=:),intent(inout),allocatable      :: arr(:)
+    class(mpi_type),intent(in)                      :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+    integer     :: shp(2)
+
+    shp=0
+    if(com%ismas.and.allocated(arr))then
+        shp=[len(arr),size(arr)]
+        write(*,*) shp, "DASDA"
+        STOP "FASFAS"
+    endif
+
+    Call bcast(shp,com)
+    if(all(shp>0))then
+        if(.not.allocated(arr)) allocate(character(len=shp(1)) :: arr(shp(2)))
+
+        Call MPI_BCAST(arr,size(arr)*len(arr),MPI_CHARACTER,com%mas,com%com,ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
+
 
 
 
@@ -285,6 +433,18 @@ subroutine bcast_real1(arr,com)
     integer     :: ierr
 
     Call MPI_BCAST(arr(1),size(arr),MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_complex(val,com)
+    complex(8),intent(inout)    :: val
+    class(mpi_type),intent(in)  :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+
+    Call MPI_BCAST(val,1,MPI_DOUBLE_COMPLEX,com%mas,com%com,ierr)
 #else
     continue
 #endif
