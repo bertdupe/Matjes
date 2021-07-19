@@ -8,7 +8,7 @@ use m_distribution, only: int_distrib,fermi_distrib,dE_fermi_distrib
 use m_save_state_r,only: TB_write_states_r, TB_read_states_r
 use m_init_Hr
 use m_H_tb_public
-use m_dos
+use m_dos_util
 use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
 private

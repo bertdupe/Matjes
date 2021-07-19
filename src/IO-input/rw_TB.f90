@@ -27,23 +27,40 @@ end subroutine
 
 subroutine read_TB_highs(io,fname,highs)
     use m_convert
+    use m_io_read_util
     integer,intent(in)                          :: io
     character(len=*), intent(in)                :: fname
     type(parameters_TB_IO_highs),intent(out)    :: highs
 
-    real(8),allocatable     ::  tmp(:,:)
+    character(len=200)      :: string_tmp, label_tmp
+    integer                 :: i, stat
+    logical                 :: success
 
     call get_parameter(io,fname,'N_highsym',highs%N_highsym)
     if(highs%N_highsym < 1)then
         return
     endif
     allocate(highs%k_highs(3,highs%N_highsym),source=0.0d0)
-    allocate(tmp(highs%N_highsym,3),source=0.0d0)  !necessary because the order of reading in get_parameter
-    call get_parameter(io,fname,'k_highs_pts',highs%N_highsym,3,tmp)
-    highs%k_highs=transpose(tmp)
-    deallocate(tmp)
+    allocate(highs%k_highs_label(highs%N_highsym))
+    highs%k_highs_label='"label"'
     allocate(highs%k_highs_frac(highs%N_highsym),source=1)
     call get_parameter(io,fname,'k_highs_frac',highs%N_highsym,highs%k_highs_frac)
+    !read high symmetry positions
+    Call set_pos_entry(io,fname,'k_highs_pts',success)
+    read (io,*)
+    do i=1,highs%N_highsym
+        read (io,'(a)',iostat=stat) string_tmp
+        if (stat /= 0) ERROR STOP "Failed to read line after k_highs_pts, check input"
+        read(string_tmp,*,iostat=stat) highs%k_highs(:,i), highs%k_highs_frac(i), label_tmp
+        if(stat==0) highs%k_highs_label(i)=label_tmp
+        if(stat/=0)then
+            read(string_tmp,*,iostat=stat) highs%k_highs(:,i), highs%k_highs_frac(i)
+        endif
+        if(stat/=0)then
+            read(string_tmp,*,iostat=stat) highs%k_highs(:,i)
+        endif
+        if(stat/=0) ERROR STOP "Failed to read k_highs_pts input, no 3 reals?"
+    enddo
     call get_parameter(io,fname,'k_highs_dist',highs%aim_dist)
 end subroutine 
 

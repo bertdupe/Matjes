@@ -2,7 +2,7 @@ module m_H_tb_dense
 use m_H_tb_base
 use m_H_tb_coo
 private
-
+public H_tb_dense
 type,extends(H_TB_coo_based),abstract :: H_tb_dense
     private
     complex(8),allocatable :: H(:,:)
@@ -12,6 +12,7 @@ type,extends(H_TB_coo_based),abstract :: H_tb_dense
     procedure   :: copy_child
     procedure   :: destroy_child
     procedure   :: mv
+    procedure   :: get_H
 end type
 
 #ifdef CPP_LAPACK
@@ -64,6 +65,13 @@ subroutine set_from_Hcoo(this,H_coo)
         this%H(rowind(i),colind(i))=this%H(rowind(i),colind(i))+val(i)
     enddo
 end subroutine 
+
+subroutine get_H(this,H)
+    class(H_tb_dense),intent(inout) :: this
+    complex(8),intent(inout)        :: H(this%dimH,this%dimH)
+
+    H=this%H
+end subroutine
 
 subroutine mv(this,Hout)
     class(H_tb_dense),intent(inout) :: this

@@ -36,9 +36,9 @@ type io_parameter
 ! Track singularities in a vector field
      logical :: io_tracker=.false.
 ! frequency of writting of the data in convergence.dat and EM.dat
-     integer :: io_writing
+     integer :: io_writing=100
 ! frequency for writting the plotting data (magnetization density and so one)
-     integer :: io_frequency
+     integer :: io_frequency=100
 ! calculate topological charged
     logical :: calc_topo=.true.
 contains

@@ -25,19 +25,19 @@ end type
 type parameters_TB_IO_H
     !parameters directly for the Hamiltonian
     !new parameters
-    type(TB_hopping),allocatable    :: hop_io(:)   !hopping parameters
-    type(TB_delta),allocatable      :: del_io(:)   !delta parameters
-    type(TB_Jsd),allocatable        :: Jsd(:)   !delta parameters
-    type(TBio_delta_onsite_scf),allocatable ::  del_scf_io(:)   !self-consistent delta on-site parameters
-    type(TBio_defect),allocatable   ::  defect(:)    !defect onsite-terms in super-cell
+    type(TB_hopping),allocatable                :: hop_io(:)        !hopping parameters
+    type(TB_delta),allocatable                  :: del_io(:)        !delta parameters
+    type(TB_Jsd),allocatable                    :: Jsd(:)           !delta parameters
+    type(TBio_delta_onsite_scf),allocatable     :: del_scf_io(:)    !self-consistent delta on-site parameters
+    type(TBio_defect),allocatable               :: defect(:)        !defect onsite-terms in super-cell
 
     type(Htb_inp)       ::  hop
     type(Hdelta)        ::  del
 
     !wann_io xor (wann_io_up and wann_io_dn) should be specified
-    type(wann_dat)      ::  wann_io !full wannier input data
-    type(wann_dat)      ::  wann_io_up !wannier input for up-states
-    type(wann_dat)      ::  wann_io_dn !wannier input for down-states
+    type(wann_dat)      ::  wann_io     !full wannier input data
+    type(wann_dat)      ::  wann_io_up  !wannier input for up-states
+    type(wann_dat)      ::  wann_io_dn  !wannier input for down-states
 
     real(8)             ::  Efermi=0.0d0   !Fermi energy added to the tight-binding hamiltonian
     integer             ::  nspin=1         !number of spins (1 or 2) for each orbital
@@ -90,10 +90,11 @@ type parameters_TB_IO_DOS
 end type
 
 type parameters_TB_IO_HIGHS
-   integer      ::  N_highsym=-1               !Number of high symmetry points to be connected
-   real(8),allocatable     ::  k_highs(:,:)    !(3,Nighsym): high symmetry kpoints that are to be connected
-   integer,allocatable     ::  k_highs_frac(:) !(Nighsym): integer fractions to apply on input k_highs
-   real(8)                 ::  aim_dist=1.0d-2 !aimed k-space distance between neighboring points along high symmetry line
+   integer      ::  N_highsym=-1                    !Number of high symmetry points to be connected
+   real(8),allocatable              ::  k_highs(:,:)         !(3,Nighsym): high symmetry kpoints that are to be connected
+   integer,allocatable              ::  k_highs_frac(:)      !(Nighsym): integer fractions to apply on input k_highs
+   character(len=50),allocatable    ::  k_highs_label(:)     !high symmetry label names
+   real(8)                          ::  aim_dist=1.0d-2      !aimed k-space distance between neighboring points along high symmetry line
 end type
 
 type parameters_TB_IO_OCC_MULT
@@ -154,14 +155,14 @@ type parameters_TB_IO_FLOW
 end type
 
 type parameters_TB
-    type(parameters_TB_IO_H)            ::  io_H
-    type(parameters_TB_IO_EF)           ::  io_ef
-    type(parameters_TB_IO_DOS)          ::  io_dos
-    type(parameters_TB_IO_HIGHS)        ::  io_highs
-    type(parameters_TB_IO_flow)         ::  flow
-    type(parameters_TB_Hsolve)          ::  H
-    type(parameters_TB_IO_OCC_MULT)     ::  io_occ_mult
-    type(parameters_TB_IO_kint)       ::  io_kmesh
+    type(parameters_TB_IO_H)            :: io_H
+    type(parameters_TB_IO_EF)           :: io_ef
+    type(parameters_TB_IO_DOS)          :: io_dos
+    type(parameters_TB_IO_HIGHS)        :: io_highs
+    type(parameters_TB_IO_flow)         :: flow
+    type(parameters_TB_Hsolve)          :: H
+    type(parameters_TB_IO_OCC_MULT)     :: io_occ_mult
+    type(parameters_TB_IO_kint)         :: io_kmesh
     logical         ::  is_mag=.False. !Hamiltonian has spins
     logical         ::  is_sc=.False. !Hamiltonian is superconducting-> everything doubles to include creators and destructors
 contains

@@ -1,4 +1,5 @@
 module m_kgrid_int
+!module which contains the k_mesh_int type used to get a kgrid based on larger grid that only contains the kpoints where there is an energy state within and energy window
 use m_kgrid, only: k_grid_t, kmesh_t
 use m_Hk, only: Hk_inp_t,Hk_eval
 use m_tb_types

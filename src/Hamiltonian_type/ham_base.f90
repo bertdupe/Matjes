@@ -300,8 +300,8 @@ contains
         endif
         Call this%mode_l%bcast(comm)
         Call this%mode_r%bcast(comm)
-        Call MPI_Bcast(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_l_single, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_r_single, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call this%finish_setup()
 #else
         continue
@@ -529,8 +529,8 @@ subroutine send_base(this,ithread,tag,com)
     Call this%mode_l%send(ithread,tag,com)
     Call this%mode_r%send(ithread,tag,com)
 
-    Call MPI_SEND(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
-    Call MPI_SEND(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_l_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_r_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
 #else
     continue
 #endif
