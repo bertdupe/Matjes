@@ -1,6 +1,6 @@
 module m_H_tb_coo
 use m_H_tb_base
-use m_TB_types, only: parameters_ham_init 
+use m_ham_init_type, only: parameters_ham_init 
 implicit none
 private
 public H_TB_coo, H_TB_coo_based

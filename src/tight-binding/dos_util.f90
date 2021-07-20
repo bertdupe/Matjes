@@ -1,8 +1,8 @@
-module m_dos
+module m_dos_util
 use m_TB_types, only: parameters_TB_IO_DOS
 implicit none
 private
-public dos_nc, dos_sc, dos_bnd_nc, dos_bnd_sc, dos_orb_nc, dos_orb_sc
+public dos_nc, dos_sc, dos_bnd_nc, dos_bnd_sc, dos_orb_nc, dos_orb_sc, dos_t
 real(8),parameter       ::  dist_inc=8.0d0  !how many sigma away from my the energy entries are still considered
 
 type,abstract   :: dos_t
@@ -16,6 +16,7 @@ type,abstract   :: dos_t
 contains
     procedure :: init => init_dos
     procedure :: print=> print_dos
+    procedure :: mpi_sum=> mpi_sum_dos
 end type
 
 type,extends(dos_t) ::  dos_nc
@@ -123,6 +124,7 @@ subroutine add_dos_nc(this,eigval)
 end subroutine
 
 subroutine add_dos_bnd_nc(this,eigval,eigvec)
+    !weighted with the projections on a set contiguous set of orbitals (this%bnd(1):this%bnd(2)), irrespective of supercell
     class(dos_bnd_nc),intent(inout) :: this
     real(8),intent(in)              :: eigval(:)
     complex(8),intent(in)           :: eigvec(:,:)
@@ -143,6 +145,7 @@ subroutine add_dos_bnd_nc(this,eigval,eigvec)
 end subroutine
 
 subroutine add_dos_orb_nc(this,eigval,eigvec)
+    !weighted with the projections on one orbital in the whole supercell (this%orb::this%freq)
     class(dos_orb_nc),intent(inout) :: this
     real(8),intent(in)              :: eigval(:)
     complex(8),intent(in)           :: eigvec(:,:)
@@ -271,6 +274,21 @@ subroutine add_dos_orb_sc(this,eigval,eigvec)
     this%N_entry=this%N_entry+1
 end subroutine
 
+
+subroutine mpi_sum_dos(this,comm) 
+    use mpi_util 
+    class(dos_t),intent(inout)      :: this
+    type(mpi_type),intent(in)       :: comm     !mpi communicator
+    integer     :: ierr
+#ifdef CPP_MPI
+
+    Call reduce_sum(this%N_entry, comm)
+    Call reduce_sum(this%dos, comm)
+#else
+    continue
+#endif
+
+end subroutine
 
 
 subroutine add_gauss(val,pref,E,dos,sigma)

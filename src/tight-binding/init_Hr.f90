@@ -1,7 +1,7 @@
 module m_init_Hr
 use m_derived_types, only: lattice
 use m_H_tb_public
-use m_tb_types ,only: parameters_TB_Hsolve,parameters_TB_IO_H
+use m_tb_types ,only: parameters_TB_IO_H
 use m_types_tb_h_inp 
 use m_neighbor_type, only: neighbors
 use m_init_H

@@ -33,7 +33,6 @@ subroutine wavefunc_evolution_run(lat,ext_param,H,comm)
     !wrapper to first initialize all spin-dynamics parameters and distribute on the different threads
     use m_TB_types, only: parameters_TB
     use m_tightbinding_r, only: tightbinding_r
-    use m_rw_TB, only:  rw_TB
     use m_init_Hr
     use m_constants, only: hbar
     type(lattice), intent(inout)                :: lat
@@ -68,10 +67,14 @@ subroutine wavefunc_evolution_run(lat,ext_param,H,comm)
     integer                 :: io_dat
 
 
-
     !read tight-binding io parameter from input and set TB_params(m_tb_params)
-    call rw_TB(tb_par,'input')
-    Call tb_par%init(lat)
+    if(comm%ismas)then
+        call tb_par%read_file('input')
+        Call tb_par%init(lat)
+    endif
+    Call tb_par%bcast(comm)
+
+
     Call get_Hr(lat,tb_par%io_H,tbH)
     Call init_wavefunc_EF(lat,tbH,300.0d0*k_b)
 

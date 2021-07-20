@@ -13,7 +13,6 @@ src/IO-input/rw_lattice.f90
 src/IO-input/MC_io.f90
 src/IO-input/rw_minimize.f90
 src/IO-input/rw_motif.f90
-src/IO-input/rw_TB.f90
 src/IO-input/rw_zdir.f90
 src/IO-input/write_tableNN.f90
 )

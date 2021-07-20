@@ -119,6 +119,7 @@ subroutine atom_bcast(this,comm)
     Call MPI_Bcast(this%charge  , 1             , MPI_DOUBLE_PRECISION, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%mass    , 1             , MPI_DOUBLE_PRECISION, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%use_ph  , 1             , MPI_LOGICAL         , comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%orbitals, 1             , MPI_INTEGER         , comm%mas, comm%com,ierr)
 #else
     continue
 #endif

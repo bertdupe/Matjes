@@ -4,19 +4,22 @@ use mpi
 #endif
 use,intrinsic :: iso_c_binding, only: c_bool
 public
-private :: set,c_bool
+private :: set,c_bool, set_from_distv,get_loop_bnd
 type        ::   mpi_type
-    integer         :: id=0             !id
+    !basic mpi=type which contains the main parameters for broadcasting and quick checks
+    integer         :: id=0             !id (0:Np-1)
     integer         :: Np=1             !number processors
     integer         :: com=1            !communicator
     integer         :: mas=0            !master
     logical(c_bool) :: ismas=.true.     !is master
 contains
-    procedure   :: set
-    procedure   :: set_from_distv
+    procedure   :: set              !constuctor using an MPI_communicator ( sets id etc.)
+    procedure   :: set_from_distv   !constructor for the basic mpi_type from the more specific mpi_distv type
+    procedure   :: get_loop_bnd
 end type
 
 type,extends(mpi_type)  :: mpi_distv
+    !type which is used for MPI_scatterV and MPI_gatherV, thus also storing relative counts and displacement of a given array distribution
     integer,allocatable :: cnt(:)       !how many are at each thread
     integer,allocatable :: displ(:)     !displacement for each thread
 contains
@@ -28,7 +31,33 @@ type(mpi_type)  ::  mpi_world
 
 contains
 
+subroutine get_loop_bnd(this,N,bnd)
+    !subroutine which gives the loop boundaries when distributing a single array with N indices (1:N)
+    !without any fancy stuff, used for most basic parallelizations
+    !the indices are distributed in contiguous array of almost equal size, adding the remained to the threads with smaller id
+    !if less N than number of MPI-threads, return 0 as second entry for unused process id's
+    class(mpi_type),intent(in)      :: this
+    integer,intent(in)              :: N    !number of entries to be distributed
+    integer,intent(out)             :: bnd(2) !start and end index
+#ifdef CPP_MPI
+    integer         :: remained, div
+
+    if(N>this%Np)then
+        div=N/this%Np
+        remained=N-div*this%Np
+        bnd(1)=1+div* this%id   +min(this%id  ,remained)
+        bnd(2)=  div*(this%id+1)+min(this%id+1,remained)
+    else
+        bnd=this%id+1
+        if(this%id>=N) bnd(2)=0
+    endif
+#else
+    bnd=[1,N]
+#endif
+end subroutine
+
 subroutine set_from_distv(this,distv)
+    !constructor for the basic mpi_type from the more specific mpi_distv type
     class(mpi_type),intent(out)   :: this
     type(mpi_distv),intent(in)    :: distv
 

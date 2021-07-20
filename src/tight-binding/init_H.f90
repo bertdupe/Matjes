@@ -4,7 +4,7 @@ use m_H_tb_public
 use m_types_tb_h_inp 
 use m_delta_onsite
  
-use m_TB_types, only: parameters_ham_init
+use m_ham_init_type, only: parameters_ham_init
 use m_neighbor_type, only: neighbors
 
 private

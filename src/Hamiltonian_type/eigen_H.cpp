@@ -2,6 +2,7 @@
 #include <Eigen/Sparse>
 #include <vector>
 #include <numeric>
+#include <assert.h>
 
 #ifdef CPP_MPI
 #include <mpi.h>
@@ -24,7 +25,6 @@ void eigen_H_init(
 
 	typedef Eigen::Triplet<double,int> T;
 	std::vector<T> tripletList;
-#if 1    
     tripletList.reserve(Nentry);
     for(int i=0; i < Nentry; i++ ){
     	tripletList.push_back(T(rows[i],cols[i],arr_in[i]));
@@ -32,10 +32,6 @@ void eigen_H_init(
     
     Ham =new SpMat{Hdim[0],Hdim[1]};
     Ham->setFromTriplets(tripletList.begin(), tripletList.end());
-#else
-    std::cerr << "ERROR eigen_H initialization temporarily disabled.\nThere is some problem with the debug compilation, but the release works so it could be used there"<< std::endl;
-    throw 4;
-#endif
 }
 
 void eigen_get_transpose(
@@ -53,7 +49,7 @@ void eigen_get_transpose(
 void eigen_H_send(
     const int& id,
     const int& tag,
-    const SpMat* &Ham,
+    SpMat* &Ham,
     const MPI_Fint* comm_in){
 
     MPI::Intracomm comm = MPI_Comm_f2c(*comm_in);
@@ -66,9 +62,13 @@ void eigen_H_send(
 
     int ierr;
     ierr=MPI_Send(shape, 3, MPI_LONG, id, tag,  comm);
+    assert(ierr==MPI_SUCCESS);
     ierr=MPI_Send(Ham->valuePtr(),      nnz,  MPI_DOUBLE, id, tag, comm);
+    assert(ierr==MPI_SUCCESS);
     ierr=MPI_Send(Ham->innerIndexPtr(), nnz,  MPI_INT,    id, tag, comm);
+    assert(ierr==MPI_SUCCESS);
     ierr=MPI_Send(Ham->outerIndexPtr(), cols, MPI_INT,    id, tag, comm);
+    assert(ierr==MPI_SUCCESS);
 }
 
 void eigen_H_recv(
@@ -88,8 +88,11 @@ void eigen_H_recv(
     Ham =new SpMat{rows,cols};
     Ham->reserve(nnz);
     ierr=MPI_Recv(Ham->valuePtr(),      nnz,  MPI_DOUBLE, id, tag, comm, &status);
+    assert(ierr==MPI_SUCCESS);
     ierr=MPI_Recv(Ham->innerIndexPtr(), nnz,  MPI_INT,    id, tag, comm, &status);
+    assert(ierr==MPI_SUCCESS);
     ierr=MPI_Recv(Ham->outerIndexPtr(), cols, MPI_INT,    id, tag, comm, &status);
+    assert(ierr==MPI_SUCCESS);
     Ham->outerIndexPtr()[cols] = nnz;
 }
 
@@ -118,8 +121,11 @@ void eigen_H_bcast(
     }
     int ierr;
     ierr=MPI_Bcast(Ham->valuePtr(),nnz ,MPI_DOUBLE,mas, comm);
+    assert(ierr==MPI_SUCCESS);
     ierr=MPI_Bcast(Ham->innerIndexPtr(),nnz ,MPI_INT,mas, comm);
+    assert(ierr==MPI_SUCCESS);
     ierr=MPI_Bcast(Ham->outerIndexPtr(),cols ,MPI_INT,mas, comm);
+    assert(ierr==MPI_SUCCESS);
     Ham->outerIndexPtr()[cols] = nnz;
 }
 
@@ -156,10 +162,11 @@ void eigen_H_distribute(
     std::partial_sum(nnz_count.begin(), nnz_count.end()-1, displ.begin()+1);
 
     if(not ismas){
-        *Ham =new SpMat{rows,cols};
-        (*Ham)->reserve(nnz_count[id]);
+        Ham =new SpMat{rows,cols};
+        Ham->reserve(nnz_count[id]);
     }
     ierr=MPI_Bcast(Ham->outerIndexPtr(),cols ,MPI_INT,mas, comm);
+    assert(ierr==MPI_SUCCESS);
     auto point=Ham->outerIndexPtr();
     for(int i=0;i<cols; i++){
         point[i]=point[i]-displ[id];
@@ -171,14 +178,18 @@ void eigen_H_distribute(
         SpMat* tmp =new SpMat{rows,cols};
         (tmp)->reserve(nnz_count[id]);
         ierr=MPI_Scatterv(Ham->innerIndexPtr(), nnz_count.data(), displ.data(), MPI_INT,    (*tmp).innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        assert(ierr==MPI_SUCCESS);
         ierr=MPI_Scatterv(Ham->valuePtr(),      nnz_count.data(), displ.data(), MPI_DOUBLE, (*tmp).valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+        assert(ierr==MPI_SUCCESS);
         std::memcpy((*tmp).outerIndexPtr(),Ham->outerIndexPtr(),cols*sizeof(Eigen::SparseMatrix<double>::StorageIndex));
-        delete *Ham;
-        *Ham=tmp;
+        delete Ham;
+        Ham=tmp;
     }
     else{
         ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_INT,    Ham->innerIndexPtr(), nnz_count[id], MPI_INT,    mas, comm);
+        assert(ierr==MPI_SUCCESS);
         ierr=MPI_Scatterv(NULL,                    nnz_count.data(), displ.data(), MPI_DOUBLE, Ham->valuePtr(),      nnz_count[id], MPI_DOUBLE, mas, comm);
+        assert(ierr==MPI_SUCCESS);
     }
     Ham->outerIndexPtr()[cols] = nnz_count[id];
     Ham->makeCompressed();

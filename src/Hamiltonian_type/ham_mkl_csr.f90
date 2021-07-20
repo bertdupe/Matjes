@@ -58,7 +58,7 @@ subroutine set_work_single(this,work,order)
     class(t_H_mkl_csr),intent(inout)        :: this
     class(work_ham_single),intent(inout)    :: work 
     integer,intent(in)                      :: order
-    integer     :: sizes(2)
+    integer     :: sizes(N_work)
 
     if(.not.this%is_set()) ERROR STOP "cannot set work size of hamiltonian if it is not set"
     if(this%row_max==0) ERROR STOP "cannot set work size of t_H_mkl_csr if row_max==0"
@@ -68,7 +68,7 @@ end subroutine
 
 subroutine get_work_size_single(this,sizes)
     class(t_H_mkl_csr),intent(in)   :: this
-    integer,intent(out)             :: sizes(2)
+    integer,intent(out)             :: sizes(N_work)
 
     Call work_size_single(maxval(this%dim_l_single),this%row_max,sizes)
 end subroutine
