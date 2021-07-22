@@ -1,11 +1,98 @@
 module m_netcdf_routine
 use netcdf
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
 IMPLICIT NONE
 
 private
 public :: readgrid,griddims,writegrid,check
+public :: netcdf_type
+
+type netcdf_type
+    integer     :: ncid=0    !netcdf id 
+    integer     :: dims(3)  =[0,0,0]   !number of entries in each direction 
+    integer     :: dim_id(3)=[0,0,0]   !netcdf-id for positions
+    integer     :: var_id              !netcdf-id for actual variable 
+    integer     :: N_entries=0  !number of times the state has been written (does not do anything as there is no time yet)
+    
+    logical     :: is_open=.false.  !file is open
+contains
+    procedure   :: file_open
+    procedure   :: file_write
+    procedure   :: file_close
+end type
 
 contains
+
+subroutine file_open(this,fname,var_name,dims)
+    class(netcdf_type),intent(inout)    :: this
+    character(len=*),intent(in)         :: fname
+    character(len=*),intent(in)         :: var_name
+    integer,intent(in)                  :: dims(3)
+
+    integer     :: xpos(dims(1)),ypos(dims(2)), zpos(dims(3))
+    integer     :: pos_id(3), i
+
+    if(this%is_open)then
+        write(error_unit,'(2/,A)')  "Trying to open an opened netcdf-file"
+        ERROR STOP
+    endif
+
+    CALL check(nf90_create(fname, NF90_CLOBBER, this%ncid))
+    this%dims=dims
+    this%is_open=.true.
+
+    !Define the dimensions.
+    CALL check(nf90_def_dim(this%ncid, "lon",   this%dims(1),   this%dim_id(1)))
+    CALL check(nf90_def_dim(this%ncid, "lat",   this%dims(2),   this%dim_id(2)))
+    CALL check(nf90_def_dim(this%ncid, "level", this%dims(3),   this%dim_id(3)))
+!    CALL check(nf90_def_dim(this%ncid, "time",  NF90_UNLIMITED, this%dim_id(4)))
+
+    !Define variables
+    !!coordinate variables with regular integer position array
+    CALL check(nf90_def_var(this%ncid, "lon"  , NF90_INT, this%dim_id(1), pos_id(1)))
+    CALL check(nf90_def_var(this%ncid, "lat"  , NF90_INT, this%dim_id(2), pos_id(2)))
+    CALL check(nf90_def_var(this%ncid, "level", NF90_INT, this%dim_id(3), pos_id(3)))
+    !!coordinate variables with regular integer position array
+
+    !TODO add actual variable
+
+    CALL check(nf90_enddef(this%ncid)) !End Definitions
+
+    !write position array
+    xpos=[(i,i=1,this%dims(1))] 
+    ypos=[(i,i=1,this%dims(2))] 
+    zpos=[(i,i=1,this%dims(3))] 
+
+    CALL check(nf90_put_var(this%ncid, this%dim_id(1), xpos))
+    CALL check(nf90_put_var(this%ncid, this%dim_id(2), ypos))
+    CALL check(nf90_put_var(this%ncid, this%dim_id(3), zpos))
+end subroutine    
+
+subroutine file_close(this)
+    class(netcdf_type),intent(inout)    :: this
+
+    if(.not.this%is_open)then
+        write(error_unit,'(2/,A)')  "Trying to close to an unopened netcdf-file"
+        ERROR STOP
+    endif
+    this%is_open=.false.
+    CALL check(nf90_close(this%ncid))
+end subroutine
+
+subroutine file_write(this,dat)
+    class(netcdf_type),intent(inout)    :: this
+    real(8),intent(in)                  :: dat(:)
+
+    if(.not.this%is_open)then
+        write(error_unit,'(2/,A)')  "Trying to write to an unopened netcdf-file"
+        ERROR STOP
+    endif
+
+    !TODO, write to the actual data 
+
+    this%N_entries=this%N_entries+1
+end subroutine
+
 
 !WRITEGRID - write a netCDF gridfile
 !:=========================================================================
@@ -25,7 +112,6 @@ CALL check(nf90_create(outfile, NF90_CLOBBER, ncid))
 CALL check(nf90_def_dim(ncid, "lon", NX, x_dimid))
 CALL check(nf90_def_dim(ncid, "lat", NY, y_dimid))
 CALL check(nf90_def_dim(ncid, "level", NZ, z_dimid))
-!Define coordinate variables
 CALL check(nf90_def_var(ncid, "lon", NF90_INT, x_dimid, x_varid))
 CALL check(nf90_def_var(ncid, "lat", NF90_INT, y_dimid, y_varid))
 CALL check(nf90_def_var(ncid, "level", NF90_INT, z_dimid, z_varid))
