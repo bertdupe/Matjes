@@ -1,5 +1,6 @@
 module m_stark
 implicit none
+character(len=*),parameter  :: ham_desc="Stark energy"
 private
 public :: get_stark_E,read_stark_input
 
@@ -63,7 +64,7 @@ subroutine get_stark_E(Ham,io,lat)
             connect(:,i)=i
         enddo
         Call Ham%init_connect(connect,val_tmp,ind_tmp,"EU",lat,1)
-        Ham%desc="Stark energy"
+        Ham%desc=ham_desc
         !set modes
         Call mode_set_rank1(Ham%mode_l,lat,"E")
         Call mode_set_rank1(Ham%mode_r,lat,"U")

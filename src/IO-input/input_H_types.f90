@@ -8,6 +8,8 @@ type :: Hr_pair !hamiltonian real pair
     integer     ::  attype(2)=[0,0] !atom types which are connected
     integer,allocatable     ::  dist(:)    !nth distance (1=nearest neighbor)
     real(8),allocatable     ::  val(:)     !value for this pair of atom-types at distance(dist)
+contains 
+    procedure   ::  prt=>prt_Hr_pair
 end type
 
 type :: Hr_pair_single !hamiltonian real pair
@@ -26,6 +28,8 @@ type :: Hr_triple !hamiltonian real pair
     integer     ::  attype(3)=[0,0,0] !atom types which are connected
     integer,allocatable     ::  dist(:)    !nth distance (1=nearest neighbor)
     real(8),allocatable     ::  val(:)     !value for this pair of atom-types at distance(dist)
+contains 
+    procedure   ::  prt=>prt_Hr_triple
 end type
 
 
@@ -227,6 +231,50 @@ subroutine reduce_Hr_pair(Hr_pair_in,Hr_pair_out)
         N_pair(j)=N_pair(j)+1
         Hr_pair_out(j)%val(N_pair(j))=Hr_pair_in(i)%val
         Hr_pair_out(j)%dist(N_pair(j))=Hr_pair_in(i)%dist
+    enddo
+end subroutine
+
+subroutine prt_Hr_pair(this,io,fmt_pre)
+    class(Hr_pair),intent(in)               :: this
+    integer,intent(in)                      :: io
+    character(len=*),intent(in),optional    :: fmt_pre
+    integer                                 :: i
+    character(len=:),allocatable            :: pre
+
+    if(present(fmt_pre))then    
+        pre=fmt_pre
+    else
+        pre=""
+    endif
+
+    write(io,'('//pre//'A)') "Hamiltonian pair data:"
+    write(io,'('//pre//'2X,A,2I6)') "atom types:",this%attype
+    write(io,'('//pre//'2X,A,I6)') "number of interactions: ",size(this%dist)
+    write(io,'('//pre//'2X,A)') "distance    value"
+    do i=1,size(this%dist)
+        write(io,'('//pre//'I6,E16.8)') this%dist(i),this%val(i)
+    enddo
+end subroutine
+
+subroutine prt_Hr_triple(this,io,fmt_pre)
+    class(Hr_triple),intent(in)             :: this
+    integer,intent(in)                      :: io
+    character(len=*),intent(in),optional    :: fmt_pre
+    integer                                 :: i
+    character(len=:),allocatable            :: pre
+
+    if(present(fmt_pre))then    
+        pre=fmt_pre
+    else
+        pre=""
+    endif
+
+    write(io,'('//pre//'A)') "Hamiltonian triple data:"
+    write(io,'('//pre//'2X,A,2I6)') "atom types:",this%attype
+    write(io,'('//pre//'2X,A,I6)') "number of interactions: ",size(this%dist)
+    write(io,'('//pre//'2X,A)') "distance    value"
+    do i=1,size(this%dist)
+        write(io,'('//pre//'I6,E16.8)') this%dist(i),this%val(i)
     enddo
 end subroutine
 end module

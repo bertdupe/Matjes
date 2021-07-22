@@ -23,9 +23,11 @@ type :: neighbors
 end type
 
 contains
-subroutine prt(neigh,io_in)
+subroutine prt(neigh,io_in,fmt_pre)
     class(neighbors),intent(in) :: neigh
     integer,intent(in),optional :: io_in
+    character(len=*),intent(in),optional    :: fmt_pre
+    character(len=:),allocatable            :: pre
 
     integer     :: io
     logical     :: isopen
@@ -33,24 +35,32 @@ subroutine prt(neigh,io_in)
     integer     :: i_dist
     integer     :: i_shell,shell
 
+    if(present(fmt_pre))then    
+        pre=fmt_pre
+    else
+        pre=""
+    endif
+
     io=output_unit
-    if(present(io_in)) io=io_in
+    if(present(io_in))then
+        io=io_in
+    else
+        io=output_unit
+    endif
     inquire(unit=io,opened=isopen)
     if(.not.isopen)then
         write(error_unit,'(AI6)') "Warning, trying to write the neighbor parameters to unopenend unit:",io
         write(error_unit,'(A)') "Aborting printing of neighbor parameters"
         return
     endif
-    write(io,'(//A,2I6,A,I3,A)') "Neighbors for atom types:",neigh%atid," with ", size(neigh%dist)," distances"
+    write(io,'('//pre//'A,2I6,A,I3,A)') "Neighbors for atom types:",neigh%atid," with ", size(neigh%dist)," distances"
     do i_dist=1,size(neigh%dist)
-        write(io,'(AI3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
+        write(io,'('//pre//'AI3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
         do i_shell=1,neigh%Nshell(i_dist)
             shell=i_shell+sum(neigh%Nshell(:i_dist-1))
-            write(io,'(A,2I4,A,3F10.6)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)
+            write(io,'('//pre//'A,2I4,A,3F10.6)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)
         enddo
-        write(io,*)
     enddo
-!    write(io,*)
 end subroutine
 
 subroutine unset(neigh)
@@ -202,7 +212,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     integer                 :: multi(5) !size of each index part
     integer                 :: prod_multi(5) !size of each index part
 
-    success=.true.
+    if(present(success)) success=.true.
     ii=0
     do i2=1,size(atpos2,2)
         do i1=1,size(atpos1,2)
@@ -256,9 +266,17 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     do while(ii<size(dist_start))
         i=i+1
         if(i>size(all_dist))then
-            write(error_unit,'(2/A)') "Failed to get sufficiently many neighboring distances as required by input"
-            success=.false.
-            return
+            if(ii==size(all_dist))then
+                dist_start(ii+1)=i
+                write(error_unit,'(2/A)') "Warning, no larger distance for neighbors found in search setup."
+                write(error_unit,'(A)')   "  Assuming the last entry is the final entry of the shell"
+                write(error_unit,'(A)')   "  This should only happen for very small systems without periodic boundaries"
+                exit
+            else
+                write(error_unit,'(2/A)') "Failed to get sufficiently many neighboring distances as required by input"
+                if(present(success)) success=.false.
+                return
+            endif
         endif
         if(all_dist(i)>vmax+eps)then
             ii=ii+1

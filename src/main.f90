@@ -16,6 +16,7 @@ use m_parallel_tempering
 use m_spindynamics
 use m_molecular_dynamics
 use m_montecarlo
+use m_tightbinding
 use m_entropic
 use m_GNEB, only: GNEB
 use m_write_config, only: write_config
@@ -121,6 +122,16 @@ Implicit None
         call molecular_dynamics(all_lattices,io_simu,ext_param,H_comb,mpi_world)
     endif
 
+        
+    !---------------------------------
+    !  Part which does the tight-binding simulations
+    !---------------------------------
+    
+    if (my_simu%name == 'tight-binding') then
+        call tightbinding(all_lattices,mpi_world)
+    endif
+
+
 
     if(mpi_world%ismas)then
         !---------------------------------
@@ -133,15 +144,6 @@ Implicit None
         if (my_simu%name == 'entropic')then
             STOP "entropic currently not implemented"
             !call entropic(all_lattices,all_lattices%cell,io_simu)
-        endif
-        
-        !---------------------------------
-        !  Part which does the tight-binding simulations
-        !---------------------------------
-        
-        if (my_simu%name == 'tight-binding') then
-            write(6,'(a)') 'entering into the tight-binding routines'
-            call tightbinding(all_lattices,io_simu)
         endif
         
         !---------------------------------

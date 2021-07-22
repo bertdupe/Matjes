@@ -41,7 +41,6 @@ subroutine ind_attype(this,id,ind)
 end subroutine
     
 subroutine copy(this,cell_out)
-use mpi_basic                
     class(t_cell),intent(in)        ::  this
     class(t_cell),intent(inout)     ::  cell_out
 
@@ -50,7 +49,7 @@ use mpi_basic
 end subroutine
 
 subroutine bcast(this,comm)
-use mpi_basic                
+    use mpi_basic                
     class(t_cell),intent(inout)    ::  this
     type(mpi_type),intent(in)       ::  comm
 
@@ -59,6 +58,7 @@ use mpi_basic
     integer     :: N,i
     if(comm%ismas) N=size(this%atomic)
     Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%n_attype, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
     if(.not.comm%ismas) allocate(this%atomic(N))
     do i=1,N
         Call this%atomic(i)%bcast(comm)
@@ -143,7 +143,6 @@ function ind_ph(this,ind_at)
     class(t_cell),intent(in)    ::  this
     integer,intent(in)          ::  ind_at
     integer                     ::  ind_ph
-    integer     ::  i
     
     if(ind_at<1.or.ind_at>size(this%atomic)) ERROR STOP "Trying to get phonon index of atom outside of set atom range"
     if(.not.this%atomic(ind_at)%use_ph) ERROR STOP "Trying to get phonon index of atom with disabled phonons"
@@ -152,18 +151,19 @@ end function
 
 
 function ind_mag(this,ind_at)
+    !returns the magnetic index of a atom in the cell
+    ! atom index -> xth magnetic atom
     class(t_cell),intent(in)    ::  this
     integer,intent(in)          ::  ind_at
     integer                     ::  ind_mag
-    integer     ::  i
     
     if(ind_at<1.or.ind_at>size(this%atomic)) ERROR STOP "Trying to get magnetic moment index of atom outside of set atom range"
     if(this%atomic(ind_at)%moment==0.0d0) ERROR STOP "Trying to get magnetic moment index of non-magnetic atom"
     ind_mag=count(this%atomic(:ind_at)%moment/=0.0d0)
-
 end function
 
 subroutine ind_mag_all(this,ind_Nat)
+    !return the atomic indices of all magnetic atoms in the cell
     class(t_cell),intent(in)    ::  this
     integer,allocatable         ::  ind_Nat(:)
     integer     ::  i

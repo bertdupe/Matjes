@@ -300,8 +300,8 @@ contains
         endif
         Call this%mode_l%bcast(comm)
         Call this%mode_r%bcast(comm)
-        Call MPI_Bcast(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_l_single, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_r_single, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call this%finish_setup()
 #else
         continue
@@ -486,7 +486,7 @@ subroutine set_work_mode(this,work)
     class(t_H_base),intent(inout)   :: this
     class(work_mode),intent(inout)  :: work 
 
-    integer     :: sizes(2)
+    integer     :: sizes(N_work)
 
     sizes=0
     sizes(1)=this%dimH(1)*(size(this%op_l)+2)+this%dimH(2)*(size(this%op_r)+2)      !this size might actually be a bit excessive, check again
@@ -529,8 +529,8 @@ subroutine send_base(this,ithread,tag,com)
     Call this%mode_l%send(ithread,tag,com)
     Call this%mode_r%send(ithread,tag,com)
 
-    Call MPI_SEND(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
-    Call MPI_SEND(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_l_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_r_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
 #else
     continue
 #endif

@@ -1,19 +1,52 @@
 module m_highsym
+    use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
     use m_derived_types, only : lattice
     use m_Hk
     use m_tb_types
+    use m_tb_k_public   !mode that contains the more efficient TB k-space type
     implicit none
     private 
-    public :: plot_highsym_kpts,set_highs_path,plot_highsym_kpts_sc, highsym_clear_path, plot_highsym_kpts_proj
+    public :: plot_highsym_kpts,set_highs_path,plot_highsym_kpts_sc, highsym_clear_path!, plot_highsym_kpts_proj
+    public :: calc_highsym
 
-    integer                 ::  N_kpts
-    real(8),allocatable     ::  kpts(:,:)
-    real(8),allocatable     ::  kpts_dist(:)
-    real(8),allocatable     ::  highs_dist(:)
+    interface plot_highsym_kpts_sc
+        module procedure plot_highsym_kpts_sc_new
+        module procedure plot_highsym_kpts_sc_old
+    end interface
+
+    interface plot_highsym_kpts
+        module procedure plot_highsym_kpts_new
+        module procedure plot_highsym_kpts_old
+    end interface
+
+    integer                             ::  N_kpts
+    real(8),allocatable                 ::  kpts(:,:)
+    real(8),allocatable                 ::  kpts_dist(:)
+    real(8),allocatable                 ::  highs_dist(:)
+    character(len=50),allocatable       ::  highs_label(:)
 
     contains
 
-    subroutine plot_highsym_kpts_sc(Hk_inp,h_io)
+    subroutine calc_highsym(lat,highs,Hk,work,is_sc)
+        type(lattice),intent(in)                :: lat
+        type(parameters_TB_IO_highs),intent(in) :: highs
+        class(H_k_base),intent(inout)           :: Hk
+        type(work_ham),intent(inout)            :: work
+        logical,intent(in)                      :: is_sc
+
+        Call set_highs_path(lat,highs)
+        if(is_sc)then
+            !Call plot_highsym_kpts_sc(Hk_inp,tb_par%io_H) 
+            Call plot_highsym_kpts_sc(Hk,work) 
+        else
+            !Call plot_highsym_kpts(Hk_inp,tb_par%io_H) 
+            Call plot_highsym_kpts(Hk,work) 
+        endif
+        Call highsym_clear_path()
+    end subroutine
+
+
+    subroutine plot_highsym_kpts_sc_old(Hk_inp,h_io)
         type(Hk_inp_t),intent(in)               :: Hk_inp
         type(parameters_TB_IO_H),intent(in)     :: h_io
 
@@ -25,7 +58,7 @@ module m_highsym
         real(8)             ::  weight
 
         if(.not. allocated(kpts)) return
-        write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
+        write(output_unit,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         !get and print data
         open(newunit=io,file=fname//'.dat')
         bnd=Hk_inp%H(1)%dimH/2
@@ -38,6 +71,48 @@ module m_highsym
             deallocate(eval,evec) !allocate at beginning
         enddo
         close(io)
+
+        Call plot_script_sc(fname)
+    end subroutine
+
+    subroutine plot_highsym_kpts_sc_new(Hk,work)
+        class(H_k_base),intent(inout)       :: Hk
+        type(work_ham),intent(inout)        :: work
+
+        real(8),allocatable         :: eval(:)
+        complex(8),allocatable      :: evec(:,:)
+        character(len=*),parameter  ::  fname="highs_plot_sc"
+        integer             ::  io,i,j
+        integer             ::  Nin,Nout, dimH
+        integer             ::  bnd
+        real(8)             ::  weight
+
+        if(.not. allocated(kpts)) return
+        write(output_unit,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
+        !prepare data
+        Nin=Hk%get_size_eval()
+        dimH=Hk%get_dimH()
+        allocate(eval(Nin),source=0.0d0)
+        allocate(evec(dimH,Nin),source=(0.0d0,0.0d0))
+        bnd=dimH/2
+        open(newunit=io,file=fname//'.dat')
+        !calc data and print to file
+        do i=1,N_kpts
+            Call Hk%get_evec(kpts(:,i),Nin,eval,evec,Nout,work) 
+            do j=1,Nout
+                weight=real(dot_product(evec(1:bnd,j),evec(1:bnd,j)),8)
+                write(io,'(3E16.8)') kpts_dist(i),eval(j),weight
+            enddo
+        enddo
+        close(io)
+
+        Call plot_script_sc(fname)
+    end subroutine
+
+
+    subroutine plot_script_sc(fname)
+        character(len=*),intent(in) ::  fname
+        integer             ::  io,i
 
         !write help function
         open(newunit=io,file=fname//'.py')
@@ -55,7 +130,7 @@ module m_highsym
         write(io,'(E16.8,",")') (highs_dist(i) ,i=1,size(highs_dist))
         write(io,'(A)') '])'
         write(io,'(A)') 'ax.set_xticklabels(['
-        write(io,'(A,",")') ('"label"' ,i=1,size(highs_dist))
+        write(io,'(A)') (trim(adjustl(highs_label(i)))//", " ,i=1,size(highs_dist))
         write(io,'(A)') '])'
         write(io,'(A)') 'ax.set_ylabel(r"E-E$_F$ [eV]")'
         write(io,'(A)') 'ax.grid(axis="x",color="black",zorder=1)'
@@ -67,7 +142,7 @@ module m_highsym
     end subroutine
 
 
-    subroutine plot_highsym_kpts(Hk_inp,h_io)
+    subroutine plot_highsym_kpts_old(Hk_inp,h_io)
         type(Hk_inp_t),intent(in)               :: Hk_inp
         type(parameters_TB_IO_H),intent(in)     :: h_io
 
@@ -76,7 +151,7 @@ module m_highsym
         integer             ::  io,i,j
 
         if(.not. allocated(kpts)) return
-        write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
+        write(output_unit,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
         !get and print data
         open(newunit=io,file=fname//'.dat')
         do i=1,N_kpts
@@ -86,13 +161,46 @@ module m_highsym
         enddo
         close(io)
 
+        Call plot_script_nc(fname)
+    end subroutine
+
+    subroutine plot_highsym_kpts_new(Hk,work)
+        class(H_k_base),intent(inout)       :: Hk
+        type(work_ham),intent(inout)        :: work
+
+        integer             :: Nin,Nout
+        real(8),allocatable :: eval(:)
+        character(len=*),parameter  ::  fname="highs_plot"
+        integer             ::  io,i,j
+
+        if(.not. allocated(kpts)) return
+        Nin=Hk%get_size_eval()
+        allocate(eval(Nin))
+        write(output_unit,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
+        !get and print data
+        open(newunit=io,file=fname//'.dat')
+        do i=1,N_kpts
+            Call Hk%get_eval(kpts(:,i),Nin,eval,Nout,work) 
+            write(io,'(2E16.8)') (kpts_dist(i),eval(j),j=1,Nout)
+        enddo
+        close(io)
+        deallocate(eval)
+
+        Call plot_script_nc(fname)
+    end subroutine
+
+
+    subroutine plot_script_nc(fname)
+        character(len=*),intent(in) ::  fname
+        integer             ::  io,i
+
         !write help function
         open(newunit=io,file=fname//'.gnu')
         write(io,'(A)') 'set xtics( \'
         do i=1,size(highs_dist,1)-1
-            write(io,"(A,E16.8,A)") '"label"',highs_dist(i),', \'
+            write(io,"(A,E16.8,A)") trim(adjustl(highs_label(i)))//" ",highs_dist(i),', \'
         enddo
-        write(io,"(A,E16.8,A)") '"label"',highs_dist(size(highs_dist,1)), '\'
+        write(io,"(A,E16.8,A)") trim(adjustl(highs_label(size(highs_label))))//" "  ,highs_dist(size(highs_dist,1)), '\'
         write(io,'(A)') ')'
         write(io,'(A)') 'set grid x linetype -1'
         write(io,'(A)') 'set ylabel "E-E_F"'
@@ -102,42 +210,39 @@ module m_highsym
         close(io)
     end subroutine
 
-    subroutine plot_highsym_kpts_proj(Hk_inp,h_io)
-        type(Hk_inp_t),intent(in)               :: Hk_inp
-        type(parameters_TB_IO_H),intent(in)     :: h_io
-
-        real(8),allocatable     :: eval(:)
-        complex(8),allocatable  :: evec(:,:)
-        character(len=*),parameter  ::  fname="highs_plot_proj"
-        integer             ::  io,i,j,l
-        real(8),allocatable ::  weight(:)
-        integer             ::  norb,ncell,dimH
-        character(len=8)    ::  Norb_char
-
-        if(.not. allocated(kpts)) return
-        write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
-        norb=h_io%norb
-        ncell=h_io%ncell
-        dimH=h_io%dimH
-        allocate(weight(norb))
-        write(Norb_char,'(I8)') norb
-        !get and print data
-        open(newunit=io,file=fname//'.dat')
-        do i=1,N_kpts
-            Call Hk_evec(Hk_inp,kpts(:,i),h_io,eval,evec) 
-            do j=1,size(eval)
-                do l=1,norb !not very elegant...
-!                    write(*,*) evec(l::ncell,j)
-                    weight(l)=real(dot_product(evec(l::norb,j),evec(l::norb,j)),8)
-!                    write(*,*) weight(l)
-!                    STOP
-                enddo
-                write(io,'(2E16.8X1'//norb_char//'E16.8)') kpts_dist(i),eval(j),weight
-            enddo
-            deallocate(eval,evec)   !allocate at beginning
-        enddo
-        close(io)
-    end subroutine
+!   subroutine plot_highsym_kpts_proj(Hk_inp,h_io)
+!       type(Hk_inp_t),intent(in)               :: Hk_inp
+!       type(parameters_TB_IO_H),intent(in)     :: h_io
+!
+!       real(8),allocatable     :: eval(:)
+!       complex(8),allocatable  :: evec(:,:)
+!       character(len=*),parameter  ::  fname="highs_plot_proj"
+!       integer             ::  io,i,j,l
+!       real(8),allocatable ::  weight(:)
+!       integer             ::  norb,ncell,dimH
+!       character(len=8)    ::  Norb_char
+!
+!       if(.not. allocated(kpts)) return
+!       write(*,'(A,I6,A)') "Calculate ",N_kpts,' kpoints on the high symmetry path'
+!       norb=h_io%norb
+!       ncell=h_io%ncell
+!       dimH=h_io%dimH
+!       allocate(weight(norb))
+!       write(Norb_char,'(I8)') norb
+!       !get and print data
+!       open(newunit=io,file=fname//'.dat')
+!       do i=1,N_kpts
+!           Call Hk_evec(Hk_inp,kpts(:,i),h_io,eval,evec) 
+!           do j=1,size(eval)
+!               do l=1,norb !not very elegant...
+!                   weight(l)=real(dot_product(evec(l::norb,j),evec(l::norb,j)),8)
+!               enddo
+!               write(io,'(2E16.8X1'//norb_char//'E16.8)') kpts_dist(i),eval(j),weight
+!           enddo
+!           deallocate(eval,evec)   !allocate at beginning
+!       enddo
+!       close(io)
+!   end subroutine
 
 
     subroutine highsym_clear_path()
@@ -153,6 +258,7 @@ module m_highsym
 
         integer                 ::  N_highsym
         real(8),allocatable     ::  k_highs(:,:)
+        real(8),allocatable     ::  k_highs_print(:,:)
         integer                 ::  i,j
         integer,allocatable     ::  Npath_k(:)
         real(8)                 ::  distance
@@ -170,6 +276,7 @@ module m_highsym
         do i=1,N_highsym
             k_highs(:,i)=k_highs(:,i)/highs%k_highs_frac(i)
         enddo
+        allocate(k_highs_print,source=k_highs)
 
         do i=1,N_highsym
             k_highs(:,i)=matmul(k_highs(:,i),lat%a_sc_inv)
@@ -203,6 +310,15 @@ module m_highsym
         enddo
         allocate(highs_dist(N_highsym))
         highs_dist=kpts_dist(highs_ind)
+        allocate(highs_label,source=highs%k_highs_label)
+
+        write(output_unit,'(A,I4,A,I9,A)') "Initialized high-symmetry k-point path along ",N_highsym," highs-symmetry points with ", N_kpts," points along the path"
+        write(output_unit,'(2XA)') "The high symmetry points in units of the supercell reciprocal lattice are:"
+        write(output_unit,'(2XA)') "    kx              ky              kz                  path position   label"
+        do i=1,N_highsym
+            write(output_unit,'(2X3F16.10,4X,F16.10,4XA)')  k_highs_print(:,i),highs_dist(i),highs_label(i)
+        enddo
+        write(output_unit,'(/)')
     end subroutine 
 
 

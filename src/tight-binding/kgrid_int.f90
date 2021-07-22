@@ -1,4 +1,5 @@
 module m_kgrid_int
+!module which contains the k_mesh_int type used to get a kgrid based on larger grid that only contains the kpoints where there is an energy state within and energy window
 use m_kgrid, only: k_grid_t, kmesh_t
 use m_Hk, only: Hk_inp_t,Hk_eval
 use m_tb_types
@@ -57,7 +58,7 @@ subroutine get_kmesh(kgrid,lat,grid,fname)
             STOP
         endif
     type is (k_grid_t)
-        write(output_unit,'(/A3I6)') "Initializing kgrid with following repetitions:", grid
+        write(output_unit,'(/A,3I6)') "Initializing kgrid with following repetitions:", grid
         Call kgrid%set(lat%a_sc_inv,grid)
     class default
         ERROR STOP "THIS SHOULD NEVER BE REACHED"

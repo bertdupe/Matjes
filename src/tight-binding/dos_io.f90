@@ -17,6 +17,7 @@ contains
     generic :: assignment(=) => dos_assign
     procedure :: print_std => dos_print_bnd
     procedure :: check => dos_check_bnd
+    procedure :: bcast => bcast_bnd
 end type
 
 type dos_orb_io
@@ -30,6 +31,7 @@ contains
     generic :: assignment(=) => dos_assign
     procedure :: print_std => dos_print_orb
     procedure :: check => dos_check_orb
+    procedure :: bcast => bcast_orb
 end type
 
 contains
@@ -228,5 +230,42 @@ subroutine dos_check_orb(this,lat)
     endif
 end subroutine
 
+subroutine bcast_bnd(this,comm)
+    use mpi_basic
+    class(dos_bnd_io), intent(inout)    :: this
+    type(mpi_type),intent(in)           :: comm
+#ifdef CPP_MPI
+    integer     :: val_arr(6), ierr
+    val_arr(1)  =this%atid
+    val_arr(2)  =this%orb
+    val_arr(3)  =this%spin
+    val_arr(4:6)=this%site
+    Call MPI_bcast(val_arr, 6,MPI_INTEGER,comm%mas,comm%com,ierr)
+    this%atid=val_arr(1)  
+    this%orb =val_arr(2)  
+    this%spin=val_arr(3)  
+    this%site=val_arr(4:6)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_orb(this,comm)
+    use mpi_basic
+    class(dos_orb_io), intent(inout)    :: this
+    type(mpi_type),intent(in)           :: comm
+#ifdef CPP_MPI
+    integer     :: val_arr(3), ierr
+    val_arr(1)  =this%atid
+    val_arr(2)  =this%orb
+    val_arr(3)  =this%spin
+    Call MPI_bcast(val_arr, 3,MPI_INTEGER,comm%mas,comm%com,ierr)
+    this%atid=val_arr(1)  
+    this%orb =val_arr(2)  
+    this%spin=val_arr(3)  
+#else
+    continue
+#endif
+end subroutine
 
 end module

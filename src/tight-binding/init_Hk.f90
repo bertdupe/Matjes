@@ -1,7 +1,8 @@
 module m_init_Hk
 use m_derived_types, only: lattice,k_grid_t
 use m_H_tb_public
-use m_tb_types ,only: parameters_TB_Hsolve,parameters_TB_IO_H, parameters_ham_init 
+use m_tb_types ,only: parameters_TB_IO_H 
+use m_ham_init_type ,only: parameters_ham_init 
 use m_types_tb_h_inp 
 use m_neighbor_type, only: neighbors
 use m_init_H

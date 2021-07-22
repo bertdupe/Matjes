@@ -4,12 +4,11 @@ use m_distribution, only: int_distrib,fermi_distrib,dE_fermi_distrib
 use m_occupation, only: calc_occupation
 public occupation_mult
 private
-integer,parameter           ::  io_unit=701
 character(len=*),parameter  ::  subdir='data_state_dist/'
 
 contains
 subroutine occupation_mult(h_par,io_par,eigval,eigvec)
-    type(parameters_TB_Hsolve),intent(in)       :: h_par
+    type(parameters_TB_IO_H),intent(in)         :: h_par
     type(parameters_TB_IO_OCC_MULT),intent(in)  :: io_par
     real(8),intent(in)                          :: eigval(:)
     complex(8),intent(in)                       :: eigvec(:,:)
@@ -21,7 +20,7 @@ subroutine occupation_mult(h_par,io_par,eigval,eigvec)
     !local parameters
     integer                     ::  NE
     real(8),allocatable         ::  E(:)
-    integer                     ::  i
+    integer                     ::  i, io_unit
     character(len=3)            ::  i_char
     procedure(int_distrib),pointer  :: dist_ptr => null()
 
@@ -59,7 +58,7 @@ subroutine occupation_mult(h_par,io_par,eigval,eigvec)
 
 !prepare and check the folder for the output
     call system('mkdir -p '//subdir)
-    open(io_unit,file=subdir//'/test',iostat=i)
+    open(newunit=io_unit,file=subdir//'/test',iostat=i)
     if(i/=i)then
        write(*,*) 'failed to access subdirectory'//subdir
        write(*,*) 'Cannot write state_occupations'
