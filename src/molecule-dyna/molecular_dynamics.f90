@@ -67,7 +67,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    real(8) :: E_potential,E_kinetic,E_total
    real(8),allocatable :: masses_motif(:)
    logical :: used(number_different_order_parameters)
-   real(8) :: damp_S,damp_F       ! solid and fluid damping
+   real(8) :: damp_S,damp_F,damp_NVT       ! solid and fluid damping
 
    ! arrays to take into account the dynamics
    real(8),allocatable,target       :: Du(:,:,:),Du_int(:,:),V_1(:,:),V_2(:,:),acceleration(:,:)
@@ -167,6 +167,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    E_int=ext_param%E_ext
    said_it_once=.False.
    security=0.0d0
+   damp_NVT=0.0d0
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! initialize the simulation
@@ -219,8 +220,9 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
 
            !get forces on the phonon lattice
            Call H%get_eff_field(lat_1,Feff,5)
-           if (kt.gt.1.0d-8) call Bolzmann(kt,damp_F,masses,FT_eff)
-           acceleration=(uamnmfs_to_eVnm*(Feff_3+FT_eff_3)-damp_F*V_1)/masses_3
+!           if (kt.gt.1.0d-8) call Bolzmann(kt,1.0d0,masses,FT_eff)
+           if (kt.gt.1.0d-8) damp_NVT=E_kinetic-kt*1.5d0
+           acceleration=(uamnmfs_to_eVnm*(Feff_3+FT_eff_3)-damp_NVT*V_1-damp_F*V_1)/masses_3
 
            V_2=acceleration*dt/2.0d0+V_1      ! ( v of t+dt/2  )
            lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )
@@ -228,7 +230,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
            !get forces on the phonon lattice
 
            Call H%get_eff_field(lat_2,Feff,5)
-           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_F*V_2)/masses_3
+           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_NVT*V_1-damp_F*V_2)/masses_3
            V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )
 
         !!!!!!!!!!!!!!!!!!!
@@ -260,7 +262,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
             if(gra_log) then
                 call CreateSpinFile(tag,lat_1%u)
                 Call write_config(tag,lat_1)
-                call write_netcdf('test',lat_1,real_time)
+!                call write_netcdf('test',lat_1,real_time)
                 write(6,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
                 write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
             endif
