@@ -217,7 +217,10 @@ subroutine init_order(this,cell,extpar_io)
     if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) this%dim_modes(3)=3
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) this%dim_modes(4)=1
     this%dim_modes(5)=this%nph*3
-    if(                            extpar_io%enable_w) this%dim_modes(6)=this%norb*2    !requires to be enables manually because of separate TB-part no requireing the lattice, factor 2 because is complex
+    if(extpar_io%enable_w)then
+        this%dim_modes(6)=this%norb*2    !requires to be enables manually because of separate TB-part no requiring the lattice, factor 2 because is complex
+        if(any(this%cell%atomic%moment/=0.0d0.and.this%cell%atomic%orbitals>0)) this%dim_modes(6)=this%dim_modes(6)*2 !another factor for spin
+    endif
 !    this%dim_modes(6)=this%dim_modes(6)*2   !UNIFY WITH HAMILTONIAN(MAGNETIC ORDER)
     !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
     this%order_set=this%dim_modes>0

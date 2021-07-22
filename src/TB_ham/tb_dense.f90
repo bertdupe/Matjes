@@ -14,6 +14,7 @@ type,extends(H_TB_coo_based),abstract :: H_tb_dense
     procedure   :: mv
     procedure   :: mult_r
     procedure   :: get_H
+    procedure   :: set_H
 end type
 
 #ifdef CPP_LAPACK
@@ -73,6 +74,14 @@ subroutine get_H(this,H)
 
     H=this%H
 end subroutine
+
+subroutine set_H(this,H)
+    class(H_tb_dense),intent(inout) :: this
+    complex(8),intent(in)           :: H(this%dimH,this%dimH)
+
+    this%H=H
+end subroutine
+
 
 subroutine mv(this,Hout)
     class(H_tb_dense),intent(inout) :: this
