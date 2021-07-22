@@ -260,6 +260,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
             if(gra_log) then
                 call CreateSpinFile(tag,lat_1%u)
                 Call write_config(tag,lat_1)
+                call write_netcdf('test',lat_1,real_time)
                 write(6,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
                 write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
             endif

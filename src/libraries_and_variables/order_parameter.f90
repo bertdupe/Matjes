@@ -26,6 +26,7 @@ contains
     procedure :: copy_val => copy_val_order_par
     procedure :: delete => delete_order_par
     procedure :: read_file
+!    procedure :: write_file_netcdf
     procedure :: truncate
 
     !MPI STUFF
