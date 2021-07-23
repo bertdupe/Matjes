@@ -73,8 +73,10 @@ subroutine wavefunc_evolution_run(lat,ext_param,H,comm)
     complex(8),allocatable  :: H_loc(:,:)
     complex(8),allocatable  :: pos(:,:)
     complex(8),allocatable  :: current(:,:,:)
+    complex(8),allocatable  :: pos_spn(:,:,:)   !pos only for spin up/down
 
     real(8),allocatable     :: current_av(:)
+    real(8),allocatable     :: pos_av(:)
     integer     ::  i
 
 
@@ -93,11 +95,13 @@ subroutine wavefunc_evolution_run(lat,ext_param,H,comm)
     !Call init_wavefunc_EF(lat,tbH,300.0d0*k_b)
 
     lat%w%all_modes_c=(0.0d0,0.0d0)
+    !lat%w%all_modes_c(101)=(1.0d0,0.0d0)
+    !lat%w%all_modes_c(102)=(1.0d0,0.0d0)
     lat%w%all_modes_c(1)=(1.0d0,0.0d0)
-    lat%w%all_modes_c(2)=(1.0d0,0.0d0)
+!    lat%w%all_modes_c(2)=(1.0d0,0.0d0)
 
 
-    timestep=1.0d-4
+    timestep=1.0d-3
     dimH=size(lat%w%all_modes_c)
     prefH=cmplx(0.0d0,-1.0d0/hbar,8)
 
@@ -116,7 +120,9 @@ subroutine wavefunc_evolution_run(lat,ext_param,H,comm)
 
     allocate(pos,mold=H_loc) 
     allocate(current(dimH,dimH,nspin),source=(0.0d0,0.0d0))
+    allocate(pos_spn(dimH,dimH,nspin),source=(0.0d0,0.0d0))
     allocate(current_av(nspin),source=0.0d0)
+    allocate(pos_av(nspin),source=0.0d0)
     pos=(0.0d0,0.0d0)
     if(nspin==1)then
         do i=1,dimH
@@ -135,13 +141,20 @@ subroutine wavefunc_evolution_run(lat,ext_param,H,comm)
     !pos(1,dimH)=(0.00d0,0.1d0)
     if(nspin==1)then
         current(:,:,1)=matmul(H_loc,pos)-matmul(pos,H_loc)
+        pos_spn(:,:,1)=pos*(0.0d0,-1.0d0)
     else
         current(:,:,1)=matmul(H_loc,pos)-matmul(pos,H_loc)
         current(2::2,:,1)=(0.0d0,0.0d0)
         current(:,2::2,1)=(0.0d0,0.0d0)
+        pos_spn(:,:,1)=pos*(0.0d0,-1.0d0)
+        pos_spn(2::2,:,1)=(0.0d0,0.0d0)
+        pos_spn(:,2::2,1)=(0.0d0,0.0d0)
         current(:,:,2)=matmul(H_loc,pos)-matmul(pos,H_loc)
         current(1::2,:,2)=(0.0d0,0.0d0)
         current(:,1::2,2)=(0.0d0,0.0d0)
+        pos_spn(:,:,2)=pos*(0.0d0,-1.0d0)
+        pos_spn(1::2,:,2)=(0.0d0,0.0d0)
+        pos_spn(:,1::2,2)=(0.0d0,0.0d0)
     endif
 
     time=0.d0
@@ -161,19 +174,22 @@ subroutine wavefunc_evolution_run(lat,ext_param,H,comm)
         enddo
         do l=1,Norder
             lat%w%all_modes_c=lat%w%all_modes_c+timestep*b(l)*wavefunc(:,l)
+!            lat%w%all_modes_c(size(lat%w%all_modes_c))=(0d0,0d0) !lose everything at end
         enddo
         time=time+timestep
-        wavefunc_tmp=lat%w%all_modes_c
-        Call tbH%mult_r(lat%w%all_modes_c,wavefunc_tmp)
-        energy=DOT_PRODUCT(lat%w%all_modes_c,wavefunc_tmp)
-        write(io_dat,*) time,energy,norm2(abs(lat%w%all_modes_c))
 
         if(mod(i_outer,100)==1)then 
+            wavefunc_tmp=lat%w%all_modes_c
+            Call tbH%mult_r(lat%w%all_modes_c,wavefunc_tmp)
+            energy=DOT_PRODUCT(lat%w%all_modes_c,wavefunc_tmp)
+            write(io_dat,*) time,energy,norm2(abs(lat%w%all_modes_c))
             do i=1,nspin
                 wavefunc_tmp=matmul(current(:,:,i),lat%w%all_modes_c)
                 current_av(i)=real(DOT_PRODUCT(wavefunc_tmp,lat%w%all_modes_c))
+                wavefunc_tmp=matmul(pos_spn(:,:,i),lat%w%all_modes_c)
+                pos_av(i)=real(DOT_PRODUCT(wavefunc_tmp,lat%w%all_modes_c))/DOT_PRODUCT(lat%w%all_modes_c,lat%w%all_modes_c)
             enddo
-            write(432,'(182E18.8E3)') time,norm2(abs(lat%w%all_modes_c)), energy,current_av, abs(lat%w%all_modes_c)**2
+            write(432,'(1000E18.8E3)') time,norm2(abs(lat%w%all_modes_c)), energy, pos_av,current_av,abs(lat%w%all_modes_c)**2
         endif
 
 
