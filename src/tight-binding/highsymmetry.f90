@@ -29,7 +29,7 @@ module m_highsym
 
     subroutine calc_highsym(lat,highs,Hk,work,is_sc)
         type(lattice),intent(in)                :: lat
-        type(parameters_TB_IO_highs),intent(in) :: highs
+        type(parameters_IO_highs),intent(in) :: highs
         class(H_k_base),intent(inout)           :: Hk
         type(work_ham),intent(inout)            :: work
         logical,intent(in)                      :: is_sc
@@ -254,7 +254,7 @@ module m_highsym
     subroutine set_highs_path(lat,highs)
         use m_constants, only : pi
         type(lattice), intent(in)                   :: lat
-        type(parameters_TB_IO_highs),intent(in)     :: highs
+        type(parameters_IO_highs),intent(in)     :: highs
 
         integer                 ::  N_highsym
         real(8),allocatable     ::  k_highs(:,:)

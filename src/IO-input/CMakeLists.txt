@@ -15,4 +15,5 @@ src/IO-input/rw_minimize.f90
 src/IO-input/rw_motif.f90
 src/IO-input/rw_zdir.f90
 src/IO-input/write_tableNN.f90
+src/IO-input/rw_high.f90
 )

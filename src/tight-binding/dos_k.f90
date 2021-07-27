@@ -118,7 +118,6 @@ subroutine write_dos_nc_mpi(Hk,h_io,lat,io_dos,work,comm)
 
     !calculate eigenvalues for each k and add to dos
     Call comm%get_loop_bnd(Nk,bnd)
-    Call mpi_barrier(comm%com, ierr)
     do ik=bnd(1),bnd(2)
         if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
         k=k_grid%get_K(ik)
