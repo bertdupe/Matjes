@@ -4,9 +4,12 @@ set_source_files_properties(${main_f90} PROPERTIES Fortran_FORMAT FREE)
 
 
 add_executable(Matjes ${main_f90})
-#set_target_properties(Matjes PROPERTIES LINKER_LANGUAGE Fortran)
 
-target_compile_options(Matjes BEFORE PRIVATE "${COMPADD_only_own}")
+if(DEFINED manual_linker_language)
+    set_target_properties(Matjes PROPERTIES LINKER_LANGUAGE ${manual_linker_language})
+endif()
+
+#target_compile_options(Matjes BEFORE PRIVATE "${COMPADD_only_own}")
 if(DEFINED add_lib)
     target_link_libraries(Matjes ${add_lib})
 endif()

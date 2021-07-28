@@ -3,7 +3,6 @@ use m_TB_types, only: parameters_TB
 use m_derived_types, only : lattice
 use m_tightbinding_r, only: tightbinding_r
 use m_tightbinding_k, only: tightbinding_k
-use m_rw_TB, only:  rw_TB
 use mpi_basic, only: mpi_type
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none

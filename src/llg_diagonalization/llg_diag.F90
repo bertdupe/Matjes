@@ -449,9 +449,18 @@ end subroutine
 subroutine sph_to_cart(M_sph,M_cart)
     real(8),intent(in)		:: M_sph(:,:)
     real(8),intent(out) 	:: M_cart(:,:)
-   	M_cart(1,:)=cos(M_sph(2,:)) * sin(M_sph(1,:))
-   	M_cart(2,:)=sin(M_sph(2,:)) * sin(M_sph(1,:))
-   	M_cart(3,:)=cos(M_sph(1,:))
+    integer     :: i
+
+!changes to loop as cray compiler whines otherwise... internal errors...
+    do i=1,size(M_sph,2)
+        M_cart(1,i)=cos(M_sph(2,i)) * sin(M_sph(1,i))
+        M_cart(2,i)=sin(M_sph(2,i)) * sin(M_sph(1,i))
+        M_cart(3,i)=cos(M_sph(1,i))
+    enddo
+
+!   	M_cart(1,:)=cos(M_sph(2,:)) * sin(M_sph(1,:))
+!   	M_cart(2,:)=sin(M_sph(2,:)) * sin(M_sph(1,:))
+!   	M_cart(3,:)=cos(M_sph(1,:))
 end subroutine
 
 end module m_llg_diag
