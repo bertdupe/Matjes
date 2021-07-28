@@ -120,7 +120,7 @@ subroutine write_dos_nc_mpi(Hk,h_io,lat,io_dos,work,comm)
     Call comm%get_loop_bnd(Nk,bnd)
     Call mpi_barrier(comm%com, ierr)
     do ik=bnd(1),bnd(2)
-        if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        if(io_dos%print_kint.and.comm%ismas) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',bnd(2)
         k=k_grid%get_K(ik)
         if(use_bnd.or.use_orb)then
             Call Hk%get_evec(k,Nin,eval,evec,Nout,work) 

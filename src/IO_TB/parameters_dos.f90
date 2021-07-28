@@ -107,6 +107,7 @@ subroutine bcast_local(this,comm)
 
     !site dependent dos input
     used=allocated(this%bnd_io)
+    N=0
     if(used) N=size(this%bnd_io)
     Call bcast(N ,comm) 
     if(N>0)then

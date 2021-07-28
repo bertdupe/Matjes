@@ -49,7 +49,7 @@ subroutine tightbinding_k(lat,tb_par,comm)
        
         !calculated the density of states
         !if(tb_par%flow%dos_k) Call calc_dos_k(Hk_inp,tb_par%io_H,lat,tb_par%io_dos,tb_par%is_sc)   !old version
-        !if(tb_par%flow%dos_k) Call calc_dos_k(Hk,tb_par%io_H,lat,tb_par%io_dos,tb_par%is_sc,work)   !new version
+        !if(tb_par%flow%dos_k) Call calc_dos_k(Hk,tb_par%io_H,lat,tb_par%io_dos,tb_par%is_sc,work)  !new version
 
         !calculates k-resolved DOS at the fermi-energy in general and including projections
         if(tb_par%flow%fermi_dos_k)then !make some more sensible input logicals...
@@ -61,6 +61,7 @@ subroutine tightbinding_k(lat,tb_par,comm)
         !calculated bandstructure
         if(tb_par%flow%highs_k) Call calc_highsym(lat,tb_par%io_highs,Hk,work,tb_par%is_sc)
     endif
+    !k-space operations that do support MPI-parallelization
     if(tb_par%flow%dos_k) Call calc_dos_k(Hk,tb_par%io_H,lat,tb_par%io_dos,tb_par%is_sc,work,comm)   !new version
 end subroutine 
 
