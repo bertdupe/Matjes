@@ -91,9 +91,11 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     !-------------------------------------------------
     
     ! prepare the lattice
-    call user_info(6,time,'initializing the order parameters',.false.)
+    write(*,'(/)')
+    call user_info(6,time,'Start initializing the order parameters',.false.)
     Call orders_initialize(my_lattice,extpar_io)
-    call user_info(6,time,'done',.false.)
+    call user_info(6,time,'Finished initializing the order parameters',.false.)
+    write(*,'(/)')
 
     ! get position
     n_motif=size(my_motif%atomic)

@@ -27,6 +27,8 @@ type MC_input
     !fluction parameters
     logical     :: do_fluct=.True.
     real(8)     :: fluct_dir(3)=[1.0d0,0.0d0,0.0d0]
+contains
+    procedure   :: bcast => bcast_MC
 end type
 
 

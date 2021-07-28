@@ -58,8 +58,7 @@ subroutine calc_dos_k_mpi(Hk,io_H,lat,io_dos,is_sc,work,comm)
     type(mpi_type),intent(in)               :: comm     !mpi communicator
 
     if(is_sc)then
-        STOP "IMPLEMENT FASFASFA"
-!        Call write_dos_sc_new(Hk,io_H,lat,io_dos,work)
+        Call write_dos_sc_mpi(Hk,io_H,lat,io_dos,work,comm)
     else
         Call write_dos_nc_mpi(Hk,io_H,lat,io_dos,work,comm)
     endif
@@ -99,7 +98,7 @@ subroutine write_dos_nc_mpi(Hk,h_io,lat,io_dos,work,comm)
     integer                                 :: Ndos_orb
 
     Call dos%init(io_dos)
-    Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh)
+    Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh,comm)
     Nk=k_grid%get_NK()
 
     !initialize data for projection on a contiguous set of orbitals somewhere in the unit-cell 
@@ -118,7 +117,6 @@ subroutine write_dos_nc_mpi(Hk,h_io,lat,io_dos,work,comm)
 
     !calculate eigenvalues for each k and add to dos
     Call comm%get_loop_bnd(Nk,bnd)
-    Call mpi_barrier(comm%com, ierr)
     do ik=bnd(1),bnd(2)
         if(io_dos%print_kint.and.comm%ismas) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',bnd(2)
         k=k_grid%get_K(ik)
@@ -141,6 +139,75 @@ subroutine write_dos_nc_mpi(Hk,h_io,lat,io_dos,work,comm)
     if(comm%ismas) Call print_dos_output(dos,dos_bnd,dos_orb,"_nc")
 end subroutine
 
+subroutine write_dos_sc_mpi(Hk,h_io,lat,io_dos,work,comm)
+    class(H_k_base),intent(inout)           :: Hk
+    type(parameters_TB_IO_H),intent(in)     :: h_io
+    type(lattice), intent(in)               :: lat
+    type(parameters_TB_IO_DOS),intent(in)   :: io_dos
+    type(work_ham),intent(inout)            :: work
+    type(mpi_type),intent(in)               :: comm
+
+    type(dos_sc)                            :: dos
+
+    integer                                 :: Nin,Nout, dimH
+    real(8),allocatable                     :: eval(:)
+    complex(8),allocatable                  :: evec(:,:)
+
+    !parameters to describe integration k-grid
+    class(kmesh_t),allocatable              :: k_grid 
+    integer                                 :: ik,Nk
+    integer                                 :: bnd(2)   !boundaries for k=loop
+    real(8)                                 :: k(3)
+
+    integer                                 :: idos
+    character(len=3)                        :: dos_id
+
+    !parameters for projection on a contiguous set of orbitals somewhere in the unit-cell 
+    type(dos_bnd_sc),allocatable            :: dos_bnd(:)
+    integer                                 :: Ndos_bnd
+    logical                                 :: use_bnd
+
+    !parameters for projection on an orbital considering all supercell periodic images
+    type(dos_orb_sc),allocatable            :: dos_orb(:)
+    integer                                 :: Ndos_orb
+    logical                                 :: use_orb
+
+    Call dos%init(io_dos)
+    Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh,comm)
+
+    Nk=k_grid%get_NK()
+
+    !initialize data for projection on a contiguous set of orbitals somewhere in the unit-cell 
+    Call init_dos_bnd(io_dos,dos_bnd,use_bnd,Ndos_bnd)
+    
+    !initialize data for projection on an orbital considering all supercell periodic images 
+    Call init_dos_orb(io_dos,dos_orb,use_orb,Ndos_orb,h_io%norb*h_io%nspin)
+
+    !prepare data
+    Nin=Hk%get_size_eval()
+    dimH=Hk%get_dimH()
+    allocate(eval(Nin),source=0.0d0)
+    allocate(evec(dimH,Nin),source=(0.0d0,0.0d0))
+
+    Call comm%get_loop_bnd(Nk,bnd)
+    !calculate eigenvalues for each k and add to dos
+    do ik=bnd(1),bnd(2)
+        if(io_dos%print_kint.and.comm%ismas) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        k=k_grid%get_K(ik)
+        Call Hk%get_evec(k,Nin,eval,evec,Nout,work) 
+        Call dos%add(eval,evec)
+        do idos=1,Ndos_bnd
+            Call dos_bnd(idos)%add(eval,evec)
+        enddo
+        do idos=1,Ndos_orb
+            Call dos_orb(idos)%add(eval,evec)
+        enddo
+    enddo
+
+    Call dos_mpi_sum(dos,dos_bnd,dos_orb, comm)
+
+    if(comm%ismas) Call print_dos_output(dos,dos_bnd,dos_orb,"_sc")
+end subroutine
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!

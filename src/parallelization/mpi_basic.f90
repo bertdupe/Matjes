@@ -16,6 +16,7 @@ contains
     procedure   :: set              !constuctor using an MPI_communicator ( sets id etc.)
     procedure   :: set_from_distv   !constructor for the basic mpi_type from the more specific mpi_distv type
     procedure   :: get_loop_bnd
+    procedure   :: barrier
 end type
 
 type,extends(mpi_type)  :: mpi_distv
@@ -30,6 +31,17 @@ private :: init_mpi_distv
 type(mpi_type)  ::  mpi_world
 
 contains
+
+subroutine barrier(this)
+    !barrier of the communicator with nothing happening without MPI
+    class(mpi_type),intent(in)      :: this
+#ifdef CPP_MPI
+    integer     ::  ierr
+    Call MPI_BARRIER(this%com,ierr)
+#else
+    continue
+#endif
+end subroutine
 
 subroutine get_loop_bnd(this,N,bnd)
     !subroutine which gives the loop boundaries when distributing a single array with N indices (1:N)
