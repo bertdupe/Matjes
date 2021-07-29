@@ -1,7 +1,6 @@
 module m_kgrid_int
 !module which contains the k_mesh_int type used to get a kgrid based on larger grid that only contains the kpoints where there is an energy state within and energy window
 use m_kgrid, only: k_grid_t, kmesh_t
-use m_Hk, only: Hk_inp_t,Hk_eval
 use m_tb_types
 use mpi_basic
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
@@ -154,12 +153,15 @@ function get_normalize(this)result(norm)
     norm=1.0d0/real(this%Nk)
 end function
 
-subroutine set(this,kgrid,Hk_inp,h_io,Ecut)
-    class(k_mesh_int)            :: this
-    type(k_grid_t),intent(in)   :: kgrid
-    type(Hk_inp_t),intent(in)   :: Hk_inp
+subroutine set(this,kgrid,Hk,h_io,Ecut,work)
+    use m_tb_k_public       !mode that contains the more efficient TB k-space type
+    class(k_mesh_int)                       :: this
+    type(k_grid_t),intent(in)               :: kgrid
+    class(H_k_base),intent(inout)           :: Hk
     type(parameters_TB_IO_H),intent(in)     :: h_io
-    real(8),intent(in)          :: Ecut(2)
+    real(8),intent(in)                      :: Ecut(2)
+    type(work_ham),intent(inout)            :: work
+
     integer                     :: Nk_init
 
     real(8),allocatable         :: k_found(:,:)
@@ -168,26 +170,31 @@ subroutine set(this,kgrid,Hk_inp,h_io,Ecut)
     real(8),allocatable         :: eval(:)
     integer                     :: iE, ik
 
+    integer                     :: Nin,Nout         !maximal and output number of eigenvalues
+    integer                     :: dimH
+
+
     if(Ecut(2)<=Ecut(1)) then
         write(error_unit,'(/2(/A,E16.8))') "Ecut(1)=",Ecut(1),"Ecut(2)=",Ecut(2)
         ERROR STOP "integration kmesh energy bound Ecut(2) must be larger than Ecut(1)"
     endif
     Nk_init=kgrid%get_Nk()
-    if(Nk_init<1)then
-        ERROR STOP "kgrid Nk<1"
-    endif
-
+    if(Nk_init<1) ERROR STOP "kgrid Nk<1"
     allocate(k_found(3,Nk_init),source=0.d0)
+
+    Nin=Hk%get_size_eval()
+    allocate(eval(Nin),source=0.0d0)
     Nfound=0
     do ik=1,Nk_init
         k=kgrid%get_K(ik)
-        Call Hk_eval(Hk_inp,k,h_io,eval) 
-        if(any(eval>Ecut(1).and.eval<Ecut(2)))then
+        Call Hk%get_eval(k,Nin,eval,Nout,work) 
+        if(any(eval(1:Nout)>Ecut(1).and.eval(1:Nout)<Ecut(2)))then
             Nfound=Nfound+1
             k_found(:,Nfound)=k
         endif
-        deallocate(eval)
     enddo
+    deallocate(eval)
+
     this%Nk=Nfound
     this%Nk_init=Nk_init
     allocate(this%k,source=k_found(:,1:Nfound))
