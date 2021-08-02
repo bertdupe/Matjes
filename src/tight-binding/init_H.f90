@@ -11,18 +11,48 @@ private
 public :: get_H, get_H_TB, get_H_sc
 contains
 
+subroutine get_H(lat,h_io,H_out,diffR)
+    !routine that returns arrays of all Hamiltonian-components (optionally with the real-space differences) either in the normal- or in the BdG-space
+    !if a superconducting delta is used, all Hamiltonians are transformed to the BdG space
+    type(lattice),intent(in)                            :: lat
+    type(parameters_TB_IO_H),intent(in)                 :: h_io
+    type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)
+    real(8),allocatable,intent(out),optional            :: diffR(:,:)
+
+    type(H_tb_coo),allocatable  :: H(:)
+    real(8),allocatable         :: diffR_loc(:,:)
+    integer                     :: i
+    !get all normal-conducting Hamiltonian components
+    Call get_H_TB(lat,h_io,H_out,diffR=diffR)   
+
+    !get superconducting Hamiltonian entries
+    if(allocated(h_io%del_io))then 
+        allocate(H(1))
+        Call get_H_sc(lat,h_io,H,h_io%del,diffR=diffR_loc)
+        Call H_append(H_out,H)
+        if(present(diffR)) Call append_arr(diffR,diffR_loc)
+    endif
+
+    !translate all Hamiltonians to the BdG space
+    if(any(H_out%nsc>1))then    
+        do i=1,size(H_out)
+            Call H_out(i)%to_BdG()
+        enddo
+    endif
+end subroutine 
+
 
 subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
     !sets the Hamiltonian terms without superconductivity,
     !i.e. only Block-diagonal terms in BdG-space
     type(lattice),intent(in)                            :: lat
-    type(parameters_TB_IO_H),intent(in)                 :: h_io
-    type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)
+    type(parameters_TB_IO_H),intent(in)                 :: h_io         !Hamiltonian input parameters
+    type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)     !Hamiltonian array gathering all found interactions
     logical,intent(in),optional                         :: sc           !transform terms to BdG-space
-    real(8),allocatable,intent(out),optional            :: diffR(:,:)
+    real(8),allocatable,intent(out),optional            :: diffR(:,:)   !real-space difference lattice vectors H_out entry
 
-    type(H_tb_coo),allocatable  :: H(:)
-    real(8),allocatable         :: diffR_loc(:,:)
+    type(H_tb_coo),allocatable  :: H(:)             !temporary Hamiltonian array 
+    real(8),allocatable         :: diffR_loc(:,:)   !corresponding temporary real-space difference arrays
     integer                     :: i
 
     if(h_io%wann_io%nrpts/=0)then
@@ -32,6 +62,7 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
         if(allocated(diffR_loc)) deallocate(diffR_loc)
     endif
 
+    !Hopping term  (input: TB_hopping)
     if(allocated(h_io%hop_io))then
         Call get_Hop_arr(lat,h_io,H,diffR=diffR_loc)
         Call H_append(H_out,H)
@@ -39,6 +70,7 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
         if(allocated(diffR_loc)) deallocate(diffR_loc)
     endif
 
+    !Jsd-coupling term  (input: TB_Jsd)
     if(allocated(h_io%jsd))then
         allocate(H(1))
         Call get_H_Jsd(lat,h_io,H(1))
@@ -49,6 +81,7 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
         endif
     endif
 
+    !defect term,potential at certain site  (input: TB_defect)
     if(allocated(h_io%defect))then
         allocate(H(1))
         Call get_H_defect(lat,h_io,H(1))
@@ -59,6 +92,7 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
         endif
     endif
 
+    !diagonal term adjusting the fermi energy (input: TB_Efermi)
     if(h_io%Efermi/=0.0d0)then
         allocate(H(1))
         Call get_H_fermi(lat,h_io,H(1))
@@ -69,8 +103,9 @@ subroutine get_H_TB(lat,h_io,H_out,sc,diffR)
         endif
     endif
 
+    !transform all entries to BdG-space already at this level
     if(present(sc))then
-        if(sc)then    !some hamiltonian is written in BdG-space, change all to that
+        if(sc)then
             do i=1,size(H_out)
                 Call H_out(i)%to_BdG()
             enddo
@@ -93,30 +128,6 @@ subroutine get_H_sc(lat,h_io,H_out,del,diffR)
     endif
     Call get_H_delta_onsite(lat,h_io,H_out(1),del)
     if(present(diffR)) allocate(diffR(3,1),source=0.0d0) !single onsite term, so difference is 0
-end subroutine 
-
-subroutine get_H(lat,h_io,H_out,diffR)
-    type(lattice),intent(in)                            :: lat
-    type(parameters_TB_IO_H),intent(in)                 :: h_io
-    type(H_tb_coo),allocatable,intent(inout)            :: H_out(:)
-    real(8),allocatable,intent(out),optional            :: diffR(:,:)
-
-    type(H_tb_coo),allocatable  :: H(:)
-    real(8),allocatable         :: diffR_loc(:,:)
-    integer                     :: i
-
-    Call get_H_TB(lat,h_io,H_out,diffR=diffR)
-    if(allocated(h_io%del_io))then
-        allocate(H(1))
-        Call get_H_sc(lat,h_io,H,h_io%del,diffR=diffR_loc)
-        Call H_append(H_out,H)
-        if(present(diffR)) Call append_arr(diffR,diffR_loc)
-    endif
-    if(any(H_out%nsc>1))then    !some hamiltonian is written in BdG-space, change all to that
-        do i=1,size(H_out)
-            Call H_out(i)%to_BdG()
-        enddo
-    endif
 end subroutine 
 
 
@@ -409,6 +420,7 @@ subroutine set_Hop(i_shell,neigh,Hloc,h_io,hinit,H)
 end subroutine
 
 subroutine append_arr(arr,arr_append)
+    !takes 2 rank-2 real-arrays with the first size in the 1. dimension and appends the second array to the first (with some allocation and moving)
     real(8),intent(inout),allocatable       :: arr(:,:), arr_append(:,:)
     real(8),allocatable :: tmp(:,:)
 

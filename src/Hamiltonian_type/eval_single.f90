@@ -1,4 +1,5 @@
 module eval_single
+!module, which contains information about how the energy caused by a single site has to be calculated
 use m_derived_types, only : lattice, number_different_order_parameters
 use m_H_type, only :t_H_base
 use m_work_ham_single, only: work_ham_single

@@ -1,4 +1,6 @@
 module m_init_Hk
+!module which contains the initialization for the tight-binding Hamiltonian in k-space (Hk_inp_t, slower type with all data in separate arrays)
+!most routines in the module are only needed for getting the superconducting delta-parameters self-consistently, otherwise only the normal get_H of init_H.f90 is sufficient
 use m_derived_types, only: lattice,k_grid_t
 use m_H_tb_public
 use m_tb_types ,only: parameters_TB_IO_H 
