@@ -124,7 +124,7 @@ Implicit None
     endif
 
     if (my_simu%name == 'wavefunc_eval')then
-        call wavefunc_evolution(all_lattices,ext_param,H_comb,mpi_world)
+        call wavefunc_evolution(all_lattices,mpi_world)
     endif
         
     !---------------------------------
@@ -154,7 +154,6 @@ Implicit None
         if (my_simu%name == 'llg_diag')then
             call diag_llg(all_lattices,io_simu,H_comb)
         endif
-        
         
         !---------------------------------
         !---------------------------------
