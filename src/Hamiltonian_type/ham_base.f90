@@ -55,6 +55,7 @@ contains
     procedure,NON_OVERRIDABLE               :: add
     procedure,NON_OVERRIDABLE               :: init_base
     procedure,NON_OVERRIDABLE               :: init_otherH
+    procedure                               :: mv_base
     procedure(int_finish_setup),deferred    :: finish_setup
     procedure(int_add_H),deferred           :: add_child
     procedure(int_destroy),deferred         :: destroy_child
@@ -306,6 +307,17 @@ contains
 #else
         continue
 #endif
+    end subroutine
+
+    subroutine mv_base(this,Hout)
+        ! copy to Hout and destroy this
+        ! better implementation should avorride this
+        class(t_H_base),intent(inout)      :: this
+        class(t_H_base),intent(inout)      :: Hout
+
+        call this%copy(Hout)
+        call this%destroy()
+
     end subroutine
 
     subroutine copy(this,Hout)

@@ -12,6 +12,7 @@ type t_eval_single
 contains
     procedure   :: set
     procedure   :: copy
+    procedure   :: mv
 end type
 
 abstract interface
@@ -74,6 +75,20 @@ subroutine copy(this,eval_out)
     eval_out%order =  this%order
     eval_out%comp  =  this%comp
     eval_out%calc  => this%calc
+end subroutine
+
+subroutine mv(this,eval_out)
+    class(t_eval_single),intent(inout)  :: this
+    class(t_eval_single),intent(inout)  :: eval_out
+
+    eval_out%order =  this%order
+    eval_out%comp  =  this%comp
+    eval_out%calc  => this%calc
+
+    this%calc => eval_single_unset
+    this%order=0
+    this%comp=0
+
 end subroutine
 
 subroutine eval_single_left(this,H,E,site,lat,work)

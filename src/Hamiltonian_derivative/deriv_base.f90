@@ -16,6 +16,7 @@ contains
     procedure :: copy
     procedure :: get => get_deriv
     procedure :: get_single => get_deriv_single
+    procedure :: mv
 end type
 
 abstract interface
@@ -40,6 +41,16 @@ end interface
 contains
 
 subroutine copy(this,deriv_out)
+    class(t_deriv),intent(in)       :: this
+    class(t_deriv),intent(inout)    :: deriv_out
+
+    deriv_out%l=>this%l
+    deriv_out%r=>this%r
+    deriv_out%l_single=>this%l_single
+    deriv_out%r_single=>this%r_single
+end subroutine
+
+subroutine mv(this,deriv_out)
     class(t_deriv),intent(in)       :: this
     class(t_deriv),intent(inout)    :: deriv_out
 
