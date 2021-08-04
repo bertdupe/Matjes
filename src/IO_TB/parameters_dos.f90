@@ -10,6 +10,7 @@ type parameters_TB_IO_DOS
     real(8)     :: dE=1.0d-2                        !energy binning size
     real(8)     :: sigma=1.0d-2                     !gauss smearing parameter for dos
     integer     :: kgrid(3)=[1,1,1]                 !number of k-points in each direction in case of k-space dos
+    logical     :: all_states=.false.                 !print the dos projected on all states separately
     logical     :: print_kint=.false.               !print out the index of the currently considered k index 
     type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos site dependent
     type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
@@ -42,6 +43,7 @@ subroutine read_file(this,io,fname)
     call get_parameter(io,fname,'dos_dE',this%dE)
     call get_parameter(io,fname,'dos_kgrid',this%kgrid)
     call get_parameter(io,fname,'dos_print_kint',this%print_kint)
+    call get_parameter(io,fname,'dos_all_states',this%all_states)
 
     str=" "
     Call get_parameter(io,fname,'dos_kmesh_file',str)
@@ -104,6 +106,7 @@ subroutine bcast_local(this,comm)
     Call bcast(this%sigma     ,comm)
     Call bcast(this%kgrid     ,comm)
     Call bcast(this%print_kint,comm) 
+    Call bcast(this%all_states,comm) 
 
     !site dependent dos input
     used=allocated(this%bnd_io)

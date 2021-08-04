@@ -58,6 +58,8 @@ subroutine dos_get_orb(io,lat,nspin,norb_at,norb_at_off,orb_out)
 end subroutine
 
 subroutine dos_get_ind(dos_bnd,lat,nspin,norb_at,norb_at_off,bnd_out)
+    !subroutine which translates the dos_bnd_io to the start and end position of the contiguous
+    !section in space of the Hamiltonian basis on which the projection is considered
     type(dos_bnd_io),intent(in)         ::  dos_bnd(:)
     type(lattice),intent(in)            ::  lat
     integer,intent(in)                  ::  nspin
