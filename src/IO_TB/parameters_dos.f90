@@ -10,8 +10,9 @@ type parameters_TB_IO_DOS
     real(8)     :: dE=1.0d-2                        !energy binning size
     real(8)     :: sigma=1.0d-2                     !gauss smearing parameter for dos
     integer     :: kgrid(3)=[1,1,1]                 !number of k-points in each direction in case of k-space dos
-    logical     :: all_states=.false.                 !print the dos projected on all states separately
+    logical     :: all_states=.false.               !print the dos projected on all states separately
     logical     :: print_kint=.false.               !print out the index of the currently considered k index 
+    real(8),allocatable             :: sigma_arr(:) !gauss smearing array
     type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos site dependent
     type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
     integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local site dos)
@@ -44,6 +45,13 @@ subroutine read_file(this,io,fname)
     call get_parameter(io,fname,'dos_kgrid',this%kgrid)
     call get_parameter(io,fname,'dos_print_kint',this%print_kint)
     call get_parameter(io,fname,'dos_all_states',this%all_states)
+
+    N=0
+    call get_parameter(io,fname,'dos_N_sigma',N)
+    if(N>0)then
+        allocate(this%sigma_arr(N),source=1.0d0)
+        call get_parameter(io,fname,'dos_sigma_arr',this%sigma_arr)
+    endif
 
     str=" "
     Call get_parameter(io,fname,'dos_kmesh_file',str)
@@ -135,6 +143,7 @@ subroutine bcast_local(this,comm)
     Call bcast_alloc(this%orb,          comm)
     Call bcast_alloc(this%fname_kmesh,  comm)
     Call bcast_alloc(this%fermi_orb,    comm)
+    Call bcast_alloc(this%sigma_arr,    comm)
     Call bcast(this%fermi_proj_all,     comm)
 
     Call bcast_alloc(this%fermi_orb, comm)

@@ -20,6 +20,8 @@ contains
     procedure :: print=> print_dos
     procedure :: mpi_sum=> mpi_sum_dos
     procedure :: is_set
+    procedure :: set_sigma
+    procedure :: get_sigma
 end type
 
 type,extends(dos_t) ::  dos_nc
@@ -413,6 +415,19 @@ subroutine mpi_sum_dos_mult(this,comm)
     continue
 #endif
 end subroutine
+
+subroutine set_sigma(this,sigma)
+    class(dos_t),intent(inout)      :: this
+    real(8),intent(in)              :: sigma
+    this%sigma=sigma
+end subroutine
+
+function get_sigma(this)result(sigma)
+    class(dos_t),intent(inout)      :: this
+    real(8)                         :: sigma
+    sigma=this%sigma
+end function 
+
 
 subroutine add_gauss_mult(val,sigma,N_E,N_proj,proj,E,dos,work)
     !add to dos:

@@ -25,6 +25,11 @@ interface init_dos_orb
     module procedure init_dos_orb_nc
 end interface
 
+interface init_dos_sig
+    module procedure init_dos_sig_sc
+    module procedure init_dos_sig_nc
+end interface
+
 contains
 
 
@@ -81,6 +86,10 @@ subroutine calc_dos_nc(Hk,h_io,lat,io_dos,work,comm)
     logical                                 :: use_orb
     integer                                 :: Ndos_orb
 
+    !normal dos at several smearing
+    type(dos_nc),allocatable                :: dos_sig(:)
+    integer                                 :: Ndos_sig
+
     type(dos_all_nc)                        :: dos_all
 
     !initialize used k-grid
@@ -92,6 +101,7 @@ subroutine calc_dos_nc(Hk,h_io,lat,io_dos,work,comm)
     if(io_dos%all_states) Call dos_all%init_mult(io_dos,Hk%dimH)            !projection on each state separately
     Call init_dos_bnd(io_dos,dos_bnd,use_bnd,Ndos_bnd)                      !projection on a contiguous set of orbitals somewhere in the unit-cell
     Call init_dos_orb(io_dos,dos_orb,use_orb,Ndos_orb,h_io%norb*h_io%nspin) !projection on an orbital considering all supercell periodic images 
+    Call init_dos_sig(io_dos,dos_sig,Ndos_sig)                             !normal dos, but with several gauss smearings 
 
     !prepare data
     Nin=Hk%get_size_eval()  !get maximal number of eigenvalues
@@ -123,14 +133,17 @@ subroutine calc_dos_nc(Hk,h_io,lat,io_dos,work,comm)
         do idos=1,Ndos_orb
             Call dos_orb(idos)%add(eval,evec)
         enddo
+        do idos=1,Ndos_sig
+            Call dos_sig(idos)%add(eval)
+        enddo
         if(io_dos%all_states) Call dos_all%add(eval,evec)
     enddo
 
     !gather all dos-data on the master thread
-    if(comm%Np>1) Call dos_mpi_sum(dos,dos_bnd,dos_orb,dos_all, comm) 
+    if(comm%Np>1) Call dos_mpi_sum(dos,dos_bnd,dos_orb,dos_sig,dos_all, comm) 
 
     !print resulting dos to files
-    if(comm%ismas) Call print_dos_output(dos,dos_bnd,dos_orb,dos_all,"_nc") 
+    if(comm%ismas) Call print_dos_output(dos,dos_bnd,dos_orb,dos_sig,dos_all,"_nc") 
 end subroutine
 
 subroutine calc_dos_sc(Hk,h_io,lat,io_dos,work,comm)
@@ -165,6 +178,10 @@ subroutine calc_dos_sc(Hk,h_io,lat,io_dos,work,comm)
     integer                                 :: Ndos_orb
     logical                                 :: use_orb
 
+    !normal dos at several smearing
+    type(dos_sc),allocatable                :: dos_sig(:)
+    integer                                 :: Ndos_sig
+
     type(dos_all_sc)                        :: dos_all
 
     !initialize used k-grid
@@ -176,6 +193,7 @@ subroutine calc_dos_sc(Hk,h_io,lat,io_dos,work,comm)
     if(io_dos%all_states) Call dos_all%init_mult(io_dos,Hk%dimH/2)          !projection on each state separately
     Call init_dos_bnd(io_dos,dos_bnd,use_bnd,Ndos_bnd)                      !projection on a contiguous set of orbitals somewhere in the unit-cell
     Call init_dos_orb(io_dos,dos_orb,use_orb,Ndos_orb,h_io%norb*h_io%nspin) !projection on an orbital considering all supercell periodic images 
+    Call init_dos_sig(io_dos,dos_sig,Ndos_sig)                              !normal dos, but with several gauss smearings 
 
     !prepare data
     Nin=Hk%get_size_eval() !get maximal number of eigenvalues
@@ -200,29 +218,34 @@ subroutine calc_dos_sc(Hk,h_io,lat,io_dos,work,comm)
         do idos=1,Ndos_orb
             Call dos_orb(idos)%add(eval,evec)
         enddo
+        do idos=1,Ndos_sig
+            Call dos_sig(idos)%add(eval,evec)
+        enddo
         if(io_dos%all_states) Call dos_all%add(eval,evec)
     enddo
 
     !gather all dos-data on the master thread
-    if(comm%Np>1) Call dos_mpi_sum(dos,dos_bnd,dos_orb,dos_all, comm) 
+    if(comm%Np>1) Call dos_mpi_sum(dos,dos_bnd,dos_orb, dos_sig, dos_all, comm) 
 
     !print resulting dos to files
-    if(comm%ismas) Call print_dos_output(dos,dos_bnd,dos_orb,dos_all,"_sc") 
+    if(comm%ismas) Call print_dos_output(dos,dos_bnd,dos_orb,dos_sig, dos_all,"_sc") 
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!   MINOR HELP ROUTINES
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine print_dos_output(dos,dos_bnd,dos_orb,dos_all,specifier)
+subroutine print_dos_output(dos,dos_bnd,dos_orb,dos_sig,dos_all,specifier)
     class(dos_t),intent(inout)              :: dos
     class(dos_t),intent(inout)              :: dos_bnd(:)
     class(dos_t),intent(inout)              :: dos_orb(:)
+    class(dos_t),intent(inout)              :: dos_sig(:)
     class(dos_mult),intent(inout)           :: dos_all
     character(len=*),intent(in)             :: specifier
     logical             :: alloc
     integer             :: i
     character(len=3)    :: dos_id
+    character(len=10)   :: sigma_char
    
     !print normal dos without projections
     Call dos%print('dos_k'//specifier//'.dat')
@@ -240,13 +263,21 @@ subroutine print_dos_output(dos,dos_bnd,dos_orb,dos_all,specifier)
         Call dos_orb(i)%print("dos_k"//specifier//"_bnd_"//dos_id//".dat")
     enddo
 
+    !print dos for different gauss smearing
+    do i=1,size(dos_sig)
+        write(sigma_char,'(F010.6)') dos_sig(i)%get_sigma()
+        Call dos_sig(i)%print("dos_k_smearing_"//trim(adjustl(sigma_char))//".dat")
+    enddo
+
+
     if(dos_all%is_set()) Call dos_all%print("dos_k_all"//specifier//".dat")
 end subroutine
 
-subroutine dos_mpi_sum(dos,dos_bnd,dos_orb,dos_all, comm)
+subroutine dos_mpi_sum(dos,dos_bnd,dos_orb,dos_sig,dos_all, comm)
     class(dos_t),   intent(inout)           :: dos
     class(dos_t),   intent(inout)           :: dos_bnd(:)
     class(dos_t),   intent(inout)           :: dos_orb(:)
+    class(dos_t),   intent(inout)           :: dos_sig(:)
     class(dos_mult),intent(inout)           :: dos_all
     type(mpi_type),intent(in)               :: comm
     integer     ::  i
@@ -257,6 +288,9 @@ subroutine dos_mpi_sum(dos,dos_bnd,dos_orb,dos_all, comm)
     enddo
     do i=1,size(dos_orb)
         Call dos_orb(i)%mpi_sum(comm)
+    enddo
+    do i=1,size(dos_sig)
+        Call dos_sig(i)%mpi_sum(comm)
     enddo
     if(dos_all%is_set()) Call dos_all%mpi_sum(comm)
 end subroutine
@@ -342,6 +376,46 @@ subroutine init_dos_orb_sc(io_dos,dos_orb,use_orb,Ndos_orb,orbital_per_unitcell)
         allocate(dos_orb(0))
     endif
 end subroutine
+
+subroutine init_dos_sig_nc(io_dos,dos_sig,Ndos_sig)
+    type(parameters_TB_IO_DOS),intent(in)       :: io_dos
+    type(dos_nc),allocatable,intent(inout)      :: dos_sig(:)
+    integer,intent(out)                         :: Ndos_sig
+    integer :: idos, N
+
+    if(allocated(io_dos%sigma_arr))then
+        Ndos_sig=size(io_dos%sigma_arr)
+        allocate(dos_sig(Ndos_sig))
+        do idos=1,Ndos_sig
+            Call dos_sig(idos)%init(io_dos)
+            Call dos_sig(idos)%set_sigma(io_dos%sigma_arr(idos))
+        enddo
+    else
+        Ndos_sig=0
+        allocate(dos_sig(0))
+    endif
+end subroutine
+
+subroutine init_dos_sig_sc(io_dos,dos_sig,Ndos_sig)
+    type(parameters_TB_IO_DOS),intent(in)       :: io_dos
+    type(dos_sc),allocatable,intent(inout)      :: dos_sig(:)
+    integer,intent(out)                         :: Ndos_sig
+    integer :: idos, N
+
+    if(allocated(io_dos%sigma_arr))then
+        Ndos_sig=size(io_dos%sigma_arr)
+        allocate(dos_sig(Ndos_sig))
+        do idos=1,Ndos_sig
+            Call dos_sig(idos)%init(io_dos)
+            Call dos_sig(idos)%set_sigma(io_dos%sigma_arr(idos))
+        enddo
+    else
+        Ndos_sig=0
+        allocate(dos_sig(0))
+    endif
+end subroutine
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!! WORK IN PROGRESS
