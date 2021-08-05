@@ -1,5 +1,5 @@
 module m_set_Hamiltonian_FT
-use m_construction_Hk
+use m_FT_Ham_base
 use m_H_public
 implicit none
 
@@ -21,7 +21,7 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
     use m_exchange_heisenberg_D, only: get_exchange_D
     use m_harmonic_phonon,only: get_Forces_F
 
-    type(Hk_inp_t),allocatable,intent(inout)       :: FT_Ham(:)
+    type(H_inp_real_to_k),allocatable,intent(inout)       :: FT_Ham(:)
     type(io_h),intent(in)               :: H_io
     type(lattice), intent(in)           :: lat
 
