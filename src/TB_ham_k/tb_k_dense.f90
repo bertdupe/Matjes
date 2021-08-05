@@ -25,9 +25,7 @@ subroutine init(this,Hk_inp,io)
 
     integer     ::  iH
 
-    allocate(this%diffR,source=Hk_inp%diffR)
-    this%dimH=Hk_inp%H(1)%dimH
-    this%N_H=size(this%diffR,2)
+    Call this%init_base(Hk_inp,io)
 
     !get real-space Hamiltonians (H_R) from Hcoo input
     allocate(this%H_R(this%dimH,this%dimH,this%N_H))
@@ -61,22 +59,32 @@ subroutine set_k(this,k)
         this%H=this%H+phase_c*this%H_R(:,:,iH)
     enddo
 #else
-    Call get_Hk(this%dimH,this%N_H,k,this%H,this%H_r,this%diffR)
+    integer ::  dimH2
+    dimH2=this%dimH*this%dimH
+    Call get_Hk(dimH2,this%N_H,k,this%H,this%H_r,this%diffR)
 #endif
 end subroutine
 
-subroutine get_Hk(dimH,Nr,k,H,H_r,diffR)
-    integer,intent(in)              :: dimH, Nr
+subroutine get_Hk(dimH2,Nr,k,H,H_r,diffR)
+    integer,intent(in)              :: dimH2, Nr
     real(8),intent(in)              :: k(3)
     real(8),intent(in)              :: diffR(3,Nr)
-    complex(8),intent(out)          :: H(dimH*dimH)
-    complex(8),intent(in)           :: H_r(dimH*dimH,Nr)
+    complex(8),intent(out)          :: H(dimH2)
+    complex(8),intent(in)           :: H_r(dimH2,Nr)
     real(8)     :: phase_r(Nr)
     complex(8)  :: phase_c(Nr)
     integer     :: iH
+#ifdef CPP_BLAS
+    external zgemv
+#endif
 
     phase_r=matmul(k,diffR)
     phase_c=cmplx(cos(phase_r),sin(phase_r),8)
+#ifdef CPP_BLAS
+    H=(0d0,0d0)
+    Call zgemv('n', dimH2, Nr, (1.0d0,0.0d0), H_r,dimH2, phase_c ,1 ,(0.0d0,0d0),H,1)
+#else
     H=matmul(H_r,phase_c)
+#endif
 end subroutine
 end module

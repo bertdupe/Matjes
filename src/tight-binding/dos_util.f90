@@ -166,7 +166,7 @@ subroutine add_dos_nc(this,eigval)
         Call get_ibnd (eigval(i),this,bnd)
         if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),1.0d0,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
-    this%dos=this%dos+dos_loc/real(size(eigval))
+    this%dos=this%dos+dos_loc
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -184,7 +184,7 @@ subroutine add_dos_all_nc(this,eigval,eigvec)
         Call get_ibnd (eigval(i),this,bnd)
         if(bnd(1)<bnd(2))then
             N_E=bnd(2)-bnd(1)+1
-            proj=real(conjg(eigvec(:,i))*eigvec(:,i),8)/this%Nproj
+            proj=real(conjg(eigvec(:,i))*eigvec(:,i),8)
             Call add_gauss_mult(eigval(i), this%sigma, N_e, this%Nproj, proj, this%Eval(bnd(1):bnd(2)), this%dos_all(:,bnd(1):bnd(2)),this%work(1:N_E))
         endif
     enddo
@@ -218,7 +218,6 @@ subroutine add_dos_all_sc(this,eigval,eigvec)
         if(bnd(1)<bnd(2))then
             N_E=bnd(2)-bnd(1)+1
             proj=real(conjg(eigvec(1:this%Nproj,i))*eigvec(1:this%Nproj,i),8)       !projection on states of u-part
-            proj=proj/(dimh/2)                                                      !normalization
             Call add_gauss_mult(eigval(i), this%sigma, N_e, this%Nproj, proj, this%Eval(bnd(1):bnd(2)), this%dos_all(:,bnd(1):bnd(2)),this%work(1:N_E))
         endif
 
@@ -227,7 +226,6 @@ subroutine add_dos_all_sc(this,eigval,eigvec)
         if(bnd(1)<bnd(2))then
             N_E=bnd(2)-bnd(1)+1
             proj=real(conjg(eigvec(dimH/2+1:dimH,i))*eigvec(dimH/2+1:dimH,i),8)             !projection on states of v-part
-            proj=proj/(dimh/2)                                                              !normalization
             Call add_gauss_mult(-eigval(i), this%sigma, N_e, this%Nproj, proj, this%Eval(bnd(1):bnd(2)), this%dos_all(:,bnd(1):bnd(2)),this%work(1:N_E))
         endif
     enddo
@@ -252,7 +250,7 @@ subroutine add_dos_bnd_nc(this,eigval,eigvec)
         Call get_ibnd (eigval(i),this,bnd)
         if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
-    this%dos=this%dos+dos_loc/real(size(eigval))
+    this%dos=this%dos+dos_loc
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -273,7 +271,7 @@ subroutine add_dos_orb_nc(this,eigval,eigvec)
         Call get_ibnd (eigval(i),this,bnd)
         if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
-    this%dos=this%dos+dos_loc/real(size(eigval))
+    this%dos=this%dos+dos_loc
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -310,7 +308,7 @@ subroutine add_dos_sc(this,eigval,eigvec)
         Call get_ibnd (-eigval(i),this,bnd)
         Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
-    this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
+    this%dos=this%dos+dos_loc
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -346,7 +344,7 @@ subroutine add_dos_bnd_sc(this,eigval,eigvec)
         Call get_ibnd (-eigval(i),this,bnd)
         if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
-    this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
+    this%dos=this%dos+dos_loc
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -382,7 +380,7 @@ subroutine add_dos_orb_sc(this,eigval,eigvec)
         Call get_ibnd (-eigval(i),this,bnd)
         if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
     enddo
-    this%dos=this%dos+dos_loc/real(size(eigval)-i_start+1)
+    this%dos=this%dos+dos_loc
     this%N_entry=this%N_entry+1
 end subroutine
 

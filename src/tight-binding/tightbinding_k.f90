@@ -32,7 +32,7 @@ subroutine tightbinding_k(lat,tb_par,comm)
     !!preparation of older k-space Hamiltonian input
     Call get_Hk_inp(lat,tb_par%io_H,Hk_inp)
     !!creates newer k-space Hamiltonian from older input
-    Hk_mode=1   !manually set dense-zheev (only this is implemented so far)
+    Hk_mode=tb_par%io_H%i_diag
     Call set_Hk(Hk,Hk_mode,comm)
     Call Hk%init(Hk_inp,tb_par%io_H)
     Call Hk%set_work(work)

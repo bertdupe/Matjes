@@ -2,6 +2,7 @@ module m_tb_k_public
 use m_tb_k_base
 use m_tb_k_dense
 use m_tb_k_zheev
+use m_tb_k_zheevr
 use m_work_ham_single, only: work_ham
 use mpi_util ,only : mpi_type, bcast
 private set_H_single
@@ -32,6 +33,19 @@ subroutine set_H_single(Hk,mode_in,comm)
         Call comm%barrier()
         ERROR STOP "CHECK input"
 #endif
+    case (2)
+#ifdef CPP_LAPACK
+        allocate(H_k_zheevr::Hk)
+        if(comm%ismas) write(output_unit,'(//A/)') "Set Hk-type to: zheevr"
+#else
+        if(comm%ismas)then
+            write(error_unit,'(//A)') "ERROR, chose to use zheevr implementation of H_k_base, but lapack is not set"
+            write(error_unit,'(A)') "Use different mode without lapack or compile with lapack."
+        endif
+        Call comm%barrier()
+        ERROR STOP "CHECK input"
+#endif
+
     case default
         if(comm%ismas)then
             write(error_unit,'(//A)') "Failed to allocate H_k_base, unimlemented mode selected"

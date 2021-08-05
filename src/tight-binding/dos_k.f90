@@ -126,17 +126,17 @@ subroutine calc_dos_nc(Hk,h_io,lat,io_dos,work,comm)
         endif
 
         !add calculated states to the various dos flavors
-        Call dos%add(eval)
+        Call dos%add(eval(1:Nout))
         do idos=1,Ndos_bnd
-            Call dos_bnd(idos)%add(eval,evec)
+            Call dos_bnd(idos)%add(eval(1:Nout),evec(1:dimH,1:Nout))
         enddo
         do idos=1,Ndos_orb
-            Call dos_orb(idos)%add(eval,evec)
+            Call dos_orb(idos)%add(eval(1:Nout),evec(1:dimH,1:Nout))
         enddo
         do idos=1,Ndos_sig
-            Call dos_sig(idos)%add(eval)
+            Call dos_sig(idos)%add(eval(1:Nout))
         enddo
-        if(io_dos%all_states) Call dos_all%add(eval,evec)
+        if(io_dos%all_states) Call dos_all%add(eval(1:Nout),evec(1:dimH,1:Nout))
     enddo
 
     !gather all dos-data on the master thread
@@ -211,17 +211,17 @@ subroutine calc_dos_sc(Hk,h_io,lat,io_dos,work,comm)
         Call Hk%get_evec(k,Nin,eval,evec,Nout,work)
 
         !add calculated states to the various dos flavors
-        Call dos%add(eval,evec)
+        Call dos%add(eval(1:Nout),evec(1:dimH,1:Nout))
         do idos=1,Ndos_bnd
-            Call dos_bnd(idos)%add(eval,evec)
+            Call dos_bnd(idos)%add(eval(1:Nout),evec(1:dimH,1:Nout))
         enddo
         do idos=1,Ndos_orb
-            Call dos_orb(idos)%add(eval,evec)
+            Call dos_orb(idos)%add(eval(1:Nout),evec(1:dimH,1:Nout))
         enddo
         do idos=1,Ndos_sig
-            Call dos_sig(idos)%add(eval,evec)
+            Call dos_sig(idos)%add(eval(1:Nout),evec(1:dimH,1:Nout))
         enddo
-        if(io_dos%all_states) Call dos_all%add(eval,evec)
+        if(io_dos%all_states) Call dos_all%add(eval(1:Nout),evec(1:dimH,1:Nout))
     enddo
 
     !gather all dos-data on the master thread
