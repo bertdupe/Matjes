@@ -94,7 +94,7 @@ subroutine proj_energy(Hk,h_io,lat,io_dos,work)
     integer                         :: dimH
     integer                         :: Nin,Nout         !maximal and output number of eigenvalues
 
-    integer                         :: i,iE,i_state
+    integer                         :: i,iE
 
     Call get_kmesh(k_grid,lat,io_dos%kgrid,io_dos%fname_kmesh)
     Nk=k_grid%get_NK()

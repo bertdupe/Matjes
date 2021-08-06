@@ -1,4 +1,4 @@
-module m_tb_k_zheevr
+module m_tb_k_feast
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 #ifdef CPP_LAPACK
 
@@ -7,10 +7,11 @@ use m_work_ham_single, only: work_ham, N_work
 !use m_tb_k_base,  only: H_k_base
 use m_tb_k_dense, only: H_k_dense
 private
-public :: H_k_zheevr
+public :: H_k_feast
 
-type,extends(H_k_dense) ::H_k_zheevr
-    integer ::  size_work(3)
+type,extends(H_k_dense) ::H_k_feast
+    integer :: size_work(3)
+    integer :: fpm(128)
 contains
     procedure   :: get_size_eval
     procedure   :: set_work    !sets the work arrays to the correct size
@@ -21,59 +22,45 @@ end type
 contains
 
 integer function  get_size_eval(this)
-    class(H_k_zheevr),intent(in)    :: this
+    class(H_k_feast),intent(in)    :: this
     get_size_eval=this%Ne
 end function
 
 subroutine set_work(this,work)
-    class(H_k_zheevr),intent(inout)     :: this
+    class(H_k_feast),intent(inout)     :: this
     type(work_ham),intent(inout)        :: work
     integer                             :: sizes(N_work)
 
-    complex(8)  :: cwork(1)
-    real(8)     :: rwork(1)
-    integer     :: iwork(1)
-    integer     :: Nout
-    integer     :: isuppz(2*this%Ne)
-    integer     :: info
-    complex(8)  :: evec(1,1)
+    Call feastinit(this%fpm) 
+    this%fpm(1)=0
+    this%fpm(2)=8
+    this%fpm(3)=-nint(log10(this%diag_acc))
 
     sizes=0
-    Call zheevr('V', 'V', 'U', this%dimH, this%H, this%dimH, this%Ebnd(1), this%Ebnd(2),&
-                & 0, 0, this%diag_acc, Nout, this%eval, evec, this%dimH, isuppz,&
-                & cwork, -1, rwork, -1, iwork, -1, info)
-    sizes(1)=int(rwork(1))  !real
-    sizes(2)=    iwork(1)   !int
-    sizes(3)=int(cwork(1))  !complex
+    sizes(1)=this%Ne
     this%size_work=sizes
     Call work%set(sizes)
 end subroutine
 
 subroutine calc_eval(this,Nin,eval,Nout,work)
-    class(H_k_zheevr),intent(inout) :: this
+    class(H_k_feast),intent(inout) :: this
     integer,intent(in)              :: Nin  !size of eigenvalue input array
     real(8),intent(inout)           :: eval(Nin)    !eigenvalue array
     integer,intent(out)             :: Nout !calculated number of eigenvalues
     type(work_ham),intent(inout)    :: work !work array that should be set to correct sizes
     !internal
-    integer                 :: info
-    complex(8)              :: evec(1,1)
-    external zheevr
 
-    integer                 :: isuppz(2*this%Ne)
-    integer                 :: lcwork, lrwork, liwork
-
-    lrwork=this%size_work(1)
-    liwork=this%size_work(2)
-    lcwork=this%size_work(3)
+    real(8)                     :: epsout
+    integer                     :: loop
+    integer                     :: info
+    complex(8),allocatable      :: x(:,:)
 
     if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVALUE AS HAMILTONIAN IS NOT SET"
-    Call zheevr('N', 'V', 'U', this%dimH, this%H, this%dimH, this%Ebnd(1), this%Ebnd(2),&
-                & 0, 0, this%diag_acc, Nout, eval, evec, 1, isuppz,&
-                & work%cmplx_arr, lcwork, work%real_arr, lrwork, work%int_arr, liwork, info)
-    if(info/=0) ERROR STOP "LAPACK ERROR"
+    allocate(x(this%dimH,Nin))
+    call zfeast_heev ( 'F', this%dimH, this%H, this%dimH, this%fpm, epsout, loop, this%Ebnd(1), this%Ebnd(2), Nin, eval, x, Nout, work%real_arr, info )
+    if(info/=0) ERROR STOP "Feast ERROR"
     if(Nout>Nin)then
-        write(error_unit,'(/A)') "Trying to diagonalize Hamiltonian with zheevr, but output Hamiltonian size has been set to low (TB_diag_estNe)"
+        write(error_unit,'(/A)') "Trying to diagonalize Hamiltonian with feast, but output Hamiltonian size has been set to low (TB_diag_estNe)"
         write(error_unit,'(AI8)') "Found eigenvalues in interval:", Nout
         write(error_unit,'(AI8)') "Assumend maximal array size  :", Nin
         ERROR STOP "INCREASE ARRAY SIZE (TB_diag_estNe) OR DECREASE ENERGY WINDOW TB_diag_Ebnd."
@@ -81,30 +68,22 @@ subroutine calc_eval(this,Nin,eval,Nout,work)
 end subroutine
 
 subroutine calc_evec(this,Nin,eval,evec,Nout,work)
-    class(H_k_zheevr),intent(inout)      :: this
+    class(H_k_feast),intent(inout)      :: this
     integer,intent(in)                  :: Nin  !size of eigenvalue input array
     real(8),intent(inout)               :: eval(Nin)
     complex(8),intent(inout)            :: evec(this%dimH,Nin)
     integer,intent(out)                 :: Nout !calculated number of eigenvalues
     type(work_ham),intent(inout)        :: work !work array that should be set to correct sizes
     !internal
-    integer                 :: info
-    external zheevr
-
-    integer                 :: isuppz(2*this%Ne)
-    integer                 :: lcwork, lrwork, liwork
-
-    lrwork=this%size_work(1)
-    liwork=this%size_work(2)
-    lcwork=this%size_work(3)
+    real(8)                     :: epsout
+    integer                     :: loop
+    integer                     :: info
 
     if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVALUE AS HAMILTONIAN IS NOT SET"
-    Call zheevr('V', 'V', 'U', this%dimH, this%H, this%dimH, this%Ebnd(1), this%Ebnd(2),&
-                & 0, 0, this%diag_acc, Nout, eval, evec, this%dimH, isuppz,&
-                & work%cmplx_arr, lcwork, work%real_arr, lrwork, work%int_arr, liwork, info)
-    if(info/=0) ERROR STOP "LAPACK ERROR"
+    call zfeast_heev ( 'F', this%dimH, this%H, this%dimH, this%fpm, epsout, loop, this%Ebnd(1), this%Ebnd(2), Nin, eval, evec, Nout, work%real_arr, info )
+    if(info/=0) ERROR STOP "Feast ERROR"
     if(Nout>Nin)then
-        write(error_unit,'(/A)') "Trying to diagonalize Hamiltonian with zheevr, but output Hamiltonian size has been set to low (TB_diag_estNe)"
+        write(error_unit,'(/A)') "Trying to diagonalize Hamiltonian with feast, but output Hamiltonian size has been set to low (TB_diag_estNe)"
         write(error_unit,'(AI8)') "Found eigenvalues in interval:", Nout
         write(error_unit,'(AI8)') "Assumend maximal array size  :", Nin
         ERROR STOP "INCREASE ARRAY SIZE (TB_diag_estNe) OR DECREASE ENERGY WINDOW TB_diag_Ebnd."
