@@ -209,26 +209,31 @@ subroutine add_dos_all_sc(this,eigval,eigvec)
             exit
         endif
     enddo
-    if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
 
-    dimH=size(eigvec,1)
-    do i=i_start,size(eigval)
-        !u-part of BdG
-        Call get_ibnd (eigval(i),this,bnd)
-        if(bnd(1)<bnd(2))then
-            N_E=bnd(2)-bnd(1)+1
-            proj=real(conjg(eigvec(1:this%Nproj,i))*eigvec(1:this%Nproj,i),8)       !projection on states of u-part
-            Call add_gauss_mult(eigval(i), this%sigma, N_e, this%Nproj, proj, this%Eval(bnd(1):bnd(2)), this%dos_all(:,bnd(1):bnd(2)),this%work(1:N_E))
-        endif
+    if(i_start>0)then 
+        dimH=size(eigvec,1)
+        do i=i_start,size(eigval)
+            !u-part of BdG
+            Call get_ibnd (eigval(i),this,bnd)
+            if(bnd(1)<bnd(2))then
+                N_E=bnd(2)-bnd(1)+1
+                proj=real(conjg(eigvec(1:this%Nproj,i))*eigvec(1:this%Nproj,i),8)       !projection on states of u-part
+                Call add_gauss_mult(eigval(i), this%sigma, N_e, this%Nproj, proj, this%Eval(bnd(1):bnd(2)), this%dos_all(:,bnd(1):bnd(2)),this%work(1:N_E))
+            endif
 
-        !v-part of BdG
-        Call get_ibnd (-eigval(i),this,bnd)
-        if(bnd(1)<bnd(2))then
-            N_E=bnd(2)-bnd(1)+1
-            proj=real(conjg(eigvec(dimH/2+1:dimH,i))*eigvec(dimH/2+1:dimH,i),8)             !projection on states of v-part
-            Call add_gauss_mult(-eigval(i), this%sigma, N_e, this%Nproj, proj, this%Eval(bnd(1):bnd(2)), this%dos_all(:,bnd(1):bnd(2)),this%work(1:N_E))
-        endif
-    enddo
+            !v-part of BdG
+            Call get_ibnd (-eigval(i),this,bnd)
+            if(bnd(1)<bnd(2))then
+                N_E=bnd(2)-bnd(1)+1
+                proj=real(conjg(eigvec(dimH/2+1:dimH,i))*eigvec(dimH/2+1:dimH,i),8)             !projection on states of v-part
+                Call add_gauss_mult(-eigval(i), this%sigma, N_e, this%Nproj, proj, this%Eval(bnd(1):bnd(2)), this%dos_all(:,bnd(1):bnd(2)),this%work(1:N_E))
+            endif
+        enddo
+#ifdef CPP_DEBUG
+    else
+        STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
+#endif
+    endif
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -294,21 +299,26 @@ subroutine add_dos_sc(this,eigval,eigvec)
             exit
         endif
     enddo
-    if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
 
-    dimH=size(eigvec,1)
-    dos_loc=0.0d0
-    do i=i_start,size(eigval)
-        !u-part of BdG
-        pref=real(dot_product(eigvec(1:dimH/2,i),eigvec(1:dimH/2,i)),8)
-        Call get_ibnd (eigval(i),this,bnd)
-        Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
-        !v-part of BdG
-        pref=real(dot_product(eigvec(dimH/2+1:dimH,i),eigvec(dimH/2+1:dimH,i)),8)
-        Call get_ibnd (-eigval(i),this,bnd)
-        Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
-    enddo
-    this%dos=this%dos+dos_loc
+    if(i_start>0)then 
+        dimH=size(eigvec,1)
+        dos_loc=0.0d0
+        do i=i_start,size(eigval)
+            !u-part of BdG
+            pref=real(dot_product(eigvec(1:dimH/2,i),eigvec(1:dimH/2,i)),8)
+            Call get_ibnd (eigval(i),this,bnd)
+            Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+            !v-part of BdG
+            pref=real(dot_product(eigvec(dimH/2+1:dimH,i),eigvec(dimH/2+1:dimH,i)),8)
+            Call get_ibnd (-eigval(i),this,bnd)
+            Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        enddo
+        this%dos=this%dos+dos_loc
+#ifdef CPP_DEBUG
+    else
+        STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
+#endif
+    endif
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -330,21 +340,25 @@ subroutine add_dos_bnd_sc(this,eigval,eigvec)
             exit
         endif
     enddo
-    if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
-
-    dimH=size(eigvec,1)
-    dos_loc=0.0d0
-    do i=i_start,size(eigval)
-        !u-part of BdG
-        pref=real(dot_product(eigvec(this%bnd(1):this%bnd(2),i),eigvec(this%bnd(1):this%bnd(2),i)),8)
-        Call get_ibnd (eigval(i),this,bnd)
-        if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
-        !v-part of BdG
-        pref=real(dot_product(eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i),eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i)),8)
-        Call get_ibnd (-eigval(i),this,bnd)
-        if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
-    enddo
-    this%dos=this%dos+dos_loc
+    if(i_start>0)then
+        dimH=size(eigvec,1)
+        dos_loc=0.0d0
+        do i=i_start,size(eigval)
+            !u-part of BdG
+            pref=real(dot_product(eigvec(this%bnd(1):this%bnd(2),i),eigvec(this%bnd(1):this%bnd(2),i)),8)
+            Call get_ibnd (eigval(i),this,bnd)
+            if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+            !v-part of BdG
+            pref=real(dot_product(eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i),eigvec(dimH/2+this%bnd(1):dimH/2+this%bnd(2),i)),8)
+            Call get_ibnd (-eigval(i),this,bnd)
+            if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        enddo
+        this%dos=this%dos+dos_loc
+#ifdef CPP_DEBUG
+    else
+        STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
+#endif
+    endif
     this%N_entry=this%N_entry+1
 end subroutine
 
@@ -366,21 +380,25 @@ subroutine add_dos_orb_sc(this,eigval,eigvec)
             exit
         endif
     enddo
-    if(i_start==0) STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
-
-    dimH=size(eigvec,1)
-    dos_loc=0.0d0
-    do i=i_start,size(eigval)
-        !u-part of BdG
-        pref=real(dot_product(eigvec(this%orb:dimH/2:this%freq,i),eigvec(this%orb:dimH/2:this%freq,i)),8)
-        Call get_ibnd (eigval(i),this,bnd)
-        if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
-        !v-part of BdG
-        pref=real(dot_product(eigvec(this%orb+dimH/2::this%freq,i),eigvec(this%orb+dimH/2::this%freq,i)),8)
-        Call get_ibnd (-eigval(i),this,bnd)
-        if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
-    enddo
-    this%dos=this%dos+dos_loc
+    if(i_start>0)then 
+        dimH=size(eigvec,1)
+        dos_loc=0.0d0
+        do i=i_start,size(eigval)
+            !u-part of BdG
+            pref=real(dot_product(eigvec(this%orb:dimH/2:this%freq,i),eigvec(this%orb:dimH/2:this%freq,i)),8)
+            Call get_ibnd (eigval(i),this,bnd)
+            if(bnd(1)<bnd(2)) Call add_gauss(eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+            !v-part of BdG
+            pref=real(dot_product(eigvec(this%orb+dimH/2::this%freq,i),eigvec(this%orb+dimH/2::this%freq,i)),8)
+            Call get_ibnd (-eigval(i),this,bnd)
+            if(bnd(1)<bnd(2)) Call add_gauss(-eigval(i),pref,this%Eval(bnd(1):bnd(2)),dos_loc(bnd(1):bnd(2)),this%sigma)
+        enddo
+        this%dos=this%dos+dos_loc
+#ifdef CPP_DEBUG
+    else
+        STOP "No positive eigenvalues found ind add_dos_sc. For dos choose energies in positive branch."
+#endif
+    endif
     this%N_entry=this%N_entry+1
 end subroutine
 
