@@ -1,8 +1,5 @@
 module m_user_info
-interface welcome
-       module procedure welcome_mpi
-       module procedure welcome_serial
-end interface welcome
+implicit none
 
 interface user_info
        module procedure user_info_raw
@@ -14,27 +11,33 @@ public :: welcome,user_info
 contains
 ! simple module to write welcome messages for the different parts of the code
 
-subroutine welcome_serial()
+subroutine welcome_message()
 implicit none
 
-write(6,'(/,a)') 'Bonjour!! you are now using the Kieler code'
-write(6,'(a)') 'All the developpers hope that you will enjoy this moment.'
-write(6,'(a)') 'If you have a problem, if you are happy with the code or if you wish to chat a bit'
-write(6,'(a)') 'send an email to bertrand.dupe@gmail.com'
+    write(6,'(/,a)') 'Bonjour!! you are now using the Kieler code'
+    write(6,'(a)') 'All the developers hope that you will enjoy this moment.'
+    write(6,'(a)') 'If you have a problem, if you are happy with the code or if you wish to chat a bit'
+    write(6,'(a)') 'send an email to bertrand.dupe@gmail.com'
+#ifdef CPP_VERSIONGIT
+    write(6,'(/2a)') "You are using the git-version: ",CPP_VERSIONGIT
+#endif
+    write(6,'(/)') 
+end subroutine
 
-end subroutine welcome_serial
+subroutine welcome
+#if CPP_MPI
+use mpi_basic,only: mpi_world
+    if(mpi_world%ismas)then
+        Call welcome_message()
+        write(6,'(a,I10,2x,a)') 'Congratulations, you are now using',mpi_world%NP,'processors'
+        Call print_preprocessor_flags(6)
+    endif
+#else
+    Call welcome_message()
+    Call print_preprocessor_flags(6)
+#endif
 
-subroutine welcome_mpi(j)
-implicit none
-integer, intent(in) :: j
-
-write(6,'(/,a)') 'Bonjour!! you are now using the Kieler code'
-write(6,'(a)') 'All the developpers hope that you will enjoy this moment.'
-write(6,'(a)') 'If you have a problem, if you are happy with the code or if you wish to chat a bit'
-write(6,'(a,/)') 'send an email to bertrand.dupe@gmail.com'
-write(6,'(a,I10,2x,a)') 'Congratulations, you are now using',j,'processors'
-
-end subroutine welcome_mpi
+end subroutine 
 
 subroutine user_info_raw(io,time1,string,space)
 implicit none
@@ -60,14 +63,49 @@ else
    time1=0.0d0
 endif
 
-#ifdef CPP_MPI
-if (irank.eq.0)
-#endif
+!REINTRODUCE ONLY WRITING WITH RESPECTIVE MASTER... MIGHT REQUIRE MODULE INTERFACE OVERLOAD PROCEDURE WITH MPI_TYPE
+!#ifdef CPP_MPI
+!if (irank.eq.0)
+!#endif
    write(io,forme) string
-#ifdef CPP_MPI
-endif
-#endif
+!#ifdef CPP_MPI
+!endif
+!#endif
 
 end subroutine user_info_raw
+
+subroutine print_preprocessor_flags(io_unit)
+    integer,intent(in)  :: io_unit
+    character(len=*),parameter  :: forma='(2X,A)'
+
+    write(io_unit,'(//A)') "Compiled using the following preprocessor flags:"
+#ifdef CPP_BLAS
+    write(io_unit,forma) "CPP_BLAS"
+#endif
+#ifdef CPP_CUDA
+    write(io_unit,forma) "CPP_CUDA"
+#endif
+#ifdef CPP_DEBUG
+    write(io_unit,forma) "CPP_DEBUG"
+#endif
+#ifdef CPP_EIGEN
+    write(io_unit,forma) "CPP_EIGEN"
+#endif
+#ifdef CPP_FFTW3
+    write(io_unit,forma) "CPP_FFTW3"
+#endif
+#ifdef CPP_MKL
+    write(io_unit,forma) "CPP_MKL"
+#endif
+#ifdef CPP_MPI
+    write(io_unit,forma) "CPP_MPI"
+#endif
+#ifdef CPP_MRG
+    write(io_unit,forma) "CPP_MRG"
+#endif
+    write(io_unit,'(/)')
+
+end subroutine
+
 
 end module m_user_info

@@ -17,7 +17,7 @@
       type(lattice), intent(in) :: my_lattice
 !internal
       integer :: i,j,k,h,xmax,ymax,n_atoms,stat,x_index,y_index
-      integer :: i_x,i_y,i_z,i_m
+      integer :: i_x,i_y,i_z
       integer :: n_raster,file_index,spin_control
       real(kind=8) :: xstart,xende,ystart,yende,maximum,minimum
       real(kind=8), dimension(:,:), allocatable :: daten
@@ -224,12 +224,11 @@
       daten=0.0d0
 
       n_atoms=product(dim_lat)
-      i_m=1
       do i_x=1,dim_lat(1)
        do i_y=1,dim_lat(2)
         do i_z=1,dim_lat(3)
         i=i_x+(i_y-1)*dim_lat(1)+(i_z-1)*dim_lat(1)*dim_lat(2)
-        daten(i,:)=my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(1:3)
+        daten(i,:)=my_lattice%M%modes(:,i_x,i_y,i_z)
         enddo
        enddo
       enddo

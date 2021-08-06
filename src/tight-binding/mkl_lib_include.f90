@@ -1,4 +1,4 @@
 
-#ifdef CPP_MKL_SPBLAS
+#ifdef CPP_MKL
 include 'mkl_spblas.f90'
 #endif

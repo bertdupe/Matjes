@@ -1,33 +1,32 @@
 module m_relaxation
+use m_mc_track_val, only: track_val
+use m_hamiltonian_collection, only: hamiltonian
 implicit none
+
 contains
 !
 ! ===============================================================
-SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,kt,acc,rate,nb,cone,Hams,Q_neigh)
-    use mtprng
+SUBROUTINE Relaxation(lat,io_MC,N_cell,state_prop,kt,H,Q_neigh,work)
     use m_Corre
     use m_constants, only : k_b
-    use m_topocharge_all
-    use m_store_relaxation
-    use m_derived_types, only : point_shell_Operator,lattice
-    use m_basic_types, only : vec_point
-    use m_modes_variables, only : point_shell_mode
-    use m_H_public
+    use m_derived_types, only : lattice
     use m_topo_commons
-    use m_io_utils
     use m_io_files_utils
     use m_convert
     use m_MCstep
-    use m_input_types,only: MC_input
+    use m_MC_io,only: MC_input
+    use m_work_ham_single, only: work_ham_single
     ! input
     type(lattice),intent(inout)     :: lat
-    real(kind=8), intent(inout)     :: qeulerp,qeulerm,cone,acc,rate,E_total,magnetization(3),E(8)
-    real(kind=8), intent(inout)     :: nb
     real(kind=8), intent(in)        :: kT
+    type(track_val),intent(inout)   :: state_prop
     type(MC_input),intent(in)       :: io_MC 
     integer, intent(in)             :: N_cell
-    class(t_H), intent(in)          :: Hams(:)
+    type(hamiltonian),intent(inout) :: H
     integer,intent(in)              :: Q_neigh(:,:) 
+    type(work_ham_single),intent(inout) :: work
+    !internal
+    real(kind=8)                    :: qeulerp,qeulerm
     ! a big table
     real(kind=8) :: Relax(18,io_MC%n_sizerelax),dumy(5)
     ! Slope Index
@@ -35,6 +34,7 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     ! dummy
     integer :: i,j,n_w_step
     character(len=50) :: fname
+    real(8) :: E_del(8) !old format to print energy decomposition , remove or replace..
     
     write(6,'(/,a,/)') "starting relaxation"
     
@@ -50,20 +50,21 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     !         the step to an unordered structure
                 !Relaxation of the System
         Do i_MC=1,io_MC%T_relax*N_cell
-            Call MCStep(lat,io_MC,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
+            Call MCStep(lat,io_MC,N_cell,state_prop,kt,H,work)
         enddo
         !In case T_relax set to zero at least one MCstep is done
-        Call MCStep(lat,io_MC,N_cell,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
+        Call MCStep(lat,io_MC,N_cell,state_prop,kt,H,work)
     
-    ! calculate the topocharge
-        dumy=get_charge(lat,Q_neigh)
-        qeulerp=dumy(1)
-        qeulerm=dumy(2)
     
     ! Write the Equilibrium files
         if (io_MC%print_relax) then
+            STOP "THIS HAS TO BE UPDATED"
+         ! calculate the topocharge
+             dumy=get_charge(lat,Q_neigh)
+             qeulerp=dumy(1)
+             qeulerm=dumy(2)
             if (mod(i_relaxation,n_w_step).eq.0) call store_relaxation(Relax,i_relaxation,dble(i_relaxation), &
-                  &  sum(E)/dble(N_cell),E,dble(N_cell),kt,Magnetization,rate,cone,qeulerp,qeulerm)
+                  &  state_prop%E_total/dble(N_cell),E_del,dble(N_cell),kt,state_prop%Magnetization,state_prop%rate,state_prop%cone,qeulerp,qeulerm)
         endif
     
     enddo   ! enddo over the relaxation loop
@@ -96,5 +97,6 @@ SUBROUTINE Relaxation(lat,io_MC,N_cell,E_total,E,Magnetization,qeulerp,qeulerm,k
     
     endif
 
-END SUBROUTINE Relaxation
+END SUBROUTINE
+
 end module

@@ -1,6 +1,7 @@
 module m_zeeman
 implicit none
 private
+character(len=*),parameter  :: ham_desc="Zeeman energy"
 public :: get_zeeman_H,read_zeeman_input
 
 contains
@@ -30,6 +31,7 @@ subroutine get_zeeman_H(Ham,io,lat)
     use m_setH_util,only: get_coo
     use m_input_H_types, only: io_H_zeeman
     use m_constants, only : mu_B,mu_0
+    use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
     type(io_H_zeeman),intent(in):: io
@@ -42,10 +44,9 @@ subroutine get_zeeman_H(Ham,io,lat)
     !input for setting t_H
     real(8),allocatable     :: val_tmp(:)
     integer,allocatable     :: ind_tmp(:,:)
-    integer,allocatable     :: line(:,:)
+    integer,allocatable     :: connect(:,:)
 
     if(io%is_set)then
-        allocate(line(1,lat%Ncell),source=0) !1, since always onsite
         allocate(Htmp(3,lat%M%dim_mode),source=0.d0) !assume shape of B-field has to be 3
         Call lat%cell%get_mag_magmom(magmom)
         do i=1,size(magmom)
@@ -57,12 +58,16 @@ subroutine get_zeeman_H(Ham,io,lat)
 
         !get local Hamiltonian in coo format
         Call get_coo(Htmp,val_tmp,ind_tmp)
-        !simple on-site term
+
+        allocate(connect(2,lat%Ncell))
         do i=1,lat%Ncell
-            line(1,i)=i
+            connect(:,i)=i
         enddo
-        Call Ham%init_1(line,val_tmp,ind_tmp,[3,1],lat)
-        Ham%desc="Zeeman energy"
+        Call Ham%init_connect(connect,val_tmp,ind_tmp,"BM",lat,1)
+        Ham%desc=ham_desc
+        !set modes
+        Call mode_set_rank1(Ham%mode_l,lat,"B")
+        Call mode_set_rank1(Ham%mode_r,lat,"M")
     endif
 end subroutine
 

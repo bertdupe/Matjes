@@ -1,18 +1,14 @@
 module m_H_dense
 !Hamiltonian type specifications using dense matrices and no external library
-use m_H_type
-use m_H_coo
-use m_derived_types, only: lattice
+use m_derived_types, only: lattice, number_different_order_parameters
+use m_H_coo_based
+use m_work_ham_single, only:  work_mode, N_work
 
-
-type,extends(t_H) :: t_H_dense
+type,extends(t_H_coo_based) :: t_H_dense
     real(8),allocatable   :: H(:,:)
 contains
     !necessary t_H routines
-    procedure :: eval_single
-    procedure :: init      
-    procedure :: init_1    
-    procedure :: init_mult_2   
+    procedure :: set_from_Hcoo 
 
     procedure :: add_child 
     procedure :: destroy_child    
@@ -20,93 +16,73 @@ contains
 
     procedure :: optimize
     procedure :: mult_r,mult_l
-    procedure :: mult_r_single,mult_l_single
+    !MPI
+    procedure :: send
+    procedure :: recv
+    procedure :: distribute
+    procedure :: bcast
 end type
 
 private
 public t_H,t_H_dense
 contains 
 
-subroutine mult_r(this,lat,res)
+subroutine mult_r(this,lat,res,work,alpha,beta)
     !mult
     use m_derived_types, only: lattice
-    class(t_h_dense),intent(in)   :: this
+    class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)   !result matrix-vector product
+    type(work_mode),intent(inout)   :: work
+    real(8),intent(in),optional     :: alpha
+    real(8),intent(in),optional     :: beta
     ! internal
-    real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
+    real(8),pointer,contiguous      :: modes(:)
+    integer                         :: work_size(N_work)
 
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
     if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-    res=matmul(this%H,modes)
 
-    if(allocated(vec)) deallocate(vec)
+    Call this%mode_r%get_mode(lat,modes,work,work_size)
+    if(present(alpha).and.present(beta))then
+        res=alpha*matmul(this%H,modes)+beta*res
+    elseif(present(alpha))then
+        res=alpha*matmul(this%H,modes)
+    elseif(present(beta))then
+        res=matmul(this%H,modes)+beta*res
+    else
+        res=matmul(this%H,modes)
+    endif
+    nullify(modes)
+    work%offset=work%offset-work_size
 end subroutine 
 
-
-subroutine mult_l(this,lat,res)
+subroutine mult_l(this,lat,res,work,alpha,beta)
     use m_derived_types, only: lattice
-    class(t_h_dense),intent(in)   :: this
+    class(t_h_dense),intent(in)     :: this
     type(lattice), intent(in)       :: lat
     real(8), intent(inout)          :: res(:)
+    type(work_mode),intent(inout)   :: work
+    real(8),intent(in),optional     :: alpha
+    real(8),intent(in),optional     :: beta
     ! internal
-    real(8),pointer            :: modes(:)
-    real(8),allocatable,target :: vec(:)
-
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
+    real(8),pointer,contiguous      :: modes(:)
+    integer                         :: work_size(N_work)
 
     if(size(res)/=this%dimH(2)) STOP "size of vec is wrong"
-    res=matmul(modes,this%H)
-    if(allocated(vec)) deallocate(vec)
-    
+
+    Call this%mode_l%get_mode(lat,modes,work,work_size)
+    if(present(alpha).and.present(beta))then
+        res=alpha*matmul(modes,this%H)+beta*res
+    elseif(present(alpha))then
+        res=alpha*matmul(modes,this%H)+res
+    elseif(present(beta))then
+        res=matmul(modes,this%H)+beta*res
+    else
+        res=matmul(modes,this%H)
+    endif
+    nullify(modes)
+    work%offset=work%offset-work_size
 end subroutine 
-
-
-subroutine mult_r_single(this,i_site,lat,res)
-    !mult
-    use m_derived_types, only: lattice
-    class(t_h_dense),intent(in) :: this
-    integer,intent(in)          :: i_site
-    type(lattice), intent(in)   :: lat
-    real(8), intent(inout)      :: res(:)   !result matrix-vector product
-    ! internal
-    integer                     :: bnd(2)
-    real(8),pointer             :: modes(:)
-    real(8),allocatable,target  :: vec(:)
-
-    Call lat%point_order(this%op_r,this%dimH(2),modes,vec)
-    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-    bnd(1)=this%dim_mode(1)*(i_site-1)+1
-    bnd(2)=this%dim_mode(1)*(i_site)
-    !terrible implementation striding-wise
-    res=matmul(this%H(bnd(1):bnd(2),:),modes)
-
-    if(allocated(vec)) deallocate(vec)
-end subroutine 
-
-subroutine mult_l_single(this,i_site,lat,res)
-    !mult
-    use m_derived_types, only: lattice
-    class(t_h_dense),intent(in) :: this
-    integer,intent(in)          :: i_site
-    type(lattice), intent(in)   :: lat
-    real(8), intent(inout)      :: res(:)   !result matrix-vector product
-    ! internal
-    integer                     :: bnd(2)
-    real(8),pointer             :: modes(:)
-    real(8),allocatable,target  :: vec(:)
-
-    Call lat%point_order(this%op_l,this%dimH(1),modes,vec)
-    if(size(res)/=this%dimH(1)) STOP "size of vec is wrong"
-    bnd(1)=this%dim_mode(2)*(i_site-1)+1
-    bnd(2)=this%dim_mode(2)*(i_site)
-    !terrible implementation striding-wise
-    res=matmul(modes,this%H(:,bnd(1):bnd(2)))
-
-    if(allocated(vec)) deallocate(vec)
-end subroutine 
-
 
 
 subroutine optimize(this)
@@ -116,59 +92,24 @@ subroutine optimize(this)
     continue 
 end subroutine
 
-subroutine init_1(this,line,Hval,Hval_ind,order,lat)
-    use m_derived_types, only: lattice
-    class(t_h_dense),intent(inout)    :: this
-
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: order(2)
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: line(:,:)
-
-    !local
-    type(t_H_coo)           :: H_coo
-
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%init_1(line,Hval,Hval_ind,order,lat)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
-
-
-subroutine init_mult_2(this,connect,Hval,Hval_ind,op_l,op_r,lat)
-    use m_derived_types, only: lattice
-    class(t_h_dense),intent(inout)    :: this
-
-    type(lattice),intent(in)        :: lat
-    integer,intent(in)              :: op_l(:),op_r(:)
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: connect(:,:)
-
-    !local
-    type(t_H_coo)           :: H_coo
-
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%init_mult_2(connect,Hval,Hval_ind,op_l,op_r,lat)
-    Call set_from_Hcoo(this,H_coo,lat)
-end subroutine 
-
 
 subroutine copy_child(this,Hout)
     class(t_h_dense),intent(in)   :: this
-    class(t_H),intent(inout)        :: Hout
+    class(t_H_base),intent(inout)        :: Hout
     
     select type(Hout)
     class is(t_h_dense)
         allocate(Hout%H,source=this%H)
+        Call this%copy_deriv(Hout)
     class default
         STOP "Cannot copy t_h_dense type with Hamiltonian that is not a class of t_h_dense"
     end select
 end subroutine
 
+
 subroutine add_child(this,H_in)
     class(t_h_dense),intent(inout)    :: this
-    class(t_H),intent(in)             :: H_in
+    class(t_H_base),intent(in)             :: H_in
 
     select type(H_in)
     class is(t_h_dense)
@@ -187,25 +128,9 @@ subroutine destroy_child(this)
     endif
 end subroutine
 
-subroutine init(this,energy_in,lat)
-    use m_derived_types, only: operator_real_order_N,lattice
-    class(t_h_dense),intent(inout)    :: this
-    type(operator_real_order_N)         :: energy_in
-    type(lattice),intent(in)            :: lat
-
-    !local
-    type(t_H_coo)           :: H_coo
-
-    if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call H_coo%init(energy_in,lat)
-    Call set_from_Hcoo(this,H_coo,lat)
-
-end subroutine 
-
-subroutine set_from_Hcoo(this,H_coo,lat)
-    type(t_H_coo),intent(inout)         :: H_coo
-    type(t_h_dense),intent(inout)     :: this
-    type(lattice),intent(in)            :: lat
+subroutine set_from_Hcoo(this,H_coo)
+    class(t_h_dense),intent(inout)  :: this
+    type(t_H_coo),intent(inout)     :: H_coo
 
     !local
     integer                 :: nnz,i
@@ -217,29 +142,75 @@ subroutine set_from_Hcoo(this,H_coo,lat)
     do i=1,nnz
         this%H(rowind(i),colind(i))=val(i)
     enddo
-
-    Call this%init_base(lat,H_coo%op_l,H_coo%op_r)
 end subroutine 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine eval_single(this,E,i_m,lat)
-    use m_derived_types, only: lattice
-    ! input
-    class(t_h_dense),intent(in)     :: this
-    type(lattice), intent(in)       :: lat
-    integer, intent(in)             :: i_m
-    ! output
-    real(kind=8), intent(out)       :: E
-    ! internal
-    real(8),pointer                 :: modes_l(:),modes_r(:)
-    real(8),allocatable,target      :: vec_l(:),vec_r(:)
-    real(8)                         :: tmp(this%dimH(2))
+subroutine send(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_dense),intent(in)     :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
 
-    Call lat%point_order(this%op_l,this%dimH(1),modes_l,vec_l)
-    Call lat%point_order(this%op_r,this%dimH(2),modes_r,vec_r)
+#ifdef CPP_MPI
+    integer     :: ierr
+    Call this%send_base(ithread,tag,com)
+    Call MPI_Send(this%H, size(this%H), MPI_DOUBLE_PRECISION, ithread, tag, com, ierr)
+#else
+    continue
+#endif
+end subroutine
 
-    tmp=matmul(this%H(:,1+(i_m-1)*this%dim_mode(2):i_m*this%dim_mode(2)),modes_r(1+(i_m-1)*this%dim_mode(2):i_m*this%dim_mode(2)))
-    E=dot_product(modes_l,tmp)
+subroutine recv(this,ithread,tag,com)
+    use mpi_basic                
+    class(t_H_dense),intent(inout)  :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: stat(MPI_STATUS_SIZE) 
+    integer     :: ierr
+    
+    Call this%recv_base(ithread,tag,com)
+    allocate(this%H(this%dimH(1),this%dimH(2)))
+    Call MPI_RECV(this%H, size(this%H), MPI_DOUBLE_PRECISION, ithread, tag, com, stat, ierr)
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast(this,comm)
+    use mpi_basic                
+    class(t_H_dense),intent(inout)        ::  this
+    type(mpi_type),intent(in)       ::  comm
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: N(2)
+
+    Call this%bcast_base(comm)
+    if(comm%ismas)then
+        N=shape(this%H)
+    endif
+    Call MPI_Bcast(N, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
+    if(.not.comm%ismas)then
+        allocate(this%H(N(1),N(2)))
+    endif
+    Call MPI_Bcast(this%H,size(this%H), MPI_REAL8, comm%mas, comm%com,ierr)
+#else
+    continue
+#endif
+end subroutine 
+
+subroutine distribute(this,comm)
+    use mpi_basic                
+    class(t_H_dense),intent(inout)  ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    ERROR STOP "Inner MPI-parallelization of the Hamiltonian is not implemented for dense Hamiltonians"
 end subroutine 
 
 end module

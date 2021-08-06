@@ -1,4 +1,5 @@
 module m_constants
+    implicit none
 ! Boltzmannfactor in eV/K
 real(kind=8), Parameter :: k_B=0.000086173324d0
 ! magnetic constant
@@ -20,25 +21,14 @@ real(kind=8), parameter :: qel=1.60217657d-19
 real(8),parameter       :: pi= 3.14159265358979323846264338327950288d0
 contains
 
-!! function that defines the pi constant and multiplies it
-!real(kind=8) function pi(a)
-!implicit none
-!real(kind=8), intent(in) :: a
-!!     Pi
-!real(kind=8), Parameter :: pi_value=acos(-1.0d0)
-!
-!pi=a*pi_value
-!end function pi
-
 ! function that spits out the unit matrix
 function identity(a)
-implicit none
-real(kind=8), intent(in) :: a
-real(kind=8), dimension(3,3) :: identity
-
-real(kind=8), dimension(1:9) :: iden=(/1.0d0,0.0d0,0.0d0,0.0d0,1.0d0,0.0d0,0.0d0,0.0d0,1.0d0/)
-
-identity = RESHAPE( iden, (/ 3, 3 /) ) * a
+    implicit none
+    real(8), intent(in) :: a
+    real(8), dimension(3,3) :: identity
+    real(8), dimension(3,3),parameter :: iden=reshape([1.0d0,0.0d0,0.0d0,0.0d0,1.0d0,0.0d0,0.0d0,0.0d0,1.0d0],[3,3])
+    
+    identity = iden * a
 
 end function identity
 

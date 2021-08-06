@@ -1,36 +1,141 @@
-     module m_paratemp
-       interface paratemp
-          module procedure serial_paratemp
-       end interface paratemp
-
-       interface calculate_diffusion
-          module procedure calculate_diffusion_serial
-       end interface calculate_diffusion
-#ifdef CPP_MPI
-       interface paratemp_gather
-          module procedure paratemp_gather_mpi
-       end interface paratemp_gather
-
-       interface paratemp_scatter
-          module procedure paratemp_scatter_mpi
-       end interface paratemp_scatter
-#endif
-       contains
-
+module m_paratemp
+use mpi_distrib_v
 !--------------------------------------------
 ! parallel tempering as described in Katzgraber et al PRE and cond-mat 30 mars 2006 arXiv:cond-mat/0602085v3
 
 !--------------------------------------------
 !--------------------------------------------
-       subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_thousand,isize,i_optTset)
+type paratemp_track
+    !variable to keep track of what is where on the different parallel tempering steps
+    ! parallel tempering label. can take 3 values
+    
+    !in space of images
+    integer,allocatable :: label(:)    ! notifies if this image has last been at lowest(1) or highest(-1) temperature, or has never reached the extrema(0) (0: no label; +1: up; -1: down)
+    !in space of temperatures
+    real(8),allocatable :: kT_all(:)        ! contains all temperatures T/k_b ordered from smallest to largest 
+    real(8),allocatable :: kT_updated(:)    ! used to save updated temperature set 
+    integer,allocatable :: nup(:),ndown(:)  ! number of times the temperature has had the up or down label
+    integer,allocatable :: Nsuccess(:)      ! keeps track how often a given temperature has moved up (only used for output)
+    integer,allocatable :: image_temp(:)    ! gives position of ordered temperature in full image array ( image_temp(1)=2 -> lattice with 1st temperature is at lattice site 2)
+end type
+
+private
+public :: calculate_diffusion,paratemp_track,alloc_paratemp_track, reorder_temperature
+
+interface calculate_diffusion
+    module procedure calculate_diffusion_paratemp_track
+    module procedure calculate_diffusion_serial
+end interface calculate_diffusion
+
+contains
+
+
+subroutine alloc_paratemp_track(this,size_table)
+    !allocate paratemp_track to the correct size (should only be called on master)
+    type(paratemp_track),intent(inout)      :: this
+    integer,intent(in)                      :: size_table
+    integer                                 :: i
+
+    allocate(this%image_temp(size_table))
+    allocate(this%nup(size_table),this%ndown(size_table),this%label(size_table),this%Nsuccess(size_table),source=0) 
+    allocate(this%kt_all(size_table),this%kT_updated(size_table),source=0.0d0)
+    ! temperature
+     ! at the beginning, the first image has the first temperature, the second image, the second ...
+    this%image_temp=[(i,i=1,size_table)]
+end subroutine
+
+subroutine reorder_temperature(energy,measure,com,nstart,track)
+    !subroutine which swaps neighboring temperatures as necessary for the parallel tempering
+    use mpi_util 
+    use mpi_basic
+    use m_mc_exp_val
+    use m_constants, only : k_B
+    use m_sort
+    real(8),intent(inout)                   :: energy(:)    !energy of each image in space of images
+    type(exp_val),intent(inout)             :: measure(:)   !Temperature & thermodyn. vals (swap order to swap images)
+    class(mpi_distv),intent(in)             :: com          !mpi-communicator which contains one entry for each temperature
+    integer,intent(in)                      :: nstart       !outer loop index to alternate between comparing (1<>2,3<>4,..) with (2<>3,4<>5,...)
+    type(paratemp_track),intent(inout)      :: track        !various parameters to keep track of parallel tempering evolution
+!internals
+    integer :: NT   !number of temperatures
+    real(8) :: kt_loc(2)        !energies of the compared pairs of lattices
+    real(8) :: E_loc(2)         !temperatures of the compared pairs of lattices
+    integer :: i_loc(2)         !position in lattices-array of compared pair
+    integer         :: i,i_start,i_temp
+    type(exp_val)   :: tmp_measure
+
+    !gather all necessary parameters (energies, temperatures(in measure), and expectation values (measure)
+    Call gatherv(energy ,com) 
+    Call measure_gatherv(measure,com)
+
+    !Swap temperatures if necessary
+    if(com%ismas)then
+        NT=size(measure)
+        !increment nup, ndown for diffusion 
+        do i=1,NT
+            if (track%label(track%image_temp(i))== 1) track%nup(i)  =track%nup(i)  +1
+            if (track%label(track%image_temp(i))==-1) track%ndown(i)=track%ndown(i)+1
+        enddo
+        
+        i_start=mod(nstart,2)+1! in case there are an odd number of replicas, change the start from 1 to 2
+        do i_temp=i_start,NT-1,2
+            !check if lattices with temperature i_temp and i_temp+1 should be exchanges
+            kt_loc=track%kt_all(i_temp:i_temp+1)
+            i_loc =track%image_temp(i_temp:i_temp+1)
+            E_loc =energy(i_loc)
+            if (accept(kt_loc,E_loc)) then
+                !Swap the measurements and temperatures
+                tmp_measure=measure(i_loc(2))
+                measure(i_loc(2))=measure(i_loc(1))
+                measure(i_loc(1))=tmp_measure
+                track%image_temp(i_temp)=i_loc(2)
+                track%image_temp(i_temp+1)=i_loc(1)
+
+                track%Nsuccess(i_temp)=track%Nsuccess(i_temp)+1
+            endif
+        enddo
+        !update label
+        track%label(track%image_temp( 1))= 1
+        track%label(track%image_temp(Nt))=-1
+    endif
+    !distribute the rearanged expectation values again
+    Call measure_scatterv(measure,com)
+end subroutine
+
+function accept(kt,E)
+    use m_get_random, only: get_rand_classic
+    real(8),intent(in)  ::  kt(2)
+    real(8),intent(in)  ::  E(2)
+    logical             ::  accept
+    real(8)     :: delta
+    real(8)     :: choice
+
+    delta=(1.0d0/kt(2)-1.0d0/kt(1))*(E(2)-E(1))
+    accept=delta>0.0d0
+    if(.not.accept)then
+        delta=max(delta,-200.0d0) !prevent underflow in exp
+        choice=get_rand_classic()
+        accept=exp(delta).gt.Choice
+    endif
+end function
+
+
+subroutine calculate_diffusion_paratemp_track(v,relaxation_steps,i_optTset)
+    !this simply unwraps the input of the paratemp_track parameter to the old subroutine I did not touch
+    type(paratemp_track),intent(inout)      :: v
+    integer, intent(in) :: relaxation_steps
+    logical, intent(in) :: i_optTset
+
+    call calculate_diffusion(v%kT_all,v%kt_updated,v%nup,v%ndown,v%Nsuccess,relaxation_steps,size(v%kt_all),i_optTset)
+end subroutine
+
+subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_swapT,isize,i_optTset)
        use m_fit
        use m_constants, only : k_B
-#ifdef CPP_MPI
-       use m_mpi_prop, only : MPI_COMM
-#endif
        implicit none
-       integer, intent(in) :: n_thousand,isize
-       real(kind=8), intent(in) :: nup(:),ndown(:),Nsuccess(:),kT_all(:)
+       integer, intent(in) :: n_swapT,isize
+       real(kind=8), intent(in) :: kT_all(:)
+       integer, intent(in) :: Nsuccess(:),nup(:),ndown(:)
        logical, intent(in) :: i_optTset
        real(kind=8), intent(inout) :: kT_updated(:)
 !      internals
@@ -66,19 +171,15 @@
 
 !calculation of the fraction of images going up
        do i=1,isize
-           if (nup(i)+ndown(i).ge.1.0d0) then
-               frac(i)=nup(i)/(nup(i)+ndown(i))
+           if (nup(i)+ndown(i)/=0) then
+               frac(i)=real(nup(i),8)/real(nup(i)+ndown(i),8)
            else
                write(6,'(a)') 'some up+down fractions are 0'
                write(6,'(a)') 'try to reduce the temperature range to favor overlapping between replicas'
                write(6,*) (frac(j),j=1,i)
                write(6,*) (nup(j),j=1,i)
                write(6,*) (ndown(j),j=1,i)
-#ifdef CPP_MPI
-               if (i_optTset) call mpi_abort(MPI_COMM,errcode,ierr)
-#else
                if (i_optTset) stop
-#endif
            endif
        enddo
 
@@ -90,28 +191,24 @@
            write(6,'(a)') 'the fraction is not 1 at lower temperature'
            write(6,'(a)') 'you can not optimise the temperature set in these conditions'
            write(6,'(a)') 'try to increase N_thousand'
-#ifdef CPP_MPI
-           if (i_optTset) call mpi_abort(MPI_COMM,errcode,ierr)
-#else
            if (i_optTset) stop
-#endif
        endif
 
        if (frac(isize).gt.1.0d-8) then
            write(6,'(a)') 'the fraction is not 0 at higher temperature'
            write(6,'(a)') 'you can not optimise the temperature set in these conditions'
            write(6,'(a)') 'try to increase N_thousand'
-#ifdef CPP_MPI
-           if (i_optTset) call mpi_abort(MPI_COMM,errcode,ierr)
-#else
+!#ifdef CPP_MPI
+!           if (i_optTset) call mpi_abort(MPI_COMM,errcode,ierr)
+!#else
            if (i_optTset) stop
-#endif
+!#endif
        endif
 
 ! if the temperature is not optimized, write the fraction and go out
        if (.not.i_optTset) then
            do i=1,isize-1
-               write(21,'(3(E20.12E3,2x))') kT_all(i)/k_B,frac(i),(Nsuccess(i)/n_thousand)
+               write(21,'(3(E20.12E3,2x))') kT_all(i)/k_B,frac(i),(real(Nsuccess(i),8)/n_swapT)
            enddo
            write(21,'(2(E20.12E3,2x))') kT_all(isize)/k_B,frac(isize)
            write(21,'(a)') ''
@@ -213,11 +310,11 @@
                  if (tau.gt.(deltaT(i)+this_dt)) then
                     write(6,'(a)') 'inconsistent new delta T'
                     write(6,'(2(a,f8.4,2x))') 'delta T=',deltaT(i)/k_b,'tau=',tau/k_b
-#ifdef CPP_MPI
-                    call mpi_abort(MPI_COMM,errcode,ierr)
-#else
+!#ifdef CPP_MPI
+!                    call mpi_abort(MPI_COMM,errcode,ierr)
+!#else
                     stop
-#endif
+!#endif
                  endif
               deltaT(i)=deltaT(i)-tau
               this_dt=this_dt+tau
@@ -234,291 +331,18 @@
 
        if (integral.ne.dble(isize-2)) then
           write(6,'(a)') "inconsistent new temperature step"
-#ifdef CPP_MPI
-          call mpi_abort(MPI_COMM,errcode,ierr)
-#else
+!#ifdef CPP_MPI
+!          call mpi_abort(MPI_COMM,errcode,ierr)
+!#else
           stop
-#endif
+!#endif
        endif
 
        do i=1,isize-1
-            write(21,'(7(E20.12E3,2x))') kt_updated(i)/k_B,kT_all(i)/k_B,frac(i),diffusivity(i),Dfrac(i),Nsuccess(i)/dble(n_thousand),etaTprim(i)
+            write(21,'(7(E20.12E3,2x))') kt_updated(i)/k_B,kT_all(i)/k_B,frac(i),diffusivity(i),Dfrac(i),real(Nsuccess(i),8)/dble(n_swapT),etaTprim(i)
        enddo
 
        write(21,'(3(E20.12E3,2x),a,/)') kt_updated(isize)/k_B,kT_all(isize)/k_B,frac(isize),'   #  ""  ""  ""  "" '
 
-       end subroutine calculate_diffusion_serial
-
-
-
-
-
-!--------------------------------------------
-!--------------------------------------------
-       subroutine serial_paratemp(label,nup,ndown,nstart,Nsuccess,kt_saved,image_temp,E_temp,isize,kt_all)
-       use m_constants, only : k_B
-       use mtprng
-       implicit none
-       integer, intent(in) :: nstart,isize
-       real(kind=8), intent(in) :: kt_saved(:),kt_all(:)
-       integer, intent(inout) :: image_temp(:)
-       real(kind=8), intent(inout) :: nup(:),ndown(:)
-       real(kind=8), intent(inout) :: label(:),Nsuccess(:)
-       real(kind=8), intent(inout) :: E_temp(:)
-!      internals
-       integer :: iii
-       real(kind=8) :: choice,delta
-       real(kind=8) :: kTn,kti,Ei,En
-       logical :: accept
-       integer :: i,i_image,i_start
-       type(mtprng_state) :: state
-
-
-       accept=.False.
-
-! count is running over the number of temperature
-
-       do i=1,isize
-
-#ifdef CPP_MPI
-! since all the temperatures can be mixed and on different processors in MPI, one has to order the current depending on the
-! temperature
-! CAUTIOUS: the currents must match the temperatures order. it means that the loop is done on the replicas in MPI and on the
-! temperature in serial
-          kt=kt_all(i)
-          i_image=minloc(abs(kt-kt_saved),1)
-#else
-! replica nb i_image with the temperature i
-          i_image=image_temp(i)
-#endif
-
-          if (label(i_image).gt.0.5d0) nup(i)=nup(i)+1.0d0
-          if (label(i_image).lt.-0.5d0) ndown(i)=ndown(i)+1.0d0
-       enddo
-
-! in case there are an odd number of replicas, change the start from 1 to 2
-       i_start=mod(nstart,2)+1
-! count is running over the number of temperatures
-       do i=i_start,isize-1,2
-
-#ifdef CPP_MPI
-! cautious, in the case of MPI, the temperatures in kt_saved can be in a different order
-          kti=kt_all(i)
-          i_image=minloc(abs(kti-kt_saved),1)
-          Ei=E_temp(i_image)
-
-          ktn=kt_all(i+1)
-          i_image=minloc(abs(ktn-kt_saved),1)
-          En=E_temp(i_image)
-#else
-          kti=kt_saved(i)
-          Ei=E_temp(i)
-
-          ktn=kt_saved(i+1)
-          En=E_temp(i+1)
-#endif
-          delta=(1/ktn-1/kti)*(En-Ei)
-
-! exp(-100) is the maximum number that can be caculated it seams.
-          if (delta.lt.-100.0d0) delta=-100.0d0
-!                delta=1.0d0
-
-          if (exp(delta).ge.1.0d0) then
-             accept=.True.
-          else
-#ifdef CPP_MRG
-             Choice=mtprng_rand_real1(state)
-#else
-             CALL RANDOM_NUMBER(Choice)
-#endif
-             if (exp(delta).gt.Choice) accept=.True.
-          endif
-
-          if (accept) then
-
-#ifdef CPP_MPI
-            iii=minloc(abs(kti-kt_saved),1)
-            iin=minloc(abs(ktn-kt_saved),1)
-            image_temp(iii)=iin
-            image_temp(iin)=iii
-#else
-! position of the replica with the temperature i+1
-            iii=image_temp(i+1)
-! swap the temperature of replica i and i+1
-            image_temp(i+1)=image_temp(i)
-! position of the replica with the temperature i
-            image_temp(i)=iii
-#endif
-! update the number of success of temperature i
-            Nsuccess(i)=Nsuccess(i)+1.0d0
-
-#ifdef CPP_MPI
-! cautious, this loop is on the replicas in MPI
-            i_image=iin
-#else
-! update the label of the replicas that have been swap
-! image i has the temperature kti
-            i_image=image_temp(i)
-#endif
-            if ((abs(kti-kt_all(isize))/k_B).lt.1.0d-8) label(i_image)=-1.0d0
-            if ((abs(kti-kt_all(1))/k_B).lt.1.0d-8) label(i_image)=1.0d0
-
-#ifdef CPP_MPI
-! cautious, this loop is on the replicas in MPI
-            i_image=iii
-#else
-! image i+1 has the temperature ktn
-            i_image=image_temp(i+1)
-#endif
-            if ((abs(ktn-kt_all(isize))/k_B).lt.1.0d-8) label(i_image)=-1.0d0
-            if ((abs(ktn-kt_all(1))/k_B).lt.1.0d-8) label(i_image)=1.0d0
-
-! end if accept
-          endif
-
-! reinitialize accept to False
-          accept=.False.
-
-       enddo
-
-       end subroutine serial_paratemp
-
-#ifdef CPP_MPI
-!--------------------------------------------
-! utils for the mpi part
-
-!--------------------------------------------
-!--------------------------------------------
-       subroutine paratemp_gather_mpi(istart,istop,irank,nRepProc,size_table,MPI_COMM,kt_updated,E_temp,image_temp, &
-       &   qeulerp_av,qeulerm_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av,vortex_av,E_sum_av,E_sq_sum_av,M_sum_av,M_sq_sum_av, &
-       &   label_world)
-       use m_mpi, only : gather
-       implicit none
-       integer, intent(in) :: istart,istop,nRepProc,size_table,MPI_COMM,irank
-       integer, intent(inout) :: image_temp(:)
-       real(kind=8), intent(inout) :: kt_updated(:),E_temp(:)
-       real(kind=8), intent(inout) :: qeulerp_av(:),qeulerm_av(:),Q_sq_sum_av(:),Qp_sq_sum_av(:),Qm_sq_sum_av(:),E_sum_av(:),E_sq_sum_av(:)
-       real(kind=8), intent(inout) :: vortex_av(:,:),M_sum_av(:,:),M_sq_sum_av(:,:)
-       real(kind=8), intent(inout) :: label_world(:)
-! dummy variables
-       integer :: transfer_I_1D(size_table)
-       integer :: ierr
-
-       include 'mpif.h'
-
-       transfer_I_1D=0
-
-! part important for the parallel tempering
-       kt_updated=gather(kt_updated(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-       E_temp=gather(E_temp(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-
-       transfer_I_1D(1:nRepProc)=image_temp(1:nRepProc)+irank*nRepProc
-       call mpi_gather(transfer_I_1D(1:nRepProc),nRepProc,MPI_INT,image_temp,nRepProc,MPI_INT,0,MPI_COMM,ierr)
-
-! label and current
-       label_world=gather(label_world(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-
-! variables to reorder after words
-       qeulerp_av=gather(qeulerp_av(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-       qeulerm_av=gather(qeulerm_av(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-       Q_sq_sum_av=gather(Q_sq_sum_av(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-       Qp_sq_sum_av=gather(Qp_sq_sum_av(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-       Qm_sq_sum_av=gather(Qm_sq_sum_av(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-       E_sum_av=gather(E_sum_av(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-       E_sq_sum_av=gather(E_sq_sum_av(1:nRepProc),nRepProc,size_table,0,MPI_COMM)
-
-! 2D variables
-       vortex_av=gather(vortex_av(:,1:nRepProc),3,nRepProc,size_table,0,MPI_COMM)
-       M_sum_av=gather(M_sum_av(:,1:nRepProc),3,nRepProc,size_table,0,MPI_COMM)
-       M_sq_sum_av=gather(M_sq_sum_av(:,1:nRepProc),3,nRepProc,size_table,0,MPI_COMM)
-
-
-
-       end subroutine paratemp_gather_mpi
-
-!--------------------------------------------
-!--------------------------------------------
-       subroutine paratemp_scatter_mpi(isize,irank,nRepProc,kt_updated,image_temp,MPI_COMM, &
-       &   qeulerp_av,qeulerm_av,Q_sq_sum_av,Qp_sq_sum_av,Qm_sq_sum_av,vortex_av,E_sum_av,E_sq_sum_av,M_sum_av,M_sq_sum_av, &
-       &   label_world)
-       use m_mpi, only : scatter
-       implicit none
-       integer, intent(in) :: nRepProc,isize,irank,MPI_COMM
-       integer, intent(inout) :: image_temp(:)
-       real(kind=8), intent(inout) :: kt_updated(:)
-       real(kind=8), intent(inout) :: qeulerp_av(:),qeulerm_av(:),Q_sq_sum_av(:),Qp_sq_sum_av(:),Qm_sq_sum_av(:),E_sum_av(:),E_sq_sum_av(:)
-       real(kind=8), intent(inout) :: vortex_av(:,:),M_sum_av(:,:),M_sq_sum_av(:,:)
-       real(kind=8), intent(inout) :: label_world(:)
-! dummy variables
-       real(kind=8) :: kt_local(isize*nRepProc)
-       real(kind=8) :: qeulerp_av_local(isize*nRepProc),qeulerm_av_local(isize*nRepProc),Q_sq_sum_av_local(isize*nRepProc), &
-        &   Qp_sq_sum_av_local(isize*nRepProc),Qm_sq_sum_av_local(isize*nRepProc),E_sum_av_local(isize*nRepProc),E_sq_sum_av_local(isize*nRepProc)
-       real(kind=8) :: vortex_av_local(3,isize*nRepProc),M_sum_av_local(3,isize*nRepProc),M_sq_sum_av_local(3,isize*nRepProc)
-       real(kind=8) :: label_world_local(isize*nRepProc)
-       integer :: image_temp_local(isize*nRepProc)
-       integer :: i_image,i,j,k,ierr
-
-       include 'mpif.h'
-
-       image_temp_local=0
-       kt_local=0.0d0
-       qeulerp_av_local=0.0d0
-       qeulerm_av_local=0.0d0
-       Q_sq_sum_av_local=0.0d0
-       Qp_sq_sum_av_local=0.0d0
-       Qm_sq_sum_av_local=0.0d0
-       E_sum_av_local=0.0d0
-       E_sq_sum_av_local=0.0d0
-       vortex_av_local=0.0d0
-       M_sum_av_local=0.0d0
-       M_sq_sum_av_local=0.0d0
-       label_world_local=0.0d0
-
-       if (irank.eq.0) then
-
-! the labels are attached to the replicas not the temperatures and should not be rearrange
-       label_world_local=label_world
-
-! all quantitites attached to the temperature should be rearranged
-
-          do j=1,isize
-              do i=1,nRepProc
-                 k=i+(j-1)*nRepProc
-                 i_image=image_temp(k)
-                 kt_local(k)=kt_updated(i_image)
-                 image_temp_local(k)=mod(k-1,nRepProc)+1
-! reorder the data to match the temperatures
-                 qeulerp_av_local(k)=qeulerp_av(i_image)
-                 qeulerm_av_local(k)=qeulerm_av(i_image)
-                 Q_sq_sum_av_local(k)=Q_sq_sum_av(i_image)
-                 Qp_sq_sum_av_local(k)=Qp_sq_sum_av(i_image)
-                 Qm_sq_sum_av_local(k)=Qm_sq_sum_av(i_image)
-                 E_sum_av_local(k)=E_sum_av(i_image)
-                 E_sq_sum_av_local(k)=E_sq_sum_av(i_image)
-
-              enddo
-          enddo
-
-         endif
-
-        image_temp(1:nRepProc)=scatter(image_temp_local,nRepProc,isize,0,MPI_COMM)
-        kt_updated(1:nRepProc)=scatter(kt_local,nRepProc,isize,0,MPI_COMM)
-        qeulerp_av(1:nRepProc)=scatter(qeulerp_av_local,nRepProc,isize,0,MPI_COMM)
-        qeulerm_av(1:nRepProc)=scatter(qeulerm_av_local,nRepProc,isize,0,MPI_COMM)
-        Q_sq_sum_av(1:nRepProc)=scatter(Q_sq_sum_av_local,nRepProc,isize,0,MPI_COMM)
-        Qm_sq_sum_av(1:nRepProc)=scatter(Qm_sq_sum_av_local,nRepProc,isize,0,MPI_COMM)
-        Qp_sq_sum_av(1:nRepProc)=scatter(Qp_sq_sum_av_local,nRepProc,isize,0,MPI_COMM)
-        E_sum_av(1:nRepProc)=scatter(E_sum_av_local,nRepProc,isize,0,MPI_COMM)
-        E_sq_sum_av(1:nRepProc)=scatter(E_sq_sum_av_local,nRepProc,isize,0,MPI_COMM)
-        label_world(1:nRepProc)=scatter(label_world_local,nRepProc,isize,0,MPI_COMM)
-
-
-         kt_updated(nRepProc+1:)=0.0d0
-         image_temp(nRepProc+1:)=0
-
-
-       end subroutine paratemp_scatter_mpi
-
-#endif
-
-       end module
+end subroutine calculate_diffusion_serial
+end module

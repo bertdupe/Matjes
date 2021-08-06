@@ -1,6 +1,9 @@
 module m_io_utils
 use m_convert
 use m_derived_types
+use m_io_read_util
+use, intrinsic :: iso_fortran_env, only : output_unit,error_unit
+implicit none
 
 interface get_lines
  module procedure get_NB_lines
@@ -13,15 +16,14 @@ end interface get_cols
 interface dump_spinse
  module procedure dump_config_spinse
  module procedure dump_config_spinse_spin
- module procedure dump_config_spinse_vec_point
 end interface dump_spinse
 
 interface dump_config
  module procedure dump_config_modes
+ module procedure dump_config_matrix_N_1D_real
  module procedure dump_config_matrix_2D_real
  module procedure dump_config_matrix_5D_real
  module procedure dump_config_FFT
- module procedure dump_config_vec_point
  module procedure dump_config_order
 end interface dump_config
 
@@ -41,12 +43,19 @@ interface get_parameter
  module procedure get_1D_vec_cmplx
  module procedure get_1D_vec_int
  module procedure get_1D_vec_bool
+ module procedure get_vec1D_real
+ module procedure get_vec1D_int
  module procedure get_int
+ module procedure get_int8
  module procedure get_real
  module procedure get_bool
  module procedure get_character
  module procedure get_my_simu
  module procedure get_atomic
+ module procedure get_atomtype
+ module procedure get_cell
+ module procedure get_H_pair
+ module procedure get_H_triple
 end interface get_parameter
 
 interface number_nonzero_coeff
@@ -123,65 +132,34 @@ end subroutine dump_config_spinse_spin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local spinse files
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse_vec_point(io,spin)
-implicit none
-integer, intent(in) :: io
-type(vec_point), intent(in) :: spin(:)
-! internale variables
-! internal variables
-!     calculating the angles
-real(kind=8) :: theta, phi
-!     Is the row even (1) or not (0)
-Integer :: i,shape_spin
-!     colors
-real(kind=8) :: Rc,Gc,Bc
-!   name of files
-
-shape_spin=size(spin)
-
-do i=1,shape_spin
-
-   call get_colors(Rc,Gc,Bc,theta,phi,spin(i)%w(:))
-
-   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(i),',',Rc,',',Bc,',',Gc,')'
-
-enddo
-
-end subroutine dump_config_spinse_vec_point
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write the local spinse files
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse(io,my_lattice,position)
-use m_derived_types
-use m_derived_types, only: lattice
-use m_constants, only : pi
-implicit none
-integer, intent(in) :: io
-type(lattice), intent(in) :: my_lattice
-real(kind=8), intent(in) :: position(:,:,:,:,:)
-! internale variables
-Integer :: i_x,i_y,i_z,i_m,N(4)
-real(kind=8) :: Rc,Gc,Bc,theta,phi
-
-N=shape(my_lattice%ordpar%l_modes)
-
-do i_m=1,N(4)
-   Do i_z=1,N(3)
-      Do i_y=1,N(2)
-         Do i_x=1,N(1)
+subroutine dump_config_spinse(io,lat,position)
+!    use m_derived_types
+    use m_derived_types, only: lattice
+    use m_constants, only : pi
+    implicit none
+    integer, intent(in) :: io
+    type(lattice), intent(in) :: lat
+    real(kind=8), intent(in) :: position(:,:,:,:,:)
+    ! internale variables
+    Integer :: i_x,i_y,i_z,i_m
+    real(kind=8) :: Rc,Gc,Bc,theta,phi
 
 
-        call get_colors(Rc,Gc,Bc,theta,phi,my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(:))
-
-         write(io,'(8(a,f16.8),a)') 'Spin(', &
-     & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
-     & Rc,',',Bc,',',Gc,')'
-
+    do i_m=1,lat%M%dim_mode/3
+       Do i_z=1,lat%dim_lat(3)
+          Do i_y=1,lat%dim_lat(2)
+             Do i_x=1,lat%dim_lat(1)
+    
+            call get_colors(Rc,Gc,Bc,theta,phi,lat%M%modes((i_m-1)*3+1:i_m*3,i_x,i_y,i_z))
+    
+             write(io,'(8(a,f16.8),a)') 'Spin(', &
+         & theta,',',phi,',',position(1,i_x,i_y,i_z,i_m),',',position(2,i_x,i_y,i_z,i_m),',',position(3,i_x,i_y,i_z,i_m),',', &
+         & Rc,',',Bc,',',Gc,')'
+    
+             enddo
          enddo
-     enddo
-   enddo
-enddo
+       enddo
+    enddo
 
 end subroutine dump_config_spinse
 
@@ -208,6 +186,22 @@ do i_x=1,N(2)
 enddo
 
 end subroutine dump_config_matrix_2D_real
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! routine that dumps a 1D matrix of real numbers with N entries per line
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine dump_config_matrix_N_1D_real(io,N,matrix)
+    implicit none
+    integer, intent(in) :: io
+    integer, intent(in) :: N    !
+    real(8), intent(in) :: matrix(:)
+    ! internale variables
+    character(len=30) :: rw_format
+    
+    write(rw_format,'( "(", I4, "E24.16,2x)" )') N
+    write(io,rw_format) matrix
+end subroutine 
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that dumps a 5D matrix of real numbers
@@ -237,27 +231,30 @@ enddo
 
 end subroutine dump_config_matrix_5D_real
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write the local modes configurations
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_modes(io,my_lattice)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! routine that reads and write the local modes configurations
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine dump_config_modes(io,lat)
+!this probably is supposed to write out all modes, but right now I updated it to
+!just write out the M mode since I am not sure if this is still used
 use m_derived_types, only : lattice
 implicit none
 integer, intent(in) :: io
-type(lattice), intent(in) :: my_lattice
+type(lattice), intent(in) :: lat
 ! internale variables
 Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
 character(len=100) :: rw_format
 
-N=shape(my_lattice%ordpar%l_modes)
 
-write(rw_format,'( "(", I4, "f14.8,2x)" )') my_lattice%dim_mode
+N(1:3)=lat%dim_lat
+
+write(rw_format,'( "(", I4, "E24.16,2x)" )') lat%M%dim_mode
 
 do i_z=1,N(3)
   do i_y=1,N(2)
     do i_x=1,N(1)
 
-    Write(io,rw_format) ((my_lattice%ordpar%l_modes(i_x,i_y,i_z,i_m)%w(j_lat), j_lat=1,my_lattice%dim_mode),i_m=1,N(4))
+    Write(io,rw_format) ((lat%M%modes(i_m,i_x,i_y,i_z), j_lat=1,lat%M%dim_mode),i_m=1,N(4))
 
     enddo
   enddo
@@ -283,38 +280,6 @@ write(io,rw_format) order%all_modes
 
 end subroutine
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! routine that reads and write an array of pointer configurations
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_vec_point(io,modes)
-use m_derived_types, only : vec_point
-implicit none
-integer, intent(in) :: io
-type(vec_point), intent(in) :: modes(:)
-! internale variables
-Integer :: i,N,N_data,j_lat
-character(len=20) :: rw_format
-
-N=size(modes)
-N_data=size(modes(1)%w)
-
-write(rw_format,'( "(", I4, "f14.8)" )') N_data
-
-do i=1,N
-
-    Write(io,rw_format) (modes(i)%w(j_lat), j_lat=1,N_data)
-
-enddo
-
-end subroutine dump_config_vec_point
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! return the maximal index of parameters of the same type
-! in: io tag
-! in: variable name (for example J_ D_ or whatever)
-! in: name of the file
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 function max_ind_variable(io,var_name,fname) result(max_ind)
     implicit none
@@ -322,9 +287,8 @@ function max_ind_variable(io,var_name,fname) result(max_ind)
     integer, intent(in) :: io
     integer         ::  max_ind
     ! internal variable
-    integer :: length_string,i_var,i_end_str,fin
+    integer :: length_string,i_var,i_end_str,fin,stat
     character(len=100) :: str
-    integer         ::  stat
     
     max_ind=0
     length_string=len_trim(var_name)
@@ -340,8 +304,7 @@ function max_ind_variable(io,var_name,fname) result(max_ind)
         if ( str(1:length_string) == var_name ) then
            i_end_str=scan(str(length_string+1:),' ')
            read(str(length_string+1:length_string+1+i_end_str),*,iostat=stat) i_var
-           if(stat/=0) cycle
-           max_ind=max(i_var,max_ind)
+           if(stat==0) max_ind=max(i_var,max_ind)
         endif
     enddo
     write(6,'(3a,I5)') 'Maximal index of ',var_name,' is:', max_ind
@@ -467,11 +430,364 @@ write(6,'(/)')
 end subroutine get_coeff
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Get cell based on atomtype
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+subroutine get_H_triple(io,fname,var_name,Htriples,success)
+    use m_input_H_types, only: Hr_triple,reduce_Hr_triple,Hr_triple_single
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)                         :: io
+    character(len=*), intent(in)                :: fname,var_name
+    type(Hr_triple), intent(out), allocatable   :: Htriples(:)
+    logical,intent(out)                         :: success
+    ! internal variable
+    type(Hr_triple_single),allocatable   :: Htriple_tmp(:)
+    type(Hr_triple), allocatable         :: Htriples_tmp(:)
+    integer :: attype(3),dist
+    real(8) :: val
+
+    integer :: Ntriple,Nnonzero
+    integer :: nread,i,ii,j
+    integer :: stat
+    character(len=100) :: str
+
+    nread=0
+    Call set_pos_entry(io,fname,var_name,success)
+    if(success)then
+        success=.false.
+        read(io,'(a)',iostat=stat) str
+        Ntriple=0; Nnonzero=0
+        nread=nread+1
+        do 
+            read(io,'(a)',iostat=stat) str
+            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) attype,dist,val
+            if (stat /= 0) exit
+            Ntriple=Ntriple+1
+            if(val/=0.0d0) Nnonzero=Nnonzero+1
+        enddo
+        if(Ntriple<1)then
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        if(Nnonzero<1)then
+            write(error_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+        success=.true.
+        allocate(Htriple_tmp(Nnonzero))
+        do i=1,Ntriple+1
+            backspace(io)
+        enddo
+        ii=1
+        do i=1,Ntriple
+            read(io,*,iostat=stat) attype,dist,val
+            if(val==0.0d0) cycle
+            if(attype(2)<attype(1))then
+                j        =attype(2)
+                attype(2)=attype(1)
+                attype(1)=j
+            endif
+            Htriple_tmp(ii)%attype=attype
+            Htriple_tmp(ii)%dist=dist
+            Htriple_tmp(ii)%val=val
+            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+            write(output_unit,'(A,3I6)')    '  atom types:', Htriple_tmp(ii)%attype
+            write(output_unit,'(A,2I6)')    '  distance  :', Htriple_tmp(ii)%dist
+            write(output_unit,'(A,E16.8/)') '  energy    :', Htriple_tmp(ii)%val
+            ii=ii+1
+        enddo 
+
+        !combines single entries into arrays with same atom types
+        Call reduce_Hr_triple(Htriple_tmp,Htriples) 
+        !check if any entry appears more than once
+        do i=1,size(Htriples)
+            do j=2,size(Htriples(i)%dist)
+                if(any(Htriples(i)%dist(j)==Htriples(i)%dist(:j-1)))then
+                    write(output_unit,*) "ERROR, found the same distance twice for for Hamiltonian ",var_name
+                    write(output_unit,*) "       at atom indices  :",Htriples(i)%attype
+                    write(output_unit,*) "       with the distance:",Htriples(i)%dist(j)
+                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
+                endif
+            enddo
+        enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        if(any(Htriples%attype(1)/=Htriples%attype(2)))then
+            Call move_alloc(Htriples,Htriples_tmp)
+            allocate(Htriples(size(Htriples_tmp)+count(Htriples_tmp%attype(1)/=Htriples_tmp%attype(2))))
+            ii=0
+            do i=1,size(Htriples_tmp)
+                ii=ii+1
+                Htriples(ii)=Htriples_tmp(i)
+                if(Htriples_tmp(i)%attype(1)/=Htriples_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Htriples(ii)=Htriples_tmp(i)
+                    Htriples(ii)%attype(1:2)=[Htriples_tmp(i)%attype(2),Htriples_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Htriples_tmp)
+        endif
+
+        success=.true.
+    endif
+
+    Call check_further_entry(io,fname,var_name)
+end subroutine 
+
+
+
+subroutine get_H_pair(io,fname,var_name,Hpairs,success)
+    use m_input_H_types, only: Hr_pair,reduce_Hr_pair,Hr_pair_single
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)                         :: io
+    character(len=*), intent(in)                :: fname,var_name
+    type(Hr_pair), intent(out), allocatable     :: Hpairs(:)
+    logical,intent(out)                         :: success
+    ! internal variable
+    type(Hr_pair_single),allocatable            :: Hpair_tmp(:)
+    type(Hr_pair), allocatable                  :: Hpairs_tmp(:)
+    integer :: attype(2),dist
+    real(8) :: val
+
+    integer :: Npair,Nnonzero
+    integer :: nread,i,ii,j
+    integer :: stat
+    character(len=100) :: str
+    
+    nread=0
+    Call set_pos_entry(io,fname,var_name,success)
+    read(io,'(a)',iostat=stat) str
+    if(success)then
+        !find out how many entries there are
+        success=.false.
+        Npair=0; Nnonzero=0
+        nread=nread+1
+        do 
+            read(io,'(a)',iostat=stat) str
+            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) attype,dist,val
+            if (stat /= 0) exit
+            Npair=Npair+1
+            if(val/=0.0d0) Nnonzero=Nnonzero+1
+        enddo
+        if(Npair<1)then
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        if(Nnonzero<1)then
+            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+        !allocate correct size of entries and move IO to beginning of data
+        allocate(Hpair_tmp(Nnonzero))
+        do i=1,Npair+1
+            backspace(io)
+        enddo
+        !read in data
+        ii=1
+        do i=1,Npair
+            read(io,*,iostat=stat) attype,dist,val
+            if(val==0.0d0) cycle
+            if(attype(2)<attype(1))then
+                j        =attype(2)
+                attype(2)=attype(1)
+                attype(1)=j
+            endif
+            Hpair_tmp(ii)%attype=attype
+            Hpair_tmp(ii)%dist=dist
+            Hpair_tmp(ii)%val=val
+            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+            write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
+            write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
+            write(output_unit,'(A,E16.8/)') '  energy    :', Hpair_tmp(ii)%val
+            ii=ii+1
+        enddo 
+
+        !combines single entries into arrays with same atom types
+        Call reduce_Hr_pair(Hpair_tmp,Hpairs) 
+        !check if any entry appears more than once
+        do i=1,size(Hpairs)
+            do j=2,size(Hpairs(i)%dist)
+                if(any(Hpairs(i)%dist(j)==Hpairs(i)%dist(:j-1)))then
+                    write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
+                    write(output_unit,*) "       at atom indices  :",Hpairs(i)%attype
+                    write(output_unit,*) "       with the distance:",Hpairs(i)%dist(j)
+                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
+                endif
+            enddo
+        enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        if(any(Hpairs%attype(1)/=Hpairs%attype(2)))then
+            Call move_alloc(Hpairs,Hpairs_tmp)
+            allocate(Hpairs(size(Hpairs_tmp)+count(Hpairs_tmp%attype(1)/=Hpairs_tmp%attype(2))))
+            ii=0
+            do i=1,size(Hpairs_tmp)
+                ii=ii+1
+                Hpairs(ii)=Hpairs_tmp(i)
+                if(Hpairs_tmp(i)%attype(1)/=Hpairs_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Hpairs(ii)=Hpairs_tmp(i)
+                    Hpairs(ii)%attype=[Hpairs_tmp(i)%attype(2),Hpairs_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Hpairs_tmp)
+        endif
+
+        success=.true.
+    endif
+
+    Call check_further_entry(io,fname,var_name)
+end subroutine 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Get cell based on atomtype
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine get_cell(io,fname,attype,cell)
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)             :: io
+    character(len=*), intent(in)    :: fname
+    type(atomtype), intent(in)      :: attype(:)
+    type(t_cell),intent(out)        :: cell
+    ! internal variable
+    integer     ::  N_atoms
+    character(len=*),parameter  ::  var_name='atoms'
+    character(len=30)       ::  atname
+    integer     :: id
+    integer :: i,j,length_string
+    integer :: stat
+    character(len=100) :: str
+    logical :: used(size(attype))
+
+    cell%n_attype=size(attype)
+    Call set_pos_entry(io,fname,var_name)
+    length_string=len_trim(var_name)
+    read (io,'(a)',iostat=stat) str
+    read(str(length_string+1:),*,iostat=stat) N_atoms
+    if(stat/=0) STOP "atoms keyword found in input, but the number of atoms is not specified there"
+    write(output_unit,'(/A,I6,A)') "found atomcell keyword, start reading the ",N_atoms," atoms"
+    allocate(cell%atomic(N_atoms))
+    do i=1,N_atoms
+        read(io,'(a)',iostat=stat) str
+        if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+        read(str,*,iostat=stat) atname,cell%atomic(i)%position
+        if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        read(atname,*,iostat=stat) id
+        if(stat/=0)then
+            id=0
+            do j=1,size(attype)
+                if(trim(attype(j)%name)==trim(atname))then
+                    id=j
+                    exit
+                endif
+            enddo
+            if(id==0) STOP "Did not find name of atom in atom types"
+        endif
+        if(id<1.or.id>size(attype)) STOP "ATOM TYPE ID IS NONSENSICAL"
+        cell%atomic(i)%type_id=id
+        Call cell%atomic(i)%set_attype(attype(id))
+        write(output_unit,*) "successfully read atom number:",i," of ",N_atoms
+    enddo
+
+    Call check_further_entry(io,fname,var_name)
+
+    !check all types are used
+    used=[(any(cell%atomic(:)%type_id==i),i=1,size(attype))]
+    do j=1,size(used)
+        if(.not.used(j)) write(error_unit,'(3A)') 'ATOM TYPE "',trim(attype(j)%name), '" is not used'
+    enddo
+    if(.not.all(used)) STOP "SOME ATOM TYPES ARE NOT USED, CHECK CELL SETUP"
+end subroutine 
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Get the different atomic types used in the unit-cell
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine get_atomtype(io,fname,attype)
+    !always uses the same variable name, hence kept as parameter
+    use m_basic_types, only : atom
+
+    implicit none
+    type(atomtype), intent(inout),allocatable :: attype(:)
+    integer, intent(in) :: io
+    character(len=*), intent(in) :: fname
+    ! internal variable
+    integer     ::  N_attype,j
+    character(len=*),parameter  ::  var_name='atomtypes'
+    integer :: i,length_string
+    integer :: stat
+    character(len=100) :: str
+
+    Call set_pos_entry(io,fname,var_name)
+    
+    length_string=len_trim(var_name)
+    read (io,'(a)',iostat=stat) str
+    read(str(length_string+1:),*,iostat=stat) N_attype
+    if(stat/=0) STOP "atomtypes keyword found in input, but the number of atom types is not specified there"
+    if(allocated(attype)) STOP "PROGRAMMING MISTAKE? attype should not be allocated at start of get_atomic"
+    allocate(attype(N_attype))
+    do i=1,N_attype
+        write(output_unit,*) "Trying to read atom type ",i," of ",N_attype
+        read(io,'(a)',iostat=stat) str
+        if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+        read(str,*,iostat=stat) attype(i)%name,attype(i)%moment,attype(i)%charge,attype(i)%mass,attype(i)%use_ph,attype(i)%orbitals
+        if (stat == 0)then
+            write(output_unit,*) attype(i)
+            cycle
+        endif
+        read(str,*,iostat=stat) attype(i)%name,attype(i)%moment,attype(i)%charge,attype(i)%mass,attype(i)%use_ph
+        if (stat == 0)then
+            write(output_unit,*) attype(i)
+            cycle
+        endif
+        STOP "FAILED TO READ PARAMETERS IN ATOMTYPE, ARE ALL RELEVANT PARAMETERS SPECIFIED AND ARE ALL ATOM TYPES SET?"
+    enddo
+
+    Call check_further_entry(io,fname,var_name)
+
+    do j=1,N_attype
+        do i=1,j-1
+            if(trim(attype(i)%name)==trim(attype(j)%name))then
+                write(error_unit,*) "Error, found 2 atoms types with the same name: atom type",i," and ", j
+                write(error_unit,*) "atom type ",i
+                write(error_unit,*) attype(i)
+                write(error_unit,*) 
+                write(error_unit,*) "atom type ",j
+                write(error_unit,*) attype(j)
+                STOP
+            endif
+        enddo
+    enddo
+end subroutine 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get the atomic configuration in the motif
 ! inout:  type(atom), dimension(:) ALL VARIABLES ARE INITIALIZED TO 0.0 !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine get_atomic(io,fname,var_name,natom,atomic)
+!old and obsolete way to read the atomic input in
 use m_basic_types, only : atom
 implicit none
 type(atom), intent(inout) :: atomic(:)
@@ -479,6 +795,7 @@ integer, intent(in) :: io,natom
 character(len=*), intent(in) :: var_name,fname
 ! internal variable
 integer :: fin,nread,i,check,length_string,n_read_at
+integer :: stat
 character(len=100) :: str
 logical :: success_read
 
@@ -503,9 +820,24 @@ do
       ! find if the variable that was given in input is found in the parameters
       do i=1,natom
          n_read_at=n_read_at+1
-         read(io,*) atomic(i)%name,atomic(i)%position,atomic(i)%moment
+         atomic(i)%type_id=n_read_at    !with old input all atoms are of different type
+         read(io,'(a)',iostat=fin) str
+         read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position,atomic(i)%moment,atomic(i)%charge
+         if(stat==0)then
+            write(*,*) "Read magnetic moment and charge from atom",i
+         else
+            read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position,atomic(i)%moment
+            if(stat==0)then
+                write(*,*) "Read magnetic moment from atom",i
+            else
+                read(str,*,iostat=stat) atomic(i)%name,atomic(i)%position
+                if(stat/=0)then
+                    write(*,*) "ERROR READING ATOM NUMBER",i
+                endif
+                write(*,*) "Read only position for atom",i
+            endif
+         endif
       enddo
-
    endif
 
 enddo
@@ -620,7 +952,6 @@ character(len=100) :: dummy
 
 nread=0
 len_string=len(trim(adjustl(vname)))
-
 rewind(io)
 do
    read (io,'(a)',iostat=fin) str
@@ -769,6 +1100,50 @@ if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', number
 
 end subroutine get_int
 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! get a INTEGER number parameter (check the string and so on)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine get_int8(io,fname,vname,number)
+use m_vector
+implicit none
+integer(8), intent(inout)       :: number
+integer, intent(in)             :: io
+character(len=*), intent(in)    :: vname,fname
+! internal variable
+integer :: fin,len_string,nread,check
+character(len=100) :: str
+character(len=100) :: dummy
+
+nread=0
+len_string=len(trim(adjustl(vname)))
+
+rewind(io)
+do
+   read (io,'(a)',iostat=fin) str
+   if (fin /= 0) exit
+   str= trim(adjustl(str))
+
+   if (len_trim(str)==0) cycle
+   if (str(1:1) == '#' ) cycle
+
+!cccc We start to read the input
+   if (( str(1:len_string) == trim(adjustl(vname))) .and. ( check_last_char(str(len_string+1:len_string+1)) )) then
+      nread=nread+1
+      backspace(io)
+      read(io,*) dummy, number
+   endif
+
+enddo
+
+check=check_read(nread,vname,fname)
+
+if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', number
+
+end subroutine 
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get a BOOLEAN vector parameter (check the string and so on)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -858,6 +1233,54 @@ endif
 if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', vec
 
 end subroutine get_1D_vec_real
+
+subroutine get_vec1d_real(io,fname,vname,vec)
+    real(8), intent(inout) :: vec(:)
+    integer, intent(in) :: io
+    character(len=*), intent(in) :: vname,fname
+    !internal
+    logical :: success
+    integer :: stat
+    character(len=len(vname))   ::  tmp
+   
+    Call set_pos_entry(io,fname,vname,success)
+    if(success)then
+        read(io,*,iostat=stat) tmp, vec
+        if(stat/=0)then
+            write(error_unit,'(/3A)') 'Failed to read ',vname,' but keyword is given'
+            STOP "Fix input"
+        endif
+    else
+        write(error_unit,'(2A)') 'No entry found for ',vname
+        write(error_unit,'(A)') 'Using default value:'
+        write(error_unit,'(3E16.8)') vec
+    endif
+    Call check_further_entry(io,fname,vname)
+end subroutine 
+
+subroutine get_vec1d_int(io,fname,vname,vec)
+    integer, intent(inout) :: vec(:)
+    integer, intent(in) :: io
+    character(len=*), intent(in) :: vname,fname
+    !internal
+    logical :: success
+    integer :: stat
+    character(len=len(vname))   ::  tmp
+   
+    Call set_pos_entry(io,fname,vname,success)
+    if(success)then
+        read(io,*,iostat=stat) tmp, vec
+        if(stat/=0)then
+            write(error_unit,'(/3A)') 'Failed to read ',vname,' but keyword is given'
+            STOP "Fix input"
+        endif
+    else
+        write(error_unit,'(2A)') 'No entry found for ',vname
+        write(error_unit,'(A)') 'Using default value:'
+        write(error_unit,'(3I10)') vec
+    endif
+    Call check_further_entry(io,fname,vname)
+end subroutine 
 
 
 

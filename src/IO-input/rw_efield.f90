@@ -1,3 +1,5 @@
+!OBSOLETE?, I can't find anything which uses this...
+#if 0
       module m_efield
       real(kind=8), allocatable :: Efield_Jij(:,:,:)
       real(kind=8) :: me(12)
@@ -148,3 +150,4 @@
       endif
 
       end subroutine rw_efield
+#endif

@@ -1,28 +1,25 @@
-message("reading config.cmake")
+#manually set compiler
+#set(CMAKE_CXX_COMPILER "g++")
+#set(CMAKE_Fortran_COMPILER "gfortran")
+set(CMAKE_CXX_COMPILER "mpicxx")
+set(CMAKE_Fortran_COMPILER "mpif90")
 
-set(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_Fortran_COMPILER "gfortran")
+#set faster release flags
+set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math -fopenmp")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=intel")
 
-#manual adds to fortran compiler
-set(compadd "")							#add to release and debug
-set(com_rel_add "")  #add to release
-set(com_deb_add "")						#add to debug 
+include_directories( /usr/include ) #FFTW directory include
 
+set(USE_CUDA TRUE)
+set(USE_EIGEN TRUE)
+set(USE_MKL TRUE)
 
-if(DEFINED ENV{MKLROOT})
-  set(MKLROOT $ENV{MKLROOT})
-  #set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
-  set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl")
-  set(add_inc ${add_inc} "${MKLROOT}/include" )
-else()
-  message( FATAL_ERROR "Did not find ${MKLROOT} environment variable" )
-endif()
+set(MKL_linker "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl") 
+set(CMAKE_CUDA_ARCHITECTURES 75)
 
-#PREPROCESSOR FLAGS
-add_compile_definitions(CPP_MKL_SPBLAS)
-add_compile_definitions(CPP_BRUTDIP)
-#add_compile_definitions(CPP_EIGEN_H)
-#add_compile_definitions(CPP_DEBUG)
+#MANUALLY SET PREPROCESSOR FLAGS
+add_compile_definitions(CPP_FFTW3)
+add_compile_definitions(CPP_MPI)
+add_compile_definitions(CPP_MRG)
 add_compile_definitions(CPP_BLAS)
-#add_compile_definitions(EIGEN_USE_MKL_ALL MKL_DIRECT_CALL)
-#add_compile_definitions(CPP_DENSE)
+#add_compile_definitions(CPP_DEBUG)

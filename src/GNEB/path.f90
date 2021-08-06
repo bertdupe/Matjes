@@ -4,7 +4,9 @@ module m_path
 !
 !
 !
+use m_type_lattice,only: lattice
 use m_vector, only : norm
+implicit none
 
 private
 public :: the_path,geodesic_path
@@ -12,31 +14,25 @@ public :: the_path,geodesic_path
 contains
 
 !> Calculate poly-geodesic length of the path
-subroutine the_path(nim,path,pathlen)
-use m_vector, only : calc_ang
-use m_basic_types, only : vec_point
-implicit none
-integer, intent(in) :: nim
-type(vec_point), intent(in) :: path(:,:)
-real(kind=8), intent(out) :: pathlen(nim)
-! internal variables
-real(kind=8) :: tmp,l1
-integer :: i,i_nim
-integer :: shape_lattice(2)
-
-pathlen(1) = 0d0
-shape_lattice=shape(path)
-
-do i_nim=2,shape_lattice(2)
-   tmp = 0d0
-   do i=1,shape_lattice(1)
-
-      l1 = calc_ang(path(i,i_nim-1)%w,path(i,i_nim)%w)
-
-      tmp = tmp+l1*l1
-   end do
-   pathlen(i_nim) = pathlen(i_nim-1) + dsqrt(tmp)
-end do
+subroutine the_path(images,pathlen)
+    use m_vector, only : calc_ang
+    implicit none
+    type(lattice), intent(in)   :: images(:)
+    real(8), intent(out)        :: pathlen(size(images))
+    ! internal variables
+    real(8) :: tmp,l1
+    integer :: i,i_nim
+    
+    pathlen(1) = 0d0
+    
+    do i_nim=2,size(images)
+       tmp = 0d0
+       do i=1,size(images(1)%M%modes_v,2)
+          l1 = calc_ang(images(i_nim-1)%M%modes_v(:,i),images(i_nim)%M%modes_v(:,i))
+          tmp = tmp+l1*l1
+       end do
+       pathlen(i_nim) = pathlen(i_nim-1) + dsqrt(tmp)
+    end do
 
 end subroutine the_path
 
@@ -136,55 +132,42 @@ end subroutine geodesic_path_one
 !
 ! Calculate the geodesic path between all the configurations
 !
-! I have removed the first configurations spini and spinf but we can put it back
+! I have removed the first configurations spini and spinf but we can put it back (???)
 
-subroutine geodesic_path(amp_rnd,path)
-use m_get_random
-use m_basic_types, only : vec
-use m_operator_pointer_utils
-implicit none
-real(kind=8), intent(in) :: amp_rnd
-real(kind=8), target, intent(inout) :: path(:,:,:)
-! internal variable
-integer :: i,i_nim,N_cell,nim,shape_path(3),i_dim,dim_mode,dim_mode_mag,j
-real(kind=8) :: norm_local,dumy(3)
-real(kind=8), allocatable, dimension(:,:) ::path_one
-real(kind=8), allocatable, dimension(:) ::u(:),ax(:),unchanged(:)
-real(kind=8), pointer, dimension(:,:,:) :: path_magnetic
-logical :: i_magnetic
+subroutine geodesic_path(amp_rnd,images)
+    use m_get_random
+    implicit none
+    real(8), intent(in)             :: amp_rnd
+    type(lattice), intent(inout)    :: images(:)
+!   real(8), target, intent(inout) :: path(:,:,:)
+    ! internal variable
+    integer             :: N_cell,nim,dim_mode_mag
+    real(8)             :: norm_local,dumy(3)
+    integer             :: i,i_nim,j
+    real(8), allocatable, dimension(:,:)    :: path_one
+    real(8), allocatable, dimension(:)      :: u(:),ax(:)
+    
+    N_cell=images(1)%Ncell
+    nim=size(images)
 
-shape_path=shape(path)
-dim_mode=shape_path(1)
-N_cell=shape_path(2)
-nim=shape_path(3)
-
-call associate_pointer(path_magnetic,path,'magnetic',i_magnetic)
-dim_mode_mag=size(path_magnetic(:,1,1))
-
-allocate(path_one(dim_mode_mag,nim),u(dim_mode_mag),ax(dim_mode_mag),unchanged(dim_mode))
-path_one=0.0d0
-ax = 0.0d0
-unchanged=path(:,1,1)
-
-do i_nim = 1,nim
-   do i=1,N_cell
-
-   ! part of the modes that will undergo the GNEB
-      call geodesic_path_one(nim,path_magnetic(:,i,1),path_magnetic(:,i,nim),ax,path_one,dim_mode_mag)
-   ! part of the field and stuff that do not change during optimization
-      path(:,i,i_nim)=unchanged
-   ! update the part of the path that will change
-      do j=1,dim_mode_mag/3
-        u(1)=2d0*(get_rand_classic()-1d0)
-        u(2)=2d0*(get_rand_classic()-1d0)
-        u(3)=2d0*(get_rand_classic()-1d0)
-        dumy=path_one( 3*(j-1)+1:3*j ,i_nim)+amp_rnd*u
-        norm_local=norm(dumy)
-        if (norm_local.gt.1.0d-8) path_magnetic( 3*(j-1)+1:3*j ,i,i_nim)=dumy/norm_local
-      enddo
-
-   end do
-end do
+    dim_mode_mag=images(1)%M%dim_mode
+    
+    allocate(path_one(dim_mode_mag,nim),u(dim_mode_mag),ax(dim_mode_mag),source=0.0d0)
+    
+    !could certainly be optimized with more vector instructions moving parts up from low-laying loops 
+    do i_nim = 1,nim
+        do i=1,N_cell
+            call geodesic_path_one(nim,images(1)%M%modes_v(:,i),images(nim)%M%modes_v(:,i),ax,path_one,dim_mode_mag)
+            do j=1,dim_mode_mag/3
+                u(1)=2d0*(get_rand_classic()-1d0)
+                u(2)=2d0*(get_rand_classic()-1d0)
+                u(3)=2d0*(get_rand_classic()-1d0)
+                dumy=path_one(3*(j-1)+1:3*j ,i_nim)+amp_rnd*u
+                norm_local=norm(dumy)
+                if (norm_local.gt.1.0d-8) images(i_nim)%M%modes_v(3*(j-1)+1:3*j,i)=dumy/norm_local
+            enddo
+        end do
+    end do
 
 end subroutine geodesic_path
 

@@ -1,3 +1,6 @@
+!IS NOT USED AND AND NOT UPDATED TO CONTIGUOUS ORDER-PARAMETERS
+
+#if 0
 ! function that computes the demag matrix at each point of space for the convolution
 ! the arguments are
 ! u(3),v and w vectors along which you are not periodic. It must be a basis vector
@@ -446,3 +449,4 @@
       end subroutine zerod_nmat
 
       end module m_nmat
+#endif

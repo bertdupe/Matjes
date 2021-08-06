@@ -6,7 +6,8 @@ module m_write_config
 !use m_io_utils
 use m_io_files_utils, only: open_file_write,close_file
 use m_io_utils, only: dump_config
-use m_type_lattice,only: lattice
+use m_type_lattice,only: lattice,order_parameter_name,order_par
+use m_netcdf_routine
 implicit none
 
 
@@ -17,42 +18,63 @@ interface write_config
 end interface
 
 private
-public write_config
+public write_config,write_netcdf
 contains
+
+!write the configuration in the Netcdf file
+!:========================================================================
+subroutine write_netcdf(fname,lat,time)
+    ! write out all order parameters that are set with the respective name and simulations
+    ! parameters in a netcdf
+    character(len=*),intent(in) ::  fname
+    type(lattice),intent(in)    ::  lat
+    real(8), intent(in)         ::  time
+
+    integer     :: i,xcoord(lat%dim_lat(1)),ycoord(lat%dim_lat(2)),zcoord(lat%dim_lat(3))
+    character(len=100) :: filename
+    real(8),pointer,contiguous ::  ord(:),ord_netcdf(:,:,:)
+    logical         ::  used(size(order_parameter_name))
+
+    Call lat%used_order(used)
+
+    write(filename,'(2A)')  trim(adjustl(fname)),'.nc'
+
+    xcoord=(/(i,i=1,lat%dim_lat(1))/)
+    ycoord=(/(i,i=1,lat%dim_lat(2))/)
+    zcoord=(/(i,i=1,lat%dim_lat(3))/)
+    do i=1,size(order_parameter_name)
+        if(used(i))then
+            Call lat%set_order_point(i,ord)
+            allocate(ord_netcdf(lat%dim_lat(1),lat%dim_lat(2),lat%dim_lat(3)))
+            ord_netcdf=reshape(ord,(/lat%dim_lat(1),lat%dim_lat(2),lat%dim_lat(3)/))
+            call writegrid(filename,order_parameter_name(i),xcoord,ycoord,zcoord,ord_netcdf,lat%dim_lat(1),lat%dim_lat(2),lat%dim_lat(3),time)
+        endif
+    enddo
+
+end subroutine
+!:========================================================================
+
 subroutine write_config_char(fname,lat)
+    !write out all order parameters that are set with the respective name in front
+    !and with the respective dimmode of columns
     character(len=*),intent(in) ::  fname
     type(lattice),intent(in)    ::  lat
 
-    integer     :: io
+    integer     :: io,i
     character(len=100) :: filename
+    real(8),pointer,contiguous ::  ord(:)
+    logical         ::  used(size(order_parameter_name))
 
-    if(associated(lat%M%all_modes))then
-        write(filename,'(3A)')  'Mfield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%M)
-        call close_file(filename,io)
-    endif
-
-    if(associated(lat%E%all_modes))then
-        write(filename,'(3A)')  'Efield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%E)
-        call close_file(filename,io)
-    endif
-
-    if(associated(lat%B%all_modes))then
-        write(filename,'(3A)')  'Bfield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%B)
-        call close_file(filename,io)
-    endif
-
-    if(associated(lat%T%all_modes))then
-        write(filename,'(3A)')  'Tfield_',trim(adjustl(fname)),'.dat'
-        io=open_file_write(filename)
-        call dump_config(io,lat%T)
-        call close_file(filename,io)
-    endif
+    Call lat%used_order(used)
+    do i=1,size(order_parameter_name)
+        if(used(i))then
+            write(filename,'(4A)')  trim(order_parameter_name(i)),'_',trim(adjustl(fname)),'.dat'
+            io=open_file_write(filename)
+            Call lat%set_order_point(i,ord)
+            call dump_config(io,lat%get_order_dim(i),ord)
+            call close_file(filename,io)
+        endif
+    enddo
 end subroutine
 
 subroutine write_config_int(i,lat)

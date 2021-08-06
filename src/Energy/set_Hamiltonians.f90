@@ -2,12 +2,15 @@ module m_set_Hamiltonians
 use m_H_public
 implicit none
 private
-public :: set_Hamiltonians,combine_Hamiltonians
+public :: set_Hamiltonians
+
 contains
-subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_vector,lat)
+
+subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_derived_types
     use m_input_H_types 
     use m_get_position,only :get_position_ND_to_1D 
+    use, intrinsic :: iso_fortran_env, only : output_unit
     
     use m_symmetry_operators
     use m_anisotropy_heisenberg,only: get_anisotropy_H
@@ -17,43 +20,46 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     use m_exchange_heisenberg_D, only: get_exchange_D
     use m_coupling_ME_J,only: get_coupling_ME_J
     use m_coupling_ME_D,only: get_coupling_ME_D
+    use m_harmonic_phonon,only: get_Forces_F
+    use m_exchange_TJ,only: get_exchange_TJ
+    use m_ASR_phonon, only: get_ASR_Ph
+    use m_Mag_Biq, only: get_Mag_Biq
+    use m_4spin, only: get_4spin
+    use m_dipolar_magnetic, only: get_dipolar
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
     type(io_h),intent(in)               :: H_io
-    real(8), intent(in) :: DM_vector(:,:,:)
-    integer, intent(in) :: tableNN(:,:,:,:,:,:) !!tableNN(4,N_Nneigh,dim_lat(1),dim_lat(2),dim_lat(3),count(my_motif%i_mom)
-    integer, intent(in) :: indexNN(:)
-    type(lattice), intent(inout) :: lat
+    type(lattice), intent(in)           :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(6)
+    logical :: use_Ham(12)
 
-    use_ham(1)=H_io%J%is_set
-    use_ham(2)=H_io%D%is_set
-    use_ham(3)=H_io%aniso%is_set
+
+    use_ham(1)=H_io%J%is_set.and..not.H_io%J%fft
+    use_ham(2)=H_io%D%is_set.and..not.H_io%D%fft
+    use_ham(3)=H_io%aniso%is_set.and..not.H_io%aniso%fft
     use_ham(4)=H_io%zeeman%is_set
     use_ham(5)=H_io%ME_J%is_set
     use_ham(6)=H_io%ME_D%is_set
-
-    if(use_ham(2).and.all(norm2(DM_vector,2)<1.0d-8))then
-        write(*,*) "WARNING, ALL DMI-vectors are vanishing"
-        write(*,*) "Disableing DMI"
-        use_ham(2)=.false.
-    endif
+    use_ham(7)=H_io%F%is_set
+    use_ham(8)=H_io%TJ%is_set
+    use_ham(9)=H_io%ASR_Ph%is_set
+    use_ham(10)=H_io%M_biq%is_set
+    use_ham(11)=H_io%sp4%is_set
+    use_ham(12)=H_io%dip%is_set.and..not.H_io%dip%fft
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
-
     i_H=1 
     !exchange_J (without DMI)
     if(use_ham(1))then
-        Call get_exchange_J(Ham_res(i_H),H_io%J,tableNN,indexNN,lat)
+        Call get_exchange_J(Ham_res(i_H),H_io%J,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !exchange_D (only DMI)
     if(use_ham(2))then
-        Call get_exchange_D(Ham_res(i_H),H_io%D,tableNN,indexNN,lat,DM_vector)
+        Call get_exchange_D(Ham_res(i_H),H_io%D,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !anisotropy
@@ -68,23 +74,61 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,tableNN,indexNN,DM_ve
     endif
     !ME-coupling symmetric (J)
     if(use_ham(5))then
-        Call get_coupling_ME_J(Ham_res(i_H),H_io%ME_J,tableNN,indexNN,lat)
+        Call get_coupling_ME_J(Ham_res(i_H),H_io%ME_J,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !ME-coupling antisymmetric (D)
     if(use_ham(6))then
-        Call get_coupling_ME_D(Ham_res(i_H),H_io%ME_D,tableNN,indexNN,lat)
+        Call get_coupling_ME_D(Ham_res(i_H),H_io%ME_D,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
+    !Harmonic phonon (F)
+    if(use_ham(7))then
+        Call get_Forces_F(Ham_res(i_H),H_io%F,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !TJ coupling
+    if(use_ham(8))then
+        Call get_exchange_TJ(Ham_res(i_H),H_io%TJ,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !ASR for the phonon
+    if(use_ham(9))then
+        Call get_ASR_Ph(Ham_res(i_H),H_io%ASR_Ph,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !Magnetic biquadratic
+    if(use_ham(10))then
+        Call get_Mag_Biq(Ham_res(i_H),H_io%M_biq,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !4-spin interaction
+    if(use_ham(11))then
+        Call get_4spin(Ham_res(i_H),H_io%sp4,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !direct calculation of dipolar interaction
+    if(use_ham(12))then
+        Call get_dipolar(Ham_res(i_H),H_io%dip,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+
+    write(output_unit,'(//A,I3,A)') "The following ",N_ham," Hamiltonians in real-space have been set:"
+    do i_H=1,N_ham
+        write(output_unit,'(3XA)') trim(Ham_res(i_H)%desc)
+    enddo
+    write(output_unit,'(//)')
 
     do i_H=1,N_ham
         if(.not. Ham_res(i_h)%is_set()) STOP "not all Hamiltonians are set"
         Call Ham_res(i_h)%optimize()
+        Call Ham_res(i_h)%finish_setup()
     enddo
 
     Call combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
     do i_H=1,size(Ham_comb)
         Call Ham_comb(i_h)%optimize()
+        Call Ham_comb(i_h)%finish_setup()
     enddo
 end subroutine
 
@@ -121,8 +165,10 @@ subroutine combine_Hamiltonians(keep_in,H_in,H_comb)
     outer:do j=1,N_in
         do i=1,j-1
             if(all(space(:,:,j)==space(:,:,i)))then
-                i_unique(j)=i_unique(i)
-                cycle outer
+                if(H_in(j)%same_space(H_in(i)))then
+                    i_unique(j)=i_unique(i)
+                    cycle outer
+                endif
             endif
         enddo
         N_out=N_out+1

@@ -1,139 +1,91 @@
 module m_MCstep
 use m_derived_types, only : lattice
-use m_basic_types, only : vec_point
-use m_sampling
-use m_choose_spin
-use m_relaxtyp
-use m_createspinfile
-use m_H_public
-implicit none
+use m_mc_track_val, only: track_val
+use m_sampling, only: sphereft,equirep
+use m_choose_spin, only: choose_spin
+use m_relaxtyp,only: underrelax,overrelax
+use m_hamiltonian_collection, only: hamiltonian
+Implicit none
 
 private
 public :: MCstep
+
 contains
 !
 ! ===============================================================
 !
-SUBROUTINE MCstep(lat,io_MC,N_spin,E_total,E,Magnetization,kt,acc,rate,nb,cone,Hams)
+SUBROUTINE MCstep(lat,io_MC,N_spin,state_prop,kt,H,work)
     use m_constants, only : k_b,pi
-    use m_input_types,only: MC_input
-    use mtprng
-    Implicit none
+    use m_MC_io,only: MC_input
+    use m_work_ham_single, only: work_ham_single
     ! input
-    type(lattice),intent(inout)     :: lat
-    type(MC_input),intent(in)       :: io_MC 
-    real(kind=8), intent(in)        :: kt
-    integer, intent(in)             :: N_spin
-    real(kind=8), intent(inout)     :: E_total,Magnetization(3),E(8),acc,rate,cone,nb
-    class(t_H), intent(in)          :: Hams(:)
+    type(lattice),intent(inout)         :: lat
+    type(MC_input),intent(in)           :: io_MC 
+    real(8), intent(in)                 :: kt
+    integer, intent(in)                 :: N_spin
+    type(track_val),intent(inout)       :: state_prop
+    type(hamiltonian), intent(inout)    :: H
+    type(work_ham_single),intent(inout) :: work
     
     ! internal variable
-    type(mtprng_state) :: state
-    !     Energy difference Delta E and -DE/kT, Dmag and Dq
-    real(kind=8) :: DE,E_new,E_old,Dmag(3)
-    real(kind=8) :: tmp
-    !     memory value for Theta
-    real(kind=8) :: choice
-    !     flipped Spin
-    real(kind=8) :: S_new(3),S_old(3)
-    integer :: iomp
-    
-    call choose_spin(iomp,N_spin)
-#ifdef CPP_DEBUG
-    if(lat%nmag>1) ERROR STOP "A lot of things will not work in this routine with nmag>1"
-#endif
-    !---------------------------------------
-    ! here are the different sampling
-    ! first the sphere sampling
-    !---------------------------------------
-    if(io_MC%ising)then
-        S_new=-lat%M%modes_v(:,iomp)
-    elseif(io_MC%underrelax)then
-        S_new=underrelax(iomp,lat,Hams)
-    elseif(io_MC%overrelax)then
-        S_new=overrelax(iomp,lat,Hams)
-    elseif(io_MC%equi)then
-        Call cone_update(cone,rate)
-        S_new=equirep(lat%M%modes_v(:,iomp),cone)
-    elseif(io_MC%sphere)then
-        Call cone_update(cone,rate)
-        S_new=sphereft(lat%M%modes_v(:,iomp),cone)
-    else
-        STOP "Invalid MC sampling method"
-    endif
-    
+    real(8) :: E_old        !energy caused by the i_spin-site with S_old 
+    real(8) :: E_new        !energy caused by the i_spin-site with S_new
+    real(8) :: S_old(3)     !old spin direction at chosen state
+    real(8) :: S_new(3)     !new spin direction at chosen state
+    real(8) :: Dmag(3)      !change of magnetization caused by S_new at i_spin 
+    real(8) :: DE           !Energy difference caused by changes spin
+    integer :: i_spin       !chosen spin index (1:N_cell*site_per_cell(order))
+
+    !choose the spin-site which is to be modified
+    call choose_spin(i_spin,state_prop%Nsite)
+
     !----------------------------------
     !       Calculate the energy difference if this was flipped
     !       and decider, if the Spin flip will be performed
     !----------------------------------
-    !Energy of old configuration
-    E_old=energy_single(Hams,iomp,lat)
-    S_old=lat%M%modes_v(:,iomp)
+    !get Energy of old configuration
+    S_old=lat%M%modes_3(:,i_spin)
+    Call H%energy_single(i_spin,state_prop%order,lat,work,E_old)
     
-    !Energy of the new configuration
-    lat%M%modes_v(:,iomp)=S_new
-    E_new=energy_single(Hams,iomp,lat)
-    lat%M%modes_v(:,iomp)=S_old
-    !! variation of the energy for this step
+    !get Energy of the new configuration
+    S_new=state_prop%spin_sample(i_spin,lat,work,H)  !choose new magnetic direction
+    lat%M%modes_3(:,i_spin)=S_new               !set new configuration
+    Call H%energy_single(i_spin,state_prop%order,lat,work,E_new)
+    lat%M%modes_3(:,i_spin)=S_old   !revert for now to old state
+
+    ! get energy difference
     DE=E_new-E_old
     
-    nb=nb+1.0d0
+    state_prop%nb=state_prop%nb+1.0d0
     if ( accept(kt,DE) ) then
-        Dmag=-lat%M%modes_v(:,iomp)+S_new
-    ! update the spin
-        lat%M%modes_v(:,iomp)=S_new
-    ! update the quantities
-        E_total=E_total+DE
-        Magnetization=Magnetization+Dmag
-        acc=acc+1.0d0
+        Dmag=-S_old+S_new   !change of magnetization
+        ! update the spin
+        lat%M%modes_3(:,i_spin)=S_new
+        ! update the quantities
+        state_prop%E_total=state_prop%E_total+DE
+        state_prop%Magnetization=state_prop%Magnetization+Dmag
+        state_prop%acc=state_prop%acc+1.0d0
     endif
    
-    rate=acc/nb
+    state_prop%rate=state_prop%acc/state_prop%nb
+END SUBROUTINE 
 
-END SUBROUTINE MCstep
 ! ===============================================================
 
 function accept(kt,DE)
+    use m_get_random, only: get_rand_classic
     real(8),intent(in)  :: kt,DE
 
     real(8) :: choice, tmp
     logical :: accept
-    
-    accept=.False.
-    !accept energy gain
-    if(dE<0.0d0)then
-        accept=.true.
-        return
-    endif
-    ! security in case kt is 0
-    if(kt<1.0d-10)then
-       return
-    endif
-    
-    tmp=-DE/kT
-    !prevent exp(tmp) underflow
-    if(tmp<-200.0d0) return
-#ifdef CPP_MRG
-    choice=mtprng_rand_real1(state)
-#else
-    CALL RANDOM_NUMBER(Choice)
-#endif
-    if (Choice.lt.exp(tmp)) Then
-        accept=.True.
+
+    accept=dE<0.0d0     !accept all energy gains
+    if(.not.accept)then
+        !check with temperature if energy loss is accepted
+        tmp=-DE/kT
+        tmp=max(tmp,-200.0d0) !prevent exp(tmp) underflow
+        choice=get_rand_classic()
+        accept=Choice.lt.exp(tmp)
     endif
 end function
-
-pure subroutine  cone_update(cone,rate)
-    use m_constants, only : pi
-    real(8),intent(inout)   :: cone
-    real(8),intent(in)      :: rate
-
-    ! cone angle update and maximal magnetic moment change
-    if ((rate.gt.0.5d0).and.(cone.lt.pi))then
-         cone=cone+0.0001d0
-    elseif ((rate.lt.0.50d0).and.(cone.gt.0.01d0)) then
-         cone=cone-0.0001d0
-    endif
-end subroutine
-
 end module

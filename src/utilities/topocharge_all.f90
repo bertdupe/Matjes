@@ -8,9 +8,9 @@
 
       subroutine initialize_topo(spin,shape_spin,masque,qeulerp,qeulerm,my_lattice)
       use m_topocharge_local, only : local_topo
-#ifdef CPP_MPI
-      use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
-#endif
+!#ifdef CPP_MPI
+!      use m_make_box, only : Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
+!#endif
       implicit none
       integer, intent(in) :: shape_spin(:),masque(:,:,:,:)
       real(kind=8), intent(in) :: spin(:,:,:,:,:)
@@ -20,7 +20,7 @@
       integer :: i_x,i_y,i_z,i_m,n_system
       real(kind=8) :: qp,qm
 
-#ifndef CPP_MPI
+!#ifndef CPP_MPI
       integer :: Xstart,Xstop,Ystart,Ystop,Zstart,Zstop
 
       Xstart=1
@@ -29,7 +29,7 @@
       Ystop=shape_spin(3)
       Zstart=1
       Zstop=shape_spin(4)
-#endif
+!#endif
 
       n_system=my_lattice%n_system
       qp=0.0d0

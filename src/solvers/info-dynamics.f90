@@ -15,52 +15,52 @@ select case (integtype)
        case(2)
 !-----------------------
 ! Heun
-#ifdef CPP_MPI
-        if (irank.eq.0) write(6,'(a)') 'Heun integration method selected'
-#else
+!#ifdef CPP_MPI
+!        if (irank.eq.0) write(6,'(a)') 'Heun integration method selected'
+!#else
         write(6,'(a)') 'Heun integration method selected'
-#endif
+!#endif
        case(3)
 !-----------------------
 ! SIA
-#ifdef CPP_MPI
-        if (irank.eq.0) write(6,'(a)') 'SIA: Heun semi-implicit+projector integration method selected'
-#else
+!#ifdef CPP_MPI
+!        if (irank.eq.0) write(6,'(a)') 'SIA: Heun semi-implicit+projector integration method selected'
+!#else
         write(6,'(a)') 'SIA: Heun semi-implicit+projector integration method selected'
-#endif
+!#endif
        case(4)
 !-----------------------
 ! SIB
-#ifdef CPP_MPI
-        if (irank.eq.0) write(6,'(a)') 'SIB: Heun semi-implicit+projector+NC integration method selected'
-#else
+!#ifdef CPP_MPI
+!        if (irank.eq.0) write(6,'(a)') 'SIB: Heun semi-implicit+projector+NC integration method selected'
+!#else
         write(6,'(a)') 'SIB: Heun semi-implicit+projector+NC integration method selected'
-#endif
+!#endif
        case(1)
 !-----------------------
 ! Euler
-#ifdef CPP_MPI1
-        if (irank.eq.0) write(6,'(a)') 'Euler integration method selected'
-#else
+!#ifdef CPP_MPI1
+!        if (irank.eq.0) write(6,'(a)') 'Euler integration method selected'
+!#else
         write(6,'(a)') 'Euler integration method selected'
 
-#endif
+!#endif
        case(5)
 !-----------------------
 ! SIB with error correction
-#ifdef CPP_MPI
-        if (irank.eq.0) write(6,'(a)') 'SIB with error correction method selected'
-#else
+!#ifdef CPP_MPI
+!        if (irank.eq.0) write(6,'(a)') 'SIB with error correction method selected'
+!#else
         write(6,'(a)') 'SIB with error correction method selected'
-#endif
+!#endif
        case(6)
 !-----------------------
 ! SIB without temperature
-#ifdef CPP_MPI
-        if (irank.eq.0) write(6,'(a)') 'SIB: Heun semi-implicit+projector+NC integration method selected (T=0)'
-#else
+!#ifdef CPP_MPI
+!        if (irank.eq.0) write(6,'(a)') 'SIB: Heun semi-implicit+projector+NC integration method selected (T=0)'
+!#else
         write(6,'(a)') 'SIB: Heun semi-implicit+projector+NC integration method selected (T=0)'
-#endif
+!#endif
        case default
 end select
 

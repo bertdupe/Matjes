@@ -8,28 +8,28 @@ use m_solver_order
 
 abstract interface
 
-    function propagator_old(B,damping,mode,size_B)result(propagator)
-      integer, intent(in) :: size_B
-      real(kind=8), intent(in) :: B(:),damping,mode(:)
-      real(kind=8) :: propagator(size_B)
-    end function 
+!    function propagator_old(B,damping,mode,size_B)result(propagator)
+!      integer, intent(in) :: size_B
+!      real(kind=8), intent(in) :: B(:),damping,mode(:)
+!      real(kind=8) :: propagator(size_B)
+!    end function 
 
     subroutine propagator(B,damping,M,Mout)
-        real(8),intent(in)                          ::  damping
-        real(8),intent(in),target,contiguous        ::  M(:,:),B(:,:)
-        real(8),intent(inout),target,contiguous     ::  Mout(:,:)
+        real(8),intent(in)                  ::  damping
+        real(8),intent(in),contiguous       ::  M(:,:),B(:,:)
+        real(8),intent(inout),contiguous    ::  Mout(:,:)
     end subroutine
 
-    function integrator_old(Mode_t,D_Mode,BT,dt,size_mode) result(integrator)
-      integer, intent(in) :: size_mode
-      real(kind=8), intent(in) :: Mode_t(:),D_Mode(:),BT(:),dt
-      real(kind=8) :: integrator(size_mode)
-    end function 
+!    function integrator_old(Mode_t,D_Mode,BT,dt,size_mode) result(integrator)
+!      integer, intent(in) :: size_mode
+!      real(kind=8), intent(in) :: Mode_t(:),D_Mode(:),BT(:),dt
+!      real(kind=8) :: integrator(size_mode)
+!    end function 
 
     function integrator(m,Dmag_int,dt)result(Mout)
-        real(8),intent(in),target,contiguous    ::  M(:,:),Dmag_int(:,:)
-        real(8),intent(in)                      ::  dt
-        real(8),target                          ::  Mout(size(M,1),size(M,2))
+        real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:)
+        real(8),intent(in)              ::  dt
+        real(8),target                  ::  Mout(size(M,1),size(M,2))
     end function
 
 
@@ -42,14 +42,15 @@ abstract interface
 
 end interface
 
-procedure (propagator_old), pointer, protected :: get_propagator_field_old=>null()
+!procedure (propagator_old), pointer, protected :: get_propagator_field_old=>null()
 procedure (propagator), pointer, protected :: get_propagator_field=>null()
 procedure (integrator), pointer, protected :: get_integrator_field=>null()
-procedure (integrator_old), pointer, protected :: get_integrator_field_old=>null()
+!procedure (integrator_old), pointer, protected :: get_integrator_field_old=>null()
 procedure (temperature_field), pointer, protected :: get_temperature_field=>null()
 
 private
-public :: select_propagator,get_propagator_field,get_propagator_field_old,get_integrator_field,get_integrator_field_old,get_temperature_field
+public :: select_propagator,get_propagator_field,get_integrator_field,get_temperature_field
+!public :: get_propagator_field_old,get_integrator_field_old
 
 contains
 
@@ -78,9 +79,9 @@ select case (integtype)
   case (1)
 
     get_propagator_field => LLG
-    get_propagator_field_old => LLG_old
+!    get_propagator_field_old => LLG_old
     get_integrator_field => euler
-    get_integrator_field_old => euler_old
+!    get_integrator_field_old => euler_old
 
     N_loop=1
 
@@ -95,9 +96,9 @@ select case (integtype)
   case (2)
 
     get_propagator_field => LLG
-    get_propagator_field_old => LLG_old
+!    get_propagator_field_old => LLG_old
     get_integrator_field => euler
-    get_integrator_field_old => euler_old
+!    get_integrator_field_old => euler_old
 
     N_loop=2
 
@@ -126,9 +127,9 @@ select case (integtype)
 !-----------------------------------------------
   case (4)
     get_propagator_field => LLG
-    get_propagator_field_old => LLG_old
+!    get_propagator_field_old => LLG_old
     get_integrator_field => euler
-    get_integrator_field_old => euler_old
+!    get_integrator_field_old => euler_old
 
     N_loop=4
     call get_parameter(io,'input','N_order',N_loop)

@@ -1,39 +1,43 @@
-      module m_mpi
-      interface allreduce
-       module procedure allreduce_scalar
-       module procedure allreduce_1D
-       module procedure allreduce_2D
-       module procedure allreduce_4D
-       module procedure allreduce_3D
-       module procedure allreduce_3D_bis
-      end interface allreduce
+module m_mpi
+#ifdef CPP_MPI
+implicit none
+public
 
-      interface reduce
-       module procedure reduce_vector_5d
-       module procedure reduce_vector_2D
-       module procedure reduce_vector_1D
-       module procedure reduce_vector_I_1D
-       module procedure reduce_scalar_r
-       module procedure reduce_scalar_i
-      end interface reduce
+interface allreduce
+ module procedure allreduce_scalar
+ module procedure allreduce_1D
+ module procedure allreduce_2D
+ module procedure allreduce_4D
+ module procedure allreduce_3D
+ module procedure allreduce_3D_bis
+end interface allreduce
 
-      interface bcast
-       module procedure bcast_5d
-      end interface bcast
+interface reduce
+ module procedure reduce_vector_5d
+ module procedure reduce_vector_2D
+ module procedure reduce_vector_1D
+ module procedure reduce_vector_I_1D
+ module procedure reduce_scalar_r
+ module procedure reduce_scalar_i
+end interface reduce
 
-      interface gather
-       module procedure gather_1d
-       module procedure gather_I_1d
-       module procedure gather_2d
-      end interface gather
+interface bcast
+ module procedure bcast_5d
+end interface bcast
 
-      interface scatter
-       module procedure scatter_1d
-       module procedure scatter_I_1d
-       module procedure scatter_2d
-      end interface scatter
+interface gather
+ module procedure gather_1d
+ module procedure gather_I_1d
+ module procedure gather_2d
+end interface gather
 
-      contains
+interface scatter
+ module procedure scatter_1d
+ module procedure scatter_I_1d
+ module procedure scatter_2d
+end interface scatter
+
+contains
 !----------------------------------------------------------------------------------------------------------
       function gather_1d(v,length,size_table,root,MPI_COMM)
       Implicit none
@@ -366,4 +370,5 @@
       call mpi_reduce(v,reduce_scalar_i,1,MPI_INTEGER,MPI_SUM,0,MPI_COMM,ierr)
 
       end function reduce_scalar_i
-      end module m_mpi
+#endif
+end module m_mpi

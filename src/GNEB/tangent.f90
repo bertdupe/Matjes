@@ -1,10 +1,13 @@
 module m_tangent
-use m_basic_types, only : vec
-use m_vector, only : norm
+use m_vector, only : norm, project
 use m_projection
+use m_derived_types, only : lattice
+implicit none
 
 interface tang
    module procedure tang_oneimage,tang_spec
+   module procedure lattice_single 
+   module procedure lattice_special
 end interface
 
 private
@@ -82,14 +85,54 @@ tau=tau/sqrt(tmp)
 
 end subroutine tang_spec
 
+!> Estimate tangent to the path according to the special definition: doi:10.1016/j.cpc.2015.07.001
+subroutine lattice_special(im,images,u,tau)
+    integer, intent(in)             :: im
+    type(lattice), intent(inout)    :: images(:)
+    real(8), intent(in)             :: u(:)  !energies
+    real(8), intent(out)            :: tau(:,:)
+    ! internal variables
+    real(8) :: u1, u2, u3,dumin,dumax,tmp
+    real(8), allocatable :: taup(:,:),taum(:,:)
+    
+    u1=u(im-1)
+    u2=u(im)
+    u3=u(im+1)
+    if (u3>u2.and.u2>u1) then
+        tau=images(im+1)%M%modes_v-images(im)%M%modes_v
+    elseif (u1>u2.and.u2>u3) then
+        tau=images(im)%M%modes_v-images(im-1)%M%modes_v
+    else
+        allocate(taup,taum,mold=tau)
+        taup=images(im+1)%M%modes_v-images(im)%M%modes_v
+        taum=images(im)%M%modes_v-images(im-1)%M%modes_v
+        dumax=dabs(u3-u2)
+        dumin=dabs(u1-u2)
+        if (dumax<dumin) then
+           tmp=dumax
+           dumax=dumin
+           dumin=tmp
+        end if
+        if (u3>u1) then
+            tau=dumax*taup+dumin*taum
+        else
+            tau=dumin*taup+dumax*taum
+        end if
+    end if
+    Call project(tau,images(im)%M%modes_v)
+    tau=tau/norm2(tau)
+end subroutine 
+
+
+
 !
 ! Calculate the tangent to the path
 !
 subroutine tang_oneimage(nim,im,coo,tau)
 implicit none
-integer, intent(in) :: im,nim
-real(kind=8), intent(in) :: coo(:,:,:)
-real(kind=8), intent(out) :: tau(:,:)
+integer, intent(in)         :: im,nim
+real(kind=8), intent(in)    :: coo(:,:,:)
+real(kind=8), intent(out)   :: tau(:,:)
 ! internal variables
 real(kind=8) :: tmp
 integer :: i,N_cell,u1,u2
@@ -118,6 +161,27 @@ end do
 tau = tau/sqrt(tmp)
 
 end subroutine tang_oneimage
+
+
+!
+! Calculate the tangent to the path
+!
+subroutine lattice_single(im,images,tau)
+    integer, intent(in)             :: im
+    type(lattice), intent(inout)    :: images(:)
+    real(8), intent(out)            :: tau(:,:)
+    ! internal variables
+    integer :: u1,u2
+    
+    u1=im+1
+    u2=im-1
+    if (im==1) u2=im
+    if (im==size(images)) u1=im
+    
+    tau=images(u1)%M%modes_v-images(u2)%M%modes_v
+    Call project(tau,images(im)%M%modes_v)
+    tau=tau/norm2(tau)
+end subroutine 
 
 
 !!!!!!!!!!!!!

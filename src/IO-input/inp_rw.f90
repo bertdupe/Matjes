@@ -37,6 +37,7 @@ call get_parameter(io_input,'input','Angle_Distrib',io_simu%io_Angle_Distrib)
 call get_parameter(io_input,'input','Field_Distrib',io_simu%io_Field_Distrib)
 call get_parameter(io_input,'input','Forces',io_simu%io_Force)
 call get_parameter(io_input,'input','tracker',io_simu%io_tracker)
+call get_parameter(io_input,'input','calc_topo',io_simu%calc_topo)
 
 call close_file('input',io_input)
 

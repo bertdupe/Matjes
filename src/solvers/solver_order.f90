@@ -4,7 +4,7 @@ real(kind=8), allocatable :: Butcher_table(:,:)
 
 private
 public :: get_butcher_explicit,get_D_mode,get_dt_mode,get_butcher_implicit
-public :: get_Dmag_int
+public :: get_Dmode_int
 
 contains
 
@@ -43,16 +43,16 @@ end subroutine get_D_mode
 !
 ! subroutine that gets D_mode as a function of the Butcher's table
 !
-subroutine get_Dmag_int(Dmag,i_loop,N_loop,Dmag_int)
-    real(8),intent(in)      ::  Dmag(:,:,:)
-    real(8),intent(out)     ::  Dmag_int(:,:)
+subroutine get_Dmode_int(Dmode,i_loop,N_loop,Dmode_int)
+    real(8),intent(in)      ::  Dmode(:,:,:)
+    real(8),intent(out)     ::  Dmode_int(:,:)
     integer,intent(in)      ::  i_loop,N_loop
 
     integer                 ::  i
 
-    Dmag_int=0.d0
+    Dmode_int=0.d0
     do i=2,N_loop+1
-        Dmag_int=Dmag_int+Butcher_table(i,i_loop+1)*Dmag(:,:,i-1)
+        Dmode_int=Dmode_int+Butcher_table(i,i_loop+1)*Dmode(:,:,i-1)
     enddo
 end subroutine
 
