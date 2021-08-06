@@ -5,6 +5,7 @@ use m_construction_Hk
 use m_FT_Ham_base
 use m_FT_Ham_coo
 use m_io_files_utils
+! the following module is used for the TB. You will find the module in the directory tight-binding
 use m_highsym, only : set_highs_path,mv_kpts
 implicit none
 

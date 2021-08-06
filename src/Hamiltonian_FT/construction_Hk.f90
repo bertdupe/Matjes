@@ -12,8 +12,8 @@ subroutine get_Hk(Hk_inp,k)
     !unfolds the real Hamiltonian into a 2 real Hamiltonians (one for the real and for the complex part)
     type(H_inp_real_to_k),intent(in)   :: Hk_inp(:)
     real(8),intent(in)                 :: k(3)
-!    type(H_inp_k_coo),intent(inout)      :: H_out_k
-!    type(H_inp_k_coo),allocatable      :: Htmp_real,Htmp_compl
+    type(H_inp_k_coo),intent(inout)      :: H_out_k
+    type(H_inp_k_coo),allocatable      :: Htmp
 
     integer     :: i_ham,N_ham,i_shell
     complex(8),allocatable  ::  val(:)
@@ -22,12 +22,10 @@ subroutine get_Hk(Hk_inp,k)
     real(8)  :: phase
 
     N_ham=size(HK_inp)
-!    allocate(H_out_k(N_ham),mold=Hk_inp)
+    Call set_H(H_out_k)
+    allocate(Htmp,mold=H_out_k)
 
     do i_ham=1,N_ham
-
-!       Call set_H(H_out_k(i_ham),h_io)
-!       allocate(H_out_k,mold=H)
 
         do i_shell=1,size(Hk_inp(i_ham)%H)
 
@@ -40,10 +38,9 @@ subroutine get_Hk(Hk_inp,k)
 
             val=val*cmplx(cos(phase),sin(phase),8)
 
-!            Call H_out_k%init_coo(val,row,col,hinit)
+            Call H_out_k%init_coo(val,row,col,hinit)
 
 !            Call H_out_k%add(Htmp_real)
-!            Call H_compl%add(Htmp_compl)
 
         enddo
 

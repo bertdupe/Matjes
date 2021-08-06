@@ -4,7 +4,19 @@ use m_H_type
 implicit none
 
 private
-public :: H_inp_k_coo
+public :: H_inp_k_coo,mode
+
+#if defined CPP_CUDA
+        mode=6
+#elif defined CPP_MKL
+        mode=1
+#elif defined CPP_EIGEN
+        mode=2
+#elif defined CPP_BLAS
+        mode=4
+#else
+        mode=5
+#endif
 
 type,abstract,extends(t_H_base) :: H_inp_k_coo
     private

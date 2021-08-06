@@ -4,4 +4,6 @@ src/Hamiltonian_FT/diagonalization_Hk.f90
 src/Hamiltonian_FT/set_Hamiltonian_FT.f90
 src/Hamiltonian_FT/FT_Ham_base.f90
 src/Hamiltonian_FT/FT_Ham_coo.f90
+src/Hamiltonian_FT/FT_Ham_public.f90
+src/Hamiltonian_FT/FT_csr.f90
 )
