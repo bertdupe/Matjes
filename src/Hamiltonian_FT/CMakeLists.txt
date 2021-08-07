@@ -6,4 +6,5 @@ src/Hamiltonian_FT/FT_Ham_base.f90
 src/Hamiltonian_FT/FT_Ham_coo.f90
 src/Hamiltonian_FT/FT_Ham_public.f90
 src/Hamiltonian_FT/FT_csr.f90
+src/Hamiltonian_FT/parameters_FT_Ham.f90
 )
