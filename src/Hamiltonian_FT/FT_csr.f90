@@ -3,22 +3,23 @@ module m_FT_csr
 use m_FT_Ham_coo
 use m_FT_Ham_base
 use m_H_combined
+use m_parameters_FT_Ham
+use m_H_type
 private
-public H_feast_csr
+public FT_H_feast_csr
 
-type,extends(H_inp_k_coo),abstract :: FT_H_csr
+type,extends(H_inp_k_coo) :: FT_H_csr
     private
+    type(parameters_FT_HAM_IO)  :: ham_io
     integer, allocatable    :: i(:),j(:)
     complex(8), allocatable :: csr(:)
     contains
     procedure   :: set_from_Hcoo
-    procedure   :: add_child
-    procedure   :: copy_child
-    procedure   :: destroy_child
     procedure   :: mv
+    procedure   :: add_coo
 end type
 
-type,extends(FT_H_csr)  :: FT_H_feast_csr
+type,extends(FT_H_csr) :: FT_H_feast_csr
     contains
     procedure   :: get_evec => evec_feast
 end type
@@ -32,8 +33,8 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine set_from_Hcoo(this,H_coo)
-    class(FT_H_csr),intent(inout)   :: this
-    type(H_inp_k_coo),intent(inout)    :: H_coo
+    class(FT_H_csr),intent(inout)       :: this
+    class(H_inp_k_coo),intent(inout)    :: H_coo
     integer             :: nnz
     complex(8),allocatable :: val_coo(:)
     integer,allocatable :: rowind(:),colind(:)
@@ -42,14 +43,14 @@ subroutine set_from_Hcoo(this,H_coo)
 
     Call this%init_otherH(H_coo)
     Call H_coo%pop_par(nnz,val_coo,rowind,colind)
-    allocate(this%csr(nnz),this%j(nnz),this%i(this%dimH+1))
-    call mkl_zcsrcoo(job, this%dimH, this%csr, this%j, this%i, nnz, val_coo, rowind, colind, info)
+    allocate(this%csr(nnz),this%j(nnz),this%i(this%ham_io%dimH+1))
+    call mkl_zcsrcoo(job, this%ham_io%dimH, this%csr, this%j, this%i, nnz, val_coo, rowind, colind, info)
     if(info/=0) STOP "mkl_zcsrcoo error"
 end subroutine
 
 subroutine mv(this,Hout)
     class(FT_H_csr),intent(inout) :: this
-    class(T_h),intent(inout)       :: Hout
+    class(t_H_base),intent(inout)       :: Hout
 
     select type(Hout)
     class is(FT_H_csr)
@@ -58,31 +59,17 @@ subroutine mv(this,Hout)
         Call move_alloc(this%j,Hout%j)
         Call move_alloc(this%csr,Hout%csr)
     class default
-        STOP "Cannot move H_TB_csr type to Hamiltonian that is not a class of H_TB_csr"
+        STOP "Cannot move FT_H_csr type to Hamiltonian that is not a class of H_TB_csr"
     end select
     Call this%destroy()
 end subroutine
 
-subroutine copy_child(this,Hout)
-    class(FT_H_csr),intent(in)  :: this
-    class(t_h),intent(inout)   :: Hout
-
-    select type(Hout)
-    class is(FT_H_csr)
-        allocate(Hout%csr,source=this%csr)
-        allocate(Hout%i,source=this%i)
-        allocate(Hout%j,source=this%j)
-    class default
-        STOP "Cannot copy H_tb_csr type with Hamiltonian that is not a class of H_tb_csr"
-    end select
-end subroutine
-
-recursive subroutine add_child(this,H_in)
+recursive subroutine add_coo(this,H_in)
     class(FT_H_csr),intent(inout)   :: this
-    class(t_h),intent(in)           :: H_in
+    class(t_H_base),intent(in)      :: H_in
 
     class(FT_H_csr),allocatable     :: Htmp
-    type(H_inp_k_coo)               :: Hcoo_tmp
+    class(H_inp_k_coo),allocatable  :: Hcoo_tmp
 
     integer, allocatable    :: ia(:),ja(:)
     complex(8), allocatable :: acsr(:)
@@ -96,26 +83,26 @@ recursive subroutine add_child(this,H_in)
         Call move_alloc(this%i,ia)
         Call move_alloc(this%j,ja)
         Call move_alloc(this%csr,acsr)
-        allocate(this%i(this%dimH+1))
-        call mkl_zcsradd('n', 1, 0,this%dimH ,this%dimH, acsr ,ja, ia, beta, H_in%csr, H_in%j, H_in%i, cdummy  , idummy, this%i, 0, info)
+        allocate(this%i(this%ham_io%dimH+1))
+        call mkl_zcsradd('n', 1, 0,this%ham_io%dimH ,this%ham_io%dimH, acsr ,ja, ia, beta, H_in%csr, H_in%j, H_in%i, cdummy  , idummy, this%i, 0, info)
         if(info/=0) STOP "ERROR in request 1 of mkl_zcsradd"
-        allocate(this%j  (this%i(this%dimH+1)-1))
-        allocate(this%csr(this%i(this%dimH+1)-1))
-        call mkl_zcsradd('n', 2, 0,this%dimH ,this%dimH, acsr ,ja, ia, beta, H_in%csr, H_in%j, H_in%i, this%csr, this%j, this%i, 0, info)
+        allocate(this%j  (this%i(this%ham_io%dimH+1)-1))
+        allocate(this%csr(this%i(this%ham_io%dimH+1)-1))
+        call mkl_zcsradd('n', 2, 0,this%ham_io%dimH ,this%ham_io%dimH, acsr ,ja, ia, beta, H_in%csr, H_in%j, H_in%i, this%csr, this%j, this%i, 0, info)
         if(info/=0) STOP "ERROR in request 2 of mkl_zcsradd"
     class is(H_inp_k_coo)
         Call H_in%copy(Hcoo_tmp)    !make local copy since add should not destroy the added array
         allocate(Htmp,mold=this)
         Call Htmp%set_from_Hcoo(Hcoo_tmp)
-        Call this%add(Htmp)
+        Call this%add_coo(Htmp)
         Call Htmp%destroy()
         Call Hcoo_tmp%destroy()
     class default
-        ERROR STOP "Cannot add H_tb_csr type with Hamiltonian that is not a class of H_tb_csr"
+        ERROR STOP "Cannot add FT_H_csr type with Hamiltonian that is not a class of FT_H_csr"
     end select
 end subroutine
 
-subroutine destroy_child(this)
+subroutine destroy(this)
     class(FT_H_csr),intent(inout)    :: this
 
     if(allocated(this%csr)) deallocate(this%csr)
@@ -149,15 +136,15 @@ subroutine evec_feast(this,eval,evec)
     emin=this%ham_io%Ebnd(1)
     emax=this%ham_io%Ebnd(2)
     m0=this%ham_io%estNe
-    if(m0==0.or.m0>this%dimH) m0=this%dimH
+    if((m0.eq.0).or.(m0.gt.this%ham_io%dimH)) m0=this%ham_io%dimH
     allocate(e(m0),source=0.0d0)
-    allocate(x(this%dimh,m0),source=(0.0d0,0.0d0))
-    allocate(res(this%dimH),source=0.0d0)
-    call zfeast_hcsrev('F', this%dimH, this%csr, this%i, this%j, fpm, epsout, loop, emin, emax, m0, e, x, m, res, info)
+    allocate(x(this%ham_io%dimh,m0),source=(0.0d0,0.0d0))
+    allocate(res(this%ham_io%dimH),source=0.0d0)
+    call zfeast_hcsrev('F', this%ham_io%dimH, this%csr, this%i, this%j, fpm, epsout, loop, emin, emax, m0, e, x, m, res, info)
     if(info/=0) STOP "sparse diagonalization failed"
     allocate(eval,source=e(1:m))
     deallocate(e)
-    allocate(evec,source=x(1:this%dimH,1:m))
+    allocate(evec,source=x(1:this%ham_io%dimH,1:m))
     deallocate(x,res)
 end subroutine
 #endif

@@ -3,7 +3,7 @@ use m_H_combined, only : t_h
 implicit none
 
 private
-public :: H_inp_real_to_k
+public H_inp_real_to_k
 
 type H_inp_real_to_k
 ! folded Hamiltonian that contains the information about the bounds (useless in the case of the FT)

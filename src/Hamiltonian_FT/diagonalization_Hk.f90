@@ -31,7 +31,7 @@ subroutine diagonalize_Ham_FT(H_io,lat)
 
     ! internal Hamiltonians
     type(H_inp_real_to_k),allocatable :: FT_Ham(:)
-!    type(H_inp_k_coo) :: FT_Ham_k
+    type(H_inp_k_coo) :: FT_Ham_k
 
     ! high symmetry lines
     type(parameters_IO_HIGHS) :: high_lines
@@ -56,9 +56,9 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     call set_Hamiltonians_FT(FT_Ham,H_io,lat)
 
     ! get the phase of the Hamiltonian
-    do i=1,size(kpts,2)
-       call get_Hk(FT_Ham,kpts(:,i))
-    enddo
+!    do i=1,size(kpts,2)
+!       call get_Hk(FT_Ham,kpts(:,i),FT_Ham_k)
+!    enddo
 
 
 end subroutine

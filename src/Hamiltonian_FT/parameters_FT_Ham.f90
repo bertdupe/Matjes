@@ -2,9 +2,10 @@ module m_parameters_FT_Ham
 implicit none
 
 private
-public :: parameters_FT_HAM_IO,read_file
+public parameters_FT_HAM_IO
 
 type parameters_FT_HAM_IO
+    integer             ::  dimH=-1         !final size of Hamiltonian including all modifications
     !solving parameters
     integer             ::  i_diag=1  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
