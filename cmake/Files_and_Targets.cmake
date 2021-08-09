@@ -42,3 +42,7 @@ endif()
 if(USE_LAPACK)
     target_link_libraries(Matjes LAPACK::LAPACK)
 endif()
+
+if(DEFINED manual_linker_language)
+    set_target_properties(Matjes PROPERTIES LINKER_LANGUAGE ${manual_linker_language})
+endif()
