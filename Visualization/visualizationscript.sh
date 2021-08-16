@@ -9,8 +9,17 @@ echo "povray -w1000 -h1000 povrayscript.pov"
 echo "Here, -w1000 -h1000 defines the resolution for width and height"
 echo ""
 
-loc_x=$(cat positions.dat | gawk '{print $1}' | LC_ALL=C sort -k 1 -g | tail -n 1 | gawk '{print -$1/2}')
-loc_y=$(cat positions.dat | gawk '{print $2}' | LC_ALL=C sort -k 1 -g | tail -n 1 | gawk '{print $1/2}')
+posx_min=$(cat positions.dat | gawk '{print $1}' | LC_ALL=C sort -k 1 -g | head -n 1)
+posx_max=$(cat positions.dat | gawk '{print $1}' | LC_ALL=C sort -k 1 -g | tail -n 1)
+
+posy_min=$(cat positions.dat | gawk '{print $2}' | LC_ALL=C sort -k 1 -g | head -n 1)
+posy_max=$(cat positions.dat | gawk '{print $2}' | LC_ALL=C sort -k 1 -g | tail -n 1)
+
+posz_min=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | head -n 1)
+posz_max=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1
+
+loc_x=$(echo "$posx_min $posx_max" | gawk '{print -($2-$1)/2}')
+loc_y=$(echo "$posy_min $posy_max" | gawk '{print ($2-$1)/2}')
 totalheight=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1)
 loc_z=$(echo "$loc_x  $loc_y  $totalheight" | gawk '{print 1.5*sqrt($1*$1+$2*$2+$3*$3)}')
 
@@ -31,7 +40,7 @@ done
 cp povrayscript.pov $path/Visualization
 cd $path/Visualization
 
-sed -i "/camera {/{n;s/.*/location < $loc_x, 0, $loc_z >\nlook_at  < $loc_x, 0, 0 > /}" povrayscript.pov
+sed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $loc_y, 0 > /}" povrayscript.pov
 
 for state in start end
 do
