@@ -180,8 +180,8 @@ subroutine read_file(this,io,fname)
     if(N>0)then
         allocate(this%hop_io(N))
         Call read_Hpar(io,fname,'TB_hopping',this%hop_io)
-    elseif(.not.this%wann_io%is_set)then
-        STOP "FAILED TO READ tight-binding hopping Hamiltonian (TB_hopping), but orbitals are set"
+    else
+        write(output_unit,'(/A/)') "No manual tight-binding hopping parameters found"
     endif
 
     Call number_Hpar(io,fname,'TB_delta',N)

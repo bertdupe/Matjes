@@ -34,7 +34,6 @@ subroutine set_work(this,work)
     real(8)     :: rwork(1)
     integer     :: iwork(1)
     integer     :: Nout
-    integer     :: isuppz(2*this%Ne)
     integer     :: info
     complex(8)  :: evec(1,1)
     integer     :: ifail(this%dimH)
@@ -89,11 +88,8 @@ subroutine calc_evec(this,Nin,eval,evec,Nout,work)
     integer                 :: info
     external zheevx
 
-    integer                 :: isuppz(2*this%Ne)
-    integer                 :: lcwork, lrwork, liwork
+    integer                 :: lcwork
 
-    lrwork=this%size_work(1)
-    liwork=this%size_work(2)
     lcwork=this%size_work(3)
 
     if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVALUE AS HAMILTONIAN IS NOT SET"

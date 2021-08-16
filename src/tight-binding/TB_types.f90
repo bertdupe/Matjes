@@ -97,10 +97,13 @@ subroutine init_parameters_TB(TB_params,lat)
         par%norb_at_off=[(sum(par%norb_at(1:i-1)),i=1,size(par%norb_at))]
         par%norb=sum(par%norb_at)
         par%dimH=par%nsc*par%nspin*par%norb*par%ncell
-        do i=1,size(par%hop_io)
-            Call par%hop_io(i)%check(lat)
-        enddo
-        Call par%hop%set(par%hop_io,lat,par%nspin)
+        if(allocated(par%hop_io))then
+        !check hopping input (par%hop_io) and set initialization terms depending on TB-hamiltonian basis (par%hop)
+            do i=1,size(par%hop_io)
+                Call par%hop_io(i)%check(lat)
+            enddo
+            Call par%hop%set(par%hop_io,lat,par%nspin)
+        endif
         inquire(file='delta_onsite.inp',exist=fexist)
         if(fexist)then
             Call par%del%read_file('delta_onsite.inp',lat)

@@ -3,6 +3,7 @@ use m_derived_types, only: lattice
 use m_H_tb_public
 use m_types_tb_h_inp 
 use m_delta_onsite
+use,intrinsic :: iso_fortran_env, only : output_unit,error_unit
  
 use m_ham_init_type, only: parameters_ham_init
 use m_neighbor_type, only: neighbors
@@ -198,7 +199,6 @@ subroutine get_H_defect(lat,h_io,H)
     type(parameters_TB_IO_H),intent(in)         :: h_io
     type(H_tb_coo),intent(inout)                :: H
 
-    integer,allocatable     :: at_arr(:)        !atom locally considered
     integer                 :: at
     integer                 :: orb_offset       !orbital offset in basic unit-cell
     integer                 :: mag_offset
@@ -211,8 +211,7 @@ subroutine get_H_defect(lat,h_io,H)
 
     type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
     type(H_tb_coo)    :: Htmp         !local Hamiltonian to save 
-    integer ::  i
-    integer ::  i_defect,i_at,i_nnz,i_cell
+    integer ::  i_defect,i_nnz,i_cell
 
     ndim=h_io%norb*h_io%nspin
     Call hinit%init(h_io)
@@ -305,7 +304,7 @@ end subroutine
 subroutine get_wann_arr(lat,h_io,Hhop,diffR)
     !gets all hopping Hamiltonians according to the input from h_io%hop
     !saves each entries with differing atom connections and connection direction separately in the Hhop-array
-    !if neigh_out is specified, returns the calculated neighbor entires (for so far unimplemented later reuse) (TODO,->intent(inout), check if correct and then reuse)
+    !if neigh_out is specified, returns the calculated neighbor entires
     !if diffR is specified, returns the difference vector from the first atom the second for each Hamiltonian (used to calculate H in k-space)
     use m_ham_arrange
     use m_setH_util, only: get_coo
@@ -314,31 +313,135 @@ subroutine get_wann_arr(lat,h_io,Hhop,diffR)
     type(H_tb_coo),allocatable,intent(inout)            :: Hhop(:)
     real(8),allocatable,intent(out),optional            :: diffR(:,:)
 
-    type(parameters_ham_init)       :: hinit   !type containing variables defining shape of Hamiltonian
-    integer :: Natt_pair !number of unique atom-type pairs
-    integer :: i_att, i_dist,i_hop, i_shell, i_neigh_shell
-    integer :: N_R, irpts
+    type(parameters_ham_init)   :: hinit        !type containing variables defining shape of Hamiltonian
+    integer                     :: N_R, irpts   !number and loop variable of cell-differences
+    integer,allocatable         :: ipair(:,:)   !saves which supercells are connected by the interaction (indices)
+    logical,allocatable         :: H_is_set(:)  !save which Hamiltonian entry as been set
+    !parameters for Hamiltonian at given cell-difference in coo sparse matrix format
+    complex(8),allocatable      :: val(:)       !coo Hamiltonian values
+    integer,allocatable         :: ind(:,:)     !coo Hamiltonian indices
 
-    !Hcoo
-    complex(8),allocatable  :: val(:)
-    integer,allocatable     :: ind(:,:),row(:),col(:)
-
-    !get Hamiltonians 
+    !prepare parameters and allocate arrays
     Call hinit%init(h_io)
-    Hinit%nsc=1 !set hoppings without BdG
-    if(Hinit%ncell>1) STOP "IMPLEMENT SEVERAL CELLS FOR HAMILTONIAN"
-    N_r=h_io%wann_io%nrpts 
+    Hinit%nsc=1     !set hoppings without BdG
+    N_r=h_io%wann_io%nrpts  !number of real-space differences (number of different Hamiltonian entreis)
     allocate(Hhop(N_r))
+    allocate(H_is_set(N_r),source=.false.)
     if(present(diffR)) allocate(diffR(3,N_r),source=0.0d0)
+
+    !loop over all different Hamiltonian differences
     do irpts=1,N_r
-        Call get_coo(h_io%wann_io%H(:,:,irpts),val,ind)
-        row=ind(1,:)
-        col=ind(2,:)
-        Call Hhop(irpts)%init_coo(val,row,col,hinit)    !this only works for a single unit-cell
-        val=val!/real(h_io%wann_io%ndegen(irpts),8)
-        diffr(:,irpts)=matmul(real(h_io%wann_io%irvec(:,irpts),8),lat%areal)
+        Call get_coo(h_io%wann_io%H(:,:,irpts),val,ind)                 !transform dense wannier-input to sparse coo-matrix
+        Call unfold_neighbors(h_io%wann_io%irvec(:,irpts), lat, ipair)  !get ipair which encodes distribution in the supercell on current interaction
+        if(allocated(ipair))then
+            Call Hhop(irpts)%init_connect(ipair,val,ind,hinit)          !initialize Hamiltonian
+            H_is_set(irpts)=.true.
+            deallocate(ipair)
+        endif
+        if(present(diffR)) diffR(:,irpts)=matmul(real(h_io%wann_io%irvec(:,irpts),8),lat%areal)
     enddo
-    deallocate(row,col) 
+
+    !remove unused entries (Hhop,diffR)
+    if(.not.all(H_is_set))  Call H_pick_entries(H_is_set,Hhop,diffR)
+end subroutine
+
+subroutine H_pick_entries(H_use, Harr, diffR)
+    !subroutine, which takes an Hamiltonian array and optionally a corresponding difference vector array and removes all entries
+    !for whose index the H_use array is false
+    logical,intent(in)                          :: H_use(:)     !true for entries that shall remain in the arrays
+    type(H_tb_coo),allocatable,intent(inout)    :: Harr(:)      !Hamiltonian array of which the entries encoded by H_use are retained (resizing)
+    real(8),allocatable,intent(inout),optional  :: diffR(:,:)   !difference vector array of which the entries encoded by H_use are retained (resizing)
+    type(H_tb_coo),allocatable      :: Harr_tmp(:)      !temporary Hamiltonian array storage
+    real(8),allocatable             :: diffR_tmp(:,:)   !temporary difference vector array storage
+    integer     ::  N_keep,i_keep, i                    !loop integers
+
+    if(size(Harr)/=size(H_use))then
+        write(error_unit,'(/)')
+        write(error_unit,'(A,I8)') "H_use array size:", size(H_use)
+        write(error_unit,'(A,I8)') "Harr  array size:", size(Harr)
+        ERROR STOP "CALLED H_pick_entries with incompatible Hamiltonian lengths"
+    endif
+    !move entries of Hamiltonian array
+    N_keep=count(H_use)
+    Call move_alloc(Harr,Harr_tmp)
+    allocate(Harr(N_keep))
+    i_keep=0
+    do i=1,size(H_use)
+        if(H_use(i))then
+            i_keep=i_keep+1
+            Call Harr_tmp(i)%mv(Harr(i_keep))
+        endif
+    enddo
+    do i=1,size(Harr_tmp)
+        Call Harr_tmp(i)%destroy()
+    enddo
+    deallocate(Harr_tmp)
+
+    if(present(diffR))then
+        if(any(shape(diffR,2)/=[3,size(H_use)]))then
+            write(error_unit,'(A,2I6)') "diffR shape :", shape(diffR)
+            write(error_unit,'(A,2I6)') "wanted shape:", 3,size(H_use)
+            ERROR STOP "CALLED H_pick_entries with incompatible Hamiltonian lengths"
+        endif
+        !move entries of difference vector array
+        Call move_alloc(diffR,diffR_tmp)
+        allocate(diffR(3,N_keep))
+        i_keep=0
+        do i=1,size(H_use)
+            if(H_use(i))then
+                i_keep=i_keep+1
+                diffR(:,i_keep)=diffR_tmp(:,i)
+            endif
+        enddo
+        deallocate(diffR_tmp)
+    endif
+end subroutine
+
+subroutine unfold_neighbors(diff,lat,ipair)
+    integer,intent(in)                  ::  diff(3)
+    type(lattice),intent(in)            ::  lat
+    integer,intent(inout),allocatable   ::  ipair(:,:)
+
+    integer         :: imax(2,3)
+    logical,save    :: said=.false.
+    integer         :: N_entry
+    integer         :: i3_1(3),i3_2(3)  !lattice sites in ([1,dimlat(1)],[1,dimlat(2)],[1,dimlat(3)])-basis
+    integer         :: i1,i2,i3
+    integer         :: ii
+
+    !get boundaries of connection in each direction obeying periodicity
+    !for each atom1 with a site within imax the connection to atom2 exists
+    imax=reshape([1,lat%dim_lat(1),1,lat%dim_lat(2),1,lat%dim_lat(3)],[2,3])
+    if(.not.lat%periodic(1).and.diff(1)<0) imax(1,1)=1             -diff(1)
+    if(.not.lat%periodic(1).and.diff(1)>0) imax(2,1)=lat%dim_lat(1)-diff(1)
+    if(.not.lat%periodic(2).and.diff(2)<0) imax(1,2)=1             -diff(2)
+    if(.not.lat%periodic(2).and.diff(2)>0) imax(2,2)=lat%dim_lat(2)-diff(2)
+    if(.not.lat%periodic(3).and.diff(3)<0) imax(1,3)=1             -diff(3)
+    if(.not.lat%periodic(3).and.diff(3)>0) imax(2,3)=lat%dim_lat(3)-diff(3)
+
+    if(any(imax(1,:)>imax(2,:)))then
+        if(.not.said) write(error_unit,'(/A/)') "WARNING, some Wannier Hamiltonian entries are disregarded because of missing periodicity"
+        said=.true.
+        return
+    endif
+    
+    N_entry=(imax(2,1)-imax(1,1)+1)*(imax(2,2)-imax(1,2)+1)*(imax(2,3)-imax(1,3)+1)
+    allocate(ipair(2,N_entry),source=0)
+    ii=0
+    !fill all pairs within the imax boundaries
+    do i3=imax(1,3),imax(2,3)
+        i3_1(3)=i3
+        do i2=imax(1,2),imax(2,2)
+            i3_1(2)=i2
+            do i1=imax(1,1),imax(2,1)
+                i3_1(1)=i1
+                i3_2=modulo(i3_1+diff-1,lat%dim_lat)+1
+                ii=ii+1
+                ipair(1,ii)=lat%index_m_1(i3_1)
+                ipair(2,ii)=lat%index_m_1(i3_2)
+            enddo
+        enddo
+    enddo
 end subroutine
 
 subroutine get_Hop_arr(lat,h_io,Hhop,neigh_out,diffR)
