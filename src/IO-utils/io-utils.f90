@@ -1251,9 +1251,9 @@ subroutine get_vec1d_real(io,fname,vname,vec)
             STOP "Fix input"
         endif
     else
-        write(error_unit,'(2A)') 'No entry found for ',vname
-        write(error_unit,'(A)') 'Using default value:'
-        write(error_unit,'(3E16.8)') vec
+        write(output_unit,'(/2A)') 'No entry found for ',vname
+        write(output_unit,'(A)') 'Using default value:'
+        write(output_unit,'(3E16.8)') vec
     endif
     Call check_further_entry(io,fname,vname)
 end subroutine 
@@ -1275,9 +1275,9 @@ subroutine get_vec1d_int(io,fname,vname,vec)
             STOP "Fix input"
         endif
     else
-        write(error_unit,'(2A)') 'No entry found for ',vname
-        write(error_unit,'(A)') 'Using default value:'
-        write(error_unit,'(3I10)') vec
+        write(output_unit,'(/2A)') 'No entry found for ',vname
+        write(output_unit,'(A)') 'Using default value:'
+        write(output_unit,'(3I10)') vec
     endif
     Call check_further_entry(io,fname,vname)
 end subroutine 

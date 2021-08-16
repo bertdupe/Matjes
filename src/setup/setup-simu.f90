@@ -25,6 +25,7 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     use m_fft_H_public
     use m_neighbor_type
     use m_hamiltonian_collection, only: hamiltonian
+    use m_lattice_position, only: get_pos_mag, print_pos_mag, print_pos_atom
     
     ! this subroutine is used only to setup the simulation box
     ! it reads first the parameters of the simulation i.e. inp file
@@ -46,15 +47,12 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     real(8)             :: time
     type(extpar_input)  :: extpar_io
     ! dummy variable
-    integer             :: dim_lat(3),n_motif
     logical             :: keep_resolved_H
     ! check the allocation of memory
-    integer             :: alloc_check
     ! Hamiltonian input parameters
     type(io_h)          :: H_io
     
     !initialisation of dummy
-    alloc_check=0
     time=0.0d0
     call user_info(6,time,'entering the setup routine',.True.)
     
@@ -97,17 +95,10 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     call user_info(6,time,'Finished initializing the order parameters',.false.)
     write(*,'(/)')
 
-    ! get position
-    n_motif=size(my_motif%atomic)
-    dim_lat=my_lattice%dim_lat
-    ! UPDATE POSITION TO NEW SET
-    if (alloc_check.ne.0) write(6,'(a)') 'out of memory cannot allocate position for the mapping procedure'
     ! write the positions into a file
-    io=open_file_write('positions.dat')
-    call my_lattice%get_pos_mag(pos)
-    write(io,'(3E16.8)') pos
-    deallocate(pos)
-    call close_file('positions.dat',io)
+    Call print_pos_mag (my_lattice,'positions.dat')
+    Call print_pos_atom(my_lattice,'position_atoms.dat')
+
 
     write(6,'(///)') 
     call user_info(6,time,'Start setting Hamiltonians',.false.)

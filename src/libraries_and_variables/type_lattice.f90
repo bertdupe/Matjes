@@ -67,16 +67,8 @@ contains
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point
     procedure :: set_order_point_inner
-!    procedure :: set_order_comb
-!    procedure :: set_order_comb_exc
-!    procedure :: point_order => point_order_onsite
-    !!reduce that order parameter again
-!    procedure :: reduce
-    !!reduce vector in order parameter space to the site(e.g. energy Ncell resolution )
-!    procedure :: reduce_cell
-    !real space position functions
-    procedure :: get_pos_mag => lattice_get_position_mag
-    procedure :: get_pos_center
+!    procedure :: get_pos_mag => lattice_get_position_mag
+!    procedure :: get_pos_center
     procedure :: pos_diff_ind => lattice_position_difference
     procedure :: pos_ind => lattice_position
     procedure :: dist_2vec  !distance between 2 vectors
@@ -882,82 +874,6 @@ function get_order_dim(this,order,ignore) result(dim_mode)
         ERROR STOP "Check input"
     endif
 end function
-
-subroutine get_pos_center(this,pos_out)
-    class(lattice),intent(in)               :: this
-    real(8),allocatable,intent(out),target  :: pos_out(:)
-
-    real(8),pointer,contiguous      :: pos(:,:,:,:)
-    real(8),pointer,contiguous      :: pos3(:,:)
-    real(8),allocatable             :: pos_lat(:,:,:,:)
-    real(8)                         :: pos_center(3) 
-    integer                         :: i
-
-    call get_position_cell(pos_lat,this%dim_lat,this%areal)
-    allocate(pos_out(3*product(this%dim_lat)),source=0.0d0)
-    pos(1:3,1:this%dim_lat(1),1:this%dim_lat(2),1:this%dim_lat(3))=>pos_out
-    pos3(1:3,1:product(this%dim_lat))=>pos_out
-    pos_center=sum(this%areal,1)*0.5d0
-    pos=pos_lat
-    do i=1,size(pos3,2)
-        pos3(:,i)=pos3(:,i)+pos_center
-    enddo
-    deallocate(pos_lat)
-    nullify(pos,pos3)
-end subroutine
-
-subroutine lattice_get_position_mag(this,pos_out)
-    class(lattice),intent(in)               :: this
-    real(8),allocatable,intent(out),target  :: pos_out(:)
-
-    real(8),pointer                 :: pos(:,:,:,:,:)
-    real(8), allocatable            :: pos_lat(:,:,:,:)
-    integer, allocatable            :: ind_at_mag(:)
-    integer     :: Nat_mag
-    real(8)     :: pos_at(3) 
-    integer     :: i,i1,i2,i3
-
-    Call this%cell%ind_mag_all(ind_at_mag)
-    Nat_mag=size(ind_at_mag)
-    call get_position_cell(pos_lat,this%dim_lat,this%areal)
-    allocate(pos_out(3*Nat_mag*product(this%dim_lat)),source=0.0d0)
-    pos(1:3,1:Nat_mag,1:this%dim_lat(1),1:this%dim_lat(2),1:this%dim_lat(3))=>pos_out
-    do i=1,Nat_mag  !could be done smarter with position array (:,Nat)
-        pos_at=this%cell%atomic(ind_at_mag(i))%position
-        pos(:,i,:,:,:)=pos_lat(:,:,:,:)
-        do i3=1,this%dim_lat(3)
-            do i2=1,this%dim_lat(2)
-                do i1=1,this%dim_lat(1)
-                    pos(:,i,i1,i2,i3)=pos(:,i,i1,i2,i3)+pos_at
-                enddo
-            enddo
-        enddo
-    enddo
-    deallocate(pos_lat)
-    nullify(pos)
-end subroutine
-
-subroutine get_position_cell(pos,dim_lat,lat)
-    !get the positions of the 0 point of each cell
-    real(8), intent(out),allocatable    :: pos(:,:,:,:)
-    integer, intent(in)                 :: dim_lat(:)
-    real(8), intent(in)                 :: lat(:,:)
-    ! internal variables
-    real(8)     :: tmp(3,3)
-    integer     :: i_z,i_y,i_x
-    
-    allocate(pos(3,dim_lat(1),dim_lat(2),dim_lat(3)),source=0.0d0)
-    do i_z=1,dim_lat(3)
-        tmp(:,3)=lat(3,:)*real(i_z-1,8)
-        do i_y=1,dim_lat(2)
-            tmp(:,2)=lat(2,:)*real(i_y-1,8)
-            do i_x=1,dim_lat(1)
-                tmp(:,1)=lat(1,:)*real(i_x-1,8)
-                pos(1:3,i_x,i_y,i_z)=sum(tmp,dim=2)
-            enddo
-        enddo
-    enddo
-end subroutine 
 
 subroutine copy_lattice(this,copy)
     class(lattice),intent(in)    :: this
