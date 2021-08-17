@@ -21,6 +21,8 @@ type parameters_TB_IO_DOS
 
     integer,allocatable :: fermi_orb(:)             !orbital indices of projections for fermi-surfaces
     logical             :: fermi_proj_all=.false.   !get fermi surface projection on all orbitals
+
+    real(8)             :: N_state=0.0d0            !normalization, (if 0.0, it gets automatically set to the number of normal conducting states)
 contains
     procedure   :: read_file
     procedure   :: bcast => bcast_local
@@ -98,6 +100,8 @@ subroutine read_file(this,io,fname)
         call get_parameter(io,fname,'fermi_orb',N,this%fermi_orb)
     endif
     call get_parameter(io,fname,'fermi_proj_all',this%fermi_proj_all)
+
+    call get_parameter(io,fname,'dos_N_state',this%N_state)
 end subroutine
 
 subroutine bcast_local(this,comm)
@@ -148,6 +152,8 @@ subroutine bcast_local(this,comm)
 
     Call bcast_alloc(this%fermi_orb, comm)
     Call bcast(this%fermi_proj_all, comm)
+
+    Call bcast(this%N_state,comm) 
 #else
     continue
 #endif

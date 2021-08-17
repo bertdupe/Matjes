@@ -15,6 +15,7 @@ type,abstract   :: dos_t
     real(8),allocatable :: dos(:)       !summed dos
     real(8)             :: dE
     real(8)             :: E_ext(2)
+    real(8)             :: N_state  !normalization for dos with number of states
 contains
     procedure :: init => init_dos
     procedure :: print=> print_dos
@@ -135,6 +136,7 @@ subroutine init_dos(this,io_dos)
     this%dE=io_dos%dE
     this%E_ext=io_dos%E_ext
     this%set=.true.
+    this%N_state=io_dos%N_state
 end subroutine
 
 subroutine init_mult(this,io_dos,Nproj)
@@ -485,22 +487,15 @@ subroutine print_dos(this,fname)
     use, intrinsic :: iso_fortran_env, only : error_unit
     class(dos_t),intent(inout)  :: this
     character(len=*),intent(in) :: fname
-    real(8),allocatable         :: dos_loc(:)
-    real(8)                     :: norm
-    integer ::  io,i
+    integer     ::  io,i
+    real(8)     ::  norm
+
+    norm=1.0d0/real(this%N_entry*this%N_state,8)
     if(.not.allocated(this%Eval)) STOP "Trying to print dos, by type is not initialized"
     if(this%N_entry<1) STOP "Trying to print dos, no eigenvalue sets have been added"
     open(newunit=io,file=fname)
-    dos_loc=this%dos
-    norm=sum(dos_loc)
-    if(norm==0.0d0) then
-        write(error_unit,'(3A)') "sum over all dos entries for ",fname," is 0, check dos input"
-    else
-        !dos_loc=dos_loc/norm
-        dos_loc=dos_loc/real(this%N_entry,8)
-    endif
     do i=1,size(this%dos)
-       write(io,'(2E16.8)') this%Eval(i),dos_loc(i)
+       write(io,'(2E16.8)') this%Eval(i),this%dos(i)*norm
     enddo
     close(io)
 end subroutine
@@ -511,14 +506,16 @@ subroutine print_dos_mult(this,fname)
     character(len=*),intent(in)     :: fname
     integer             ::  io,i
     character(len=50)   ::  frmt
+    real(8)             ::  norm
 
+    norm=1.0d0/real(this%N_entry*this%N_state,8)
     if(.not.allocated(this%Eval)) STOP "Trying to print dos, by type is not initialized"
     if(this%N_entry<1) STOP "Trying to print dos, no eigenvalue sets have been added"
 
     write(frmt,'(A,I20,A)') '(',this%Nproj+1,'E16.8)'
     open(newunit=io,file=fname)
     do i=1,size(this%dos)
-       write(io,frmt) this%Eval(i),this%dos_all(:,i)/real(this%N_entry,8)
+       write(io,frmt) this%Eval(i),this%dos_all(:,i)*norm
     enddo
     close(io)
 end subroutine

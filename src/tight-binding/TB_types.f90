@@ -118,6 +118,7 @@ subroutine init_parameters_TB(TB_params,lat)
         endif
         if(par%wann_io%is_set.and..true.) Call par%wann_io%rearrange_spin() !add additional parameter to control spin-rearangement
     end associate
+    if(TB_params%io_dos%N_state==0.0d0) TB_params%io_dos%N_state= TB_params%io_H%dimH / TB_params%io_H%nsc
     if(allocated(TB_params%io_dos%bnd_io))then
         do i=1,size(TB_params%io_dos%bnd_io)
             Call TB_params%io_dos%bnd_io(i)%check(lat)
