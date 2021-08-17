@@ -3,40 +3,22 @@ module m_lattice_position
 use m_type_lattice, only: lattice
 private
 public get_pos_mag, get_pos_center
-public print_pos_atom, print_pos_mag
+public print_pos_ind
 
 contains
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!   Specific printing function
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine print_pos_atom(lat,fname)
-    !print position of all atoms to file (fname)
+subroutine print_pos_ind(lat,ind,fname)
+    !print position of atoms referenced by ind (atom number in unit-cell) to file (fname)
     type(lattice),intent(in)    :: lat
+    integer,intent(in)          :: ind(:)
     character(len=*),intent(in) :: fname
     integer             ::  io
     real(8),allocatable ::  pos(:)
     open(newunit=io,file=fname)
-    Call get_pos_atom(lat,pos)
+    Call get_pos_ind(lat,ind,pos)
     write(io,'(3E16.8)') pos
     close(io)
     deallocate(pos)
-end subroutine
-
-subroutine print_pos_mag(lat,fname)
-    !print position of all magnetic atoms to file (fname)
-    type(lattice),intent(in)    :: lat
-    character(len=*),intent(in) :: fname
-    integer             ::  io
-    real(8),allocatable ::  pos(:)
-
-    if(lat%nmag>0)then
-        open(newunit=io,file=fname)
-        Call get_pos_mag(lat,pos)
-        write(io,'(3E16.8)') pos
-        close(io)
-    endif
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -109,7 +91,7 @@ subroutine get_pos_ind(this,ind,pos_out)
     Nind=size(ind)
     Nat=size(this%cell%atomic)
     if(any(ind<1).or.any(ind>Nat))then
-        write(error_unit,'(//AI5,A)') "Input indices for get_pos_ind are not within (0,",Nat,")"
+        write(error_unit,'(//AI5,A)') "Input indices for get_pos_ind are not within [1,",Nat,"]"
         write(error_unit,'(A)') "Indicies:"
         write(error_unit,'(3X,5I8)') ind
         ERROR STOP 

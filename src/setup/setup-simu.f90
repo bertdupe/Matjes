@@ -1,20 +1,16 @@
 module m_setup_simu
+use m_type_lattice, only: lattice
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
+use m_user_info
 implicit none
+private
+public :: setup_simu
 
 contains
 subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb)
     !main setup routine (right now should only be called from one MPI-thread, bcast afterwards)
     use m_derived_types, only: io_parameter,t_cell,simulation_parameters
     use m_fftw, only: set_k_mesh
-    use m_setup_DM
-    use m_user_info
-    use m_table_dist
-    use m_mapping
-    use m_indexation
-    use m_arrange_neigh
-    use m_get_position
-    use m_io_files_utils, only: open_file_write, close_file
-    use m_io_utils, only: dump_config
     use m_set_Hamiltonians,only: set_Hamiltonians
     use m_set_fft_Hamiltonians,only: set_fft_Hamiltonians
     use m_rw_extpar, only: extpar_input, rw_extpar
@@ -25,7 +21,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     use m_fft_H_public
     use m_neighbor_type
     use m_hamiltonian_collection, only: hamiltonian
-    use m_lattice_position, only: get_pos_mag, print_pos_mag, print_pos_atom
     
     ! this subroutine is used only to setup the simulation box
     ! it reads first the parameters of the simulation i.e. inp file
@@ -54,34 +49,34 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     
     !initialisation of dummy
     time=0.0d0
-    call user_info(6,time,'entering the setup routine',.True.)
+    call user_info(output_unit,time,'entering the setup routine',.True.)
     
     ! read the important inputs
     time=0.0d0
-    call user_info(6,time,'reading the lattice in the input file',.False.)
+    call user_info(output_unit,time,'reading the lattice in the input file',.False.)
     call rw_lattice(my_lattice)
     
     ! read the important inputs
-    call user_info(6,time,'reading the motif in the input file',.False.)
+    call user_info(output_unit,time,'reading the motif in the input file',.False.)
     Call read_cell(my_motif,my_lattice)
 
     !read the Hamiltonian parameters
     Call rw_H(H_io)
     
     ! find the symmetry of the lattice here
-    call user_info(6,time,'reading the input file',.false.)
+    call user_info(output_unit,time,'reading the input file',.false.)
     time=0.0d0
     call inp_rw(io_simu)
     
-    call user_info(6,time,'Read external parameters',.false.)
+    call user_info(output_unit,time,'Read external parameters',.false.)
     time=0.0d0
     call ext_param_rw(ext_param)
     Call rw_extpar(extpar_io)
-    write(6,'(a,/)') 'checking for the presence of electric field'
+    write(output_unit,'(a,/)') 'checking for the presence of electric field'
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!
     !!! create the lattice depending on the simulation that one chooses
-    call user_info(6,time,'allocating the spin, table of neighbors and the index...',.false.)
+    call user_info(output_unit,time,'allocating the spin, table of neighbors and the index...',.false.)
     time=0.0d0
     
     Call my_lattice%init_order(my_motif,extpar_io)
@@ -89,28 +84,24 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     !-------------------------------------------------
     
     ! prepare the lattice
-    write(*,'(/)')
-    call user_info(6,time,'Start initializing the order parameters',.false.)
+    call user_info(output_unit,time,'Start initializing the order parameters',.false.)
     Call orders_initialize(my_lattice,extpar_io)
-    call user_info(6,time,'Finished initializing the order parameters',.false.)
-    write(*,'(/)')
+    call user_info(output_unit,time,'Finished initializing the order parameters',.false.)
 
     ! write the positions into a file
-    Call print_pos_mag (my_lattice,'positions.dat')
-    Call print_pos_atom(my_lattice,'position_atoms.dat')
+    Call print_positions(my_lattice,time)
 
-
-    write(6,'(///)') 
-    call user_info(6,time,'Start setting Hamiltonians',.false.)
+    write(output_unit,'(///)') 
+    call user_info(output_unit,time,'Start setting Hamiltonians',.false.)
     keep_resolved_H=io_simu%io_Energy_detail.or..True.  !need to change where all Hamiltonian data is kept
     Call set_Ham_mode_io()
     Call set_Hamiltonians(Ham_res,Ham_comb,keep_resolved_H,H_io,my_lattice)
-    call user_info(6,time,'finished setting Hamiltonians',.false.)
+    call user_info(output_unit,time,'finished setting Hamiltonians',.false.)
 
     Call set_fft_H_mode_io()
-    call user_info(6,time,'Start setting fft-Hamiltonians',.false.)
+    call user_info(output_unit,time,'Start setting fft-Hamiltonians',.false.)
     Call set_fft_Hamiltonians(fft_Ham_res,fft_Ham_comb,keep_resolved_H,H_io,my_lattice)
-    call user_info(6,time,'finished setting fft-Hamiltonians',.false.)
+    call user_info(output_unit,time,'finished setting fft-Hamiltonians',.false.)
 
 
     Call H_comb%init_H_cp(my_lattice,Ham_comb,fft_Ham_comb)   !later change to move if the hamiltonian-type array is no longer necessary in main routine
@@ -118,11 +109,36 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
 
     if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
     
-    write(6,'(/,a,/)') 'the setup of the simulation is over'
-    write(6,'(I6,a)') my_lattice%ncell, ' unit cells'
-    write(6,'(a)') '-----------------------------------------------'
-    write(6,'(a)') ''
-    write(6,'(a)') '-----------------------------------------------'
+    write(output_unit,'(/,a,/)') 'the setup of the simulation is over'
+    write(output_unit,'(I6,a)') my_lattice%ncell, ' unit cells'
+    write(output_unit,'(a)') '-----------------------------------------------'
+    write(output_unit,'(a)') ''
+    write(output_unit,'(a)') '-----------------------------------------------'
 end subroutine setup_simu
 
+subroutine print_positions(lat,time)
+    !print positions of atoms to file
+    use m_lattice_position, only:  print_pos_ind
+    type(lattice), intent(in)   :: lat 
+    real(8),intent(inout)       :: time
+    integer             :: i
+    integer,allocatable :: ind(:)   !save atom indices (in unit-cell) considered in respective file
+    integer             :: Nat      !number of atoms
+
+    call user_info(output_unit,time,'Start printing atomic positions.',.false.)
+
+    !print position of all atoms
+    Nat=size(lat%cell%atomic)
+    allocate(ind,source=[(i,i=1,Nat)])
+    Call print_pos_ind(lat,ind,'position_atoms.dat')   !print position of all atoms to file
+    deallocate(ind)
+
+    !print position of all magnetic atoms
+    if(lat%nmag>0)then
+        Call lat%cell%ind_mag_all(ind)
+        Call print_pos_ind (lat, ind, 'positions.dat')
+        deallocate(ind)
+    endif
+    call user_info(output_unit,time,'Finished printing atomic positions',.false.)
+end subroutine
 end module

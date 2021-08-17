@@ -678,6 +678,7 @@ subroutine get_cell(io,fname,attype,cell)
     integer :: stat
     character(len=100) :: str
     logical :: used(size(attype))
+    integer :: div
 
     cell%n_attype=size(attype)
     Call set_pos_entry(io,fname,var_name)
@@ -690,8 +691,13 @@ subroutine get_cell(io,fname,attype,cell)
     do i=1,N_atoms
         read(io,'(a)',iostat=stat) str
         if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-        read(str,*,iostat=stat) atname,cell%atomic(i)%position
-        if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        read(str,*,iostat=stat) atname,cell%atomic(i)%position, div
+        if (stat == 0)then
+            cell%atomic(i)%position=cell%atomic(i)%position/real(div,8)
+        else
+            read(str,*,iostat=stat) atname,cell%atomic(i)%position
+            if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        endif
         read(atname,*,iostat=stat) id
         if(stat/=0)then
             id=0
