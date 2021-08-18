@@ -23,8 +23,8 @@ subroutine read_file(this,io,fname)
     use m_io_utils
     use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
     class(parameters_FT_HAM_IO),intent(inout)  :: this
-    integer,intent(in)                       :: io
-    character(len=*), intent(in)             :: fname
+    integer,intent(in)                         :: io
+    character(len=*), intent(in)               :: fname
     ! Internal variables
     integer :: N
     character(len=100)  :: str

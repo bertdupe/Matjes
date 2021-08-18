@@ -1,5 +1,6 @@
 module m_FT_Ham_base
 use m_H_combined, only : t_h
+use m_H_type
 implicit none
 
 private

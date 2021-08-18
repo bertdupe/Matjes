@@ -1,10 +1,9 @@
 module m_FT_Ham_coo
-use m_FT_Ham_base
 use m_H_type
-use m_parameters_FT_Ham
 use mpi_basic
 use m_derived_types, only: lattice,op_abbrev_to_int
 use m_work_ham_single, only:  work_mode
+use m_io_files_utils
 implicit none
 
 private
@@ -30,9 +29,9 @@ type,extends(t_H_base) :: H_inp_k_coo
 
     contains
 !    procedure :: create
-    procedure   :: destroy_coo
-    procedure   :: init
-    procedure   :: pop_par
+    procedure :: destroy_coo
+    procedure :: init
+    procedure :: pop_par
 
     !necessary t_H routines
     procedure :: destroy_child
@@ -129,7 +128,6 @@ subroutine init(this,val,row,col)
     complex(8),intent(in)               :: val(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)                  :: row(size(val)),col(size(val))
 
-
     if(this%is_set()) STOP "cannot set FT hamiltonian as it is already set"
     this%nnz=size(val)
     this%val=val
@@ -138,13 +136,14 @@ subroutine init(this,val,row,col)
 
 end subroutine
 
-subroutine pop_par(this,nnz,val,row,col)
+subroutine pop_par(this,dimH,nnz,val,row,col)
     class(H_inp_k_coo),intent(inout)       :: this
-    integer,intent(out)                    :: nnz
+    integer,intent(out)                    :: nnz,dimH(2)
     complex(8),allocatable,intent(out)     :: val(:)
     integer,allocatable,intent(out)        :: row(:),col(:)
 
     nnz=this%nnz
+    dimH=this%dimH
     this%dimH=0
     this%nnz=0
     Call MOVE_ALLOC(this%val,val)
@@ -181,11 +180,13 @@ subroutine copy_child(this,Hout)
     select type(Hout)
     class is(H_inp_k_coo)
         Hout%nnz=this%nnz
-        allocate(Hout%val,source=this%val   )
-        allocate(Hout%row,source=this%row   )
-        allocate(Hout%col,source=this%col   )
+        allocate(Hout%val,source=this%val)
+        allocate(Hout%row,source=this%row)
+        allocate(Hout%col,source=this%col)
+    class is(t_H_base)
+        call this%copy(Hout)
     class default
-        STOP "Cannot copy t_H_coo type with Hamiltonian that is not a class of t_H_coo"
+        STOP "Cannot copy H_inp_k_coo type with Hamiltonian that is not a class of t_H_coo"
     end select
 end subroutine
 
@@ -193,7 +194,12 @@ subroutine add_child(this,H_in)
     class(H_inp_k_coo),intent(inout)     :: this
     class(t_H_base),intent(in)           :: H_in
 
-    STOP "IMPLEMENT ADDIND FOR t_H_coo in m_H_coo if really necessary"
+    select type(H_in)
+    class is(H_inp_k_coo)
+        this%val=this%val+H_in%val
+    class default
+        STOP "Cannot copy H_inp_k_coo type with Hamiltonian that is not a class of t_H_coo"
+    end select
 end subroutine
 
 subroutine finish_setup(this)
