@@ -16,7 +16,6 @@ subroutine read_anisotropy_input(io_unit,fname,io)
     character(len=*), intent(in)    :: fname
     type(io_H_aniso),intent(out)    :: io
 
-    integer ::  i
     !read parameters for anisotropy in cartesian coordinates 
     Call read_int_realarr(io_unit,fname,'magnetic_anisotropy',3,io%attype,io%val)
     !read parameters for anisotropy in normalized lattice parameters
@@ -125,10 +124,8 @@ subroutine get_anisotropy_H(Ham,io,lat)
     type(io_H_aniso),intent(in) :: io
     type(lattice),intent(in)    :: lat
     !local 
-    integer :: i,j
+    integer :: i
     real(8),allocatable :: Htmp(:,:)
-    integer,allocatable :: ind_at(:)    !atom indices in space of all atoms
-    integer             :: ind_mag      !atom index in space of magnetic atoms
     real(8),allocatable :: val_tmp(:)
     integer,allocatable :: ind_tmp(:,:)
     integer,allocatable :: connect(:,:)
@@ -176,9 +173,6 @@ subroutine get_anisotropy_fft(H_fft,io,lat)
     real(8),allocatable :: Karr(:,:,:)  !K-operator to be FT'd (1:3*Nmag,1:3*Nmag,1:Nk_tot)
 
     !local 
-    integer :: i,j
-    integer,allocatable :: ind_at(:)    !atom indices in space of all atoms
-    integer             :: ind_mag      !atom index in space of magnetic atoms
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
@@ -205,19 +199,23 @@ subroutine get_Haniso_unitcell(io,lat,H)
     integer             ::  i,j
     integer,allocatable :: ind_at(:)    !atom indices in space of all atoms
     integer             :: ind_mag      !atom index in space of magnetic atoms
-    real(8)             :: aniso(3)
+    real(8)             :: direction(3),magnitude
     real(8)             :: lat_norm(3,3)
+    integer             :: i1,i2
 
     !add anisotropy input in cartesian input coordinates to unit-cell Hamiltonian
     if(allocated(io%attype))then
         do i=1,size(io%attype)
             Call lat%cell%ind_attype(io%attype(i),ind_at)
-            aniso=io%val(:,i)
+            magnitude=norm2(io%val(:,i))
+            direction=io%val(:,i)/magnitude
             do j=1,size(ind_at)
                 ind_mag=lat%cell%ind_mag(ind_at(j))
-                H((ind_mag-1)*3+1,(ind_mag-1)*3+1)=H((ind_mag-1)*3+1,(ind_mag-1)*3+1)+aniso(1)
-                H((ind_mag-1)*3+2,(ind_mag-1)*3+2)=H((ind_mag-1)*3+2,(ind_mag-1)*3+2)+aniso(2)
-                H((ind_mag-1)*3+3,(ind_mag-1)*3+3)=H((ind_mag-1)*3+3,(ind_mag-1)*3+3)+aniso(3)
+                do i1=1,3
+                    do i2=1,3
+                        H((ind_mag-1)*3+i1,(ind_mag-1)*3+i2)=H((ind_mag-1)*3+i1,(ind_mag-1)*3+i2)+magnitude*direction(i1)*direction(i2)
+                    enddo
+                enddo
             enddo
         enddo
     endif
@@ -229,13 +227,16 @@ subroutine get_Haniso_unitcell(io,lat,H)
         enddo
         do i=1,size(io%attype_lat)
             Call lat%cell%ind_attype(io%attype_lat(i),ind_at)
-            aniso=io%val_lat(1:3,i)/norm2(io%val_lat(1:3,i))
-            aniso=matmul(lat_norm,aniso)*io%val_lat(4,i)
+            magnitude=io%val_lat(4,i)
+            direction=io%val_lat(1:3,i)/norm2(io%val_lat(1:3,i))
+            direction=matmul(lat_norm,direction)
             do j=1,size(ind_at)
                 ind_mag=lat%cell%ind_mag(ind_at(j))
-                H((ind_mag-1)*3+1,(ind_mag-1)*3+1)=H((ind_mag-1)*3+1,(ind_mag-1)*3+1)+aniso(1)
-                H((ind_mag-1)*3+2,(ind_mag-1)*3+2)=H((ind_mag-1)*3+2,(ind_mag-1)*3+2)+aniso(2)
-                H((ind_mag-1)*3+3,(ind_mag-1)*3+3)=H((ind_mag-1)*3+3,(ind_mag-1)*3+3)+aniso(3)
+                do i1=1,3
+                    do i2=1,3
+                        H((ind_mag-1)*3+i1,(ind_mag-1)*3+i2)=H((ind_mag-1)*3+i1,(ind_mag-1)*3+i2)+magnitude*direction(i1)*direction(i2)
+                    enddo
+                enddo
             enddo
         enddo
     endif
