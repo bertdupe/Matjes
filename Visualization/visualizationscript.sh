@@ -16,7 +16,7 @@ posy_min=$(cat positions.dat | gawk '{print $2}' | LC_ALL=C sort -k 1 -g | head 
 posy_max=$(cat positions.dat | gawk '{print $2}' | LC_ALL=C sort -k 1 -g | tail -n 1)
 
 posz_min=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | head -n 1)
-posz_max=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1
+posz_max=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1)
 
 loc_x=$(echo "$posx_min $posx_max" | gawk '{print -($2-$1)/2}')
 loc_y=$(echo "$posy_min $posy_max" | gawk '{print ($2-$1)/2}')
@@ -31,20 +31,20 @@ fi
 # prepare file for povray #
 ###########################
 
-for state in start end
+for state in start end 25 50 75
 do
 paste positions.dat magnetic_$state.dat | gawk '{for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
 done
 
 
-cp povrayscript.pov $path/Visualization
+cp ../../Matjes/Visualization/povrayscript.pov $path/Visualization
 cd $path/Visualization
 
-sed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $loc_y, 0 > /}" povrayscript.pov
+gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $loc_y, 0 > /}" povrayscript.pov
 
-for state in start end
+for state in start end 25 50 75
 do
-sed -i "$ s/#include .*/#include \"position_magnetization_$state.dat\"/g" povrayscript.pov
+gsed -i "$ s/#include .*/#include \"position_magnetization_$state.dat\"/g" povrayscript.pov
 ##############
 # run povray #
 ##############
