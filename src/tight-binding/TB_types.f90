@@ -78,6 +78,7 @@ subroutine init_parameters_TB(TB_params,lat)
     ! starting from the pure input using lattice properties etc.
     use m_derived_types, only: lattice
     use m_dos_io, only: dos_get_ind, dos_get_orb
+    use, intrinsic :: iso_fortran_env, only : error_unit
     class(parameters_TB),intent(inout)  :: TB_params
     type(lattice), intent(in)           :: lat
 
@@ -97,6 +98,12 @@ subroutine init_parameters_TB(TB_params,lat)
         par%norb_at_off=[(sum(par%norb_at(1:i-1)),i=1,size(par%norb_at))]
         par%norb=sum(par%norb_at)
         par%dimH=par%nsc*par%nspin*par%norb*par%ncell
+        if(par%require_estNe.and.par%estNe<1)then
+            write(error_unit,'(/A)') "WARNING: The TB-Hamiltonian implementation requires an upper bound for the number of eigenvalues (TB_diag_estNe), which is currently non-positive."
+            par%estNe=par%dimH
+            write(error_unit,'(9X,A,I10,A)') "This bound is now automatically set to the Hamiltonian dimension: ", par%estNe,"."
+            write(error_unit,'(9X,A/)') "If only a subset of the eigenvalues is considered, calculation might be faster reducing TB_diag_estNe accordingly."
+        endif
         if(allocated(par%hop_io))then
         !check hopping input (par%hop_io) and set initialization terms depending on TB-hamiltonian basis (par%hop)
             do i=1,size(par%hop_io)

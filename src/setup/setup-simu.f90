@@ -70,8 +70,8 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     
     call user_info(output_unit,time,'Read external parameters',.false.)
     time=0.0d0
-    call ext_param_rw(ext_param)
-    Call rw_extpar(extpar_io)
+    Call rw_extpar(extpar_io,my_lattice%areal)
+    Call ext_param%set(extpar_io%H,extpar_io%E,extpar_io%T) !set legacy external parameters from newer input (extpar_io)
     write(output_unit,'(a,/)') 'checking for the presence of electric field'
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!

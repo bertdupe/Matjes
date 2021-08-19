@@ -6,7 +6,6 @@ src/IO-input/rw_cell.f90
 src/IO-input/rw_dyna.f90
 src/IO-input/rw_dyna_MD.f90
 src/IO-input/rw_extpar.f90
-src/IO-input/rw_extfield.f90
 src/IO-input/rw_GNEB.f90
 src/IO-input/rw_H.f90
 src/IO-input/rw_lattice.f90

@@ -204,42 +204,55 @@ subroutine get_H_defect(lat,h_io,H)
     integer                 :: mag_offset
     integer                 :: ndim
 
-    integer                 ::  nnz
-    complex(8),allocatable  ::  val(:)
-    integer,allocatable     ::  row(:),col(:)
-    real(8)                 ::  mag(3)
+    integer                 :: nnz
+    complex(8),allocatable  :: val(:)
+    integer,allocatable     :: row(:),col(:)
+    real(8)                 :: mag(3)
+    logical                 :: has_spin
 
     type(parameters_ham_init)   ::  hinit   !type containing variables defining shape of Hamiltonian
     type(H_tb_coo)    :: Htmp         !local Hamiltonian to save 
     integer ::  i_defect,i_nnz,i_cell
 
+    has_spin=h_io%nspin>1
     ndim=h_io%norb*h_io%nspin
     Call hinit%init(h_io)
     Hinit%nsc=1 !set hoppings without BdG
-    nnz=0
-    do i_defect=1,size(h_io%defect)
-        nnz=nnz+4
-    enddo
+    nnz=size(h_io%defect)
+    if(has_spin) nnz=size(h_io%defect)*4
+
     allocate(val(nnz),source=(0.0d0,0.0d0))
     allocate(row(nnz),col(nnz),source=0)
     i_nnz=0
-    do i_defect=1,size(h_io%defect)
-        i_cell=lat%index_m_1(h_io%defect(i_defect)%site)
-        at=h_io%defect(i_defect)%atom
-        mag_offset=3*count(lat%cell%atomic(1:at-1)%moment/=0.0d0)
-        orb_offset=(h_io%norb_at_off(at)+h_io%defect(i_defect)%orbital-1)*hinit%nspin
-        row(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,2,1,2]
-        col(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,1,2,2]
-        mag=lat%M%modes_v(mag_offset+1:mag_offset+3,i_cell)
+    if(has_spin)then
+        do i_defect=1,size(h_io%defect)
+            i_cell=lat%index_m_1(h_io%defect(i_defect)%site)
+            at=h_io%defect(i_defect)%atom
+            mag_offset=3*count(lat%cell%atomic(1:at-1)%moment/=0.0d0)
+            orb_offset=(h_io%norb_at_off(at)+h_io%defect(i_defect)%orbital-1)*hinit%nspin
+            row(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,2,1,2]
+            col(i_nnz+1:i_nnz+4)=(i_cell-1)*ndim+orb_offset+[1,1,2,2]
+            mag=lat%M%modes_v(mag_offset+1:mag_offset+3,i_cell)
 
-        val(i_nnz+1)=cmplx( mag(3)*h_io%defect(i_defect)%mag, 0.0d0                             ,8)
-        val(i_nnz+2)=cmplx( mag(1)*h_io%defect(i_defect)%mag, mag(2)*h_io%defect(i_defect)%mag  ,8)
-        val(i_nnz+3)=cmplx( mag(1)*h_io%defect(i_defect)%mag,-mag(2)*h_io%defect(i_defect)%mag  ,8)
-        val(i_nnz+4)=cmplx(-mag(3)*h_io%defect(i_defect)%mag, 0.0d0                             ,8)
-        val(i_nnz+1)=val(i_nnz+1)+cmplx(h_io%defect(i_defect)%nonmag,0.0d0,8)
-        val(i_nnz+4)=val(i_nnz+4)+cmplx(h_io%defect(i_defect)%nonmag,0.0d0,8)
-        i_nnz=i_nnz+4
-    enddo
+            val(i_nnz+1)=cmplx( mag(3)*h_io%defect(i_defect)%mag, 0.0d0                             ,8)
+            val(i_nnz+2)=cmplx( mag(1)*h_io%defect(i_defect)%mag, mag(2)*h_io%defect(i_defect)%mag  ,8)
+            val(i_nnz+3)=cmplx( mag(1)*h_io%defect(i_defect)%mag,-mag(2)*h_io%defect(i_defect)%mag  ,8)
+            val(i_nnz+4)=cmplx(-mag(3)*h_io%defect(i_defect)%mag, 0.0d0                             ,8)
+            val(i_nnz+1)=val(i_nnz+1)+cmplx(h_io%defect(i_defect)%nonmag,0.0d0,8)
+            val(i_nnz+4)=val(i_nnz+4)+cmplx(h_io%defect(i_defect)%nonmag,0.0d0,8)
+            i_nnz=i_nnz+4
+        enddo
+    else
+        do i_defect=1,size(h_io%defect)
+            i_cell=lat%index_m_1(h_io%defect(i_defect)%site)
+            at=h_io%defect(i_defect)%atom
+            orb_offset=(h_io%norb_at_off(at)+h_io%defect(i_defect)%orbital-1)*hinit%nspin
+            row(i_nnz+1)=(i_cell-1)*ndim+orb_offset+1
+            col(i_nnz+1)=(i_cell-1)*ndim+orb_offset+1
+            val(i_nnz+1)=val(i_nnz+1)+cmplx(h_io%defect(i_defect)%nonmag,0.0d0,8)
+            i_nnz=i_nnz+1
+        enddo
+    endif
     Call Htmp%init_coo(val,row,col,hinit)
     Call H%add(Htmp)
     Call Htmp%destroy()

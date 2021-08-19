@@ -43,6 +43,7 @@ contains
     procedure :: init_bnd => init_dos_bnd
 end type
 
+!get the local dos of single continuous slice in the Hamiltonian basis (eg. all orbitals of one atom somewhere in the supercell)
 type,extends(dos_bnd) ::  dos_bnd_nc
 contains
     procedure :: add  => add_dos_bnd_nc
@@ -53,7 +54,7 @@ contains
     procedure :: add  => add_dos_bnd_sc
 end type
 
-
+!get the local dos on a single obrital repeated with the frequency freq -> same orbital in every cell of the super-cell
 type,abstract,extends(dos_t)    ::  dos_orb
     private
     integer     :: orb

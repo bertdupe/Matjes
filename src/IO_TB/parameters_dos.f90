@@ -13,11 +13,11 @@ type parameters_TB_IO_DOS
     logical     :: all_states=.false.               !print the dos projected on all states separately
     logical     :: print_kint=.false.               !print out the index of the currently considered k index 
     real(8),allocatable             :: sigma_arr(:) !gauss smearing array
-    type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos site dependent
-    type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
-    integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local site dos)
-    integer,allocatable :: orb(:)                   !local dos orbitals (number local orbital dos)
-    character(:),allocatable    ::  fname_kmesh     !file name for kmesh integration grid input
+    type(dos_bnd_io),allocatable    :: bnd_io(:)    !io for local dos site dependent
+    type(dos_orb_io),allocatable    :: orb_io(:)    !io for local dos orbital dependent
+    integer,allocatable             :: bnd(:,:)     !local dos bnd parameters (2,number local site dos)
+    integer,allocatable             :: orb(:)       !local dos orbitals (number local orbital dos)
+    character(:),allocatable        :: fname_kmesh  !file name for kmesh integration grid input
 
     integer,allocatable :: fermi_orb(:)             !orbital indices of projections for fermi-surfaces
     logical             :: fermi_proj_all=.false.   !get fermi surface projection on all orbitals

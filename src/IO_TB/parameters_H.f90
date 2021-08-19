@@ -40,6 +40,7 @@ type parameters_TB_IO_H
     logical             ::  rearrange=.false.               !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
     real(8)             ::  Ebnd(2)=[-1.0d+99,1.0d+99]      !minimal and maximal energy values to consider in restricted eigensolver routines
     integer             ::  estNe=0                         !estimated number of eigenvalues in interval
+    logical             ::  require_estNe=.false.           !chosen Hamiltonian implementation(i_diag) requires estNe
     real(8)             ::  diag_acc=1d-12                  !accuracy of iterative eigenvalue solution
 
     !selfconsistent delta parameters
@@ -55,6 +56,8 @@ contains
     procedure   :: read_file
     procedure   :: bcast => bcast_local
 end type
+
+logical,parameter :: idiag_require_estNe(*)=[.false.,.false.,.true.,.true.,.true.,.true.]   !array which encodes which Hamiltonian implementation (idiag) requires the estNe
 contains
 
 subroutine bcast_local(this,comm) 
@@ -259,6 +262,13 @@ subroutine read_file(this,io,fname)
         write(error_unit,'(A)') "is not implemented"
         STOP
     end select
+    if(this%i_diag<1.or.this%i_diag>size(idiag_require_estNe))then
+        write(error_unit,'(/A,I5,A)') "Hamiltonian implementation identifier (TB_diag) chosen outside of implemented range [1,",size(idiag_require_estNe),"]."
+        write(error_unit,'(A,I5)') "TB_diag= ", this%i_diag
+        write(error_unit,'(A)') "Check input"
+        STOP
+    endif
+    this%require_estNe=idiag_require_estNe(this%i_diag)
 end subroutine
 
 subroutine number_Hpar(io,fname,var_name,Nnonzero)
