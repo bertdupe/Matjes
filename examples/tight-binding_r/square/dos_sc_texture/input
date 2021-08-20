@@ -1,0 +1,48 @@
+simulation tight-binding
+do_TB_r T
+
+do_occ_mult_r T
+occ_mult_dE 0.05
+occ_mult_E_ext -0.30 -0.1
+occ_mult_kt 0.005
+
+TB_Hamiltonian  sparse_feast
+#TB_Hamiltonian  dense_zheevd
+TB_diag_acc 1.0d-7
+TB_diag_estNe 1500
+TB_diag_Ebnd -0.31 0.31
+TB_write_solution_r T
+
+###Hamiltonian input
+TB_hopping
+1 1  1 1  0 0  1 -0.50
+1 1  1 1  0 0  2 -0.10
+
+TB_Jsd
+1 1 0.05 # 1.0
+
+TB_delta
+1 1 1 1 0 0.2 0.0
+
+TB_Efermi -1.0d0
+
+### high symmetry plot
+do_dos_r T
+dos_E_ext -0.3 0.3
+dos_dE 0.002
+dos_sigma 0.020
+
+### lattice setup
+Periodic_log T T F
+Nsize  60  60 1
+alat 1.0 1.0 1.0
+lattice
+ 1.0 0.0 0.0
+ 0.0 1.0 0.0
+ 0.0 0.0 1.0
+
+atomtypes  1
+at1 1.0 0.0 0.0 F 1
+
+atoms 1
+at1 0.0 0.0 0.0

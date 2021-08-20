@@ -1,0 +1,31 @@
+simulation tight-binding
+do_TB_k T
+
+###Hamiltonian input
+TB_hopping
+1 1  1 1  0 0  0 -0.50
+1 1  1 1  0 0  1 -0.50
+1 1  1 1  0 0  2  1.00
+1 1  1 1  0 0  3 -0.10
+
+### high symmetry plot
+do_dos_k T
+dos_E_ext -4.0 8.0
+dos_kgrid 3000 3000 1
+dos_dE 0.0025
+dos_sigma 0.010
+
+### lattice setup
+Periodic_log T T F
+Nsize 1 1 1
+alat 1.0 1.0 1.0
+lattice
+ 0.5  0.86602540378443864676 0.0
+ 0.5 -0.86602540378443864676 0.0
+ 0.0  0.0                    1.0
+
+atomtypes  1
+at1 0.0 0.0 0.0 F 1
+
+atoms 1
+at1 0.0 0.0 0.0
