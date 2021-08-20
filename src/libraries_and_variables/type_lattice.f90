@@ -32,7 +32,6 @@ type lattice
      integer        :: dim_modes(number_different_order_parameters)=0 !saves the dimension of the set order_parameters
      integer        :: site_per_cell(number_different_order_parameters)=0 !number of sites of order parameter per unit-cell (like nmag, nph)
 
-
      integer                :: n_system !no clue what this does
      integer, allocatable   :: world(:)
      logical                :: periodic(3) !lattice periodic in direction
@@ -61,6 +60,10 @@ contains
     !basic function
     procedure :: copy => copy_lattice
     procedure :: copy_val_to => copy_val_lattice
+    !netcdf io functions
+    procedure :: io_open
+    procedure :: io_write
+    procedure :: io_close
     !mpi functions
     procedure :: bcast
     procedure :: bcast_val
@@ -92,6 +95,40 @@ end type
 
 
 contains 
+
+subroutine io_open(this)
+    class(lattice),intent(inout)        ::  this
+    integer ::  i,ind
+
+    if(this%order_set(1)) call this%m%open_io(trim(order_parameter_name(1)))
+    if(this%order_set(2)) call this%e%open_io(trim(order_parameter_name(2)))
+    if(this%order_set(3)) call this%b%open_io(trim(order_parameter_name(3)))
+    if(this%order_set(4)) call this%t%open_io(trim(order_parameter_name(4)))
+    if(this%order_set(5)) call this%u%open_io(trim(order_parameter_name(5)))
+end subroutine
+
+subroutine io_write(this)
+    class(lattice),intent(inout)        ::  this
+    integer ::  i,ind
+
+    if(this%order_set(1)) call this%m%write_io()
+    if(this%order_set(2)) call this%e%write_io()
+    if(this%order_set(3)) call this%b%write_io()
+    if(this%order_set(4)) call this%t%write_io()
+    if(this%order_set(5)) call this%u%write_io()
+end subroutine
+
+subroutine io_close(this)
+    class(lattice),intent(inout)        ::  this
+    integer ::  i,ind
+
+    if(this%order_set(1)) call this%m%close_io()
+    if(this%order_set(2)) call this%e%close_io()
+    if(this%order_set(3)) call this%b%close_io()
+    if(this%order_set(4)) call this%t%close_io()
+    if(this%order_set(5)) call this%u%close_io()
+end subroutine
+
 
 subroutine init_geo(this,areal_in,alat,dim_lat,boundary)
     !initialize the lattice with the geometric inputs

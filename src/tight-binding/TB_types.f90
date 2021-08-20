@@ -2,7 +2,7 @@ module m_TB_types
 !module which contains the main tight-binding data type parameters_TB
 
 !io sub-types
-use m_parameters_TB_IO_HIGHS,       only: parameters_TB_IO_highs
+use m_parameters_rw_high,           only: parameters_IO_highs
 use m_parameters_TB_IO_DOS,         only: parameters_TB_IO_DOS
 use m_parameters_TB_IO_flow,        only: parameters_TB_IO_flow
 use m_parameters_TB_IO_ef,          only: parameters_TB_IO_ef
@@ -19,7 +19,7 @@ type parameters_TB
     type(parameters_TB_IO_H)            :: io_H
     type(parameters_TB_IO_EF)           :: io_ef
     type(parameters_TB_IO_DOS)          :: io_dos
-    type(parameters_TB_IO_HIGHS)        :: io_highs
+    type(parameters_IO_HIGHS)           :: io_highs
     type(parameters_TB_IO_OCC_MULT)     :: io_occ_mult
     type(parameters_TB_IO_kint)         :: io_kmesh
     type(parameters_TB_IO_flow)         :: flow
@@ -46,7 +46,7 @@ subroutine parameters_TB_read(TB_params,fname)
     Call TB_params%io_ef%read_file   (io,fname)
     Call TB_params%io_dos%read_file  (io,fname)
     Call TB_params%flow%read_file   (io,fname)
-    Call TB_params%io_highs%read_file(io,fname)
+    Call TB_params%io_highs%read_file('k',io,fname)
     Call TB_params%io_occ_mult%read_file(io,fname)
     Call TB_params%io_kmesh%read_file(io,fname)
     call close_file(fname,io)
