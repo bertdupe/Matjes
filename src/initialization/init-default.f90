@@ -1,5 +1,5 @@
 module m_init_default
-use m_input_types, only: extpar_input
+use m_rw_extpar, only: extpar_input
 implicit none
 private
 public init_default

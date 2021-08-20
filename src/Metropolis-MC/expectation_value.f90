@@ -19,7 +19,8 @@ integer,parameter       :: bnd_real(2) =[ 1, 11] !initial and final entry of rea
 integer,parameter       :: bnd_cmplx(2)=[12, 15] !initial and final entry of complex numbers
 integer,parameter       :: bnd_int(2)  =[16, 16] !initial and final entry of integer numbers
 
-type exp_val                                                                                             
+type exp_val
+    sequence !should be sequence for MPI-type
     !! contribution of the different energy parts
     real(8) :: kt=0.0d0 !temperature should always be at first position so it does not get added measure_reduce
     ! energy
@@ -169,7 +170,7 @@ subroutine print_spatial_fluct(this,com,io_unit_in)
     use m_convert
     use mpi_basic, only: mpi_type
     use m_io_files_utils, only: open_file_write,close_file
-    class(exp_val),intent(inout)    :: this
+    type(exp_val),intent(inout)     :: this
     class(mpi_type),intent(in)      :: com
     integer,optional                :: io_unit_in
   ! internal
@@ -196,7 +197,7 @@ end subroutine
 subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     use m_topo_commons
     use m_derived_types,only: lattice
-    class(exp_val),intent(inout)            :: this
+    type(exp_val),intent(inout)             :: this
     type(lattice),intent(in)                :: lat
     type(track_val),intent(in)              :: state_prop
     integer,intent(in)                      :: Q_neigh(:,:)

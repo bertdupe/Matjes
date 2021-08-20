@@ -1,6 +1,6 @@
 module m_llg_diag
 use m_hamiltonian_collection, only: hamiltonian
-use m_input_types,only : min_input
+use m_io_minimize,only : min_input
 use m_constants,  only : hbar, mu_B
 use m_io_files_utils
 use m_io_utils

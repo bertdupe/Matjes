@@ -1,7 +1,7 @@
 module m_io_gneb
 use m_vector, only : norm
 use m_type_lattice,only: lattice
-use m_input_types, only: GNEB_input
+use m_GNEB_io, only: GNEB_input
 use m_convert, only: convert
 use,intrinsic :: ISO_FORTRAN_ENV, only: OUTPUT_UNIT
 implicit none

@@ -20,9 +20,11 @@ subroutine read_anisotropy_input(io_unit,fname,io)
     Call read_int_realarr(io_unit,fname,'magnetic_anisotropy',3,io%attype,io%val)
     !read parameters for anisotropy in normalized lattice parameters
     Call read_int_realarr(io_unit,fname,'magnetic_anisotropy_lat',4,io%attype_lat,io%val_lat)
-    if(any(norm2(io%val_lat(1:3,:),dim=1)==0))then
-        write(error_unit,'(/A)') 'ERROR, entry of "magnetic_anisotropy_lat" has vanishing real array(1:3) components which encode the direction' 
-        STOP "CHECK INPUT"
+    if(allocated(io%val_lat))then
+        if(any(norm2(io%val_lat(1:3,:),dim=1)==0))then
+            write(error_unit,'(/A)') 'ERROR, entry of "magnetic_anisotropy_lat" has vanishing real array(1:3) components which encode the direction' 
+            STOP "CHECK INPUT"
+        endif
     endif
 
     if(allocated(io%val).or.allocated(io%val_lat)) io%is_set=.true.

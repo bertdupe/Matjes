@@ -1,13 +1,24 @@
-module m_rw_minimize
-use m_input_types, only: min_input
+module m_io_minimize
 implicit none
-public
+private
+public min_input
+
+type min_input
+    real(8)     :: mass=1.0d0      ! mass used for minimize
+    real(8)     :: dt=0.1d0         ! timestep
+    integer(8)  :: N_minimization=huge(int(1,8))     !number of minimization steps
+    integer     :: Efreq=100            ! frequency of printing the current energy/torque during the mimization
+    real(8)     :: conv_torque=1.0d-6   !torque convergence criterion
+contains
+    procedure   :: read_file
+end type
+
 
 contains
-subroutine rw_minimize(min_io,io_in,fname_in)
+subroutine read_file(min_io,io_in,fname_in)
     use m_io_files_utils, only : open_file_read,close_file
     use m_io_utils,only: get_parameter
-    type(min_input),intent(out)    :: min_io
+    class(min_input),intent(out)    :: min_io
     character(*),intent(in),optional    :: fname_in
     integer,intent(in),optional         :: io_in
     !integernal

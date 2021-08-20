@@ -11,7 +11,7 @@ use m_createspinfile
 use m_energyfield
 use m_minimize
 use m_H_public
-use m_rw_GNEB,only: GNEB_input  
+use m_GNEB_io,only: GNEB_input  
 use m_hamiltonian_collection, only: hamiltonian
 implicit none
 private
