@@ -46,22 +46,28 @@ contains
 subroutine open_io(this,varname)
     class(order_par),intent(inout)  :: this
     character(len=*),intent(in)     :: varname
+#ifdef CPP_NETCDF
     integer     :: shp(4)
 
     shp=shape(this%modes)   !get shape of lattice
     Call this%io%file_open(varname//'.nc',varname,shp(2:))
+#endif
 end subroutine
 
 subroutine write_io(this)
     class(order_par),intent(inout)  ::  this
 
+#ifdef CPP_NETCDF
     Call this%io%file_write(this%all_modes)
+#endif
 end subroutine
 
 subroutine close_io(this)
     class(order_par),intent(inout)  :: this
 
+#ifdef CPP_NETCDF
     Call this%io%file_close()
+#endif
 end subroutine
 
 

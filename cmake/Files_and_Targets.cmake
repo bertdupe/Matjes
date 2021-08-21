@@ -45,3 +45,7 @@ endif()
 if(USE_LAPACK)
     target_link_libraries(Matjes LAPACK::LAPACK)
 endif()
+
+if(USE_netCDF)
+    target_link_libraries(Matjes "${netCDF_fortran_library}")
+endif()

@@ -1,10 +1,14 @@
 module m_netcdf_routine
+#ifdef CPP_NETCDF
 use netcdf
+#endif
 use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
 IMPLICIT NONE
 
 private
+#ifdef CPP_NETCDF
 public :: readgrid,griddims,writegrid,check
+#endif
 public :: netcdf_type
 
 type netcdf_type
@@ -28,6 +32,7 @@ subroutine file_open(this,fname,var_name,dims)
     character(len=*),intent(in)         :: fname
     character(len=*),intent(in)         :: var_name
     integer,intent(in)                  :: dims(3)
+#ifdef CPP_NETCDF    
 
     integer     :: xpos(dims(1)),ypos(dims(2)), zpos(dims(3))
     integer     :: pos_id(3), i
@@ -66,17 +71,25 @@ subroutine file_open(this,fname,var_name,dims)
     CALL check(nf90_put_var(this%ncid, this%dim_id(1), xpos))
     CALL check(nf90_put_var(this%ncid, this%dim_id(2), ypos))
     CALL check(nf90_put_var(this%ncid, this%dim_id(3), zpos))
+#else
+    write(error_unit,'(/A)') "WARNING, called netcdf routine, while Matjes is called without CPP_NETCDF"
+    write(error_unit,'(A/)') "         this will have no effect"
+#endif
 end subroutine    
 
 subroutine file_close(this)
     class(netcdf_type),intent(inout)    :: this
-
     if(.not.this%is_open)then
         write(error_unit,'(2/,A)')  "Trying to close to an unopened netcdf-file"
         ERROR STOP
     endif
     this%is_open=.false.
+#ifdef CPP_NETCDF
     CALL check(nf90_close(this%ncid))
+#else
+    write(error_unit,'(/A)') "WARNING, called netcdf routine, while Matjes is called without CPP_NETCDF"
+    write(error_unit,'(A/)') "         this will have no effect"
+#endif
 end subroutine
 
 subroutine file_write(this,dat)
@@ -89,11 +102,13 @@ subroutine file_write(this,dat)
     endif
 
     !TODO, write to the actual data 
+    STOP "NETCDF file write, and most other things, is not implemented"
 
     this%N_entries=this%N_entries+1
 end subroutine
 
 
+#ifdef CPP_NETCDF
 !WRITEGRID - write a netCDF gridfile
 !:=========================================================================
 SUBROUTINE writegrid(outfile,var_name,xpos,ypos,zpos,idata,NX,NY,NZ,time)
@@ -197,4 +212,5 @@ END IF
 END SUBROUTINE check
 !:======================================================================
 
+#endif
 end module m_netcdf_routine
