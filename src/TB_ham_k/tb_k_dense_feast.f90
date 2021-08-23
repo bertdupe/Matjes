@@ -1,6 +1,6 @@
 module m_tb_k_feast
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
-#ifdef CPP_LAPACK
+#ifdef CPP_MKL
 
 !use m_H_tb_public
 use m_work_ham_single, only: work_ham, N_work

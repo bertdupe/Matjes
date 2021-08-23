@@ -1,3 +1,5 @@
+#this file tries to find and check libraries to set appropriate environment variables automatically
+
 #check for CUDA and set parameters if used
 message("\n\n Search for CUDA using environment CUDA_PATH")
 if(( USE_CUDA OR NOT DEFINED USE_CUDA) AND DEFINED ENV{CUDA_PATH})
@@ -10,12 +12,14 @@ if(( USE_CUDA OR NOT DEFINED USE_CUDA) AND DEFINED ENV{CUDA_PATH})
     include_directories( ${CUDA_PATH}/include )
     if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
         set(CMAKE_CUDA_ARCHITECTURES 75)
+        message("CMake variable 'CMAKE_CUDA_ARCHITECTURES' not set, using default value: ${CMAKE_CUDA_ARCHITECTURES}")
     endif()
 elseif(USE_CUDA AND NOT DEFINED ENV{CUDA_PATH})
     message( FATAL_ERROR "Enforcing to use cuda, but CUDA_PATH is not defined.\n Export the CUDA_PATH environment variable or remove USE_CUDA in config.cmake\n\n" )
 else()
     message( "Skipping CUDA-part of compilation\n\n" )
 endif()
+
 
 #check for EIGEN and set parameters if used
 message("\n\n Search for EIGEN")
@@ -30,42 +34,149 @@ else()
     message( "Skipping Eigen-part of compilation\n\n" )
 endif()
 
-#check for MKL
-message("\n\n CHECK If MKL is defined using environment MKLROOT")
-if((USE_MKL OR NOT DEFINED USE_MKL) AND DEFINED ENV{MKLROOT})
-    message("FOUND MKL library and compiling with it.\n\n" )
-    add_compile_definitions(CPP_MKL)
-    set(USE_MKL TRUE)
 
+#check for MKL
+message("\n\n Searching for MKL (sparse)")
+if(NOT DEFINED USE_MKL OR (DEFINED USE_MKL AND USE_MKL))
     if(DEFINED MKL_library_path)
-        link_directories( ${MKL_library_path})
-	message("Using manually set MKL library path: ${MKL_library_path}")
+	    message(" Using manually set MKL library path: ${MKL_library_path}")
     else()
-        link_directories( $ENV{MKLROOT}/lib/intel64 )
-	message("Using default MKL library path")
+        set(MKL_library_path $ENV{MKLROOT}/lib/intel64)
+	message(" Using default MKL library path: ${MKL_library_path}")
     endif()
 
     if(DEFINED MKL_include_path)
-        include_directories( ${MKL_include_path})
-	message("Using manually set MKL include path: ${MKL_include_path}")
+	    message(" Using manually set MKL include path: ${MKL_include_path}")
     else()
-    	include_directories( $ENV{MKLROOT}/include )
-	message("Using default MKL include path.")
+        set(MKL_include_path $ENV{MKLROOT}/include)
+	    message(" Using default MKL include path: ${MKL_include_path}")
     endif()
 
     if(DEFINED MKL_linker)
-	message("Using manually set MKL linker: ${MKL_linker}")
+    	message(" Using manually set MKL linker: ${MKL_linker}")
     else()
         set(MKL_linker "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl") 
-	message("Using default MKL linker: -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl")
+	    message(" Using default MKL linker: ${MKL_linker}")
     endif()
-    set(add_lib ${add_lib} ${MKL_linker})
 
-elseif(USE_MKL AND NOT DEFINED ENV{MKLROOT})
-    message( FATAL_ERROR "Enforcing to use MKL, but library can not be found.\n\n" )
+#check sparse MKL
+    try_compile(FOUND_mkl "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/spblas_mkl.f90"
+        CMAKE_FLAGS
+                  "-DINCLUDE_DIRECTORIES=${MKL_include_path}"
+                  "-DLINK_DIRECTORIES=${MKL_library_path}"
+        LINK_LIBRARIES "${MKL_linker}"
+        OUTPUT_VARIABLE MKL_test_output
+        )
+
+    if(FOUND_mkl)
+        message(" Success testing MKL (sparse).\n Compiling with MKL_Sparse")
+        add_compile_definitions(CPP_MKL)
+        set(USE_MKL TRUE)
+    elseif(USE_MKL AND NOT FOUND_mkl)
+        message("Error information testing MKL (sparse):")
+        message("${MKL_test_output}")
+        message("\n")
+        message( FATAL_ERROR "Unsuccessfull MKL (sparse) test.\n USE_MKL has been set to TRUE, thus aborting.")
+    else()
+        message("Unsuccessfull MKL (sparse) test.\n Compiling without MKL (sparse).")
+        set(USE_MKL FALSE)
+    endif()
+
+#check FFTW3 from mkl
+    if(USE_MKL AND (NOT DEFINED USE_FFTW OR USE_FFTW))
+        try_compile(FOUND_FFTW "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw.f90"
+            CMAKE_FLAGS
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}"
+                      "-DLINK_DIRECTORIES=${MKL_library_path}"
+            LINK_LIBRARIES "${MKL_linker}"
+            OUTPUT_VARIABLE FFTW_test_output
+            )
+        if(FOUND_FFTW)
+            message(" Success testing FFTW with mkl.\n Disable other search for fftw3 library implementation.\n Compiling with CPP_FFTW3")
+            add_compile_definitions(CPP_FFTW3)
+            set(USE_FFTW FALSE)
+        endif()
+
+        try_compile(FFTW_threaded "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_thread.f90"
+            CMAKE_FLAGS
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}"
+                      "-DLINK_DIRECTORIES=${MKL_library_path}"
+            LINK_LIBRARIES "${MKL_linker}"
+            )
+        if(FFTW_threaded AND FOUND_FFTW)
+            message(" Success testing FFTW with threading .\n Compiling with CPP_FFTW3_THREAD")
+            add_compile_definitions(CPP_FFTW3_THREAD)
+        elseif(NOT FFTW_threaded AND FOUND_FFTW)
+            message(" Failure to compile FFTW with threading, but normal fftw should work")
+        endif()
+    endif()
+
 else()
-    message( "Skipping MKL-part of compilation\n\n" )
+    message("Found USE_MKL = FALSE, skipping MKL (sparse) test.")
 endif()
+
+#check for FFTW3
+message("\n\n Searching for FFTW3")
+if(NOT DEFINED USE_FFTW OR (DEFINED USE_FFTW AND USE_FFTW))
+
+    if(DEFINED FFTW_library_path)
+	    message(" Using manually set FFTW library path: ${FFTW_library_path}")
+    else()
+        set(FFTW_library_path "/usr/lib")
+	     message(" Using default FFTW library path: ${FFTW_library_path}")
+    endif()
+
+    if(DEFINED FFTW_include_path)
+	    message(" Using manually set FFTW include path: ${FFTW_include_path}")
+    else()
+        set(FFTW_include_path "/usr/include")
+	    message(" Using default FFTW include path: ${FFTW_include_path}")
+    endif()
+
+    if(DEFINED FFTW_linker)
+    	message(" Using manually set FFTW linker: ${FFTW_linker}")
+    else()
+        set(FFTW_linker "-lfftw3") 
+    	message(" Using default FFTW linker: ${FFTW_linker}")
+    endif()
+
+    try_compile(FOUND_FFTW "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw.f90"
+       CMAKE_FLAGS
+                 "-DINCLUDE_DIRECTORIES=${FFTW_include_path}"
+                 "-DLINK_DIRECTORIES=${FFTW_library_path}"
+        LINK_LIBRARIES "${FFTW_linker}"
+        OUTPUT_VARIABLE FFTW_test_output
+        )
+    if(FOUND_FFTW)
+        message(" Success testing FFTW.\n Compiling with CPP_FFTW3")
+        add_compile_definitions(CPP_FFTW3)
+        set(USE_FFTW TRUE)
+    elseif(USE_FFTW AND NOT FOUND_FFTW)
+        message("Error information testing FFTW:")
+        message("${FFTW_test_output}")
+        message("\n")
+        message( FATAL_ERROR "Unsuccessfull FFTW test.\n USE_FFTW has been set to TRUE, thus aborting.")
+    else()
+        message("Unsuccessfull FFTW test.\n Compiling without FFTW.")
+        set(USE_FFTW FALSE)
+    endif()
+
+    try_compile(FFTW_threaded "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_thread.f90"
+        LINK_LIBRARIES "${FFTW_linker}"
+        OUTPUT_VARIABLE FFTW_test_output
+        )
+    if(FFTW_threaded AND USE_FFTW)
+        message(" Success testing FFTW with threading .\n Compiling with CPP_FFTW3_THREAD")
+        add_compile_definitions(CPP_FFTW3_THREAD)
+    elseif(NOT FFTW_threaded AND USE_FFTW)
+        message(" Failure to compile FFTW with threading, but normal fftw should work")
+    endif()
+elseif(FOUND_FFTW)
+    message("FFTW implementation already found, skipping search of explicit FFTW implementation.")
+else(NOT FOUND_FFTW AND NOT USE_FFTW)
+    message("Skipping FFTW as USE_FFTW=FALSE.")
+endif()
+
 
 
 #check for BLAS
@@ -76,7 +187,7 @@ if((USE_BLAS OR NOT DEFINED USE_BLAS) AND BLAS_FOUND)
         message("FOUND BLAS library, but since MKL is already found that is used.\n\n" )
         set(USE_BLAS FALSE)
     else()
-        message("\n\nFOUND BLAS library and using that implementation\n\n" )
+        message("FOUND BLAS library and using that implementation\n\n" )
         set(USE_BLAS TRUE)
     endif()
     add_compile_definitions(CPP_BLAS)
@@ -105,19 +216,49 @@ else()
     message( "Skipping LAPACK-part of compilation\n\n" )
 endif()
 
+
+#check for netcdf
 message("\n\n Search for NETCDF")
-if( NOT DEFINED netCDF_fortran_library)
-    set(netCDF_fortran_library "netcdff")
-endif()
-try_compile(FOUND_netCDF "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/netcdf.f90"
-    LINK_LIBRARIES "${netCDF_fortran_library}")
-if((USE_netCDF OR NOT DEFINED USE_netCDF) AND FOUND_netCDF)
-    message(" Success testing netCDF.\n Using library linker: ${netCDF_fortran_library}\n\n")
-    add_compile_definitions(CPP_NETCDF)
-    set(USE_netCDF TRUE)
-elseif(USE_netCDF AND NOT FOUND_netCDF)
-    message( FATAL_ERROR "Enforcing to use netCDF, but library can not be found.\nSet include_directory() and set(netCDF_fortran_library \"...\") in config.cmake with respecitive directory and library linker.\n\n")
+if(NOT DEFINED USE_netCDF OR (DEFINED USE_netCDF AND USE_netCDF))
+    if(DEFINED netCDF_library_path)
+        message(" Using manually set netCDF library path: ${netCDF_library_path}")
+    else()
+        set(netCDF_library_path "/usr/lib")
+         message(" Using default netCDF library path: ${netCDF_library_path}")
+    endif()
+    
+    if(DEFINED netCDF_include_path)
+        message(" Using manually set netCDF include path: ${netCDF_include_path}")
+    else()
+        set(netCDF_include_path "/usr/include")
+        message(" Using default netCDF include path: ${netCDF_include_path}")
+    endif()
+    
+    if(DEFINED netCDF_linker)
+    	message(" Using manually set netCDF linker: ${netCDF_linker}")
+    else()
+        set(netCDF_linker "-lnetcdff") 
+    	message(" Using default netCDF linker: ${netCDF_linker}")
+    endif()
+    
+    try_compile(FOUND_netCDF "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/netcdf.f90"
+        CMAKE_FLAGS
+                  "-DINCLUDE_DIRECTORIES=${netCDF_include_path}"
+                  "-DLINK_DIRECTORIES=${netCDF_library_path}"
+        LINK_LIBRARIES "${netCDF_linker}"
+        OUTPUT_VARIABLE netCDF_test_output)
+    if((USE_netCDF OR NOT DEFINED USE_netCDF) AND FOUND_netCDF)
+        message(" Success testing netCDF.\n")
+        add_compile_definitions(CPP_NETCDF)
+        set(USE_netCDF TRUE)
+    elseif(USE_netCDF AND NOT FOUND_netCDF)
+        message("Error output testing netcdf:")
+        message("${netCDF_test_output}")
+        message( FATAL_ERROR "Enforcing to use netCDF, but library can not be found.\nSet netCDF_library_path netCDF_include_path, netCDF_linker cmake variable in config.cmake with respecitive directory and library linker.\n\n")
+    else()
+        message( "Failed netcdf test.\nSkipping netCDF-part of compilation\n\n" )
+    endif()
 else()
-    message( "Failed netcdf test.\nSkipping netCDF-part of compilation\n\n" )
+    message("Skipping netCDF as USE_netCDF=FALSE.")
 endif()
 

@@ -49,7 +49,7 @@ subroutine set_H_single(Hk,mode_in,comm)
         ERROR STOP "CHECK input"
 #endif
     case (3)
-#ifdef CPP_LAPACK
+#ifdef CPP_MKL
         allocate(H_k_feast::Hk)
         if(comm%ismas) write(output_unit,'(//A/)') "Set Hk-type to: feast_dense"
 #else

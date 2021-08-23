@@ -94,6 +94,9 @@ subroutine print_preprocessor_flags(io_unit)
 #ifdef CPP_FFTW3
     write(io_unit,forma) "CPP_FFTW3"
 #endif
+#ifdef CPP_FFTW3_THREAD
+    write(io_unit,forma) "CPP_FFTW3_THREAD"
+#endif
 #ifdef CPP_MKL
     write(io_unit,forma) "CPP_MKL"
 #endif
@@ -102,6 +105,12 @@ subroutine print_preprocessor_flags(io_unit)
 #endif
 #ifdef CPP_MRG
     write(io_unit,forma) "CPP_MRG"
+#endif
+#ifdef CPP_SCRIPT
+    write(io_unit,forma) "CPP_MRG"
+#endif
+#ifdef CPP_USE_WORK
+    write(io_unit,forma) "CPP_USE_WORK"
 #endif
     write(io_unit,'(/)')
 

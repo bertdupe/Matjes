@@ -40,7 +40,6 @@ type,extends(H_tb_dense)  ::  H_zheevx
     procedure   :: get_eval => eval_zheevx
     procedure   :: get_evec => evec_zheevx
 end type
-
 #endif
 
 #ifdef CPP_MKL

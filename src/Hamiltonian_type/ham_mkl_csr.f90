@@ -198,8 +198,8 @@ subroutine destroy_child(this)
     integer     ::  stat
 
     if(this%is_set())then
-        stat=mkl_sparse_destroy(this%H)
         nullify(this%H_val,this%H_inner,this%H_outer)
+        stat=mkl_sparse_destroy(this%H)
         this%nnz=0
         this%row_max=0
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_csr type in m_H_sparse_mkl'

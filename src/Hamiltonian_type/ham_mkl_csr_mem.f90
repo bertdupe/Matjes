@@ -197,8 +197,8 @@ subroutine destroy_child(this)
 
     Call this%t_H_mkl_csr%destroy_child()
     if(this%is_set())then
-        stat=mkl_sparse_destroy(this%HT)
         nullify(this%HT_val,this%HT_inner,this%HT_outer)
+        stat=mkl_sparse_destroy(this%HT)
         this%col_max=0
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_csr type in m_H_sparse_mkl'
     endif

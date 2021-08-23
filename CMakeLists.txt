@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.12) #find out actual minimum version
 
 #Some stuff might be defined in config file
 if (EXISTS "${CMAKE_BINARY_DIR}/config.cmake")
@@ -13,7 +13,12 @@ project(Matjes NONE)
 
 enable_language (Fortran CXX)
 
-#check which external libraries can be used 
+if(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU" AND ${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "9.0.0")
+    message("\n")
+    message(FATAL_ERROR " gfortran compiler with version ${CMAKE_Fortran_COMPILER_VERSION} detected.\n A gfortran version 9.0 or higher is necessary.")
+endif()
+
+#check which external libraries can be used and set some environment variables accordingly
 include("cmake/external_lib_check.cmake")
 
 #apply program branch options 

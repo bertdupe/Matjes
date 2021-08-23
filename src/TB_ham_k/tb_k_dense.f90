@@ -21,6 +21,7 @@ subroutine init(this,Hk_inp,io)
     type(Hk_inp_t),intent(inout)        :: Hk_inp
     type(parameters_TB_IO_H),intent(in) :: io
     type(H_TB_coo)     :: H_tmp
+#ifdef CPP_LAPACK
     type(H_zheev)      :: H_loc    !real space Hamiltonian as the given distance by diffR [N_H]
 
     integer     ::  iH
@@ -36,6 +37,9 @@ subroutine init(this,Hk_inp,io)
         Call H_tmp%destroy()
         Call H_loc%destroy()
     enddo
+#else
+    ERROR STOP "CANNOT INITIALIZE H_K_dense without CPP_LAPACK"
+#endif
 
     !prepare temp H
     allocate(this%H(this%dimH,this%dimH))
