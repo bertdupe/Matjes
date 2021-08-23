@@ -5,8 +5,8 @@ set(CMAKE_CXX_COMPILER "mpicxx")
 set(CMAKE_Fortran_COMPILER "mpif90")
 
 #set faster release flags
-set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math -fopenmp")
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=intel -fopenmp")
+set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=intel")
 
 #include_directories( /usr/include ) #FFTW directory include
 
@@ -27,6 +27,7 @@ set(manual_linker_language "CXX")
 #set(USE_LAPACK  FALSE)
 #set(USE_MKL     FALSE)
 #set(USE_netCDF  FALSE)
+set(USE_OPENMP  TRUE)   #without entry default off
 
 #MANUALLY SET PREPROCESSOR FLAGS
 add_compile_definitions(CPP_SCRIPT)     #disables some check of nonsensical input for less interactive sessions
