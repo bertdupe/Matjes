@@ -214,8 +214,9 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     endif
 
     Call this%fft_H%init_shape(dim_mode,periodic,dim_lat,Kbd,N_rep)
-
+#ifdef CPP_FFTW3_THREAD
 !$  Call fftw_plan_with_nthreads(omp_get_max_threads())
+#endif
     !set order work arrays and fourier transform
     Nk_tot=product(N_rep)
     allocate(this%M_F(dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
@@ -256,7 +257,7 @@ subroutine get_H(this,lat,Hout)
     Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
     Call this%H_internal(this%H_n,Hout,lat%dim_lat,this%N_rep,size(Hout,1))
 #else
-    ERROR STOP "fft_H%get_H requires CPP_FFTW"
+    ERROR STOP "fft_H%get_H requires CPP_FFTW3"
 #endif
 end subroutine
 
@@ -281,7 +282,7 @@ subroutine get_H_single(this,lat,site,Hout)
     Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
     Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
 #else
-    ERROR STOP "fft_H_fftw%get_H_single requires CPP_FFTW"
+    ERROR STOP "fft_H_fftw%get_H_single requires CPP_FFTW3"
 #endif
 end subroutine
 

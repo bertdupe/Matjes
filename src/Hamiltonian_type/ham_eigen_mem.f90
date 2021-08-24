@@ -78,13 +78,12 @@ subroutine get_work_size_single(this,sizes)
     sizes=max(sizes,sizes_n)
 end subroutine
 
-subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+subroutine mult_r_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_eigen_mem), intent(in)    :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
     integer, intent(in)                 :: N            !number of indices to calculated
     integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output

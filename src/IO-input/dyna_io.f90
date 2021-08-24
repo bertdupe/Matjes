@@ -2,13 +2,12 @@ module m_dyna_io
 use mpi_basic
 private
 public dyna_input
-public rw_dyna
 
 type dyna_input
-    real(8) :: timestep=1.0d0
-    real(8) :: damping=1.0d0
-    integer :: Efreq=100
-    integer :: duration=1000
+    real(8) :: timestep=1.0d0       !full iteration time-step (fs)
+    real(8) :: damping=1.0d0        !damping term magnitude (unitless)
+    integer :: duration=1000        !number of full time-step iterated during simulation
+    integer :: Efreq=100            !number of iterations after which state parameters are printed out (EM.dat)
 contains
     procedure   :: read_file =>read_dyna
     procedure   :: bcast
@@ -61,38 +60,4 @@ subroutine read_dyna(this,fname_in,comm)
 
     if(present(comm)) Call this%bcast(comm)
 end subroutine
-
-subroutine rw_dyna(timestep,damping,Efreq,duration)
-use m_constants
-use m_derived_types
-use m_io_files_utils
-use m_io_utils
-implicit none
-real(kind=8), intent(out) :: timestep,damping
-integer, intent(out) :: duration,Efreq
-! internal
-integer :: io
-logical :: Ffield,i_Efield,stmtemp
-
-Efreq=1
-timestep=1.0d0
-damping=0.0d0
-
-io=open_file_read('input')
-
-call get_parameter(io,'input','timestep',timestep)
-call get_parameter(io,'input','Efreq',Efreq)
-call get_parameter(io,'input','duration',duration)
-call get_parameter(io,'input','STMtemp',stmtemp)
-call get_parameter(io,'input','damping',damping)
-
-Ffield=.false.
-call get_parameter(io,'input','Ffield',Ffield)
-i_Efield=.false.
-call get_parameter(io,'input','Efield',i_Efield)
-
-call close_file('input',io)
-
-end subroutine rw_dyna
-
 end module

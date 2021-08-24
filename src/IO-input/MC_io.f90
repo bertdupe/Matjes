@@ -3,6 +3,8 @@ use m_constants, only : pi
 use mpi_basic,only: mpi_type
 implicit none
 
+public :: MC_input
+
 type MC_input
     !parameters what is run how often
     integer     :: n_Tsteps=1
@@ -27,11 +29,13 @@ type MC_input
     !fluction parameters
     logical     :: do_fluct=.True.
     real(8)     :: fluct_dir(3)=[1.0d0,0.0d0,0.0d0]
+contains
+    procedure   :: bcast => bcast_MC
+    procedure   :: read_file => rw_MC
 end type
 
 
 private
-public :: rw_MC,MC_input,bcast_MC
 
 contains
 

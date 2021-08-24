@@ -463,8 +463,7 @@ subroutine delta_onsite_scf_read(par, unit, iotype, v_list, iostat, iomsg)
     character(*), intent(inout)   :: iomsg
     
     type(TBio_delta_onsite_scf)        :: tmp
-   
-    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital , tmp%val
+    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital, tmp%val
     if(iostat==0) par=tmp
 end subroutine
 

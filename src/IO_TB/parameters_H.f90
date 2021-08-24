@@ -36,12 +36,12 @@ type parameters_TB_IO_H
     integer,allocatable ::  norb_at_off(:)  !offset of orbitals at each atom
 
     !solving parameters
-    integer             ::  i_diag=1  !different diagonalization methods
-    logical             ::  sparse=.false.  !do calculation sparse
-    logical             ::  rearrange=.false.  !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
-    real(8)             ::  Ebnd(2)=[-1.0d+99,1.0d+99]     !minimal and maximal energy values to consider in restricted eigensolver routines
-    integer             ::  estNe=0                       !estimated number of eigenvalues in interval
-    real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
+    integer             ::  i_diag=1                        !different diagonalization methods
+    logical             ::  rearrange=.false.               !rearrange Hamiltonian basis order to have same site c and c^+  next to each other
+    real(8)             ::  Ebnd(2)=[-1.0d+99,1.0d+99]      !minimal and maximal energy values to consider in restricted eigensolver routines
+    integer             ::  estNe=0                         !estimated number of eigenvalues in interval
+    logical             ::  require_estNe=.false.           !chosen Hamiltonian implementation(i_diag) requires estNe
+    real(8)             ::  diag_acc=1d-12                  !accuracy of iterative eigenvalue solution
 
     !selfconsistent delta parameters
     logical             ::  use_scf=.false.         !use selfconsistent delta
@@ -56,6 +56,8 @@ contains
     procedure   :: read_file
     procedure   :: bcast => bcast_local
 end type
+
+logical,parameter :: idiag_require_estNe(*)=[.false.,.false.,.true.,.true.,.true.,.true.]   !array which encodes which Hamiltonian implementation (idiag) requires the estNe
 contains
 
 subroutine bcast_local(this,comm) 
@@ -133,7 +135,6 @@ subroutine bcast_local(this,comm)
     Call bcast_alloc(this%norb_at_off,comm)
 
     Call bcast      (this%i_diag,comm)
-    Call bcast      (this%sparse,comm)
     Call bcast      (this%rearrange,comm)
     Call bcast      (this%Ebnd,comm)
     Call bcast      (this%estNe,comm)
@@ -182,8 +183,8 @@ subroutine read_file(this,io,fname)
     if(N>0)then
         allocate(this%hop_io(N))
         Call read_Hpar(io,fname,'TB_hopping',this%hop_io)
-    elseif(.not.this%wann_io%is_set)then
-        STOP "FAILED TO READ tight-binding hopping Hamiltonian (TB_hopping), but orbitals are set"
+    else
+        write(output_unit,'(/A/)') "No manual tight-binding hopping parameters found"
     endif
 
     Call number_Hpar(io,fname,'TB_delta',N)
@@ -228,8 +229,6 @@ subroutine read_file(this,io,fname)
     call get_parameter(io,fname,'TB_scf_diffconv',  this%scf_diffconv)
     call get_parameter(io,fname,'TB_scf_Ecut',      this%scf_Ecut)
     call get_parameter(io,fname,'TB_scf_kgrid',     this%scf_kgrid)
-    call get_parameter(io,fname,'TB_sparse',        this%sparse)
-    call get_parameter(io,fname,'TB_diag',          this%i_diag)
     call get_parameter(io,fname,'TB_diag_acc',      this%diag_acc)
     call get_parameter(io,fname,'TB_diag_Ebnd',     this%Ebnd)
     call get_parameter(io,fname,'TB_diag_Emin',     this%Ebnd(1))
@@ -239,6 +238,37 @@ subroutine read_file(this,io,fname)
         write(error_unit,'(2/A/2(E16.8/))') "WARNING, tight binding minimal energy bound is smaller than maximal energy bound:", this%Ebnd
         STOP "Fix input"
     endif
+
+    str='not_found'
+    call get_parameter(io,fname,'TB_Hamiltonian', str)
+    select case(trim(str))
+    case('dense_zheevd')
+        this%i_diag=1
+    case('dense_zheev')
+        this%i_diag=2
+    case('dense_feast')
+        this%i_diag=3
+    case('dense_zheevr')
+        this%i_diag=4
+    case('dense_zheevx')
+        this%i_diag=5
+    case('sparse_feast')
+        this%i_diag=6
+    case('not_found')
+        call get_parameter(io,fname,'TB_diag',this%i_diag)
+    case default
+        write(error_unit,'(/A)') "ERROR reading tight-binding Hamiltonian input"
+        write(error_unit,'(2A)') "Found TB_Hamitonian: :", trim(str)
+        write(error_unit,'(A)') "is not implemented"
+        STOP
+    end select
+    if(this%i_diag<1.or.this%i_diag>size(idiag_require_estNe))then
+        write(error_unit,'(/A,I5,A)') "Hamiltonian implementation identifier (TB_diag) chosen outside of implemented range [1,",size(idiag_require_estNe),"]."
+        write(error_unit,'(A,I5)') "TB_diag= ", this%i_diag
+        write(error_unit,'(A)') "Check input"
+        STOP
+    endif
+    this%require_estNe=idiag_require_estNe(this%i_diag)
 end subroutine
 
 subroutine number_Hpar(io,fname,var_name,Nnonzero)

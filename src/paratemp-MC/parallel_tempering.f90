@@ -96,8 +96,8 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     i_optTset=.True.
 
     !set some input parameters
-    if(com%ismas) call rw_MC(io_MC)
-    Call bcast(io_MC,com)
+    if(com%ismas) call io_MC%read_file()
+    Call io_MC%bcast(com)
     N_adjT=io_MC%N_Topt
     NT_global=io_MC%n_Tsteps
     n_sizerelax=io_MC%n_sizerelax

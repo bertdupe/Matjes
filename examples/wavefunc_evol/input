@@ -1,0 +1,54 @@
+simulation wavefunc_eval
+do_TB_r F
+do_TB_k T
+enable_w T
+
+TB_sparse F
+TB_diag 1
+TB_hopping
+1 1  1 1  0 0  1  1.0
+1 1  1 1  0 0  0 -9.0
+
+#TB_Jsd
+#1 1 0.1
+
+do_highs_k T
+N_highsym 2 #nb of high symmetry points
+k_highs_pts
+0.000000000 0.000000000 0.000000000 #high symmetry point 1 (Gamma)
+1.000000000 0.000000000 0.000000000 #high symmetry point 2 (X)
+
+k_highs_dist 0.001 #distance between points
+
+TB_scf_print T
+#TB_scf_Ecut 1.0d0
+TB_scf_kgrid 100 100 1
+TB_diag_Ebnd -1.0 1.0
+
+TB_diag_estNe 1400
+
+do_dos_k F
+dos_E_ext -1.0  1.00
+dos_dE 0.005
+dos_sigma 0.010
+#do_fermi_dos_k T
+dos_kgrid 500 500 1
+
+wave_tstep 1.0d-3
+wave_Efreq 100
+wave_duration 100000
+
+# parameters of the lattice
+Nsize 49  1 1
+Periodic_log T T F
+alat 1.0 1.0 1.0
+#Simple cubic lattice
+lattice
+ 1.0 0.0 0.0
+ 0.0 1.0 0.0
+ 0.0 0.0 1.0
+atomtypes  1
+at1 0.0 0.0 0.0 F 1
+
+atoms 1
+at1   0.0 0.0 0.0

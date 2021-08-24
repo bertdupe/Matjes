@@ -20,7 +20,7 @@ module m_fftw
 !    public :: calculate_fft,calculate_FFT_Dr,get_FFT, Fourier_H_at_k
     contains
 #if 0
-#ifdef CPP_FFTW
+#ifdef CPP_FFTW3
         !!!!!!!!!!!!!!!!!!!!!!
         ! FFT dipole
         !!!!!!!!!!!!!!!!!!!!!!

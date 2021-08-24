@@ -1,4 +1,5 @@
 module eval_single
+!module, which contains information about how the energy caused by a single site has to be calculated
 use m_derived_types, only : lattice, number_different_order_parameters
 use m_H_type, only :t_H_base
 use m_work_ham_single, only: work_ham_single
@@ -122,7 +123,7 @@ subroutine eval_single_left(this,H,E,site,lat,work)
     !get indices of left mode which has components of site site at component comp
     Call H%mode_l%get_ind_site(this%comp, site, _dim_, ind_out)  
     !get Hamiltonian.right_mode product for all left mode indices ind_out
-    Call H%mult_r_disc(site, lat, _dim_, ind_out, mv_vec, ind_sum, ind_Mult, mat_mult, vec_mult)
+    Call H%mult_r_disc(lat, _dim_, ind_out, mv_vec, ind_sum, ind_Mult, mat_mult, vec_mult)
     !get left mode indices ind_out excluding mode number comp
     Call H%mode_l%get_mode_disc(lat, _dim_, ind_out, vec_oth)
     !energy is sum of left mode times Hamiltonian.right_mode values
@@ -177,7 +178,7 @@ subroutine eval_single_right(this,H,E,site,lat,work)
     !get indices of left mode which has components of site site at component comp
     Call H%mode_r%get_ind_site(this%comp, site, _dim_, ind_out)  
     !get Hamiltonian.right_mode product for all left mode indices ind_out
-    Call H%mult_l_disc(site, lat, _dim_, ind_out, mv_vec, ind_sum, ind_Mult, mat_mult, vec_mult)
+    Call H%mult_l_disc(lat, _dim_, ind_out, mv_vec, ind_sum, ind_Mult, mat_mult, vec_mult)
     !get left mode indices ind_out excluding mode number comp
     Call H%mode_r%get_mode_disc(lat, _dim_, ind_out, vec_oth)
     !energy is sum of left mode times Hamiltonian.right_mode values

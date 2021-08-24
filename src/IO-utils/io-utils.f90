@@ -678,6 +678,7 @@ subroutine get_cell(io,fname,attype,cell)
     integer :: stat
     character(len=100) :: str
     logical :: used(size(attype))
+    integer :: div
 
     cell%n_attype=size(attype)
     Call set_pos_entry(io,fname,var_name)
@@ -690,8 +691,13 @@ subroutine get_cell(io,fname,attype,cell)
     do i=1,N_atoms
         read(io,'(a)',iostat=stat) str
         if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-        read(str,*,iostat=stat) atname,cell%atomic(i)%position
-        if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        read(str,*,iostat=stat) atname,cell%atomic(i)%position, div
+        if (stat == 0)then
+            cell%atomic(i)%position=cell%atomic(i)%position/real(div,8)
+        else
+            read(str,*,iostat=stat) atname,cell%atomic(i)%position
+            if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        endif
         read(atname,*,iostat=stat) id
         if(stat/=0)then
             id=0
@@ -906,7 +912,8 @@ do
       if (nvar.eq.0) then
          write(6,'(/,a)') 'The simulation type was not found  '
          write(6,'(2a)') 'The code has read  ', str
-         write(6,*) 'possible choices are  ',type_simu
+         write(6,*) 'possible choices are:'
+         write(6,'(3XA)') type_simu
          stop
       endif
 
@@ -1251,9 +1258,9 @@ subroutine get_vec1d_real(io,fname,vname,vec)
             STOP "Fix input"
         endif
     else
-        write(error_unit,'(2A)') 'No entry found for ',vname
-        write(error_unit,'(A)') 'Using default value:'
-        write(error_unit,'(3E16.8)') vec
+        write(output_unit,'(/2A)') 'No entry found for ',vname
+        write(output_unit,'(A)') 'Using default value:'
+        write(output_unit,'(3E16.8)') vec
     endif
     Call check_further_entry(io,fname,vname)
 end subroutine 
@@ -1275,9 +1282,9 @@ subroutine get_vec1d_int(io,fname,vname,vec)
             STOP "Fix input"
         endif
     else
-        write(error_unit,'(2A)') 'No entry found for ',vname
-        write(error_unit,'(A)') 'Using default value:'
-        write(error_unit,'(3I10)') vec
+        write(output_unit,'(/2A)') 'No entry found for ',vname
+        write(output_unit,'(A)') 'Using default value:'
+        write(output_unit,'(3I10)') vec
     endif
     Call check_further_entry(io,fname,vname)
 end subroutine 

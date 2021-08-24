@@ -1,0 +1,48 @@
+simulation tight-binding
+do_TB_k T
+
+###Hamiltonian input
+TB_hopping
+1 1  1 1  0 0  0 -0.8
+1 1  1 1  0 0  1  1.0
+1 1  1 1  0 0  2 -0.20
+
+TB_defect
+1 1  0.0d0 1.0d0 6 6 1
+
+#### self consistent superconducting delta and initial delta
+TB_scfdelta
+1  1  1  1.0000
+TB_scf_print F
+TB_scf_kgrid   4   4 1
+TB_delta
+1 1  1 1  0  5.d-2 5.0d-2
+
+
+### DOS and local DOS input
+do_dos_k T
+dos_kgrid 200 200 1
+dos_E_ext -0.5  0.5
+dos_print_kint F
+dos_dE 0.005
+dos_sigma 0.010
+TB_loc_dos 6
+1 1 1  6 6 1
+1 1 2  6 6 1
+1 1 1  7 6 1
+1 1 2  7 6 1
+1 1 1  7 7 1
+1 1 2  7 7 1
+
+### lattice setup
+Nsize 11 11 1
+alat 1.0 1.0 1.0
+Periodic_log T T F
+lattice
+ 1.0 0.0 0.0
+ 0.0 1.0 0.0
+ 0.0 0.0 1.0
+atomtypes  1
+at1 1.0 0.0 0.0 F 1
+atoms 1
+at1  0.0 0.0  0.0 
