@@ -49,7 +49,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     use m_solver_order,only : get_Dmode_int
-    use m_dyna_io, only: rw_dyna
     use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 !$  use omp_lib
     

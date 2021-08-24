@@ -40,4 +40,5 @@ include(src/vector_utils/CMakeLists.txt)
 include(src/Hamiltonian_derivative/CMakeLists.txt)
 include(src/llg_diagonalization/CMakeLists.txt)
 include(src/wavefunc_evolution/CMakeLists.txt)
-
+include(src/netcdf/CMakeLists.txt)
+#include(src/Hamiltonian_FT/CMakeLists.txt)

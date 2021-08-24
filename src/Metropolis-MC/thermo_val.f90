@@ -20,6 +20,7 @@ integer,parameter       :: bnd_int(2)=[-1,-1] !initial and final entry of comple
 integer,parameter       :: N_entry=size(blocks)
 
 type therm_val                                                                                             
+    sequence
     !! contribution of the different energy parts
     real(8) :: kt=0.0d0 !temperature should always be at first position so it does not get added measure_reduce
     ! thermodynamical quantities
@@ -49,8 +50,8 @@ subroutine therm_set(this,measure,Cor_log,N_cell_in)
     use m_constants, only : pi
     !routine which calculates all thermodynamic quantities in this from the 
     !tracked expectation values
-    class(therm_val),intent(out)    :: this
-    class(exp_val),intent(in)       :: measure
+    type(therm_val),intent(out)     :: this
+    type(exp_val),intent(in)        :: measure
     logical, intent(in)             :: Cor_log
     integer,intent(in)              :: N_cell_in
     !internal
@@ -94,7 +95,7 @@ end subroutine
 
 subroutine print_av(this)
     use, intrinsic :: iso_fortran_env, only : output_unit
-    class(therm_val),intent(inout)    :: this
+    type(therm_val),intent(inout)   :: this
 
     write(output_unit,'(5(a,f18.9,2x))') 'M= ',norm2(this%M), &
       & 'E= ',this%E,'Q+= ',this%qeulerp,'Q-= ',-this%qeulerm,'Q= ',this%qeulerp-this%qeulerm
@@ -116,7 +117,7 @@ end subroutine
 subroutine thermo_print(this,io_unit_in)
     !print thermodynamic quantities 
     use m_constants, only : k_b
-    class(therm_val),intent(inout)  :: this(:)
+    type(therm_val),intent(inout)   :: this(:)
     integer,optional                :: io_unit_in
     integer     ::  io_unit,i
     real(8) ::  Q

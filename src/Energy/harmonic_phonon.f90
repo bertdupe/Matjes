@@ -26,7 +26,7 @@ subroutine read_F_input(io_param,fname,io)
 
 end subroutine
 
-subroutine get_Forces_F(Ham,io,lat)
+subroutine get_Forces_F(Ham,io,lat,Ham_out,neighbor_pos_list)
     !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
@@ -36,8 +36,10 @@ subroutine get_Forces_F(Ham,io,lat)
     use m_mode_public
 
     class(t_H),intent(inout)    :: Ham
-    type(io_H_Ph),intent(in)     :: io
+    type(io_H_Ph),intent(in)    :: io
     type(lattice),intent(in)    :: lat
+    real(8),optional,intent(inout)     :: neighbor_pos_list(:,:)
+    class(t_H),optional,intent(inout)    :: Ham_out
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
@@ -58,7 +60,9 @@ subroutine get_Forces_F(Ham,io,lat)
     integer         :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
 
     ! conversion factor Ha/Bohr2 to eV/nm2
+    ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
     real(8), parameter  :: HaBohrsq_to_Evnmsq = 9717.38d0
+    real(8), parameter  :: HaBohr_to_Evnm = 514.2208619083232d0
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
@@ -104,6 +108,7 @@ subroutine get_Forces_F(Ham,io,lat)
                     !fill Hamiltonian type
                     Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"UU",lat,0)
                     deallocate(val_tmp,ind_tmp)
+                    if (present(Ham_out)) call Ham_tmp%copy(Ham_out)
                     Call Ham%add(Ham_tmp)
                     Call Ham_tmp%destroy()
                     connect_bnd(1)=connect_bnd(2)+1

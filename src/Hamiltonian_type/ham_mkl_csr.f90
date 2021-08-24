@@ -198,8 +198,8 @@ subroutine destroy_child(this)
     integer     ::  stat
 
     if(this%is_set())then
-        stat=mkl_sparse_destroy(this%H)
         nullify(this%H_val,this%H_inner,this%H_outer)
+        stat=mkl_sparse_destroy(this%H)
         this%nnz=0
         this%row_max=0
         if(stat/=SPARSE_STATUS_SUCCESS) STOP 'failed to destroy t_h_mkl_csr type in m_H_sparse_mkl'
@@ -291,12 +291,11 @@ end subroutine
 !#undef _dim_
 !end subroutine 
 
-subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+subroutine mult_r_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the left vector * matrix product for the indices ind_out of the result vector
     ! input
     class(t_H_mkl_csr), intent(in)      :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
     integer, intent(in)                 :: N            !number of indices to calculated
     integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output
@@ -333,12 +332,11 @@ subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_
     enddo
 end subroutine 
 
-subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+subroutine mult_l_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector
     ! input
     class(t_H_mkl_csr), intent(in)      :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
     integer, intent(in)                 :: N            !number of indices to calculated
     integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output

@@ -19,7 +19,8 @@ integer,parameter       :: bnd_real(2) =[ 1, 11] !initial and final entry of rea
 integer,parameter       :: bnd_cmplx(2)=[12, 15] !initial and final entry of complex numbers
 integer,parameter       :: bnd_int(2)  =[16, 16] !initial and final entry of integer numbers
 
-type exp_val                                                                                             
+type exp_val
+    sequence !should be sequence for MPI-type
     !! contribution of the different energy parts
     real(8) :: kt=0.0d0 !temperature should always be at first position so it does not get added measure_reduce
     ! energy
@@ -40,7 +41,7 @@ type exp_val
     complex(8)  :: MipMim =cmplx(0.0d0,0.0d0,8) !<Mi+Mi-> (is real)
     complex(8)  :: MipMjp =cmplx(0.0d0,0.0d0,8) !<Mi+Mj+>
 
-	!<Mj+Mi->
+    !<Mj+Mi->
     complex(8),allocatable:: MjpMim_ij(:,:) 
 
     integer :: N_add=0 !counts how often values have been added
@@ -166,37 +167,37 @@ end subroutine
 !!!!! print spatial distribution for <Mj+Mi->
 subroutine print_spatial_fluct(this,com,io_unit_in)
     use m_constants, only : k_b
-	use m_convert
+    use m_convert
     use mpi_basic, only: mpi_type
-	use m_io_files_utils, only: open_file_write,close_file
-    class(exp_val),intent(inout)    :: this
+    use m_io_files_utils, only: open_file_write,close_file
+    type(exp_val),intent(inout)     :: this
     class(mpi_type),intent(in)      :: com
     integer,optional                :: io_unit_in
   ! internal
-	integer             :: shape_MiMj(2),io_file(2),iomp
-	character(len=50)   :: file_name(2),form
+    integer             :: shape_MiMj(2),io_file(2),iomp
+    character(len=50)   :: file_name(2),form
     real(8)             :: av_Nadd
 
     av_Nadd=1.0d0/real(this%N_add,8)
-	shape_MiMj=shape(this%MjpMim_ij)
-	form=convert('(',shape_MiMj(1),'(E20.12E3,2x))')
+    shape_MiMj=shape(this%MjpMim_ij)
+    form=convert('(',shape_MiMj(1),'(E20.12E3,2x))')
 
-	file_name(1)=convert('fluct_Re_MjpMim_per_site_',this%kT/k_B,'.dat')
-	io_file(1)=open_file_write(file_name(1))
-   	write(io_file(1),form) real(this%MjpMim_ij)*av_Nadd
-	call close_file(file_name(1),io_file(1))
+    file_name(1)=convert('fluct_Re_MjpMim_per_site_',this%kT/k_B,'.dat')
+    io_file(1)=open_file_write(file_name(1))
+    write(io_file(1),form) real(this%MjpMim_ij)*av_Nadd
+    call close_file(file_name(1),io_file(1))
 
-	file_name(2)=convert('fluct_Im_MjpMim_per_site_',this%kT/k_B,'.dat')
-	io_file(2)=open_file_write(file_name(2))
-   	write(io_file(2),form) aimag(this%MjpMim_ij(:,iomp))*av_Nadd
-	call close_file(file_name(2),io_file(2))
+    file_name(2)=convert('fluct_Im_MjpMim_per_site_',this%kT/k_B,'.dat')
+    io_file(2)=open_file_write(file_name(2))
+    write(io_file(2),form) aimag(this%MjpMim_ij(:,iomp))*av_Nadd
+    call close_file(file_name(2),io_file(2))
 end subroutine
 
 
 subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     use m_topo_commons
     use m_derived_types,only: lattice
-    class(exp_val),intent(inout)            :: this
+    type(exp_val),intent(inout)             :: this
     type(lattice),intent(in)                :: lat
     type(track_val),intent(in)              :: state_prop
     integer,intent(in)                      :: Q_neigh(:,:)

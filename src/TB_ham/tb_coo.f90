@@ -131,7 +131,7 @@ subroutine init_connect_based(this,connect,Hval,Hval_ind,io,ind_offset)
     complex(8),intent(in)                   :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
     integer,intent(in)                      :: Hval_ind(:,:)
     integer,intent(in)                      :: connect(:,:)
-    type(parameters_ham_init),intent(in)     :: io
+    type(parameters_ham_init),intent(in)    :: io
     integer,intent(in),optional             :: ind_offset(2)
     !local
     type(H_TB_coo)    :: H_coo
@@ -158,12 +158,11 @@ end subroutine
 
 subroutine init_coo(this,val,row,col,io,ind_offset)
     !constructs Hamiltonian manually for a given sparse coo-input
-    class(H_tb_coo),intent(inout)       :: this
-    complex(8),intent(in)               :: val(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)                  :: row(size(val)),col(size(val))
-    type(parameters_ham_init),intent(in) :: io
-    integer,intent(in),optional         :: ind_offset(2) !integer offset in each Hamiltonian dimension (to easily access other sectors in BdG-space)
-
+    class(H_tb_coo),intent(inout)           :: this
+    complex(8),intent(in)                   :: val(:)  !all entries between 2 cell sites of considered orderparameter
+    integer,intent(in)                      :: row(size(val)),col(size(val))
+    type(parameters_ham_init),intent(in)    :: io
+    integer,intent(in),optional             :: ind_offset(2) !integer offset in each Hamiltonian dimension (to easily access other sectors in BdG-space)
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
     Call this%init_base(io)
@@ -180,19 +179,21 @@ end subroutine
 
 subroutine init_connect(this,connect,Hval,Hval_ind,io,ind_offset)
     !constructs a Hamiltonian based on only one kind of Hamiltonian subsection (one Hval set)
-    class(H_tb_coo),intent(inout)     :: this
-    complex(8),intent(in)               :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)                  :: Hval_ind(:,:)
-    integer,intent(in)                  :: connect(:,:)  !(2,Nentries) index in (1:Ncell) basis of both connected sites 
-    type(parameters_ham_init),intent(in) :: io
-    integer,intent(in),optional         :: ind_offset(2) !integer offset in each Hamiltonian dimension (to easily access other sectors in BdG-space)
+    !takes the Hamiltonian entries within one unit-cell (Hval, H_ind) and unfolds them on the supercell using the connections
+    !for one difference vector given by the input: connect
+    class(H_tb_coo),intent(inout)           :: this             !Hamiltonian type to be set
+    complex(8),intent(in)                   :: Hval(:)          !all entries between 2 cell sites of considered orderparameter
+    integer,intent(in)                      :: Hval_ind(:,:)    !(2,sizeHin) indices (column, row) within unit-cell
+    integer,intent(in)                      :: connect(:,:)     !(2,Nentries) index in (1:Ncell) basis of both connected sites (super-cell)
+    type(parameters_ham_init),intent(in)    :: io               !shape/dimension parameters to be set
+    integer,intent(in),optional             :: ind_offset(2)    !integer offset in each Hamiltonian dimension (to easily access other sectors in BdG-space)
 
     integer :: nnz
     integer :: i
     integer :: N_connect,sizeHin
 
     if(this%is_set()) STOP "cannot set hamiltonian as it is already set"
-    Call this%init_base(io)
+    Call this%init_base(io) !initialize correct size
     N_connect=size(connect,2)
     sizeHin=size(Hval)
     nnz=sizeHin*N_connect

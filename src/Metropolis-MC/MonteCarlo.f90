@@ -26,8 +26,8 @@ subroutine montecarlo(lat,io_simu,ext_param,H,com_all)
     Call ext_param%bcast(com_all)
     Call H%bcast(com_all)
 
-    if(com_all%ismas) call rw_MC(io_MC)
-    Call bcast(io_MC,com_all)
+    if(com_all%ismas) call io_MC%read_file()
+    Call io_MC%bcast(com_all)
 
     Call montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
 end subroutine

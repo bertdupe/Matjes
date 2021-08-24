@@ -52,6 +52,7 @@ function uninit(this,time)result(val)
     real(8), intent(in)                 :: time
     real(8)                             :: val(this%dim_mode)
 
+    val=0.d0
     Error STOP "Tryint to use an uninitialized excitation_t"
 end function
 

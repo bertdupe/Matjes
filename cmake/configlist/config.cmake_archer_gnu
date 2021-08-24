@@ -1,0 +1,37 @@
+##module load stuff
+#module restore PrgEnv-gnu
+#module load cray-fftw
+#module load mkl/19.5-281
+##module load eigen
+#module load cmake
+
+#manually set compiler
+set(CMAKE_CXX_COMPILER "CC")
+set(CMAKE_Fortran_COMPILER "ftn")
+
+#set faster release flags
+set(CMAKE_Fortran_FLAGS_RELEASE "-Ofast -funroll-loops")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -funroll-loops")
+set(CMAKE_Fortran_FLAGS "-fallow-argument-mismatch -m64")   #allow mismatch for this version of gfortran with mpi, m64 for mkl
+
+set(manual_linker_language "CXX")
+include_directories( /opt/cray/pe/fftw/3.3.8.8/x86_rome/include ) #FFTW directory include
+#include_directories( /work/y07/shared/libs/eigen/3.3.8/include ) #Eigen directory include, installation does not contain cmake stuff...
+
+#set(USE_OPENMP TRUE)   #use openMP
+
+#set(USE_CUDA TRUE)     #force using CUDA
+#set(USE_EIGEN TRUE)    #force using Eigen
+#set(USE_MKL TRUE)      #force using MKL
+
+set(mklroot $ENV{MKLROOT})
+set(MKL_library_path $ENV{MKLROOT}/lib/intel64)
+set(MKL_include_path $ENV{MKLROOT}/include)
+set(MKL_linker "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl") 
+unset(mklroot)
+
+#MANUALLY SET PREPROCESSOR FLAGS
+add_compile_definitions(CPP_FFTW3)
+add_compile_definitions(CPP_MPI)
+add_compile_definitions(CPP_MRG)
+#add_compile_definitions(CPP_DEBUG)

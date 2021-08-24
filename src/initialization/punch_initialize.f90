@@ -32,8 +32,7 @@ subroutine punch_lattice(lat,fname_in)
     endif
     inquire(file=fname,exist=exists)
     if(.not.exists)then
-        write(*,'(///A)') 'FILE:',fname," NOT FOUND"
-        write(*,'(A///)') 'SKIPPING init_punch'
+        write(*,'(/AAA/A/)') 'FILE: "',trim(fname),'" NOT FOUND','SKIPPING init_punch'
         return
     endif
     io=open_file_read(fname)

@@ -95,7 +95,7 @@ contains
         !get indices of left mode which has components of site site at component comp
         Call H%mode_l%get_ind_site(comp,site,_dim_,ind_out)  
         !get Hamiltonian.right_mode product for all left mode indices ind_out
-        Call H%mult_r_disc(site,lat,_dim_,ind_out,mv_vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        Call H%mult_r_disc(lat,_dim_,ind_out,mv_vec,ind_sum,ind_Mult,mat_mult,vec_mult)
         !get left mode indices ind_out excluding mode number comp
         Call H%mode_l%get_mode_exc_disc(lat,comp,_dim_,ind_out,vec_red)
         !mutliply Hamiltonian.right_mode values with left mode exluding comp values
@@ -151,7 +151,7 @@ contains
         !get indices of right mode which has components of site site at component comp
         Call H%mode_r%get_ind_site(comp,site,_dim_,ind_out)
         !get left_mode.Hamiltonian product for all right mode indices ind_out
-        Call H%mult_l_disc(site,lat,_dim_,ind_out,mv_vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        Call H%mult_l_disc(lat,_dim_,ind_out,mv_vec,ind_sum,ind_Mult,mat_mult,vec_mult)
         !get right mode indices ind_out excluding mode number comp
         Call H%mode_r%get_mode_exc_disc(lat,comp,_dim_,ind_out,vec_red)
         !mutliply left_mode.Hamiltonian values with right mode exluding comp values

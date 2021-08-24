@@ -1,4 +1,5 @@
 module m_order_parameter
+use m_netcdf_routine, only: netcdf_type
 implicit none
 private
 public order_par
@@ -23,13 +24,21 @@ type order_par
     integer                                 :: dim_mode=0       !number of entries per unit-cell
     integer                                 :: dim_mode_inner=0 !size of minimal sensible combination of order parameter (eg. 3 for real-space vector)
     logical                                 :: is_cmplx=.false. !whether the order parameter is complex (modes_c_* are set and make sense)
+    type(netcdf_type),private               :: io
+
 contains 
     procedure :: init => init_order_par
     procedure :: copy => copy_order_par
     procedure :: copy_val => copy_val_order_par
     procedure :: delete => delete_order_par
     procedure :: read_file
+!    procedure :: write_file_netcdf
     procedure :: truncate
+!netcdf file operations
+    procedure :: open_io
+    procedure :: write_io
+    procedure :: close_io
+
 
     !MPI STUFF
     procedure :: bcast
@@ -37,6 +46,34 @@ contains
     final :: final_order_par
 end type
 contains
+
+subroutine open_io(this,varname)
+    class(order_par),intent(inout)  :: this
+    character(len=*),intent(in)     :: varname
+#ifdef CPP_NETCDF
+    integer     :: shp(4)
+
+    shp=shape(this%modes)   !get shape of lattice
+    Call this%io%file_open(varname//'.nc',varname,shp(2:))
+#endif
+end subroutine
+
+subroutine write_io(this)
+    class(order_par),intent(inout)  ::  this
+
+#ifdef CPP_NETCDF
+    Call this%io%file_write(this%all_modes)
+#endif
+end subroutine
+
+subroutine close_io(this)
+    class(order_par),intent(inout)  :: this
+
+#ifdef CPP_NETCDF
+    Call this%io%file_close()
+#endif
+end subroutine
+
 
 subroutine bcast(this,comm)
 use mpi_basic                

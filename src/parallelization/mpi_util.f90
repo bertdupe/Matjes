@@ -1,6 +1,5 @@
 module mpi_util
 use mpi_basic
-use m_MC_io, only: bcast_MC 
 implicit none
 
 interface scatter 
@@ -26,9 +25,9 @@ interface bcast
     module procedure bcast_logical1
     module procedure bcast_real
     module procedure bcast_real1
+    module procedure bcast_real2
     module procedure bcast_complex
     module procedure bcast_character
-    module procedure bcast_MC
 end interface
 
 interface reduce_sum
@@ -437,6 +436,19 @@ subroutine bcast_real1(arr,com)
     continue
 #endif
 end subroutine
+
+subroutine bcast_real2(arr,com)
+    real(8),intent(inout)       :: arr(:,:)
+    class(mpi_type),intent(in)  :: com
+#ifdef CPP_MPI    
+    integer     :: ierr
+
+    Call MPI_BCAST(arr(1,1),size(arr),MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
+#else
+    continue
+#endif
+end subroutine
+
 
 subroutine bcast_complex(val,com)
     complex(8),intent(inout)    :: val
