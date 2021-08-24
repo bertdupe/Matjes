@@ -62,4 +62,5 @@ if(USE_netCDF)
     target_include_directories(Matjes PUBLIC ${netCDF_include_path})
     target_link_directories(Matjes PUBLIC ${netCDF_library_path})
     target_link_libraries(Matjes "${netCDF_linker}")
+
 endif()
