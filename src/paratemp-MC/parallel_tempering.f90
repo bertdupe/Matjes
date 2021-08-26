@@ -98,8 +98,8 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     Call io_MC%bcast(com)
     N_adjT=io_MC%N_Topt
     NT_global=io_MC%n_Tsteps
-    autocor_steps=io_MC%T_auto
     N_spin=my_lattice%Ncell*my_lattice%nmag
+    autocor_steps=max(1,io_MC%T_auto*N_spin)
     n_swapT=io_MC%n_sizerelax
     if(com%ismas)then
         write(6,'(/,a,I6,a,/)') "setup for parallel tempering"
@@ -137,7 +137,7 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
         ! open the data file where the thermodynamical quantities should be written
         Call thermo_print_init(io_EM)
         allocate(thermo(NT_global))
-        Call neighbor_Q(my_lattice,Q_neigh)
+        if(io_simu%calc_topo) Call neighbor_Q(my_lattice,Q_neigh)
     endif
    
     !broadcast and calculate locally necessary values for further calculations
@@ -160,19 +160,17 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     
     do j_optset=1,N_adjT
         
-        if (j_optset>1) autocor_steps=io_MC%T_relax !  one might want to thermalize the first iteration more as compared with the j_optset>2
+        if (j_optset>1) autocor_steps=max(1,io_MC%T_relax*N_spin) !  one might want to thermalize the first iteration more as compared with the j_optset>2
     
         ! Relaxation of the System
         do i_swapT=1,n_swapT
             !do loop over local temperatures
             do i_temp=1,NT_local
                 kt=measure(i_temp)%kt
-
                 !does it make more sense to do big relaxation step at the very beginning?
-                Do i_MC=1,autocor_steps*N_spin
+                Do i_MC=1,autocor_steps
                     Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)
                 enddo
-                Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)! In case autocor_steps set to zero at least one MCstep is done
 
                 Call measure_add(measure(i_temp),lattices(i_temp),state_prop(i_temp),Q_neigh,fluct_val) !add up relevant observable
                 E_temp(i_temp)=state_prop(i_temp)%E_total !save the total energy of each replicas
