@@ -118,6 +118,7 @@ subroutine measure_scatterv(this,com)
     integer                         :: ierr
 
     Call set_custom_type()
+
     Call MPI_Scatterv(this(1),com%cnt,com%displ,MPI_custom_type,this(1),com%cnt(com%id+1),MPI_custom_type,com%mas,com%com,ierr)
 #else
     continue
@@ -200,7 +201,7 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     type(exp_val),intent(inout)             :: this
     type(lattice),intent(in)                :: lat
     type(track_val),intent(in)              :: state_prop
-    integer,intent(in)                      :: Q_neigh(:,:)
+    integer,intent(in),allocatable          :: Q_neigh(:,:)
     type(fluct_parameters),intent(in)       :: fluct_val
 
     !put that into state_prop as well?
@@ -216,16 +217,18 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     this%M_sq=this%M_sq+state_prop%Magnetization**2
 
     ! calculate the topocharge
-    dumy=get_charge(lat,Q_neigh)
-    qeulerp=dumy(1)
-    qeulerm=-dumy(2)
+    if(allocated(Q_neigh))then
+        dumy=get_charge(lat,Q_neigh)
+        qeulerp=dumy(1)
+        qeulerm=-dumy(2)
 
-    this%Qp=this%Qp+qeulerp
-    this%Qm=this%Qm+qeulerm
-    this%Q_sq=this%Q_sq+(qeulerp-qeulerm)**2
-    this%Qp_sq=this%Qp+qeulerp**2
-    this%Qm_sq=this%Qm+qeulerm**2
-    this%vortex=this%vortex+dumy(3:5)
+        this%Qp=this%Qp+qeulerp
+        this%Qm=this%Qm+qeulerm
+        this%Q_sq=this%Q_sq+(qeulerp-qeulerm)**2
+        this%Qp_sq=this%Qp+qeulerp**2
+        this%Qm_sq=this%Qm+qeulerm**2
+        this%vortex=this%vortex+dumy(3:5)
+    endif
 
     if(fluct_val%l_use) Call eval_fluct(this%MjpMim_ij, &
                                        &this%MipMip, &

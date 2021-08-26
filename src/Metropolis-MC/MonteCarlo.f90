@@ -44,7 +44,6 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     use m_set_temp
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
-    use m_average_MC, only: get_neighbours
     use m_fluct, only: fluct_parameters,init_fluct_parameter
     use m_mc_therm_val
     use m_get_table_nn,only :get_table_nn
@@ -66,11 +65,12 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     integer                     :: NT_global    !global number of temperatures calculated
     integer                     :: NT_local     !local(on mpi-thread) number of temperatures calculated
     integer                     :: size_collect !required local size for parameters that are collected through mpi
+    integer                     :: Nstep_auto   !number of MCsteps between each evaluation of the state
 
     type(track_val)             :: state_prop   !type which saves the current state of the system (
     type(exp_val),allocatable   :: measure(:)   !type to keep track of temperature & all expectation values for each temperature
     type(therm_val),allocatable :: thermo(:)    !type to store  thermodynamic properties for each temperature
-    integer,allocatable         :: Q_neigh(:,:)
+    integer,allocatable         :: Q_neigh(:,:) !neighbors for topological charge calculation
     type(fluct_parameters)      :: fluct_val    !parameters for fluctuation calculation    
     !mpi parameters
     type(mpi_type)              :: com_inner    !communicator for inner parallelization, so far ignored (get_two_level_comm) has to be checked first)
@@ -84,6 +84,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     ! initialize the variables
     N_spin=lat%Ncell*lat%nmag
     NT_global=io_MC%n_Tsteps
+    Nstep_auto=max(1,io_MC%T_auto*N_spin)   !max for  at least one step 
     if(com_all%ismas) write(io_status,'(/,a,I6,a,/)') "you are calculating",NT_global," temperatures"
 
     !find out how to parallelize
@@ -108,7 +109,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
             deallocate(kt_all)
         endif
         filen_kt_acc=[max(int(log10(maxval(measure%kt))),1),5]
-        Call neighbor_Q(lat,Q_neigh)!get neighbors to topological charge calculation
+        if(io_simu%calc_topo) Call neighbor_Q(lat,Q_neigh)!get neighbors to topological charge calculation
     endif
 
     !bcast parameters to all threads
@@ -120,7 +121,6 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     if(com_inner%ismas)  Call measure_scatterv(measure,com_outer) 
 
     !intialize tracking variables (total energy, magnetization sum)
-    !Call state_prop%init(lat,H,io_MC) 
     Call state_prop%init(lat,H,io_MC) 
 
     Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
@@ -132,19 +132,20 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
         if(fluct_val%l_use)then
             allocate(measure(i_kt)%MjpMim_ij(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
         endif
-
+        
+        !initial relaxation for each temperature to decorrelate from initial state
         call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,Q_neigh,work)
+
         !Monte Carlo steps, calculate the values
         do i_MC=1,io_MC%Total_MC_Steps
             !Monte Carlo steps for independency
-            Do i_relax=1,io_MC%T_auto*N_spin
+            Do i_relax=1,Nstep_auto
                 Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,work)
             End do
-            Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,work) ! at least one step
             Call measure_add(measure(i_kt),lat,state_prop,Q_neigh,fluct_val) 
-        end do ! over i_MC
+        end do
 
-        Call measure_reduce(measure(i_kt),com_inner)
+        Call measure_reduce(measure(i_kt),com_inner)    !combine same T expectation values over inner MPI
         if(com_inner%ismas)then
             Call therm_set(thermo(i_kt),measure(i_kt),io_MC%Cor_log,N_spin)
             if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)

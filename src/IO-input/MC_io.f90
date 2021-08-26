@@ -7,28 +7,31 @@ public :: MC_input
 
 type MC_input
     !parameters what is run how often
-    integer     :: n_Tsteps=1
-    integer     :: n_sizerelax=1
-    integer     :: n_thousand=1000
-    integer     :: T_relax=1
-    integer     :: T_auto=1
-    integer     :: Total_MC_Steps=1000
-    integer     :: N_Topt=1 !number temperature optimization steps in parallel tempering
+    !THE MC parameter are used of MonteCarlo and parallel-tempering, but the meaning ofter differs and definitely should be unified by someone
+    integer     :: n_Tsteps=1               !number of temperatures considered between initial and final temperature
+    integer     :: n_sizerelax=1            !number of times the state is printed during the initial relaxation (if print_relax)
+    integer     :: N_relaxation=1000        !number of outer loops for relaxation
+    integer     :: T_relax=1                !number of MCsteps in inner relaxation (times number of spins)
+    integer     :: T_auto=1                 !number of autocorrelation steps (afterwards multiplied with number of spins)
+    integer     :: Total_MC_Steps=1000      !number of averaging steps
+    integer     :: N_Topt=1                 !number temperature optimization steps in parallel tempering
 
-    logical     :: print_relax=.false.
-    logical     :: Cor_log=.false.
-    logical     :: ising=.false.
-    logical     :: underrelax=.false.
-    logical     :: overrelax=.false.
-    logical     :: equi=.false.
-    logical     :: sphere=.false.
-    logical     :: expval_save=.false. !save the expectation values
-    logical     :: expval_read=.false.  !read expectation values from previous calculation
-    real(8)     :: cone=pi
+    logical     :: print_relax=.false.      !writes information about the states during the initial relaxation to judge success of intial relaxation
+    logical     :: Cor_log=.false.          !calculate correlation? (probably rather obsolete)
+    logical     :: expval_save=.false.      !save the expectation values
+    logical     :: expval_read=.false.      !read expectation values from previous calculation
+    real(8)     :: cone=pi                  !initialization variable for equi and sphere spin selection
+    !method for sampling of test state 
+    !(in which direction should the spin of the chosen site point?)
+    logical     :: ising=.false.            !Ising samling (reverses spin)
+    logical     :: underrelax=.false.       !underrelaxation (update magnetization according to M=M-Mx(MxB))
+    logical     :: overrelax=.false.        !overrelaxation  (update magnetization according to M=M+Mx(MxB))
+    logical     :: equi=.false.             !random spin on the unit-sphere within the cone angle (which gets modified)
+    logical     :: sphere=.false.           !sphereft sampling (sampling.f90)
 
     !fluction parameters
-    logical     :: do_fluct=.True.
-    real(8)     :: fluct_dir(3)=[1.0d0,0.0d0,0.0d0]
+    logical     :: do_fluct=.True.                      !calculate fluctuation parameters
+    real(8)     :: fluct_dir(3)=[1.0d0,0.0d0,0.0d0]     !direction with respect to which the fluctuation parameters are calculated
 contains
     procedure   :: bcast => bcast_MC
     procedure   :: read_file => rw_MC
@@ -47,7 +50,7 @@ subroutine bcast_MC(this,com)
     integer     ::  ierr
     Call MPI_BCAST( this%n_Tsteps        ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%n_sizerelax     ,1,MPI_INTEGER,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%n_thousand      ,1,MPI_INTEGER,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%N_relaxation    ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%T_relax         ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%T_auto          ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%Total_MC_Steps  ,1,MPI_INTEGER,com%mas,com%com,ierr)
@@ -86,7 +89,7 @@ subroutine rw_MC(inp_MC,io_in)
     
     call get_parameter(io_input,'input','n_Tsteps',inp_MC%n_Tsteps)
     call get_parameter(io_input,'input','n_sizerelax',inp_MC%n_sizerelax)
-    call get_parameter(io_input,'input','n_relaxation',inp_MC%n_thousand)
+    call get_parameter(io_input,'input','n_relaxation',inp_MC%n_relaxation)
     call get_parameter(io_input,'input','Total_MC_Steps',inp_MC%Total_MC_Steps)
     call get_parameter(io_input,'input','T_relax',inp_MC%T_relax)
     call get_parameter(io_input,'input','T_auto',inp_MC%T_auto)
