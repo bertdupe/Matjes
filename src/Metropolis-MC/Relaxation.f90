@@ -23,7 +23,7 @@ end type
 contains
 !
 ! ===============================================================
-SUBROUTINE Relaxation(lat,io_MC,N_spin,state_prop,kt,H,Q_neigh,work)
+SUBROUTINE Relaxation(lat,io_MC,N_spin,state_prop,kt,H,Q_neigh,work,l_print)
     !Relaxes the magnetic state for a given temperature by calling the MC_step io_MC%N_relaxation*io_MC%T_relax*N_spin times.
     !Intermediate relaxation information can be obtained with io_MC%print_relax  at io_MC%n_sizerelax states.
     use m_Corre
@@ -32,21 +32,21 @@ SUBROUTINE Relaxation(lat,io_MC,N_spin,state_prop,kt,H,Q_neigh,work)
     use m_MCstep
     use m_MC_io,only: MC_input
     use m_work_ham_single, only: work_ham_single
-    ! input
     type(lattice),intent(inout)         :: lat
     real(kind=8), intent(in)            :: kT
     type(track_val),intent(inout)       :: state_prop
     type(MC_input),intent(in)           :: io_MC 
     integer, intent(in)                 :: N_spin       !number of spins considered
-    type(hamiltonian),intent(inout)     :: H
-    integer,intent(in),allocatable      :: Q_neigh(:,:) 
-    type(work_ham_single),intent(inout) :: work
+    type(hamiltonian),intent(inout)     :: H            !Hamiltonian type
+    integer,intent(in),allocatable      :: Q_neigh(:,:) !neighbor information for topological charge evaluation (may be unallocated if no topo charge is wanted) 
+    type(work_ham_single),intent(inout) :: work         !work array for Hamiltonian evaluation
+    logical,intent(in)                  :: l_print      !print to output file
     integer         :: N_MCStep                     !number of MCsteps within each outer relaxation loop
     type(T_relax)   :: relax(io_MC%n_sizerelax)     !type to store state at different relaxation steps
     integer         :: n_w_step                     !number of steps for each relaxation progress write
     integer         :: i_relaxation,i_MC,i_store    !loop variables
     
-    write(6,'(/,a,f8.4,2x,a,/)') 'starting relaxation for T= ',kT/k_B,'Kelvin'
+    if(l_print) write(6,'(/,a,f8.4,2x,a,/)') 'starting relaxation for T= ',kT/k_B,'Kelvin'
     
     n_w_step=io_MC%N_relaxation/io_MC%n_sizerelax
     N_MCStep=max(1,io_MC%T_relax*N_spin)  !In case T_relax set to zero at least one MCstep is done
@@ -67,7 +67,7 @@ SUBROUTINE Relaxation(lat,io_MC,N_spin,state_prop,kt,H,Q_neigh,work)
         endif
     enddo   ! enddo over the relaxation loop
     
-    write(6,'(/,a,f8.4,2x,a,/)') 'System is relaxed for T= ',kT/k_B,'Kelvin'
+    if(l_print) write(6,'(/,a,f8.4,2x,a,/)') 'System is relaxed for T= ',kT/k_B,'Kelvin'
     
     if (io_MC%print_relax)  Call print_relax_arr(Relax,kT)  !print the Equilibrium files
 end subroutine

@@ -31,6 +31,7 @@ type MC_input
 
     !fluction parameters
     logical     :: do_fluct=.True.                      !calculate fluctuation parameters
+    logical     :: do_fluct_spatial=.True.              !calculate fluctuation parameters resolved in unit-cell
     real(8)     :: fluct_dir(3)=[1.0d0,0.0d0,0.0d0]     !direction with respect to which the fluctuation parameters are calculated
 contains
     procedure   :: bcast => bcast_MC
@@ -56,16 +57,17 @@ subroutine bcast_MC(this,com)
     Call MPI_BCAST( this%Total_MC_Steps  ,1,MPI_INTEGER,com%mas,com%com,ierr)
     Call MPI_BCAST( this%N_Topt          ,1,MPI_INTEGER,com%mas,com%com,ierr)
 
-    Call MPI_BCAST( this%print_relax,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%Cor_log    ,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%do_fluct   ,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%ising      ,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%underrelax ,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%overrelax  ,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%equi       ,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%sphere     ,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%expval_save,1,MPI_LOGICAL,com%mas,com%com,ierr)
-    Call MPI_BCAST( this%expval_read,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%print_relax     ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%Cor_log         ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%do_fluct        ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%do_fluct_spatial,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%ising           ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%underrelax      ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%overrelax       ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%equi            ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%sphere          ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%expval_save     ,1,MPI_LOGICAL,com%mas,com%com,ierr)
+    Call MPI_BCAST( this%expval_read     ,1,MPI_LOGICAL,com%mas,com%com,ierr)
 
     Call MPI_BCAST( this%cone      ,1,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
     Call MPI_BCAST( this%fluct_dir ,3,MPI_DOUBLE_PRECISION,com%mas,com%com,ierr)
@@ -100,7 +102,9 @@ subroutine rw_MC(inp_MC,io_in)
     call get_parameter(io_input,'input','Cor_log',inp_MC%Cor_log)
 
     call get_parameter(io_input,'input','do_fluct',inp_MC%do_fluct)
+    call get_parameter(io_input,'input','do_fluct_spatial',inp_MC%do_fluct_spatial)
     call get_parameter(io_input,'input','fluct_direction',inp_MC%fluct_dir)
+    if(.not.inp_MC%do_fluct) inp_MC%do_fluct_spatial=.false.
 
     call get_parameter(io_input,'input','ising',inp_MC%ising)
     call get_parameter(io_input,'input','underrelaxation',inp_MC%underrelax)
