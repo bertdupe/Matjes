@@ -9,6 +9,21 @@ echo "povray -w1000 -h1000 povrayscript.pov"
 echo "Here, -w1000 -h1000 defines the resolution for width and height"
 echo ""
 
+xcut=false
+cutpos_y=0
+while [ -n "$1" ]
+do
+case "$1" in
+-x | --xcut) # cut along the x axis at y=cutpos_y=cste
+xcut=true
+if [[ -n "$2" ]] # && "$2" != "-"* ]] # uncomment if you want to implement other options
+then cutpos_y=$2
+fi
+;;
+esac
+shift
+done
+
 posx_min=$(cat positions.dat | gawk '{print $1}' | LC_ALL=C sort -k 1 -g | head -n 1)
 posx_max=$(cat positions.dat | gawk '{print $1}' | LC_ALL=C sort -k 1 -g | tail -n 1)
 
@@ -18,10 +33,17 @@ posy_max=$(cat positions.dat | gawk '{print $2}' | LC_ALL=C sort -k 1 -g | tail 
 posz_min=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | head -n 1)
 posz_max=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1)
 
+if [ $xcut == true ]
+then
+loc_x=$(echo "$posx_min  $posx_max" | gawk '{print -($2-$1)/2}')
+loc_y=$(echo "$loc_x  $cutpos_y" | gawk '{print -1.5*sqrt(2*$1*$1)+$2}')
+loc_z=0
+else
 loc_x=$(echo "$posx_min $posx_max" | gawk '{print -($2-$1)/2}')
 loc_y=$(echo "$posy_min $posy_max" | gawk '{print ($2-$1)/2}')
 totalheight=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1)
 loc_z=$(echo "$loc_x  $loc_y  $totalheight" | gawk '{print 1.5*sqrt($1*$1+$2*$2+$3*$3)}')
+fi
 
 if [ ! -d "Visualization" ]
 then
@@ -31,25 +53,48 @@ fi
 # prepare file for povray #
 ###########################
 
-for state in start end 25 50 75
+# states=(start $(seq 1 1 19) end)
+states=(start)
+nb_states=${#states[@]}
+for state in ${states[@]}
 do
-paste positions.dat magnetic_$state.dat | gawk '{for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
+if [ $xcut == true ]
+then
+paste positions.dat magnetic_$state.dat | gawk -v y_cut="$cutpos_y" '{if (strtonum($2) == strtonum(y_cut)) { for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
+else
+paste positions.dat magnetic_$state.dat | gawk '{ for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
+fi
 done
 
-
-cp ../../Matjes/Visualization/povrayscript.pov $path/Visualization
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+cp $script_dir/povrayscript.pov $path/Visualization
 cd $path/Visualization
+rm *.png # make a backup if you don't want to loose all your files!
 
+# sed for linux, gsed for macos
+if [ $xcut == true ]
+then
+gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $cutpos_y, 0 >\nsky < 0, 0, 1 > /}" povrayscript.pov
+else
 gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $loc_y, 0 > /}" povrayscript.pov
+fi
 
-for state in start end 25 50 75
+image_num=($(seq -w 0 1 $nb_states))
+i=0
+for state in ${states[@]}
 do
+# sed for linux, gsed for macos
 gsed -i "$ s/#include .*/#include \"position_magnetization_$state.dat\"/g" povrayscript.pov
 ##############
 # run povray #
 ##############
-povray -w1000 -h1000 povrayscript.pov Output_File_Name=spinstructure_$state.png
+echo "generating picture for state: " $state
+echo "image number:" ${image_num[$i]}
+povray -w1000 -h1000 povrayscript.pov Output_File_Name=spinstructure_${image_num[$i]}.png &> /dev/null
+let i++
 
 done
 echo "Thank you very much!!!"
 echo "Your pictures are now in the directory 'Visualization'"
+# you can use the following command in order to generate a movie from these pictures:
+# ffmpeg -r 10 -i spinstructure_%2d.png  -c:v libx264 -vf fps=25 -pix_fmt yuv420p anim-.mp4
