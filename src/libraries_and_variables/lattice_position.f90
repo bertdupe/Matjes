@@ -91,7 +91,7 @@ subroutine get_pos_ind(this,ind,pos_out)
     Nind=size(ind)
     Nat=size(this%cell%atomic)
     if(any(ind<1).or.any(ind>Nat))then
-        write(error_unit,'(//AI5,A)') "Input indices for get_pos_ind are not within [1,",Nat,"]"
+        write(error_unit,'(//A,I5,A)') "Input indices for get_pos_ind are not within [1,",Nat,"]"
         write(error_unit,'(A)') "Indicies:"
         write(error_unit,'(3X,5I8)') ind
         ERROR STOP 

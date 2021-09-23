@@ -51,7 +51,7 @@ subroutine get_pair_dat(lat,at_type,neigh_in,pair_dat)
 
     !initial checks
     if(any(at_type>lat%cell%N_attype))then
-        write(error_unit,'(3/AI6,A,I6,A)') "Trying to get neighbor pair for atom type ",maxval(at_type),', but only ',lat%cell%N_attype,' atom-types exist in the cell'
+        write(error_unit,'(3/A,I6,A,I6,A)') "Trying to get neighbor pair for atom type ",maxval(at_type),', but only ',lat%cell%N_attype,' atom-types exist in the cell'
         write(error_unit,'(A)') "Check Hamiltonian input"
         ERROR STOP "ABORT"
     endif

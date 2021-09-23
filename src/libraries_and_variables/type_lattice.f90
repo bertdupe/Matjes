@@ -536,8 +536,8 @@ function get_order_dim(this,order,ignore) result(dim_mode)
             if(ignore) return
         endif
         write(error_unit,'(//2A)') "Error trying to access dimension of order parameter: ",trim(order_parameter_name(order))
-        write(error_unit,'(AI6)') "Its current order dimension is:", dim_mode
-        if(dim_mode==0) write(error_unit,'(AI6)') "Check input if the wanted order-parameter has been enabled"
+        write(error_unit,'(A,I6)') "Its current order dimension is:", dim_mode
+        if(dim_mode==0) write(error_unit,'(A,I6)') "Check input if the wanted order-parameter has been enabled"
         ERROR STOP "Check input"
     endif
 end function
