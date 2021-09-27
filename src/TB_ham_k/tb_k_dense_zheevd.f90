@@ -89,8 +89,8 @@ subroutine calc_evec(this,Nin,eval,evec,Nout,work)
     Nout=this%dimH
     if(Nout>Nin)then
         write(error_unit,'(/A)') "Trying to diagonalize Hamiltonian with zheevd, but output Hamiltonian size has been set to low (TB_diag_estNe)"
-        write(error_unit,'(AI8)') "Found eigenvalues in interval:", Nout
-        write(error_unit,'(AI8)') "Assumend maximal array size  :", Nin
+        write(error_unit,'(A,I8)') "Found eigenvalues in interval:", Nout
+        write(error_unit,'(A,I8)') "Assumend maximal array size  :", Nin
         ERROR STOP "INCREASE ARRAY SIZE (TB_diag_estNe) OR DECREASE ENERGY WINDOW TB_diag_Ebnd."
     endif
     evec=this%H

@@ -88,7 +88,7 @@ subroutine set_H_single(Hk,mode_in,comm)
     case default
         if(comm%ismas)then
             write(error_unit,'(//A)') "Failed to allocate H_k_base, unimlemented mode selected"
-            write(error_unit,'(AI12)') "  mode=",mode
+            write(error_unit,'(A,I12)') "  mode=",mode
         endif
         Call comm%barrier()
         ERROR STOP "CHECK input"
