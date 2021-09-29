@@ -23,7 +23,6 @@ end subroutine
 
 subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     use mpi_distrib_v
-    use m_H_public
     use m_topocharge_all
     use m_set_temp
     use m_constants, only : k_b
@@ -32,7 +31,6 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     use m_createspinfile
     use m_topo_commons, only : neighbor_Q,get_charge
     use m_convert
-    use m_io_files_utils
     use m_MC_io
     use m_MCstep
     use m_mc_track_val,only: track_val

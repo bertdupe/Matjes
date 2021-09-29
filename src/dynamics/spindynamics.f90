@@ -10,7 +10,6 @@ contains
 
 subroutine spindynamics(lat,io_simu,ext_param,H,H_res,comm)
     !wrapper to first initialize all spin-dynamics parameters and distribute on the different threads
-    use m_H_public,only: t_H
     type(lattice), intent(inout)                :: lat
     type(io_parameter), intent(inout)           :: io_simu
     type(simulation_parameters), intent(inout)  :: ext_param
@@ -45,7 +44,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_tracker, only: init_tracking,plot_tracking
     use m_print_Beff, only: print_Beff
     use m_precision, only: truncate
-    use m_H_public, only: t_H, energy_all
     use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     use m_solver_order,only : get_Dmode_int
