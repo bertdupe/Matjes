@@ -305,7 +305,10 @@ subroutine lattice_position(this,ind,pos)
     integer,intent(in)      :: ind(4)  !(i_x,i_y,i_y,i_at)
     real(8),intent(out)     :: pos(3)
 
-    pos=matmul(real(ind(1:3)-1,8),this%areal)
+    real(8)                 :: ind_real(3)
+
+    ind_real=real(ind(1:3)-1,8)
+    pos=matmul(ind_real,this%areal)
     pos=pos+this%cell%atomic(ind(4))%position
 end subroutine
 

@@ -341,11 +341,13 @@ subroutine TB_delta_read(par, unit, iotype, v_list, iostat, iomsg)
     character(*), intent(inout)   :: iomsg
     
     type(TB_delta)                :: tmp
+    real(8)                       :: tmp_val(2)
    
     read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital ,tmp%dist, tmp%val
     backspace(unit)
     if (iostat > 0)then    !try to read 2 real values format
-        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital ,tmp%dist, tmp%val%re, tmp%val%im
+        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital ,tmp%dist, tmp_val
+        tmp%val=cmplx(tmp_val(1),tmp_val(2),8)
         backspace(unit)
     endif
     read(unit,*)    !together with backspace make sure that it advances

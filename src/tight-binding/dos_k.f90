@@ -115,7 +115,7 @@ subroutine calc_dos_nc(Hk,h_io,lat,io_dos,work,comm)
     !calculate eigenvalues for each k and add to dos
     Call comm%get_loop_bnd(Nk,bnd) !get k-loop bounds for parallelization
     do ik=bnd(1),bnd(2)
-        if(io_dos%print_kint.and.comm%ismas) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',bnd(2)
+        if(io_dos%print_kint.and.comm%ismas) write(output_unit,'(2(A,I6))') 'start dosk', ik,' of',bnd(2)
 
         !get the diagonalization at a chosen k-point
         k=k_grid%get_K(ik)
@@ -204,7 +204,7 @@ subroutine calc_dos_sc(Hk,h_io,lat,io_dos,work,comm)
     Call comm%get_loop_bnd(Nk,bnd) !get k-loop bounds for parallelization
     !calculate eigenvalues for each k and add to dos
     do ik=bnd(1),bnd(2)
-        if(io_dos%print_kint.and.comm%ismas) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        if(io_dos%print_kint.and.comm%ismas) write(output_unit,'(2(A,I6))') 'start dosk', ik,' of',Nk
 
         !get the diagonalization at a chosen k-point
         k=k_grid%get_K(ik)
@@ -458,7 +458,7 @@ subroutine get_kgrid_adapt(Hk_inp,h_io,lat,io_dos)
 
     !calculate eigenvalues for each k and add to dos
     do ik=1,Nk
-        if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        if(io_dos%print_kint) write(output_unit,'(2(A,I6))') 'start dosk', ik,' of',Nk
         k=k_grid%get_K(ik)
         Call Hk_eval(Hk_inp,k,h_io,eval) 
         min_eval(ik)=minval(abs(eval))
