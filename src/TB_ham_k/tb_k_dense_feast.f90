@@ -61,8 +61,8 @@ subroutine calc_eval(this,Nin,eval,Nout,work)
     if(info/=0) ERROR STOP "Feast ERROR"
     if(Nout>Nin)then
         write(error_unit,'(/A)') "Trying to diagonalize Hamiltonian with feast, but output Hamiltonian size has been set to low (TB_diag_estNe)"
-        write(error_unit,'(AI8)') "Found eigenvalues in interval:", Nout
-        write(error_unit,'(AI8)') "Assumend maximal array size  :", Nin
+        write(error_unit,'(A,I8)') "Found eigenvalues in interval:", Nout
+        write(error_unit,'(A,I8)') "Assumend maximal array size  :", Nin
         ERROR STOP "INCREASE ARRAY SIZE (TB_diag_estNe) OR DECREASE ENERGY WINDOW TB_diag_Ebnd."
     endif
 end subroutine
@@ -84,8 +84,8 @@ subroutine calc_evec(this,Nin,eval,evec,Nout,work)
     if(info/=0) ERROR STOP "Feast ERROR"
     if(Nout>Nin)then
         write(error_unit,'(/A)') "Trying to diagonalize Hamiltonian with feast, but output Hamiltonian size has been set to low (TB_diag_estNe)"
-        write(error_unit,'(AI8)') "Found eigenvalues in interval:", Nout
-        write(error_unit,'(AI8)') "Assumend maximal array size  :", Nin
+        write(error_unit,'(A,I8)') "Found eigenvalues in interval:", Nout
+        write(error_unit,'(A,I8)') "Assumend maximal array size  :", Nin
         ERROR STOP "INCREASE ARRAY SIZE (TB_diag_estNe) OR DECREASE ENERGY WINDOW TB_diag_Ebnd."
     endif
 end subroutine

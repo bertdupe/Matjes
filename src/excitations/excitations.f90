@@ -104,7 +104,7 @@ subroutine read_all_excitations(fname,excitations)
             if(io_exc(i)%shape_t_name==excitations%shape_t(j)%name)then
                 if(excitations%shape_t(j)%dim_mode/=dim_modes_inner(io_exc(i)%op))then
                     write(error_unit,'(A)') "ERROR, Excitation operator dimension does not fit associated excitation shape_t (wrong dimensions)"
-                    write(error_unit,'(2(AI3))') "Error associating excitation ",i," with shape_t number",j
+                    write(error_unit,'(2(A,I3))') "Error associating excitation ",i," with shape_t number",j
                     STOP
                 endif
                 excitations%exc(i)%int_shape_t=j
@@ -148,7 +148,7 @@ subroutine read_all_excitations(fname,excitations)
             do j=1,size(excitations%exc)
                 if(excitations%exc(j)%op==i)then
                     ii=ii+1
-                    write(output_unit,'(3X,2AI4)') trim(order_parameter_name(i))," excitation no.:",ii
+                    write(output_unit,'(3X,2A,I4)') trim(order_parameter_name(i))," excitation no.:",ii
                     Call excitations%shape_r(excitations%exc(j)%int_shape_r)%print_r(output_unit)
                     Call excitations%shape_t(excitations%exc(j)%int_shape_t)%print_t(output_unit)
                     write(output_unit,*)
