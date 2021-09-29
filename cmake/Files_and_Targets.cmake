@@ -10,7 +10,7 @@ endif()
 
 #target_compile_options(Matjes BEFORE PRIVATE "${COMPADD_only_own}")
 if(DEFINED add_lib)
-    message("\n Directly including the following libraries to the matjes target: ${add_inc}")
+    message("\n Directly including the following libraries to the matjes target: ${add_lib}")
     target_link_libraries(Matjes ${add_lib})
 endif()
 if(DEFINED add_inc)
