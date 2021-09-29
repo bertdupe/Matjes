@@ -112,14 +112,14 @@ end subroutine invert_real
 SUBROUTINE invert_complex(N,M,AA,BB,DET)
 implicit none
 integer, intent(in) :: N,M
-COMPLEX(kind=16), intent(inout) :: AA(:,:),BB(:,:)    !AA(N,N),BB(N,M)
-COMPLEX(kind=16), intent(out) :: DET
+COMPLEX(kind=8), intent(inout) :: AA(:,:),BB(:,:)    !AA(N,N),BB(N,M)
+COMPLEX(kind=8), intent(out) :: DET
 ! internal variables
 REAL(kind=8), PARAMETER :: EPSMACH=2.E-12
 INTEGER, POINTER :: PC(:), PL(:)
-COMPLEX(kind=16), POINTER :: CS(:)
-COMPLEX(kind=16) :: PV, TT
-REAL(kind=16) :: PAV
+COMPLEX(kind=8), POINTER :: CS(:)
+COMPLEX(kind=8) :: PV, TT
+REAL(kind=8) :: PAV
 integer :: I, IK, J, JK, K, ialloc
 
 !Initializations :
