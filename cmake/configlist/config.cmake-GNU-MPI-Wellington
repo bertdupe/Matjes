@@ -1,25 +1,37 @@
 #module purge
 #module load cmake/3.21.1 fftw3/gcc/64/3.3.4 intel/mkl/64/2019.5.281 mpfr gmp mpc gcc/10.2.0 openmpi/gcc-10.2.0/64/2.1.2 netcdf/gcc/64/4.7.4_gcc10.2.0
+
 #manually set compiler
-set(CMAKE_CXX_COMPILER "mpicc")
+set(CMAKE_C_COMPILER "mpicc")
+set(CMAKE_CXX_COMPILER "mpicxx")
 set(CMAKE_Fortran_COMPILER "mpif90")
+# this is critical or the object files are read in as though they were source code.
 set(manual_linker_language "CXX")
+
 #set faster release flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math -fopenmp")
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=native")
 
 #include_directories( /usr/include ) #FFTW directory include
 
-set(MKLROOT "$ENV{MKLROOT}/mkl")
-
 set(USE_CUDA FALSE)
-set(USE_EIGEN FALSE)
-set(USE_MKL TRUE)
+
+set(USE_EIGEN TRUE)
+include_directories( /cm/shared/apps/eigen/3.4.0/ )
+
+# wellington has old mkl without sparse
+set(USE_MKL FALSE)
 
 set(add_inc ${add_inc} $ENV{FFTWINCLUDE})
 set(add_lib ${add_lib} $ENV{FFTWDIR})
 
-set(MKL_linker "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl") 
+#use mkl all the same for blas and lapack
+set(MKLROOT "$ENV{MKLROOT}")
+set(add_lib ${add_lib} "-L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl -lmpi_cxx")
+set(add_inc ${add_inc} "${MKLROOT}/include" )
+
+include_directories( /cm/shared/apps/openmpi/gcc-10.2.0/64/2.1.2/include )
+
 #set(CMAKE_CUDA_ARCHITECTURES 75)
 
 #MANUALLY SET PREPROCESSOR FLAGS
