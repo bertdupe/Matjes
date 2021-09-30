@@ -49,14 +49,18 @@ set(add_inc ${add_inc} "${MKLROOT}/include" )
 
 set(add_inc ${add_inc} "/cm/shared/apps/eigen/3.4.0/")
 include_directories( /cm/shared/apps/eigen/3.4.0/ )
-include_directories( /cm/shared/apps/fftw/gcc/64/3.3.4/include ) #FFTW directory include
-#include_directories( /cm/shared/apps/openmpi/gcc-10.2.0/64/2.1.2/include )
 
 #PREPROCESSOR FLAGS
-#add_compile_definitions(CPP_MKL_SPBLAS)
-add_compile_definitions(CPP_BRUTDIP)
+#add_compile_definitions(CPP_MKL_SPBLAS) # only old mkl lib with no sparse stuff
+
+add_compile_definitions(CPP_BRUTDIP) #???
+
 #add_compile_definitions(CPP_MPI)
+#include_directories( /cm/shared/apps/openmpi/gcc-10.2.0/64/2.1.2/include )
+
 add_compile_definitions(CPP_FFTW3)
+include_directories( /cm/shared/apps/fftw/gcc/64/3.3.4/include ) #FFTW directory include
+
 add_compile_definitions(CPP_MRG)
 
 
