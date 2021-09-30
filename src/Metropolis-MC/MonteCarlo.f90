@@ -26,8 +26,8 @@ subroutine montecarlo(lat,io_simu,ext_param,H,com_all)
     Call ext_param%bcast(com_all)
     Call H%bcast(com_all)
 
-    if(com_all%ismas) call rw_MC(io_MC)
-    Call bcast(io_MC,com_all)
+    if(com_all%ismas) call io_MC%read_file()
+    Call io_MC%bcast(com_all)
 
     Call montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
 end subroutine
@@ -36,7 +36,6 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     use, intrinsic :: iso_fortran_env, only : output_unit
     use mpi_distrib_v
     use m_constants, only : k_b,pi
-!    use m_rw_MC
     use m_topo_commons, only : neighbor_Q,get_charge
     use m_MCstep
     use m_relaxation
@@ -44,8 +43,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     use m_set_temp
     use m_mc_exp_val
     use m_mc_track_val,only: track_val
-    use m_average_MC, only: get_neighbours
-    use m_fluct, only: fluct_parameters,init_fluct_parameter
+    use m_fluct, only: fluct_parameters,init_fluct_parameter, print_fluct_spatial, eval_fluct_spatial
     use m_mc_therm_val
     use m_get_table_nn,only :get_table_nn
     use m_work_ham_single, only: work_ham_single
@@ -66,12 +64,14 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     integer                     :: NT_global    !global number of temperatures calculated
     integer                     :: NT_local     !local(on mpi-thread) number of temperatures calculated
     integer                     :: size_collect !required local size for parameters that are collected through mpi
+    integer                     :: Nstep_auto   !number of MCsteps between each evaluation of the state
 
-    type(track_val)             :: state_prop   !type which saves the current state of the system (
+    type(track_val)             :: state_prop   !type which saves the current state of the system
     type(exp_val),allocatable   :: measure(:)   !type to keep track of temperature & all expectation values for each temperature
     type(therm_val),allocatable :: thermo(:)    !type to store  thermodynamic properties for each temperature
-    integer,allocatable         :: Q_neigh(:,:)
+    integer,allocatable         :: Q_neigh(:,:) !neighbors for topological charge calculation
     type(fluct_parameters)      :: fluct_val    !parameters for fluctuation calculation    
+    complex(8),allocatable      :: fluct_spatial(:,:)   !save the spatial distribution of the fluctuations
     !mpi parameters
     type(mpi_type)              :: com_inner    !communicator for inner parallelization, so far ignored (get_two_level_comm) has to be checked first)
     type(mpi_distv)             :: com_outer    !communicator for parallelization of Temperatures
@@ -84,6 +84,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     ! initialize the variables
     N_spin=lat%Ncell*lat%nmag
     NT_global=io_MC%n_Tsteps
+    Nstep_auto=max(1,io_MC%T_auto*N_spin)   !max for  at least one step 
     if(com_all%ismas) write(io_status,'(/,a,I6,a,/)') "you are calculating",NT_global," temperatures"
 
     !find out how to parallelize
@@ -108,7 +109,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
             deallocate(kt_all)
         endif
         filen_kt_acc=[max(int(log10(maxval(measure%kt))),1),5]
-        Call neighbor_Q(lat,Q_neigh)!get neighbors to topological charge calculation
+        if(io_simu%calc_topo) Call neighbor_Q(lat,Q_neigh)!get neighbors to topological charge calculation
     endif
 
     !bcast parameters to all threads
@@ -120,31 +121,30 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     if(com_inner%ismas)  Call measure_scatterv(measure,com_outer) 
 
     !intialize tracking variables (total energy, magnetization sum)
-    !Call state_prop%init(lat,H,io_MC) 
     Call state_prop%init(lat,H,io_MC) 
 
     Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
+    if(io_MC%do_fluct_spatial) allocate(fluct_spatial(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
 
     Do i_kT=1,NT_local
         Call measure_bcast(measure(i_kt),com_inner)
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
 
-        if(fluct_val%l_use)then
-            allocate(measure(i_kt)%MjpMim_ij(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
-        endif
+        if(io_MC%do_fluct_spatial) fluct_spatial=(0.0d0,0.0d0)
+        
+        !initial relaxation for each temperature to decorrelate from initial state
+        call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,Q_neigh,work,logical(com_inner%ismas))
 
-        call Relaxation(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,Q_neigh,work)
         !Monte Carlo steps, calculate the values
         do i_MC=1,io_MC%Total_MC_Steps
             !Monte Carlo steps for independency
-            Do i_relax=1,io_MC%T_auto*N_spin
+            Do i_relax=1,Nstep_auto
                 Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,work)
             End do
-            Call MCstep(lat,io_MC,N_spin,state_prop,measure(i_kt)%kt,H,work) ! at least one step
             Call measure_add(measure(i_kt),lat,state_prop,Q_neigh,fluct_val) 
-        end do ! over i_MC
-
-        Call measure_reduce(measure(i_kt),com_inner)
+            if(io_MC%do_fluct_spatial) Call eval_fluct_spatial(fluct_spatial,lat,fluct_val)
+        end do
+        Call measure_reduce(measure(i_kt),com_inner)    !combine same T expectation values over inner MPI
         if(com_inner%ismas)then
             Call therm_set(thermo(i_kt),measure(i_kt),io_MC%Cor_log,N_spin)
             if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)
@@ -153,8 +153,8 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
             write(*,*) 'energy internal:', state_prop%E_total,' energy total:', H%energy(lat)
 #endif      
         endif
-        if(fluct_val%l_use) call print_spatial_fluct(measure(i_kt),com_all) !write spatial distribution of fluctuations
-        if(allocated(measure(i_kt)%MjpMim_ij)) deallocate(measure(i_kt)%MjpMim_ij)
+
+        if(io_MC%do_fluct_spatial) call print_fluct_spatial(measure(i_kt)%N_add,measure(i_kt)%kT/k_B,fluct_spatial,com_inner) !write spatial distribution of fluctuations
     end do !over i_kT
 
     if(com_inner%ismas)then

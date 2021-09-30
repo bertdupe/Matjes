@@ -1,4 +1,6 @@
 module m_init_Hr
+!module which contains the initialization for the tight-binding Hamiltonian in r-space (H_tb_coo)
+!most routines in the module are only needed for getting the superconducting delta-parameters self-consistently, otherwise only the normal get_H of init_H.f90 is sufficient
 use m_derived_types, only: lattice
 use m_H_tb_public
 use m_tb_types ,only: parameters_TB_IO_H
@@ -13,6 +15,32 @@ public get_Hr, get_delta
 
 contains
 
+
+subroutine get_Hr(lat,h_io,H)
+    !main routine to get the real-space Hamiltonian (H)
+    type(lattice),intent(in)                :: lat
+    type(parameters_TB_IO_H),intent(in)     :: h_io
+    class(H_tb),allocatable,intent(out)     :: H
+
+    type(Hdelta)                            :: del
+    type(H_tb_coo),allocatable              :: H_list(:)
+    integer         ::  i
+
+    if(h_io%use_scf)then 
+        !use self-conistent superconducting delta
+        del=h_io%del
+        Call get_Hr_conv(lat,h_io,H,del)
+    else
+        !get Hamiltonian without self-consistent delta (this should be the normal case)
+        Call set_H(H,h_io)  !allocates H to the wanted implementation of H_tb
+
+        Call get_H(lat,h_io,H_list) !gets the different interactions in separate Hamiltonians (init_H.f90)
+        do i=1,size(H_list)
+            Call H%add(H_list(i))   !add all the Hamiltonians to the output H
+        enddo
+    endif
+end subroutine
+
 subroutine get_delta(lat,h_io,del)
     !subroutine to only get self-consistent delta (necessary only for k-space calculation which uses the self-consistent delta obtained from real-space)
     type(lattice),intent(in)                :: lat
@@ -25,28 +53,6 @@ subroutine get_delta(lat,h_io,del)
         Call get_Hr_conv(lat,h_io,H,del)
     else
         STOP "It does not make sense to call this routine if no self-consistent delta is considered"
-    endif
-end subroutine
-
-subroutine get_Hr(lat,h_io,H)
-    type(lattice),intent(in)                :: lat
-    type(parameters_TB_IO_H),intent(in)     :: h_io
-    class(H_tb),allocatable,intent(out)     :: H
-
-    type(Hdelta)                            :: del
-    type(H_tb_coo),allocatable              :: H_list(:)
-    integer         ::  i
-
-    if(h_io%use_scf)then !use self-conistent version
-        del=h_io%del
-        Call get_Hr_conv(lat,h_io,H,del)
-    else
-        Call set_H(H,h_io)
-
-        Call get_H(lat,h_io,H_list)
-        do i=1,size(H_list)
-            Call H%add(H_list(i))
-        enddo
     endif
 end subroutine
 

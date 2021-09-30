@@ -678,6 +678,7 @@ subroutine get_cell(io,fname,attype,cell)
     integer :: stat
     character(len=100) :: str
     logical :: used(size(attype))
+    integer :: div
 
     cell%n_attype=size(attype)
     Call set_pos_entry(io,fname,var_name)
@@ -690,8 +691,13 @@ subroutine get_cell(io,fname,attype,cell)
     do i=1,N_atoms
         read(io,'(a)',iostat=stat) str
         if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-        read(str,*,iostat=stat) atname,cell%atomic(i)%position
-        if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        read(str,*,iostat=stat) atname,cell%atomic(i)%position, div
+        if (stat == 0)then
+            cell%atomic(i)%position=cell%atomic(i)%position/real(div,8)
+        else
+            read(str,*,iostat=stat) atname,cell%atomic(i)%position
+            if (stat /= 0) STOP "FAILED TO READ ATOMIC id/name and position"
+        endif
         read(atname,*,iostat=stat) id
         if(stat/=0)then
             id=0
@@ -906,7 +912,8 @@ do
       if (nvar.eq.0) then
          write(6,'(/,a)') 'The simulation type was not found  '
          write(6,'(2a)') 'The code has read  ', str
-         write(6,*) 'possible choices are  ',type_simu
+         write(6,*) 'possible choices are:'
+         write(6,'(3XA)') type_simu
          stop
       endif
 
@@ -979,167 +986,112 @@ end subroutine get_character
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get a BOOLEAN number parameter (check the string and so on)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine get_bool(io,fname,vname,tag)
+subroutine get_bool(io,fname,vname,val)
 use m_vector
 implicit none
-logical, intent(inout) :: tag
+logical, intent(inout) :: val
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
-! internal variable
-integer :: fin,len_string,nread,check
-character(len=100) :: str
-character(len=100) :: dummy
+!internal
+logical :: success
+integer :: stat
+character(len=len(vname))   ::  tmp
 
-nread=0
-len_string=len(trim(adjustl(vname)))
-
-rewind(io)
-do
-   read (io,'(a)',iostat=fin) str
-   if (fin /= 0) exit
-   str= trim(adjustl(str))
-
-   if (len_trim(str)==0) cycle
-   if (str(1:1) == '#' ) cycle
-
-!cccc We start to read the input
-
-   if ( str(1:len_string) == trim(adjustl(vname)) ) then
-      nread=nread+1
-      backspace(io)
-      read(io,*) dummy, tag
-   endif
-
-enddo
-
-check=check_read(nread,vname,fname)
-
-if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', tag
-
-end subroutine get_bool
+Call set_pos_entry(io,fname,vname,success)
+if(success)then
+    read(io,*,iostat=stat) tmp, val
+    if(stat/=0)then
+        write(error_unit,'(/5A)') 'Failed to read "',vname,'" in file "',fname,'", but keyword is given'
+        STOP "Fix input"
+    endif
+    write(output_unit,'(A,A30,3A,L)') 'Found entry for    ','"'//vname//'"',' in file "',fname,'", using value:         ', val
+else
+    write(output_unit,'(A,A30,3A,L)') 'No entry found for ','"'//vname//'"',' in file "',fname,'", using default value: ', val
+endif
+Call check_further_entry(io,fname,vname)
+end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get a REAL number parameter (check the string and so on)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine get_real(io,fname,vname,number)
+subroutine get_real(io,fname,vname,val)
 use m_vector
 implicit none
-real(kind=8), intent(inout) :: number
+real(kind=8), intent(inout) :: val
 integer, intent(in) :: io
 character(len=*), intent(in) :: vname,fname
-! internal variable
-integer :: fin,len_string,nread,check
-character(len=100) :: str
-character(len=100) :: dummy
+!internal
+logical :: success
+integer :: stat
+character(len=len(vname))   ::  tmp
 
-nread=0
-len_string=len(trim(adjustl(vname)))
-
-rewind(io)
-do
-   read (io,'(a)',iostat=fin) str
-   if (fin /= 0) exit
-   str= trim(adjustl(str))
-
-   if (len_trim(str)==0) cycle
-   if (str(1:1) == '#' ) cycle
-
-!cccc We start to read the input
-   if ( (str(1:len_string) == trim(adjustl(vname))) .and. ( check_last_char(str(len_string+1:len_string+1)) )) then
-      nread=nread+1
-      backspace(io)
-      read(io,*) dummy, number
-   endif
-
-enddo
-
-check=check_read(nread,vname,fname)
-
-if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', number
-
-end subroutine get_real
+Call set_pos_entry(io,fname,vname,success)
+if(success)then
+    read(io,*,iostat=stat) tmp, val
+    if(stat/=0)then
+        write(error_unit,'(/5A)') 'Failed to read "',vname,'" in file "',fname,'", but keyword is given'
+        STOP "Fix input"
+    endif
+    write(output_unit,'(A,A30,3A,E16.8)') 'Found entry for    ','"'//vname//'"',' in file "',fname,'", using value:         ', val
+else
+    write(output_unit,'(A,A30,3A,E16.8)') 'No entry found for ','"'//vname//'"',' in file "',fname,'", using default value: ', val
+endif
+Call check_further_entry(io,fname,vname)
+end subroutine 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get a INTEGER number parameter (check the string and so on)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine get_int(io,fname,vname,number)
+subroutine get_int(io,fname,vname,val)
 use m_vector
 implicit none
-integer, intent(inout) :: number
-integer, intent(in) :: io
-character(len=*), intent(in) :: vname,fname
-! internal variable
-integer :: fin,len_string,nread,check
-character(len=100) :: str
-character(len=100) :: dummy
-
-nread=0
-len_string=len(trim(adjustl(vname)))
-
-rewind(io)
-do
-   read (io,'(a)',iostat=fin) str
-   if (fin /= 0) exit
-   str= trim(adjustl(str))
-
-   if (len_trim(str)==0) cycle
-   if (str(1:1) == '#' ) cycle
-
-!cccc We start to read the input
-   if (( str(1:len_string) == trim(adjustl(vname))) .and. ( check_last_char(str(len_string+1:len_string+1)) )) then
-      nread=nread+1
-      backspace(io)
-      read(io,*) dummy, number
-   endif
-
-enddo
-
-check=check_read(nread,vname,fname)
-
-if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', number
-
-end subroutine get_int
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! get a INTEGER number parameter (check the string and so on)
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine get_int8(io,fname,vname,number)
-use m_vector
-implicit none
-integer(8), intent(inout)       :: number
+integer, intent(inout)          :: val
 integer, intent(in)             :: io
 character(len=*), intent(in)    :: vname,fname
-! internal variable
-integer :: fin,len_string,nread,check
-character(len=100) :: str
-character(len=100) :: dummy
+logical                     :: success
+integer                     :: stat
+character(len=len(vname))   ::  tmp
 
-nread=0
-len_string=len(trim(adjustl(vname)))
+Call set_pos_entry(io,fname,vname,success)
+if(success)then
+    read(io,*,iostat=stat) tmp, val
+    if(stat/=0)then
+        write(error_unit,'(/5A)') 'Failed to read "',vname,'" in file "',fname,'", but keyword is given'
+        STOP "Fix input"
+    endif
+    write(output_unit,'(A,A30,3A,I12)') 'Found entry for    ','"'//vname//'"',' in file "',fname,'", using value:         ', val
+else
+    write(output_unit,'(A,A30,3A,I12)') 'No entry found for ','"'//vname//'"',' in file "',fname,'", using default value: ', val
+endif
+Call check_further_entry(io,fname,vname)
+end subroutine
 
-rewind(io)
-do
-   read (io,'(a)',iostat=fin) str
-   if (fin /= 0) exit
-   str= trim(adjustl(str))
 
-   if (len_trim(str)==0) cycle
-   if (str(1:1) == '#' ) cycle
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! get a INTEGER number parameter (check the string and so on)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine get_int8(io,fname,vname,val)
+use m_vector
+implicit none
+integer(8), intent(inout)       :: val 
+integer, intent(in)             :: io
+character(len=*), intent(in)    :: vname,fname
+logical                     :: success
+integer                     :: stat
+character(len=len(vname))   ::  tmp
 
-!cccc We start to read the input
-   if (( str(1:len_string) == trim(adjustl(vname))) .and. ( check_last_char(str(len_string+1:len_string+1)) )) then
-      nread=nread+1
-      backspace(io)
-      read(io,*) dummy, number
-   endif
-
-enddo
-
-check=check_read(nread,vname,fname)
-
-if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', number
-
+Call set_pos_entry(io,fname,vname,success)
+if(success)then
+    read(io,*,iostat=stat) tmp, val
+    if(stat/=0)then
+        write(error_unit,'(/5A)') 'Failed to read "',vname,'" in file "',fname,'", but keyword is given'
+        STOP "Fix input"
+    endif
+    write(output_unit,'(A,A30,3A,I12)') 'Found entry for    ','"'//vname//'"',' in file "',fname,'", using value:         ', val
+else
+    write(output_unit,'(A,A30,3A,I12)') 'No entry found for ','"'//vname//'"',' in file "',fname,'", using default value: ', val
+endif
+Call check_further_entry(io,fname,vname)
 end subroutine 
 
 
@@ -1234,8 +1186,8 @@ if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', vec
 
 end subroutine get_1D_vec_real
 
-subroutine get_vec1d_real(io,fname,vname,vec)
-    real(8), intent(inout) :: vec(:)
+subroutine get_vec1d_real(io,fname,vname,val)
+    real(8), intent(inout) :: val(:)
     integer, intent(in) :: io
     character(len=*), intent(in) :: vname,fname
     !internal
@@ -1245,15 +1197,26 @@ subroutine get_vec1d_real(io,fname,vname,vec)
    
     Call set_pos_entry(io,fname,vname,success)
     if(success)then
-        read(io,*,iostat=stat) tmp, vec
+        read(io,*,iostat=stat) tmp, val
         if(stat/=0)then
             write(error_unit,'(/3A)') 'Failed to read ',vname,' but keyword is given'
             STOP "Fix input"
         endif
+        if(size(val)<4)then
+            write(output_unit,'(A,A30,3A,3E16.8)') 'Found entry for    ','"'//vname//'"',' in file "',fname,'", using value:         ', val
+        else
+            write(output_unit,'(A,A30,3A)') 'Found entry for    ','"'//vname//'"',' in file "',fname,'"'
+            write(output_unit,'(3XA)')      '   The values are:'
+            write(output_unit,'(18X,3E16.8)') val
+        endif
     else
-        write(error_unit,'(2A)') 'No entry found for ',vname
-        write(error_unit,'(A)') 'Using default value:'
-        write(error_unit,'(3E16.8)') vec
+        if(size(val)<4)then
+            write(output_unit,'(A,A30,3A,3E16.8)') 'No entry found for ','"'//vname//'"',' in file "',fname,'", using default value: ', val
+        else
+            write(output_unit,'(A,A30,3A)') 'No entry found for ','"'//vname//'"',' in file "',fname,'"'
+            write(output_unit,'(3XA)')      '   Using the default values:'
+            write(output_unit,'(18X,3E16.8)') val
+        endif
     endif
     Call check_further_entry(io,fname,vname)
 end subroutine 
@@ -1275,9 +1238,9 @@ subroutine get_vec1d_int(io,fname,vname,vec)
             STOP "Fix input"
         endif
     else
-        write(error_unit,'(2A)') 'No entry found for ',vname
-        write(error_unit,'(A)') 'Using default value:'
-        write(error_unit,'(3I10)') vec
+        write(output_unit,'(/2A)') 'No entry found for ',vname
+        write(output_unit,'(A)') 'Using default value:'
+        write(output_unit,'(3I10)') vec
     endif
     Call check_further_entry(io,fname,vname)
 end subroutine 

@@ -75,20 +75,20 @@ subroutine to_array(this,arr)
     logical,intent(out)                     :: arr(Npar)
 
     arr =[&
-    this%do_r, &
-    this%dos_r, &
-    this%spec_r, &
-    this%fermi_r,& 
-    this%occ_r, &
-    this%occ_mult_r, &
-    this%read_solution_r, &
-    this%write_solution_r, &
-    this%do_k, &
-    this%dos_k, &
-    this%highs_k, & 
-    this%fermi_k, &
-    this%fermi_dos_k, &
-    this%proj_energy ]
+    this%do_r, &                ! 1
+    this%dos_r, &               ! 2
+    this%spec_r, &              ! 3
+    this%fermi_r,&              ! 4
+    this%occ_r, &               ! 5
+    this%occ_mult_r, &          ! 6
+    this%read_solution_r, &     ! 7
+    this%write_solution_r, &    ! 8
+    this%do_k, &                ! 9
+    this%dos_k, &               !10
+    this%highs_k, &             !11
+    this%fermi_k, &             !12
+    this%fermi_dos_k, &         !13
+    this%proj_energy ]          !14
 end subroutine
 
 subroutine from_array(this,arr)

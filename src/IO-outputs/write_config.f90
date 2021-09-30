@@ -18,11 +18,15 @@ interface write_config
 end interface
 
 private
-public write_config,write_netcdf
+public write_config
+#ifdef CPP_NETCDF
+public write_netcdf     !is this really needed?
+#endif 
 contains
 
 !write the configuration in the Netcdf file
 !:========================================================================
+#ifdef CPP_NETCDF
 subroutine write_netcdf(fname,lat,time)
     ! write out all order parameters that are set with the respective name and simulations
     ! parameters in a netcdf
@@ -52,6 +56,7 @@ subroutine write_netcdf(fname,lat,time)
     enddo
 
 end subroutine
+#endif
 !:========================================================================
 
 subroutine write_config_char(fname,lat)

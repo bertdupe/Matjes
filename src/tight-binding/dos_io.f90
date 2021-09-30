@@ -1,4 +1,6 @@
 module m_dos_io
+!module which contains the input routines for the specilized dos flavors
+!dos_bnd_io refers to the dos_bnd_* in dos_util.f90, which 
 use m_derived_types, only: lattice
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 private
@@ -6,10 +8,11 @@ public dos_bnd_io , dos_orb_io
 public dos_get_ind, dos_get_orb
 
 type dos_bnd_io
+    !local dos of single continuous slice in the Hamiltonian basis 
     integer ::  atid=-1     !atom id
-    integer ::  orb=-1      !orbital (0,atom%norb)
-    integer ::  spin=-1     !spin (0,nspin)
-    integer ::  site(3)=1   !site
+    integer ::  orb=-1      !orbital [0,atom%norb]  !0 includes all orbitals
+    integer ::  spin=-1     !spin [0,nspin] !0 includes spin both spins
+    integer ::  site(3)=1   !site (within the supercell (1,Ncell(:))
 contains
     procedure   :: dos_read => dos_read_bnd
     generic :: read(formatted) => dos_read
@@ -21,9 +24,10 @@ contains
 end type
 
 type dos_orb_io
+    !dos of entire super-cell whose states correspond to a single basis-state in the unit-cell
     integer ::  atid=-1     !atom id
-    integer ::  orb=-1      !orbital (0,atom%norb)
-    integer ::  spin=-1     !spin (1,2)
+    integer ::  orb=-1      !orbital [1,atom%norb]
+    integer ::  spin=-1     !spin [1,2]
 contains
     procedure   :: dos_read => dos_read_orb
     generic :: read(formatted) => dos_read
@@ -58,6 +62,8 @@ subroutine dos_get_orb(io,lat,nspin,norb_at,norb_at_off,orb_out)
 end subroutine
 
 subroutine dos_get_ind(dos_bnd,lat,nspin,norb_at,norb_at_off,bnd_out)
+    !subroutine which translates the dos_bnd_io to the start and end position of the contiguous
+    !section in space of the Hamiltonian basis on which the projection is considered
     type(dos_bnd_io),intent(in)         ::  dos_bnd(:)
     type(lattice),intent(in)            ::  lat
     integer,intent(in)                  ::  nspin

@@ -1,7 +1,7 @@
 module m_GNEB
 use m_H_public,only: t_H
 use m_gneb_utils
-use m_rw_GNEB,only: rw_gneb,GNEB_input  
+use m_GNEB_io,only: GNEB_input  
 use m_io_gneb,only: write_path,write_en
 use m_write_spin, only: WriteSpinAndCorrFile
 use m_createspinfile, only: CreateSpinFile
@@ -48,7 +48,7 @@ subroutine GNEB_run(my_lattice,io_simu,H)
     size_order=my_lattice%M%dim_mode
     gra_log=io_simu%io_Xstruct
     ci=1
-    Call rw_gneb(io_gneb)
+    Call io_gneb%read_file()
     nim=io_gneb%nim
 
     allocate(images(nim))

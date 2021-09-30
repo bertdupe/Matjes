@@ -5,21 +5,34 @@ set(CMAKE_CXX_COMPILER "mpicxx")
 set(CMAKE_Fortran_COMPILER "mpif90")
 
 #set faster release flags
-set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math -fopenmp")
+set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math")
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=intel")
 
-include_directories( /usr/include ) #FFTW directory include
+#include_directories( /usr/include ) #FFTW directory include
 
-set(USE_CUDA TRUE)
-set(USE_EIGEN TRUE)
-set(USE_MKL TRUE)
+#some parameters that can be modified on the cmake stage
+#set(MKL_linker  "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl")
+#set(MKL_library_path $ENV{MKLROOT}/lib/intel64)
+#set(MKL_include_path $ENV{MKLROOT}/include)
+#set(netCDF_fortran_library "netcdff")
+#set(FFTW_linker "-lfftw3") 
+#set(CMAKE_CUDA_ARCHITECTURES 75)
+set(manual_linker_language "CXX")
 
-set(MKL_linker "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl") 
-set(CMAKE_CUDA_ARCHITECTURES 75)
+#options to enable/disable features (leaving out enables if library is found)
+#set(USE_BLAS    FALSE)
+#set(USE_CUDA    FALSE)
+#set(USE_EIGEN   FALSE)
+#set(USE_FFTW    FALSE)
+#set(USE_LAPACK  FALSE)
+#set(USE_MKL     FALSE)
+#set(USE_netCDF  FALSE)
+set(USE_OPENMP  TRUE)   #without entry default off
 
 #MANUALLY SET PREPROCESSOR FLAGS
-add_compile_definitions(CPP_FFTW3)
-add_compile_definitions(CPP_MPI)
-add_compile_definitions(CPP_MRG)
-add_compile_definitions(CPP_BLAS)
-#add_compile_definitions(CPP_DEBUG)
+add_compile_definitions(CPP_SCRIPT)     #disables some check of nonsensical input for less interactive sessions
+#add_compile_definitions(CPP_MPI)       #enables MPI-parallelization
+add_compile_definitions(CPP_MRG)        #enables alternative seeded random number generator (problem at very large number of evaluations (boundaries implemented incorrectly))
+add_compile_definitions(CPP_USE_WORK)   #enables use of work array for single site energy evaluation which can speed up Monte-Carlo evaluations
+#add_compile_definitions(Eigen3_DIR=/home/pbuhl/programs/eigen/cmake)   #Eigen environment variables to choose directory of installation
+#add_compile_definitions(CPP_DEBUG)     #enables further checks

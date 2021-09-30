@@ -15,13 +15,15 @@ subroutine read_zeeman_input(io_param,fname,io)
     !internal
     real(8)         :: h_ext(3)
     logical         :: enable_zeeman
+    real(8)         :: h_ext_lat(4)
 
     call get_parameter(io_param,fname,'c_zeeman',io%c_zeeman)
-    h_ext=0.d0
-    call get_parameter(io_param,fname,'H_ext',3,h_ext)
+    h_ext=0.d0; h_ext_lat=0.0d0
+    call get_parameter(io_param,fname,'H_ext',h_ext)
+    call get_parameter(io_param,fname,'H_ext_lat',h_ext_lat)
     enable_zeeman=.false.
     call get_parameter(io_param,fname,'enable_zeeman',enable_zeeman)
-    io%is_set=enable_zeeman.or.norm2(h_ext).ge.1.0d-8
+    io%is_set=enable_zeeman.or.norm2(h_ext).ge.1.0d-8.or.abs(h_ext_lat(4)).ge.1.0d-8
 end subroutine
 
 subroutine get_zeeman_H(Ham,io,lat)

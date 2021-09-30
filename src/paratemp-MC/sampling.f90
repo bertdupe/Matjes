@@ -69,7 +69,6 @@ double precision, intent(in) :: coco
 double precision , dimension(3), intent(in) :: old_s
 double precision , dimension(3) :: equirep
 !internal variable
-type(mtprng_state) :: state
 double precision :: Skal_store, choice, new_s(3)
 integer :: i_store
 
@@ -88,24 +87,15 @@ Do i_store=1,3
    new_s(i_store)=new_s(i_store)/(dsqrt(Skal_store))
 End do
 
-if (dsqrt(Skal_store).gt.1.0d0) &
-#ifdef CPP_MPI
-   new_s=old_s
-#else
-   goto 11
-#endif
+if (dsqrt(Skal_store).gt.1.0d0)  goto 11
 
 !C     Calculate, if the angle between
 !C     the new and the old spin is accepted
 Skal_store=dacos(dot_product(old_s,new_s))
 
 !C     if the spin is not turned by an allowed angle, try again
-if ((Skal_store.GT.coco).or.(Skal_store.LT.-0.0001)) &
-#ifdef CPP_MPI
-   new_s=old_s
-#else
-   goto 12
-#endif
+if ((Skal_store.GT.coco).or.(Skal_store.LT.-0.0001)) goto 12
+
 equirep=new_s
 end function equirep
 

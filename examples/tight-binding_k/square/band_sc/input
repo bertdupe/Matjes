@@ -1,0 +1,37 @@
+simulation tight-binding
+do_TB_k T
+
+###Hamiltonian input
+TB_hopping
+1 1  1 1  0 0  1 -0.50
+1 1  1 1  0 0  2 -0.10
+
+TB_delta
+1 1 1 1 0 0.1 0.0
+
+TB_Efermi -1.0d0
+
+### high symmetry plot
+do_highs_k T
+N_highsym 4
+k_highs_pts
+0.0 0.0 0.0 1 "'g'"
+0.5 0.0 0.0 1 "'X'"
+1.0 1.0 0.0 2 "'M'"
+0.0 0.0 0.0 1 "'g'"
+k_highs_dist 0.01  #distance between points
+
+### lattice setup
+Periodic_log T T F
+Nsize 1 1 1
+alat 1.0 1.0 1.0
+lattice
+ 1.0 0.0 0.0
+ 0.0 1.0 0.0
+ 0.0 0.0 1.0
+
+atomtypes  1
+at1 0.0 0.0 0.0 F 1
+
+atoms 1
+at1 0.0 0.0 0.0

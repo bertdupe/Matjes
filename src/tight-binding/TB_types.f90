@@ -78,6 +78,7 @@ subroutine init_parameters_TB(TB_params,lat)
     ! starting from the pure input using lattice properties etc.
     use m_derived_types, only: lattice
     use m_dos_io, only: dos_get_ind, dos_get_orb
+    use, intrinsic :: iso_fortran_env, only : error_unit
     class(parameters_TB),intent(inout)  :: TB_params
     type(lattice), intent(in)           :: lat
 
@@ -97,10 +98,19 @@ subroutine init_parameters_TB(TB_params,lat)
         par%norb_at_off=[(sum(par%norb_at(1:i-1)),i=1,size(par%norb_at))]
         par%norb=sum(par%norb_at)
         par%dimH=par%nsc*par%nspin*par%norb*par%ncell
-        do i=1,size(par%hop_io)
-            Call par%hop_io(i)%check(lat)
-        enddo
-        Call par%hop%set(par%hop_io,lat,par%nspin)
+        if(par%require_estNe.and.par%estNe<1)then
+            write(error_unit,'(/A)') "WARNING: The TB-Hamiltonian implementation requires an upper bound for the number of eigenvalues (TB_diag_estNe), which is currently non-positive."
+            par%estNe=par%dimH
+            write(error_unit,'(9X,A,I10,A)') "This bound is now automatically set to the Hamiltonian dimension: ", par%estNe,"."
+            write(error_unit,'(9X,A/)') "If only a subset of the eigenvalues is considered, calculation might be faster reducing TB_diag_estNe accordingly."
+        endif
+        if(allocated(par%hop_io))then
+        !check hopping input (par%hop_io) and set initialization terms depending on TB-hamiltonian basis (par%hop)
+            do i=1,size(par%hop_io)
+                Call par%hop_io(i)%check(lat)
+            enddo
+            Call par%hop%set(par%hop_io,lat,par%nspin)
+        endif
         inquire(file='delta_onsite.inp',exist=fexist)
         if(fexist)then
             Call par%del%read_file('delta_onsite.inp',lat)
@@ -115,6 +125,7 @@ subroutine init_parameters_TB(TB_params,lat)
         endif
         if(par%wann_io%is_set.and..true.) Call par%wann_io%rearrange_spin() !add additional parameter to control spin-rearangement
     end associate
+    if(TB_params%io_dos%N_state==0.0d0) TB_params%io_dos%N_state= TB_params%io_H%dimH / TB_params%io_H%nsc
     if(allocated(TB_params%io_dos%bnd_io))then
         do i=1,size(TB_params%io_dos%bnd_io)
             Call TB_params%io_dos%bnd_io(i)%check(lat)

@@ -39,8 +39,12 @@ type :: io_H_base
 end type
 
 type,extends(io_H_base) :: io_H_aniso
-    integer,allocatable     ::  attype(:)   !integer of atom type
-    real(8),allocatable     ::  val(:,:)    !(3,size(attype))
+    !anisotropy in space of Cartesian coordinates
+    integer,allocatable     ::  attype(:)       !integer of atom type
+    real(8),allocatable     ::  val(:,:)        !(4,size(attype))  (1:3) direction, (4) magnitude
+    !anisotropy in space of normalized real-space lattice
+    integer,allocatable     ::  attype_lat(:)   !integer of atom type
+    real(8),allocatable     ::  val_lat(:,:)    !(4,size(attype_lat))  (1:3) direction, (4) magnitude
 end type
 
 type,extends(io_H_base) :: io_H_zeeman

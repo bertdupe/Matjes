@@ -30,7 +30,7 @@ subroutine algebraic_read_string(this,str)
     if(stat/=0)then
         write(error_unit,'(A)') "ERROR, Failed to read excitation shape from line:"
         write(error_unit,'(A)') str
-        write(error_unit,'(AI3,A)') "The error happens when reading the ", size(this%real_var)," reals after 2 strings, 2 reals and 1 int"
+        write(error_unit,'(A,I3,A)') "The error happens when reading the ", size(this%real_var)," reals after 2 strings, 2 reals and 1 int"
         STOP
     endif
 
@@ -41,7 +41,7 @@ subroutine algebraic_read_string(this,str)
         if(t0(1)>this%t_start.and.t0(1)<this%t_end)then
             write(error_unit,'(A)') "WARNING, in algebraic excitation t-shape the t0 is within (t_start,t_end)"
             write(error_unit,'(A)') "This can lead to divergences which is probably not intended"
-            write(error_unit,'(3(AE16.8/))') "t_start: ", this%t_start,"t_end:   ", this%t_end, "t0:     ", t0(1)
+            write(error_unit,'(3(A,E16.8/))') "t_start: ", this%t_start,"t_end:   ", this%t_end, "t0:     ", t0(1)
             write(error_unit,'(A)') "CHECK INPUT"
             ERROR STOP
         endif

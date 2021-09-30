@@ -14,7 +14,6 @@ subroutine tightbinding(lat,comm)
     type(mpi_type),intent(in)       :: comm
     ! internal parameter
     type(parameters_TB)     :: tb_par
-    logical                 :: use_this
 
     if(comm%ismas) write(output_unit,'(a)') 'entering into the tight-binding routines'
     Call lat%bcast(comm)

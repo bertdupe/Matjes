@@ -33,7 +33,7 @@ subroutine calc_eval(this,Nin,eval,Nout,work)
     integer,intent(in)              :: Nin  !size of eigenvalue input array
     real(8),intent(inout)           :: eval(Nin)    !eigenvalue array
     integer,intent(out)             :: Nout !calculated number of eigenvalues
-    type(work_ham)                  :: work !work array that should be set to correct sizes
+    type(work_ham),intent(inout)    :: work !work array that should be set to correct sizes
     !internal
     integer                 :: info,lcwork,lrwork
     external zheev
@@ -62,7 +62,7 @@ subroutine calc_evec(this,Nin,eval,evec,Nout,work)
     real(8),intent(inout)               :: eval(Nin)
     complex(8),intent(inout)            :: evec(this%dimH,Nin)
     integer,intent(out)                 :: Nout !calculated number of eigenvalues
-    type(work_ham)                      :: work !work array that should be set to correct sizes
+    type(work_ham),intent(inout)        :: work !work array that should be set to correct sizes
     !internal
     integer                 :: info,lcwork,lrwork
     external zheev
