@@ -15,10 +15,10 @@ subroutine welcome_message()
     use , intrinsic :: iso_fortran_env, only: output_unit
 implicit none
 
-    write(6,'(/,a)') 'Bonjour!! you are now using the Kieler code'
+    write(6,'(/,a)') 'Bonjour!! you are now using the Matjes code'
     write(6,'(a)') 'All the developers hope that you will enjoy this moment.'
     write(6,'(a)') 'If you have a problem, if you are happy with the code or if you wish to chat a bit'
-    write(6,'(a)') 'send an email to bertrand.dupe@gmail.com'
+    write(6,'(a)') 'send an email to bertrand.dupe@uliege.be'
 #ifdef CPP_VERSIONGIT
     write(6,'(/2a)') "You are using the git-version: ",CPP_VERSIONGIT
 #endif
