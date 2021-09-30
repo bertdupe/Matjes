@@ -1,0 +1,17 @@
+#simulation minimize_infdamp
+simulation tight-binding  #so that nothing is done
+
+### lattice setup
+Periodic_log T T F
+Nsize  50  10 1
+alat 1.0 1.0 1.0
+lattice
+ 1.0  0.0  0.0
+ 0.0  1.0  0.0
+ 0.0  0.0  1.0
+
+atomtypes  1
+at1 1.0 0.0 0.0 F 1
+
+atoms 1
+at1 0.0 0.0  0.0    3

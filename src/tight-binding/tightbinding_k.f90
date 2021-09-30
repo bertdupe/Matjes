@@ -107,7 +107,7 @@ subroutine proj_energy(Hk,h_io,lat,io_dos,work)
     allocate(evec(dimH,Nin),source=(0.0d0,0.0d0))
 
     do ik=1,Nk
-        if(io_dos%print_kint) write(output_unit,'(2(AI6))') 'start dosk', ik,' of',Nk
+        if(io_dos%print_kint) write(output_unit,'(2(A,I6))') 'start dosk', ik,' of',Nk
         k=k_grid%get_K(ik)
         Call Hk%get_evec(k,Nin,eval,evec,Nout,work) 
         do iE=1,Nout

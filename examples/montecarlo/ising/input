@@ -1,0 +1,39 @@
+simulation metropolis
+
+#Hamiltonian setup
+magnetic_J
+1 1 1  0.5d-3
+magnetic_anisotropy
+1  0.0  0.0 -1.0d-3
+
+Hamiltonian_mode 1      # currently most efficient single site energy evaluation
+
+# parameters of the lattice
+Nsize  40  40  1
+Periodic_log T T F
+alat 1.0 1.0 1.0
+lattice
+1.0 0.0 0.0
+0.0 1.0 0.0
+0.0 0.0 1.0
+atomtypes  1
+at1  1.0 0.0 0.0 F
+atoms 1
+at1   0.0  0.0   0.0 
+
+
+#Metropolis
+Tini 10.0d0             #initial temperatue
+Tfin 40.0d0             #final temperature
+n_Tsteps 31             #number of temperature steps
+calc_topo F             #disable calculation of topological charges
+ising T                 #Ising samling (reverses spin)
+Total_MC_Steps  4000    #number of averaging steps
+T_auto 5                #number of autocorrelation steps (afterwards multiplied with number of spins) 
+n_relaxation  100       #number of outer loops for relaxation
+T_relax  1              #number of MCsteps in inner relaxation (times number of spins)
+#print_relax F           #writes information about the states during the initial relaxation to judge success of intial relaxation
+#n_sizerelax 10          #number of times the state is printed during the initial relaxation (if print_relax)
+do_fluct F              #calculate fluctuation parameters
+do_fluct_spatial F      #calculate fluctuation parameters resolved in unit-cell
+

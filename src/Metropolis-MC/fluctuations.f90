@@ -4,12 +4,10 @@ use m_derived_types,only: lattice
 use m_neighbor_type
 implicit none
 private
-public fluct_parameters,init_fluct_parameter,eval_fluct
+public fluct_parameters,init_fluct_parameter,eval_fluct, eval_fluct_spatial, print_fluct_spatial
 
 type fluct_parameters
     logical                 :: l_use=.False. 
-!    integer, allocatable    :: flat_nei(:,:)
-!    integer, allocatable    :: indexNN(:)
     type(neighbors)         :: neigh
     integer                 :: ind(2)  !index of positive and negative nearest neighbor in neigh%diff_vec array 
 contains
@@ -56,26 +54,25 @@ subroutine init_fluct_parameter(fluct_val,lat,l_use_in,direction)
     endif
 end subroutine
 
-subroutine eval_fluct( MjpMim_ij_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,fluct_val)
+subroutine eval_fluct(  MipMip_sum, MipMim_sum, MipMjp_sum, MjpMim_sum, lat,fluct_val)
     use m_vector, only : cross
-    complex(8),intent(inout)           :: MjpMim_ij_sum(:,:), MipMip_sum, MipMim_sum,MipMjp_sum
+    complex(8),intent(inout)           :: MipMip_sum, MipMim_sum, MipMjp_sum, MjpMim_sum
     type(lattice),intent(in)           :: lat
     type(fluct_parameters),intent(in)  :: fluct_val
 
-    integer         :: N_cell
-    integer         :: i_cell, i_sh,i_nei,j_flat 
+    integer         :: i_sh,i_nei
     integer         :: i,j
     real(8)         :: Mi(3), Mj(3)
-	complex(8)		:: MipMip, MipMim, MipMjp
+	complex(8)		:: MipMip, MipMim, MipMjp, MjpMim
     integer         :: neigh_start
-    integer         :: shell_offset
     integer         :: ind
 
     if(.not.fluct_val%l_use) return
 
-    MipMip=cmplx(0.0d0,0.0d0,8)
-    MipMjp=cmplx(0.0d0,0.0d0,8)
-    MipMim=cmplx(0.0d0,0.0d0,8)
+    MipMip=(0.0d0,0.0d0)
+    MipMjp=(0.0d0,0.0d0)
+    MipMim=(0.0d0,0.0d0)
+    MjpMim=(0.0d0,0.0d0)
 
     !do onsite-terms
     neigh_start=1
@@ -97,99 +94,72 @@ subroutine eval_fluct( MjpMim_ij_sum, MipMip_sum, MipMim_sum, MipMjp_sum,lat,flu
             j=fluct_val%neigh%pairs(2,i_nei)
             Mi=lat%M%modes_3(:,i)
             Mj=lat%M%modes_3(:,j)
-            MipMjp               =MipMjp               +cmplx(Mi(1)*Mj(1)-Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)+Mi(2)*Mj(1),8)     !why is here a minus?
-            MjpMim_ij_sum(i_sh,i)=MjpMim_ij_sum(i_sh,i)+cmplx(Mi(1)*Mj(1)+Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)-Mi(2)*Mj(1),8)
+            MipMjp=MipMjp + cmplx(Mi(1)*Mj(1)-Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)+Mi(2)*Mj(1),8)     !why is here a minus?
+            MjpMim=MjpMim + cmplx(Mi(1)*Mj(1)+Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)-Mi(2)*Mj(1),8)
         enddo
     enddo
 
     MipMip_sum=MipMip_sum+MipMip
     MipMim_sum=MipMim_sum+MipMim
     MipMjp_sum=MipMjp_sum+MipMjp
+    MjpMim_sum=MjpMim_sum+MjpMim
 end subroutine
 
 
-!subroutine get_neighbours(lat,flat_nei, indexNN)
-!	use m_io_utils
-!	use m_io_files_utils
-!
-!    use m_get_table_nn,only :get_table_nn
-!    Implicit none
-!    type(lattice),intent(in)  :: lat
-!    integer,allocatable,intent(inout)        :: flat_nei(:,:), indexNN(:)
-!    ! internal variables
-!    integer      :: N_shells,N_cell
-!    integer, allocatable :: tableNN(:,:,:,:,:,:)
-!    integer      :: i_sh, i_x, i_y, i_z, i_nei, temp1(3),temp2(3), i_flat, j_flat
-!    real(kind=8), allocatable :: position(:,:)
-!	integer :: N
-!	integer :: propag_dir=1 !direction of propagation of fluctuations to look at, 1,2,3 for x,y,z
-!
-!    N_cell=lat%Ncell
-!    N_shells = 1 !choose how many shells of neighbours: 1 = first neighbours  /!\currently boundary wont work for more than 1 shell 
-!    Call get_table_nn(lat,N_shells,indexNN,tableNN)
-!    allocate(flat_nei(N_cell,sum(indexNN))) !flat nei is N x number of neighbours per site
-!    flat_nei=0
-!
-!
-!	!get positions for no reason other than to know in which spatial direction the bond is for given pair of neighbours
-!	N=get_lines('positions.dat')
-!	allocate(position(3,N))
-!	position=0.0d0
-!	call get_position(position,'positions.dat')
-!	
-!
-!	!simple cubic lattice: columns 1:6 of flat_nei(i,:) correspond to neighbours of i along: x,y,z,-z,-y,-x
-!	!careful: if film in xy plane then it's only along x,y,-y,-x
-!    do i_sh=1,N_shells !loop on shell of neighbours
-!        do i_x=1,lat%dim_lat(1) !loop on lattice sites
-!            do i_y=1,lat%dim_lat(2)
-!                do i_z=1,lat%dim_lat(3) 
-!                    temp1=[i_x,i_y,i_z]
-!                    i_flat=lat%index_m_1(temp1)  !get i_flat
-!					!write(*,*) 'spin: ',i_flat,' with xyz positions ', position(:,i_flat) 
-!                    do i_nei=1,indexNN(i_sh) !loop on neighbours
-!						
-!						!write(*,*)'spin',i_flat, ' with  coordinates ',temp1(1),temp1(2),temp1(3) 
-!                        temp2=tableNN(1:3,i_nei,i_x,i_y,i_z,1)!get x,y,z indices of neighbour
-!
-!						if (tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) j_flat=-1 !remove non-connected neighbours
-!						!if( (all(temp1.ge.temp2)).or.(tableNN(5,i_nei,i_x,i_y,i_z,1).ne.1) ) then  !do not keep backwards neighbours or non-connected neighbours
-!						!	j_flat=-1; 
-!						!else if ( ( temp1(1)==1.and.temp2(1)==lat%dim_lat(1).and.lat%dim_lat(1).ne.1 ) &
-!						!.or.      ( temp1(2)==1.and.temp2(2)==lat%dim_lat(2).and.lat%dim_lat(2).ne.1 ) &
-!						!.or.      ( temp1(3)==1.and.temp2(3)==lat%dim_lat(3).and.lat%dim_lat(3).ne.1 ) )  then !boundary:remove left and top
-!						!	j_flat=-1 
-!							!write(*,*) 'boundary nei to remove: verified for temp1, temp2=', temp1(1:3), temp2(1:3)
-!						!else
-!                       		j_flat=lat%index_m_1(temp2) !get j_flat
-!						!end if
-!
-!						!boundary: add right and bottom
-!						!if ( (temp1(1)==lat%dim_lat(1).and.temp2(1)==1.and.lat%dim_lat(1).ne.1) &
-!						!.or. (temp1(2)==lat%dim_lat(2).and.temp2(2)==1.and.lat%dim_lat(2).ne.1) &
-!						!.or. (temp1(3)==lat%dim_lat(3).and.temp2(3)==1.and.lat%dim_lat(3).ne.1)	) then
-!                       !		j_flat=lat%index_m_1(temp2) 
-!						!end if
-!
-!						!only keep neighbour along the propagation direction
-!						!if (temp1(propag_dir).eq.temp2(propag_dir)) then
-!						!	j_flat=-1 
-!						!endif
-!					
-!						if (i_flat.eq.j_flat) j_flat=-1 !remove self interaction
-!                        flat_nei(i_flat,i_nei)=j_flat
-!
-!					!	write(*,*)'>>neighbour',j_flat, ' with xyz positions ', position(:,j_flat) 
-!                    enddo
-!                enddo
-!            enddo
-!        enddo
-!    enddo
-!
-!!do i_flat=1,N_cell
-!!	write(*,*)'flat_nei for spin',i_flat, ' is', flat_nei(i_flat,:)
-!!enddo
-!
-!END subroutine get_neighbours
+subroutine eval_fluct_spatial( MjpMim_ij_sum,lat,fluct_val)
+    use m_vector, only : cross
+    complex(8),intent(inout)           :: MjpMim_ij_sum(:,:)
+    type(lattice),intent(in)           :: lat
+    type(fluct_parameters),intent(in)  :: fluct_val
+
+    integer         :: i_sh,i_nei
+    integer         :: i,j
+    real(8)         :: Mi(3), Mj(3) !temporary arrays for the chosen magnetizations
+    integer         :: ind
+
+    if(.not.fluct_val%l_use) return
+
+    do i_sh=1,size(fluct_val%ind)
+        ind=fluct_val%ind(i_sh)
+        do i_nei=fluct_val%neigh%ishell(ind-1)+1, fluct_val%neigh%ishell(ind) 
+            i=fluct_val%neigh%pairs(1,i_nei)
+            j=fluct_val%neigh%pairs(2,i_nei)
+            Mi=lat%M%modes_3(:,i)
+            Mj=lat%M%modes_3(:,j)
+            MjpMim_ij_sum(i_sh,i)=MjpMim_ij_sum(i_sh,i)+cmplx(Mi(1)*Mj(1)+Mi(2)*Mj(2)  ,  Mi(1)*Mj(2)-Mi(2)*Mj(1),8)
+        enddo
+    enddo
+end subroutine
+
+!!!! print spatial distribution for <Mj+Mi->
+subroutine print_fluct_spatial(N_add,temp,fluct,com)
+    use m_constants, only : k_b
+    use m_convert
+    use mpi_util, only: reduce_sum, mpi_type
+    integer,intent(in)              :: N_add        !on com master thread number of times the fluct array has been added (already reduced of the mpi-communicator)
+    real(8),intent(in)              :: temp         !on com master thread temperature
+    complex(8),intent(inout)        :: fluct(:,:)   !summed up spatial fluctuation contributions (initially each thread only contains its own contributions, on output destroyed)
+    class(mpi_type),intent(in)      :: com          !inner mpi-communicator that contains all threads with the same temperature
+    integer             :: io
+    character(len=50)   :: frm
+
+    Call reduce_sum(fluct,com)
+    if(com%ismas)then
+        fluct=fluct/real(N_add,8)  !normalization (number of times the fluct array has been added with a configuration)
+        
+        frm=convert('(',size(fluct,1),'(E20.12E3,2x))')
+
+        open(newunit=io,file=convert('fluct_Re_MjpMim_per_site_',temp,'.dat'))
+        write(io,frm) real(fluct)
+        close(io)
+
+        open(newunit=io,file=convert('fluct_Im_MjpMim_per_site_',temp,'.dat'))
+        write(io,frm) aimag(fluct)
+        close(io)
+    endif
+    fluct=(0.0d0,0.0d0) !set to zero since the values now are nonsensical anyways
+end subroutine
+
+
 end module 
 

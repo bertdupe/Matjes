@@ -89,7 +89,7 @@ subroutine get_Hk_inp_conv(lat,h_io,H_inp,del)
         endif
     enddo
     if(diff>=h_io%scf_diffconv)then
-        write(error_unit,'(2(AE14.8))') "WARNING, self-consistent delta in k-space did not reach convergence criteria with ",diff,' instead of ',h_io%scf_diffconv
+        write(error_unit,'(2(A,E14.8))') "WARNING, self-consistent delta in k-space did not reach convergence criteria with ",diff,' instead of ',h_io%scf_diffconv
     endif
     Call H_inp%combine(H_inp_nc,H_inp_sc)
     Call H_inp_nc%destroy()

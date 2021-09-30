@@ -298,7 +298,7 @@ subroutine number_Hpar(io,fname,var_name,Nnonzero)
     do 
         read(io,'(a)',iostat=stat) str
         if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-        read(str,*,iostat=stat) tmp
+        Call tmp%local_read(str,stat)
         if (stat /= 0) exit
         Nentry=Nentry+1
         if(.not.tmp%is_zero()) Nnonzero=Nnonzero+1
@@ -326,7 +326,7 @@ subroutine read_Hpar(io,fname,var_name,par)
     ii=1
     do while (ii<=size(par))
         read(io,'(a)',iostat=stat) str
-        read(str,*,iostat=stat) par(ii)
+        Call par(ii)%local_read(str,stat)
         if(par(ii)%is_zero()) cycle
         write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
         Call par(ii)%print_std()
