@@ -15,9 +15,31 @@ subroutine read_anisotropy_input(io_unit,fname,io)
     integer,intent(in)              :: io_unit
     character(len=*), intent(in)    :: fname
     type(io_H_aniso),intent(out)    :: io
+    real(8),allocatable     :: tmp(:,:)
+    integer                 :: i,j
+    logical                 :: success
 
-    !read parameters for anisotropy in cartesian coordinates 
-    Call read_int_realarr(io_unit,fname,'magnetic_anisotropy',3,io%attype,io%val)
+    !read parameters for anisotropy in cartesian coordinates assuming 4 entries, where 1:3 is unit vector direction and 4 is magnitude
+    Call read_int_realarr(io_unit,fname,'magnetic_anisotropy',4,io%attype,io%val,success)
+
+    !read parameters for anisotropy in cartesian coordinates using 3-real format where is magnitude is given by the norm of the entry with the sign of the first nonzero entry
+    if(.not.success)then
+        Call read_int_realarr(io_unit,fname,'magnetic_anisotropy',3,io%attype,tmp)
+        if(allocated(tmp))then
+            allocate(io%val(4,size(tmp,2)))
+            do i=1,size(tmp,2)
+                io%val(4,i)=norm2(tmp(:,i))
+                io%val(1:3,i)=tmp(:,i)
+                do j=1,3
+                    if(tmp(j,i)/=0.0d0)then
+                        io%val(4,i)=sign(io%val(4,i),tmp(j,i))
+                    endif
+                enddo
+            enddo
+            deallocate(tmp)
+        endif
+    endif
+
     !read parameters for anisotropy in normalized lattice parameters
     Call read_int_realarr(io_unit,fname,'magnetic_anisotropy_lat',4,io%attype_lat,io%val_lat)
     if(allocated(io%val_lat))then
@@ -32,7 +54,7 @@ subroutine read_anisotropy_input(io_unit,fname,io)
     Call get_parameter(io_unit,fname,'magnetic_anisotropy_fft',io%fft) 
 end subroutine
 
-subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals)
+subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals,success)
     !reads lines after variable name with 1 integer and Nreal reals and return all non-vanishing entries allocated to the correct size
     use m_io_utils
     integer,intent(in)                  :: io_unit
@@ -41,6 +63,7 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals)
     integer,intent(in)                  :: Nreal
     integer,allocatable,intent(inout)   :: ints(:)
     real(8),allocatable,intent(inout)   :: reals(:,:)
+    logical,optional,intent(out)        :: success  !return if reading was successfull
 
     ! internal variable
     integer :: int_tmp
@@ -54,6 +77,7 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals)
 
     if(allocated(ints)) deallocate(ints)
     if(allocated(reals)) deallocate(reals)
+    if(present(success)) success=.false.
 
     nread=0
     length_string=len_trim(var_name)
@@ -78,6 +102,10 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals)
                 Nentry=Nentry+1
                 if(norm2(vec_tmp)/=0.0d0) Nnonzero=Nnonzero+1
             enddo
+            if(present(success).and.Nentry<1)then
+                !failed to read, but success is supplied so no complaining
+                return
+            endif
             if(Nentry<1)then
                 write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
 #ifndef CPP_SCRIPT            
@@ -114,6 +142,7 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals)
         endif
     enddo
     check=check_read(nread,var_name,fname)
+    if(present(success)) success=.true.
 end subroutine
 
 subroutine get_anisotropy_H(Ham,io,lat)
@@ -209,8 +238,8 @@ subroutine get_Haniso_unitcell(io,lat,H)
     if(allocated(io%attype))then
         do i=1,size(io%attype)
             Call lat%cell%ind_attype(io%attype(i),ind_at)
-            magnitude=norm2(io%val(:,i))
-            direction=io%val(:,i)/magnitude
+            magnitude=io%val(4,i)
+            direction=io%val(1:3,i)/norm2(io%val(1:3,i))
             do j=1,size(ind_at)
                 ind_mag=lat%cell%ind_mag(ind_at(j))
                 do i1=1,3

@@ -1,4 +1,5 @@
 module m_rw_cell
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
 implicit none
 contains
 subroutine read_cell(cell,lat)
@@ -24,6 +25,13 @@ subroutine read_cell(cell,lat)
         enddo
         call close_file('input',io_input)
         n_mag=count(cell%atomic(:)%moment.gt.0.0d0)
+
+        write(output_unit,'(/A)') "Found the following atomic sites in the basic unit-cell:"
+        write(output_unit,'(A)') "  name            position x (nm)   position y (nm)   position z (nm)       mag. moment      charge        mass     use phonon    number orbitals"
+        do i=1,size(cell%atomic)
+            write(output_unit,'(3X,A14,3(F12.8,6X),6X,3(F8.4,6X),L3,10X,I5)') cell%atomic(i)%name,cell%atomic(i)%position,cell%atomic(i)%moment,cell%atomic(i)%charge,cell%atomic(i)%mass,cell%atomic(i)%use_ph,cell%atomic(i)%orbitals
+        enddo
+        write(output_unit,'(/)')
 
         !WEIRD WORLD STUFF I DON'T understand
         !size of the world

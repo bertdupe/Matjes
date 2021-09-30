@@ -1,4 +1,5 @@
-       module m_store_relaxation
+#if 0
+module m_store_relaxation
        interface store_relaxation
         module procedure store_relaxation_serial_2d
        end interface store_relaxation
@@ -151,3 +152,4 @@
        end subroutine write_relaxation_3d
 
        end module m_store_relaxation
+ #endif

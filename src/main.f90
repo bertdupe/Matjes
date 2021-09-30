@@ -78,7 +78,7 @@ Implicit None
     !  Part which does the parallel tempering
     !---------------------------------
     if (my_simu%name == 'parallel-tempering')then
-        Call parallel_tempering(all_lattices,io_simu,ext_param,H_comb,mpi_world)
+        Call parallel_tempering(all_lattices,io_simu,ext_param,H_res,mpi_world)
     endif
 
     

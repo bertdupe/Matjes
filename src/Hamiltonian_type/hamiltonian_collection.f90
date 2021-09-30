@@ -1,6 +1,6 @@
 module m_hamiltonian_collection
 use m_H_public, only: t_H, get_Htype_N
-use m_fft_H_public, only: fft_H
+use m_fft_H_public, only: fft_H, get_fft_H
 use m_work_ham_single, only: work_ham_single, work_mode
 
 use m_H_type,only : len_desc
@@ -83,7 +83,7 @@ subroutine distribute(this,com_in)
     if(com_in%ismas)then
         if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
         if(allocated(this%H_fft))then
-            write(error_unit,*) "WARNING, MPI-distributions for H_fft is not implemented"
+            write(error_unit,*) "WARNING, MPI-distributions for H_fft is not checked"
         endif
     endif
     Call bcast(this%NH_total,com_in)
@@ -158,23 +158,34 @@ subroutine bcast_hamil(this,comm)
     class(hamiltonian),intent(inout)    :: this
     type(mpi_type),intent(in)           :: comm
 #ifdef CPP_MPI
-    integer     ::  i,N
+    integer     ::  i
+    integer     ::  N_tmp(5)
 
     if(comm%ismas)then
         if(any(this%is_para))then
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif
-        if(allocated(this%H_fft)) ERROR STOP "IMPLEMENT DIPOLAR FFT CASE Bcast in hamiltonian"
+        if(allocated(this%H_fft)) ERROR STOP "IMPLEMENT FFT CASE Bcast in hamiltonian"
     endif
 
-    Call MPI_Bcast(this%N_total,  1, MPI_INTEGER, comm%mas, comm%com,i)
-    Call MPI_Bcast(this%NH_total, 1, MPI_INTEGER, comm%mas, comm%com,i)
-    Call MPI_Bcast(this%NHF_total,1, MPI_INTEGER, comm%mas, comm%com,i)
-    if(.not.comm%ismas) Call get_Htype_N(this%H,N)
-    do i=1,this%NH_total
-        Call this%H(i)%bcast(comm)
-    enddo
+    N_tmp=[this%N_total,this%NH_total,this%NHF_total,this%NH_local,this%NHF_local]
+    Call bcast(N_tmp,comm)
+    this%N_total =N_tmp(1); this%NH_total=N_tmp(2); this%NHF_total=N_tmp(3); this%NH_local=N_tmp(4); this%NHF_local=N_tmp(5)
+
+    if(this%NH_total>1)then
+        if(.not.comm%ismas) Call get_Htype_N(this%H,this%NH_total)
+        do i=1,this%NH_total
+            Call this%H(i)%bcast(comm)
+        enddo
+    endif
+    if(this%NHF_total>1)then
+        if(.not.comm%ismas) Call get_fft_H(this%H_fft,this%NHF_total)
+        do i=1,this%NHF_total
+            Call this%H_fft(i)%bcast(comm)
+        enddo
+    endif
+    Call bcast_alloc(this%H_fft_tmparr,comm) 
     if(.not.comm%ismas) Call set_work_mode(this)
 #else
     continue

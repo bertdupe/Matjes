@@ -1,0 +1,38 @@
+simulation parallel-tempering
+
+#Hamiltonian setup
+magnetic_J
+1 1 1  0.5d-3
+
+magnetic_anisotropy
+1  0.0  0.0 -1.0d-3
+
+Hamiltonian_mode 1      # currently most efficient single site energy evaluation
+
+# parameters of the lattice
+Nsize 20 20 1
+Periodic_log T T F
+alat 1.0 1.0 1.0
+lattice
+1.0 0.0 0.0
+0.0 1.0 0.0
+0.0 0.0 1.0
+atomtypes  1
+at1  1.0 0.0 0.0 F
+atoms 1
+at1   0.0  0.0   0.0 
+
+
+#Metropolis
+Tini 10.0d0             #initial temperatue
+Tfin 40.0d0             #final temperature
+n_Topt 4                #number of temperature-set optimization steps
+n_Tsteps 20             #number of temperature steps
+calc_topo F             #disable calculation of topological charges
+ising T                 #Ising samling (reverses spin)
+T_auto 10               #number of autocorrelation steps for first temperature set(afterwards multiplied with number of spins) 
+T_relax 5               #number of autocorrelation steps after first  temperature set(afterwards multiplied with number of spins) 
+n_sizerelax 1000        #initial T-set number of swap stages
+do_fluct F              #calculate fluctuation parameters
+do_fluct_spatial F      #calculate fluctuation parameters resolved in unit-cell
+

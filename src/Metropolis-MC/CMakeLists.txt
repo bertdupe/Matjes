@@ -1,5 +1,4 @@
 set(main_f90 ${main_f90}
-src/Metropolis-MC/CalculateAverages.f90
 src/Metropolis-MC/choosespin.f90
 src/Metropolis-MC/initialize_temperature.f90
 src/Metropolis-MC/MCstep.f90

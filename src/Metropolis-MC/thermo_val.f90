@@ -1,18 +1,15 @@
 module m_mc_therm_val
+!module which contains the type (therm_val) which gathers the thermodynamical quantities from the expectation values (exp_val)
 use m_mc_exp_val, only: exp_val
 use m_mc_track_val, only: track_val
 private
 public :: therm_val,therm_set
 public :: thermo_gatherv
 public :: thermo_print, thermo_print_init
-!public :: exp_val, measure_print_thermo, measure_add,measure_eval,print_av
-!public :: measure_print_thermo_init
-!!public MPI_routines
-!public :: measure_scatterv, measure_gatherv, measure_bcast, measure_reduce
 integer,protected       :: MPI_custom_type          ! mpi variable for direct mpi operations with this type 
 logical,protected       :: MPI_custom_set=.false.   !check is MPI_custom_type is set
 !
-!!THESE ENTRIES HAVE TO BE UPDATED EVERYTIME EXP_VAL IS MODIFIED, OTHERWISE MPI-STUFF WILL FAIL
+!!THESE ENTRIES HAVE TO BE UPDATED EVERYTIME therm_val IS MODIFIED, OTHERWISE MPI-STUFF WILL FAIL
 integer,parameter       :: blocks(*)=[1, 1,3,4, 1,3,1,3, 1,1,3,3, 1,1,1,1] !size of each element of therm_val
 integer,parameter       :: bnd_real(2) =[ 1, 12] !initial and final entry of real numbers
 integer,parameter       :: bnd_cmplx(2)=[13, 16] !initial and final entry of complex numbers
@@ -37,11 +34,11 @@ type therm_val
     real(8) :: qeulerm=0.0d0
     real(8) :: vortex(3)=0.0d0
     real(8) :: chi_l(3)=0.0d0   !probably quite obsolete
-    
-    complex(8)  :: MjpMim =cmplx(0.0d0,0.0d0,8) !<Mj+Mi->
+    !fluctuation parameters (do_fluct)
     complex(8)  :: MipMip =cmplx(0.0d0,0.0d0,8) !<Mi+Mi+>
     complex(8)  :: MipMim =cmplx(0.0d0,0.0d0,8) !<Mi+Mi-> (is real)
     complex(8)  :: MipMjp =cmplx(0.0d0,0.0d0,8) !<Mi+Mj+>
+    complex(8)  :: MjpMim =cmplx(0.0d0,0.0d0,8) !<Mj+Mi->
 end type
 
 contains 
@@ -84,10 +81,10 @@ subroutine therm_set(this,measure,Cor_log,N_cell_in)
               &    (measure%Qp_sq*av_Nadd/16.0d0/pi**2-measure%Qp**2))*av_kT!/(measure%qeulerm_av*measure%qeulerp_av)
 
     !fluctuation parameters
-    if(allocated(measure%MjpMim_ij)) this%MjpMim=sum(measure%MjpMim_ij)*av_Nadd*av_site  !not entirely sure about this term
     this%MipMip=measure%MipMip*av_Nadd*av_site
     this%MipMim=measure%MipMim*av_Nadd*av_site
     this%MipMjp=measure%MipMjp*av_Nadd*av_site
+    this%MjpMim=measure%MjpMim*av_Nadd*av_site
 
     if (Cor_log) this%chi_l=measure%N_add !what is this supposed to do?
     Call print_av(this)

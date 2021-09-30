@@ -23,18 +23,14 @@ end subroutine
 
 subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     use mpi_distrib_v
-    use m_H_public
     use m_topocharge_all
     use m_set_temp
-    use m_average_MC
     use m_constants, only : k_b
     use m_vector, only : norm
-    use m_store_relaxation
     use m_check_restart
     use m_createspinfile
     use m_topo_commons, only : neighbor_Q,get_charge
     use m_convert
-    use m_io_files_utils
     use m_MC_io
     use m_MCstep
     use m_mc_track_val,only: track_val
@@ -74,7 +70,7 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     ! slope for the number of images and temperatures
     integer :: i_temp
     ! dummy slopes
-    integer :: i,io_EM,N_spin,n_sizerelax
+    integer :: i,io_EM,N_spin
     logical :: i_optTset
 
     !mpi parameters
@@ -100,10 +96,9 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     Call io_MC%bcast(com)
     N_adjT=io_MC%N_Topt
     NT_global=io_MC%n_Tsteps
-    n_sizerelax=io_MC%n_sizerelax
-    autocor_steps=io_MC%T_auto
     N_spin=my_lattice%Ncell*my_lattice%nmag
-    n_swapT=n_sizerelax
+    autocor_steps=max(1,io_MC%T_auto*N_spin)
+    n_swapT=io_MC%n_sizerelax
     if(com%ismas)then
         write(6,'(/,a,I6,a,/)') "setup for parallel tempering"
         write(6,'(a,I6,a,/)') "you are calculating",NT_global," temperatures"
@@ -140,7 +135,7 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
         ! open the data file where the thermodynamical quantities should be written
         Call thermo_print_init(io_EM)
         allocate(thermo(NT_global))
-        Call neighbor_Q(my_lattice,Q_neigh)
+        if(io_simu%calc_topo) Call neighbor_Q(my_lattice,Q_neigh)
     endif
    
     !broadcast and calculate locally necessary values for further calculations
@@ -162,21 +157,18 @@ subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     
     do j_optset=1,N_adjT
-        !  T_relax is T_relax_temp, this is because
-        !  one might want to thermalize the first iteration more as compared with the j_optset>2
-        if (j_optset.gt.1) autocor_steps=io_MC%T_relax
+        
+        if (j_optset>1) autocor_steps=max(1,io_MC%T_relax*N_spin) !  one might want to thermalize the first iteration more as compared with the j_optset>2
     
         ! Relaxation of the System
         do i_swapT=1,n_swapT
             !do loop over local temperatures
             do i_temp=1,NT_local
                 kt=measure(i_temp)%kt
-
                 !does it make more sense to do big relaxation step at the very beginning?
-                Do i_MC=1,autocor_steps*N_spin
+                Do i_MC=1,autocor_steps
                     Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)
                 enddo
-                Call MCstep(lattices(i_temp),io_MC,N_spin,state_prop(i_temp),kt,H,work)! In case autocor_steps set to zero at least one MCstep is done
 
                 Call measure_add(measure(i_temp),lattices(i_temp),state_prop(i_temp),Q_neigh,fluct_val) !add up relevant observable
                 E_temp(i_temp)=state_prop(i_temp)%E_total !save the total energy of each replicas
