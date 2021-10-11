@@ -1,20 +1,37 @@
 module m_FT_Ham_zheev
 #ifdef CPP_LAPACK
 use m_work_ham_single, only: work_ham, N_work
-use m_FT_Ham_dense_base
+use m_FT_Ham_dense
 implicit none
 
 private
 public :: FT_Ham_zheev
 
-type,extends(FT_H_dense_base) :: FT_Ham_zheev
+type,extends(FT_H_dense) :: FT_Ham_zheev
 contains
     procedure   ::  set_work    !sets the work arrays to the correct size
+    procedure   ::  set_k
     procedure   ::  calc_eval        !subroutine to calculate the eigenvalues using the internally set matrix
     procedure   ::  calc_evec        !subroutine to calculate the eigenvectors and eigenvalues using the internally set matrix
 end type
 
 contains
+
+subroutine set_k(this,k)
+    class(FT_Ham_zheev),intent(inout)   :: this
+    real(8),intent(in)                  :: k(3)
+
+    real(8)     :: phase_r
+    complex(8)  :: phase_c
+    integer  :: iH
+    this%H=(0.0d0,0.0d0)
+    do iH=1,this%N_H
+        phase_r=dot_product(this%diffR(:,iH),k)
+        phase_c=cmplx(cos(phase_r),sin(phase_r),8)
+        this%H=this%H+phase_c*this%H_R(:,:,iH)
+    enddo
+
+end subroutine
 
 subroutine set_work(this,work)
     class(FT_Ham_zheev),intent(inout)   :: this
@@ -30,7 +47,7 @@ end subroutine
 subroutine calc_eval(this,Nin,eval,Nout,work)
     class(FT_Ham_zheev),intent(inout)  :: this
     integer,intent(in)                 :: Nin  !size of eigenvalue input array
-    real(8),intent(inout)              :: eval(Nin)    !eigenvalue array
+    complex(8),intent(inout)           :: eval(Nin)    !eigenvalue array
     integer,intent(out)                :: Nout !calculated number of eigenvalues
     type(work_ham)                     :: work !work array that should be set to correct sizes
     !internal
@@ -58,7 +75,7 @@ end subroutine
 subroutine calc_evec(this,Nin,eval,evec,Nout,work)
     class(FT_Ham_zheev),intent(inout)   :: this
     integer,intent(in)                  :: Nin  !size of eigenvalue input array
-    real(8),intent(inout)               :: eval(Nin)
+    complex(8),intent(inout)            :: eval(Nin)
     complex(8),intent(inout)            :: evec(this%io_H%dimH,Nin)
     integer,intent(out)                 :: Nout !calculated number of eigenvalues
     type(work_ham)                      :: work !work array that should be set to correct sizes

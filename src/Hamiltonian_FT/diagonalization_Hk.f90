@@ -1,6 +1,7 @@
 module m_diagonalization_Hk
 use m_parameters_rw_high
 use m_set_Hamiltonian_FT
+use m_FT_Ham_public
 use m_construction_Hk
 use m_FT_Ham_base
 use m_FT_Ham_coo
@@ -52,13 +53,16 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     call set_highs_path(lat,high_lines)
     call mv_kpts(kpts)
 
-    ! prepare the Hamiltonian for the FT
+    ! prepare the Hamiltonian based on the coo matrices for the FT
     call set_Hamiltonians_FT(FT_Ham,H_io,lat)
+    ! choose with which algoritm you want to work
 
     ! get the phase of the Hamiltonian
-!    do i=1,size(kpts,2)
-!       call get_Hk(FT_Ham,kpts(:,i),FT_Ham_k)
-!    enddo
+    do i=1,size(kpts,2)
+    write(*,*) kpts(:,i)
+       call get_Hk(FT_Ham,kpts(:,i),FT_Ham_k)
+    pause
+    enddo
 
 
 end subroutine

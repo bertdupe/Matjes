@@ -1,4 +1,4 @@
-module m_FT_Ham_base
+module m_FT_Ham_coo_rtok_base
 use m_H_combined, only : t_h
 use m_H_type
 implicit none

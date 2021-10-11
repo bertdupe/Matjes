@@ -1,5 +1,5 @@
 module m_set_Hamiltonian_FT
-use m_FT_Ham_base
+use m_FT_Ham_coo_rtok_base
 use m_H_public
 implicit none
 
