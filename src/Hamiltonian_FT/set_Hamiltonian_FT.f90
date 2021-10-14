@@ -42,21 +42,25 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
     i_H=1
     !exchange_J (without DMI)
     if(use_ham(1))then
-        Call get_exchange_J(FT_Ham(i_H)%H_folded,H_io%J,lat)
+        call get_Htype(FT_Ham(i_H)%H_folded)
+        Call get_exchange_J(FT_Ham(i_H)%H_folded,H_io%J,lat,FT_Ham(i_H)%H,FT_Ham(i_H)%diffR)
         if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1
     endif
     !exchange_D (only DMI)
     if(use_ham(2))then
-        Call get_exchange_D(FT_Ham(i_H)%H_folded,H_io%D,lat)
+        call get_Htype(FT_Ham(i_H)%H_folded)
+        Call get_exchange_D(FT_Ham(i_H)%H_folded,H_io%D,lat,FT_Ham(i_H)%H,FT_Ham(i_H)%diffR)
         if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1
     endif
     !anisotropy
     if(use_ham(3))then
+        call get_Htype(FT_Ham(i_H)%H_folded)
         Call get_anisotropy_H(FT_Ham(i_H)%H_folded,H_io%aniso,lat)
         if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1
     endif
     !zeeman
     if(use_ham(4))then
+        call get_Htype(FT_Ham(i_H)%H_folded)
         Call get_zeeman_H(FT_Ham(i_H)%H_folded,H_io%zeeman,lat)
         if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1
     endif

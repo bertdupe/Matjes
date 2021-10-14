@@ -135,6 +135,7 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     write(6,'(a)') '-----------------------------------------------'
     write(6,'(a)') ''
     write(6,'(a)') '-----------------------------------------------'
+    stop 'Bertrand'
 end subroutine setup_simu
 
 end module

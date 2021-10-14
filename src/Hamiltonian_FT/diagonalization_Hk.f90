@@ -27,12 +27,14 @@ contains
 subroutine diagonalize_Ham_FT(H_io,lat)
     use m_input_H_types
     use m_derived_types
+    use m_FT_Ham_public
     type(io_h),intent(in)               :: H_io
     type(lattice), intent(in)           :: lat
 
     ! internal Hamiltonians
     type(H_inp_real_to_k),allocatable :: FT_Ham(:)
     type(H_inp_k_coo) :: FT_Ham_k
+    class(FT_Ham_base),allocatable :: Hk
 
     ! high symmetry lines
     type(parameters_IO_HIGHS) :: high_lines

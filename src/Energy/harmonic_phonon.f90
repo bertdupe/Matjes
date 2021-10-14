@@ -35,10 +35,10 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     use m_forces_from_file, only: get_forces_file
     use m_mode_public
 
-    class(t_H),intent(inout)    :: Ham
-    type(io_H_Ph),intent(in)    :: io
-    type(lattice),intent(in)    :: lat
-    real(8),optional,allocatable,intent(inout)                   :: neighbor_pos_list(:,:)
+    class(t_H),intent(inout)                         :: Ham
+    type(io_H_Ph),intent(in)                         :: io
+    type(lattice),intent(in)                         :: lat
+    real(8),optional,allocatable,intent(inout)       :: neighbor_pos_list(:,:)
     class(t_H),optional,allocatable,intent(inout)    :: Ham_shell_pos(:)
 
     !local Hamiltonian
