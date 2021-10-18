@@ -235,14 +235,15 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
         	Beff_norm=norm(Beff)
         	if(Beff_norm.lt.1.0d-8) stop 'Beff=0, problem in the infinite damping minimization routine' !avoid dividing by 0
         	Beff=Beff/Beff_norm
-        	
+        	!write(*,*) 'ok1'
         	!get local normalized torque and its largest component
-        	torque=cross(M3(:,iomp),Beff,1,N_dim*N_cell)
+        	torque=cross(M3(:,iomp),Beff,1,3)
         	test_torque=maxval(dabs(torque))
       	  	if (test_torque.gt.max_torque ) max_torque=test_torque
-        	
+        	        	!write(*,*) 'ok2'
         	!align moment to field (unless m=0) 
-        	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff 	            
+        	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff 
+        	        	!write(*,*) 'ok3'	            
         enddo
         
 !        iter=iter+1
