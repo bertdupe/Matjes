@@ -168,7 +168,6 @@ end subroutine
 
 subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     use m_derived_types, only : io_parameter,lattice
-   ! use m_constants, only : pi
     use m_write_spin
     use m_createspinfile
     use m_vector, only : cross,norm
@@ -176,7 +175,6 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     type(min_input), intent(in)     :: io_min
     type(lattice),intent(inout)     :: lat
     type(hamiltonian),intent(inout) :: H
-   ! type(work_ham_single),intent(inout) :: work ! idk what this is
     
     ! internal
     real(8)                     :: max_torque,test_torque,Edy
@@ -185,9 +183,7 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     logical                     :: gra_log
     integer                     :: gra_int
     integer                     :: N_cell,N_dim,N_mag
-    !real(8),allocatable,target  :: F_eff(:)
-    !real(8),allocatable         :: F_norm(:),torque(:)
-    real(8),pointer             :: M3(:,:)!,F_eff3(:,:)
+    real(8),pointer             :: M3(:,:)
     logical                     :: conv
     real(8)					    :: dummy(3), Beff(3), torque(3), Beff_norm
     type(work_ham_single)       :: work !type containing work arrays for single energy evaluation
@@ -198,9 +194,6 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     N_dim=lat%M%dim_mode
     N_mag=(N_dim/3)*N_cell
     
-    !allocate(F_norm(N_mag),source=0.0d0)
-    !allocate(F_eff(N_dim*N_cell),torque(N_dim*N_cell),source=0.0d0)
-    !F_eff3(1:3,1:N_mag)=>F_eff
     M3(1:3,1:N_mag)=>lat%M%all_modes
     Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
     gra_log=io_simu%io_Xstruct
@@ -216,37 +209,26 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !           Begin minimization
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !iter=0
-    !max_torque=10.0d0
     do iter=1,io_min%N_minimization
         max_torque=0.0d0
 
-        !Call H%get_eff_field(lat,F_eff,1)
-       ! F_norm=norm2(F_eff3,1)
-        !if(any(F_norm.lt.1.0d-8)) stop 'problem in the infinite damping minimization routine' !avoid divide by 0
-       ! torque=cross(lat%M%all_modes,F_eff,1,N_dim*N_cell)
-       ! test_torque=max(maxval(torque),-minval(torque))
-      !  if ( abs(test_torque).gt.max_torque ) max_torque=test_torque
-      
-        !ITERATIVELY align the moments onto local normalized field. Recompute effective field at each site.
+        !Iteratively align the moments onto local normalized field. Recompute effective field at each site.
         do iomp=1,N_mag
         	!get local normalized field
          	Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
         	Beff_norm=norm(Beff)
         	if(Beff_norm.lt.1.0d-8) stop 'Beff=0, problem in the infinite damping minimization routine' !avoid dividing by 0
         	Beff=Beff/Beff_norm
-        	!write(*,*) 'ok1'
+
         	!get local normalized torque and its largest component
         	torque=cross(M3(:,iomp),Beff,1,3)
         	test_torque=maxval(dabs(torque))
       	  	if (test_torque.gt.max_torque ) max_torque=test_torque
-        	        	!write(*,*) 'ok2'
+
         	!align moment to field (unless m=0) 
         	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff 
-        	        	!write(*,*) 'ok3'	            
         enddo
         
-!        iter=iter+1
         !print max_torque every io_min%Efreq iterations
         if (mod(iter,io_min%Efreq).eq.0) write(*,*) 'Max torque =',max_torque
     
@@ -274,7 +256,6 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     Edy=H%energy(lat)
     write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell,8)
     nullify(M3)
-    !deallocate(F_eff,F_norm,torque)
 end subroutine
 
 end module m_minimize
