@@ -6,8 +6,10 @@ module m_highsym
     use m_tb_k_public   !mode that contains the more efficient TB k-space type
     implicit none
     private 
-    public :: plot_highsym_kpts,set_highs_path,plot_highsym_kpts_sc, highsym_clear_path!, plot_highsym_kpts_proj
+    public :: plot_highsym_kpts,plot_highsym_kpts_sc, highsym_clear_path!, plot_highsym_kpts_proj
     public :: calc_highsym
+    public :: set_highs_path
+    public :: cp_kpts,mv_kpts
 
     interface plot_highsym_kpts_sc
         module procedure plot_highsym_kpts_sc_new
@@ -320,6 +322,33 @@ module m_highsym
         enddo
         write(output_unit,'(/)')
     end subroutine 
+
+    subroutine cp_kpts(kpts_out)
+        real(8), allocatable, intent(out)  :: kpts_out(:,:)
+
+        if (.not.allocated(kpts)) then
+           write(output_unit,'(A)') 'KPTS are not allocated and can not be copied'
+           STOP
+        else
+           allocate(kpts_out(3,N_kpts),source=0.0d0)
+           kpts_out=kpts
+        endif
+
+    end subroutine
+
+    subroutine mv_kpts(kpts_out)
+        real(8), allocatable, intent(out)  :: kpts_out(:,:)
+
+        if (.not.allocated(kpts)) then
+           write(output_unit,'(A)') 'KPTS are not allocated and can not be copied'
+           STOP
+        else
+           allocate(kpts_out(3,N_kpts),source=0.0d0)
+           kpts_out=kpts
+           call highsym_clear_path()
+        endif
+
+    end subroutine
 
 
 end module m_highsym

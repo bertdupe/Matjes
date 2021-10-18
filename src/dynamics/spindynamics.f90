@@ -113,10 +113,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         if(modulo(dim_mode,3)/=0) STOP "dynamics will only work if the considered order-parameter can be described as 3-vector"
         
         OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
-              Write(7,'(20(a,2x))') '# 1:step','2:real_time','3:E_av','4:M', &
+              Write(7,'(20(a,2x))') '# 1:step','2:real_time (fs)','3:E_av (eV)','4:M', &
              &  '5:Mx','6:My','7:Mz','8:vorticity','9:vx', &
-             &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T=', &
-             &  '16:Tfin=','17:Ek=','18:Hx','19:Hy=','20:Hz='
+             &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T= (K)', &
+             &  '16:Tfin=','17:Ek=','18:Hx (T)','19:H (T)y=','20:H (T)z='
         
         ! check the convergence
         open(8,FILE='convergence.dat',action='write',form='formatted')
