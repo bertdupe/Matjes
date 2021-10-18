@@ -55,6 +55,7 @@ contains
     procedure,NON_OVERRIDABLE               :: add
     procedure,NON_OVERRIDABLE               :: init_base
     procedure,NON_OVERRIDABLE               :: init_otherH
+    procedure                               :: mv_base
     procedure(int_finish_setup),deferred    :: finish_setup
     procedure(int_add_H),deferred           :: add_child
     procedure(int_destroy),deferred         :: destroy_child
@@ -300,12 +301,23 @@ contains
         endif
         Call this%mode_l%bcast(comm)
         Call this%mode_r%bcast(comm)
-        Call MPI_Bcast(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
-        Call MPI_Bcast(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_l_single, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%dim_r_single, number_different_order_parameters, MPI_INTEGER  , comm%mas, comm%com,ierr)
         Call this%finish_setup()
 #else
         continue
 #endif
+    end subroutine
+
+    subroutine mv_base(this,Hout)
+        ! copy to Hout and destroy this
+        ! better implementation should avorride this
+        class(t_H_base),intent(inout)      :: this
+        class(t_H_base),intent(inout)      :: Hout
+
+        call this%copy(Hout)
+        call this%destroy()
+
     end subroutine
 
     subroutine copy(this,Hout)
@@ -486,7 +498,7 @@ subroutine set_work_mode(this,work)
     class(t_H_base),intent(inout)   :: this
     class(work_mode),intent(inout)  :: work 
 
-    integer     :: sizes(2)
+    integer     :: sizes(N_work)
 
     sizes=0
     sizes(1)=this%dimH(1)*(size(this%op_l)+2)+this%dimH(2)*(size(this%op_r)+2)      !this size might actually be a bit excessive, check again
@@ -529,8 +541,8 @@ subroutine send_base(this,ithread,tag,com)
     Call this%mode_l%send(ithread,tag,com)
     Call this%mode_r%send(ithread,tag,com)
 
-    Call MPI_SEND(this%dim_l_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
-    Call MPI_SEND(this%dim_r_mode, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_l_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
+    Call MPI_SEND(this%dim_r_single, number_different_order_parameters, MPI_INTEGER, ithread, tag, com, ierr)
 #else
     continue
 #endif
@@ -597,13 +609,12 @@ subroutine get_sum(N1,N2,vec_in,vec_out)
     vec_out=sum(vec_in,1)
 end subroutine
 
-subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+subroutine mult_l_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the left vector * matrix product for the indices ind_out of the result vector
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_base), intent(in)         :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
     integer, intent(in)                 :: N            !number of indices to calculated
     integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output
@@ -619,12 +630,11 @@ subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_
     ERROR STOP
 end subroutine 
 
-subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+subroutine mult_r_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector
     ! input
     class(t_H_base), intent(in)         :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
     integer, intent(in)                 :: N            !number of indices to calculated
     integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output

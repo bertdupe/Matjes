@@ -1,7 +1,9 @@
 module m_Hk
+!slow and general implementation of k-space Hamiltonian
 use m_derived_types, only: lattice
 use m_H_tb_public
-use m_tb_types ,only: parameters_TB_Hsolve,parameters_TB_IO_H, parameters_ham_init 
+use m_tb_types ,only: parameters_TB_IO_H 
+use m_ham_init_type ,only: parameters_ham_init 
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 

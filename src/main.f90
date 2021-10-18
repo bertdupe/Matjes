@@ -16,7 +16,9 @@ use m_parallel_tempering
 use m_spindynamics
 use m_molecular_dynamics
 use m_montecarlo
+use m_tightbinding
 use m_entropic
+use m_wavefunc_evol
 use m_GNEB, only: GNEB
 use m_write_config, only: write_config
 use m_random_init, only: random_init
@@ -76,7 +78,7 @@ Implicit None
     !  Part which does the parallel tempering
     !---------------------------------
     if (my_simu%name == 'parallel-tempering')then
-        Call parallel_tempering(all_lattices,io_simu,ext_param,H_comb,mpi_world)
+        Call parallel_tempering(all_lattices,io_simu,ext_param,H_res,mpi_world)
     endif
 
     
@@ -121,6 +123,17 @@ Implicit None
         call molecular_dynamics(all_lattices,io_simu,ext_param,H_comb,mpi_world)
     endif
 
+    if (my_simu%name == 'wavefunc_eval')then
+        call wavefunc_evolution(all_lattices,mpi_world)
+    endif
+        
+    !---------------------------------
+    !  Part which does the tight-binding simulations
+    !---------------------------------
+    
+    if (my_simu%name == 'tight-binding') then
+        call tightbinding(all_lattices,mpi_world)
+    endif
 
     if(mpi_world%ismas)then
         !---------------------------------
@@ -136,21 +149,11 @@ Implicit None
         endif
         
         !---------------------------------
-        !  Part which does the tight-binding simulations
-        !---------------------------------
-        
-        if (my_simu%name == 'tight-binding') then
-            write(6,'(a)') 'entering into the tight-binding routines'
-            call tightbinding(all_lattices,io_simu)
-        endif
-        
-        !---------------------------------
         !  diag llg
         !---------------------------------
         if (my_simu%name == 'llg_diag')then
             call diag_llg(all_lattices,io_simu,H_comb)
         endif
-        
         
         !---------------------------------
         !---------------------------------

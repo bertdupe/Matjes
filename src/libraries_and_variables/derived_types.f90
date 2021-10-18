@@ -36,9 +36,9 @@ type io_parameter
 ! Track singularities in a vector field
      logical :: io_tracker=.false.
 ! frequency of writting of the data in convergence.dat and EM.dat
-     integer :: io_writing
+     integer :: io_writing=100
 ! frequency for writting the plotting data (magnetization density and so one)
-     integer :: io_frequency
+     integer :: io_frequency=100
 ! calculate topological charged
     logical :: calc_topo=.true.
 contains
@@ -64,6 +64,7 @@ type simulation_parameters
     real(8),dimension(3)    ::  H_ext=0.0d0,E_ext=0.0d0
     contains
     procedure :: bcast => simulation_parameters_bcast
+    procedure :: set => simulation_parameters_set
 end type simulation_parameters
 
 contains
@@ -84,6 +85,16 @@ subroutine simulation_parameters_bcast(this,comm)
 #endif
 end subroutine
 
+subroutine simulation_parameters_set(this,H,E,T)
+    use m_constants, only : k_B
+    class(simulation_parameters),intent(inout)      ::  this
+    real(8),intent(in)  ::  H(3),E(3),T(2)
+
+    this%H_ext=H
+    this%E_ext=E
+    this%ktini=T(1)*k_B
+    this%ktfin=T(2)*k_B
+end subroutine
 
 subroutine io_parameter_bcast(this,comm)
     use mpi_basic                

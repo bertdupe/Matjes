@@ -1,7 +1,10 @@
 module m_init_Hk
+!module which contains the initialization for the tight-binding Hamiltonian in k-space (Hk_inp_t, slower type with all data in separate arrays)
+!most routines in the module are only needed for getting the superconducting delta-parameters self-consistently, otherwise only the normal get_H of init_H.f90 is sufficient
 use m_derived_types, only: lattice,k_grid_t
 use m_H_tb_public
-use m_tb_types ,only: parameters_TB_Hsolve,parameters_TB_IO_H, parameters_ham_init 
+use m_tb_types ,only: parameters_TB_IO_H 
+use m_ham_init_type ,only: parameters_ham_init 
 use m_types_tb_h_inp 
 use m_neighbor_type, only: neighbors
 use m_init_H
@@ -86,7 +89,7 @@ subroutine get_Hk_inp_conv(lat,h_io,H_inp,del)
         endif
     enddo
     if(diff>=h_io%scf_diffconv)then
-        write(error_unit,'(2(AE14.8))') "WARNING, self-consistent delta in k-space did not reach convergence criteria with ",diff,' instead of ',h_io%scf_diffconv
+        write(error_unit,'(2(A,E14.8))') "WARNING, self-consistent delta in k-space did not reach convergence criteria with ",diff,' instead of ',h_io%scf_diffconv
     endif
     Call H_inp%combine(H_inp_nc,H_inp_sc)
     Call H_inp_nc%destroy()

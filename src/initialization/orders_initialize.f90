@@ -24,9 +24,9 @@ subroutine orders_initialize(lat,extpar_io)
     if (fexist) stop 'please rename the file "init-modes.dat" to "*_init.dat", eg."magnetic_init.dat"'
 
     initialized=.false.
-    Call lat%read_order(isinit_opt=initialized)
+    Call lat%read_order(isinit_opt=initialized)             !read initialization from ${order_parameter_name}.inp
     Call lat%read_order("_init.dat",isinit_opt=initialized) !backwards compatible name, remove at some point?
-    Call init_config_lattice(lat,initialized,extpar_io)
-    Call punch_lattice(lat)
+    Call init_config_lattice(lat,initialized,extpar_io)     !checks if init.config contains initialization (init_config), otherwise use default initialization (init_default)
+    Call punch_lattice(lat)                                 !additional option to set order parameter to zero for some geometric shapes (initial usage to get magnetic island on superconductor)
 end subroutine
 end module

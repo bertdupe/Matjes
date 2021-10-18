@@ -1,4 +1,5 @@
 module m_order_parameter
+use m_netcdf_routine, only: netcdf_type
 implicit none
 private
 public order_par
@@ -12,21 +13,32 @@ type order_par
 
     real(8),pointer,private,contiguous      :: data_real(:)=>null() !main pointer that get allocated
     !pointers onto data_real, which can be adressed from outside
-    real(8),pointer,contiguous              :: modes(:,:,:,:) => null()
-    real(8),pointer,contiguous              :: all_modes(:)   => null()
-    real(8),pointer,contiguous              :: modes_v(:,:)   => null() !(1:dimmode,:) shape
-    real(8),pointer,contiguous              :: modes_3(:,:)   => null() !(1:3,:) shape, only associated if it makes sense (help accessing vector in 3-dimensional space)
-    real(8),pointer,contiguous              :: modes_in(:,:)  => null() !(1:dim_mode_innder,:) inner modes
+    real(8),pointer,contiguous              :: modes(:,:,:,:)   => null()
+    real(8),pointer,contiguous              :: all_modes(:)     => null()
+    real(8),pointer,contiguous              :: modes_v(:,:)     => null() !(1:dimmode,:) shape
+    real(8),pointer,contiguous              :: modes_3(:,:)     => null() !(1:3,:) shape, only associated if it makes sense (help accessing vector in 3-dimensional space)
+    real(8),pointer,contiguous              :: modes_in(:,:)    => null() !(1:dim_mode_innder,:) inner modes
+    complex(8),pointer,contiguous           :: modes_c_v(:,:)   => null()
+    complex(8),pointer,contiguous           :: all_modes_c(:)   => null()
 
-    integer                                 :: dim_mode=0
-    integer                                 :: dim_mode_inner=0
+    integer                                 :: dim_mode=0       !number of entries per unit-cell
+    integer                                 :: dim_mode_inner=0 !size of minimal sensible combination of order parameter (eg. 3 for real-space vector)
+    logical                                 :: is_cmplx=.false. !whether the order parameter is complex (modes_c_* are set and make sense)
+    type(netcdf_type),private               :: io
+
 contains 
     procedure :: init => init_order_par
     procedure :: copy => copy_order_par
     procedure :: copy_val => copy_val_order_par
     procedure :: delete => delete_order_par
     procedure :: read_file
+!    procedure :: write_file_netcdf
     procedure :: truncate
+!netcdf file operations
+    procedure :: open_io
+    procedure :: write_io
+    procedure :: close_io
+
 
     !MPI STUFF
     procedure :: bcast
@@ -34,6 +46,34 @@ contains
     final :: final_order_par
 end type
 contains
+
+subroutine open_io(this,varname)
+    class(order_par),intent(inout)  :: this
+    character(len=*),intent(in)     :: varname
+#ifdef CPP_NETCDF
+    integer     :: shp(4)
+
+    shp=shape(this%modes)   !get shape of lattice
+    Call this%io%file_open(varname//'.nc',varname,shp(2:))
+#endif
+end subroutine
+
+subroutine write_io(this)
+    class(order_par),intent(inout)  ::  this
+
+#ifdef CPP_NETCDF
+    Call this%io%file_write(this%all_modes)
+#endif
+end subroutine
+
+subroutine close_io(this)
+    class(order_par),intent(inout)  :: this
+
+#ifdef CPP_NETCDF
+    Call this%io%file_close()
+#endif
+end subroutine
+
 
 subroutine bcast(this,comm)
 use mpi_basic                
@@ -50,6 +90,7 @@ use mpi_basic
 
     Call MPI_Bcast(this%dim_mode      , 1, MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%dim_mode_inner, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%is_cmplx      , 1, MPI_LOGICAL, comm%mas, comm%com,ierr)
     if(comm%ismas)then
         N=size(this%data_real)
         mode_shape=shape(this%modes)
@@ -59,7 +100,7 @@ use mpi_basic
     dim_lat=mode_shape(2:4)
     dim_mode_inner=this%dim_mode_inner
     if(.not.comm%ismas)then
-        Call this%init(dim_lat,dim_mode,dim_mode_inner)
+        Call this%init(dim_lat,dim_mode,dim_mode_inner,is_cmplx=this%is_cmplx)
     endif
     Call MPI_Bcast(this%modes, size(this%modes), MPI_REAL8, comm%mas, comm%com,ierr)
 #else
@@ -136,17 +177,20 @@ subroutine read_file(this,fname,fexist)
     call close_file(fname,io)
 end subroutine
 
-subroutine init_order_par(self,dim_lat,dim_mode,dim_mode_inner,vec_val,val)
+subroutine init_order_par(self,dim_lat,dim_mode,dim_mode_inner,vec_val,val,is_cmplx)
     !if the data pointers are not allocated, initialize them with 0
     !if the data pointers are allocated, check that size requirements are identical
     !associate public pointers to internal data storage
+    use iso_c_binding, only: C_PTR, c_loc,c_f_pointer
     class(order_par),intent(inout)  :: self
     integer,intent(in)              :: dim_lat(3)
     integer,intent(in)              :: dim_mode
     integer,intent(in)              :: dim_mode_inner
     real(8),intent(in),optional     :: vec_val(dim_mode),val    !possibities to initialize order parameters
+    logical,intent(in),optional     :: is_cmplx                 !sets if the order parameter can be understood as complex-> set respective modes_c access
     !internal
     integer                         :: N,Ncell
+    type(C_PTR)                     :: tmp_ptr
    
     !initialize real array data if necessary and associate pointers
     self%dim_mode=dim_mode
@@ -168,6 +212,16 @@ subroutine init_order_par(self,dim_lat,dim_mode,dim_mode_inner,vec_val,val)
 
     if(present(vec_val)) self%modes_v=spread(vec_val,2,Ncell)
     if(present(val)) self%all_modes=val
+
+    if(present(is_cmplx))then
+        if(is_cmplx)then
+            self%is_cmplx=is_cmplx
+            if(modulo(dim_mode,2)/=0) ERROR STOP "If orderparameter is complex, the dim_mode for the pointer associations has to be even"
+            tmp_ptr=c_loc(self%data_real)
+            Call c_f_pointer(tmp_ptr,self%modes_c_v,[dim_mode/2,Ncell]) 
+            self%all_modes_c(1:(dim_mode/2)*Ncell)=>self%modes_c_v
+        endif
+    endif
 end subroutine
 
 subroutine final_order_par(self)
@@ -179,7 +233,7 @@ end subroutine
 subroutine delete_order_par(self)
     class(order_par),intent(inout) :: self
 
-    nullify(self%all_modes,self%modes,self%modes_v,self%modes_3,self%modes_in)
+    nullify(self%all_modes,self%modes,self%modes_v,self%modes_3,self%modes_in,self%modes_c_v,self%all_modes_c)
     if(associated(self%data_real)) deallocate(self%data_real)
 end subroutine
 
@@ -193,14 +247,14 @@ subroutine copy_order_par(self,copy,dim_lat)
         STOP "failed to copy order_par, since the source modes are not allocated"
     endif
     allocate(copy%data_real,source=self%data_real)
-    Call copy%init(dim_lat,self%dim_mode,self%dim_mode_inner)
+    Call copy%init(dim_lat,self%dim_mode,self%dim_mode_inner,is_cmplx=self%is_cmplx)
 
 end subroutine
 
 subroutine copy_val_order_par(self,copy)
     class(order_par),intent(inout) :: self
     class(order_par),intent(inout) :: copy
-   
+ 
     if(.not.associated(self%data_real))then
         STOP "failed to copy_val order_par, since the source modes are not allocated"
     endif

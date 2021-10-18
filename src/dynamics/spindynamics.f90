@@ -10,7 +10,6 @@ contains
 
 subroutine spindynamics(lat,io_simu,ext_param,H,H_res,comm)
     !wrapper to first initialize all spin-dynamics parameters and distribute on the different threads
-    use m_H_public,only: t_H
     type(lattice), intent(inout)                :: lat
     type(io_parameter), intent(inout)           :: io_simu
     type(simulation_parameters), intent(inout)  :: ext_param
@@ -45,11 +44,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_tracker, only: init_tracking,plot_tracking
     use m_print_Beff, only: print_Beff
     use m_precision, only: truncate
-    use m_H_public, only: t_H, energy_all
     use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
     use m_solver_order,only : get_Dmode_int
-    use m_dyna_io, only: rw_dyna
     use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 !$  use omp_lib
     
@@ -80,7 +77,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     real(8) :: timestep_int,real_time,h_int(3),E_int(3)
     real(8) :: kt,ktini,ktfin
     real(8) :: time
-    integer :: iomp, N_cell, N_loop, tag
+    integer :: N_cell, N_loop, tag
     !integer :: io_test
     !! switch that controls the presence of magnetism, electric fields and magnetic fields
     logical :: l_excitation
@@ -116,10 +113,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         if(modulo(dim_mode,3)/=0) STOP "dynamics will only work if the considered order-parameter can be described as 3-vector"
         
         OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
-              Write(7,'(20(a,2x))') '# 1:step','2:real_time','3:E_av','4:M', &
+              Write(7,'(20(a,2x))') '# 1:step','2:real_time (fs)','3:E_av (eV)','4:M', &
              &  '5:Mx','6:My','7:Mz','8:vorticity','9:vx', &
-             &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T=', &
-             &  '16:Tfin=','17:Ek=','18:Hx','19:Hy=','20:Hz='
+             &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T= (K)', &
+             &  '16:Tfin=','17:Ek=','18:Hx (T)','19:H (T)y=','20:H (T)z='
         
         ! check the convergence
         open(8,FILE='convergence.dat',action='write',form='formatted')
@@ -238,11 +235,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                     Call update_exc(real_time+dt,mag_lattice,excitations)
                     Call update_exc(real_time+dt,lat_1      ,excitations)
 
-!                    do iomp=1,N_cell
-!                        !smarter to just copy relevant order parameters around, or even point all to the same array
-!                        call update_EMT_of_r(iomp,mag_lattice)
-!                        call update_EMT_of_r(iomp,lat_1)
-!                    enddo
                 endif
             endif
 
@@ -252,7 +244,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
             if(comm%ismas)then
                 !do integration
-                ! Be carefull the sqrt(dt) is not included in BT_mag(iomp),D_T_mag(iomp) at this point. It is included only during the integration
                 Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop))
                 Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
                 lat_2%M%modes_3=get_integrator_field(mag_lattice%M%modes_3,Dmag_int_3,dt)

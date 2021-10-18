@@ -8,7 +8,8 @@ public :: Htb_inp, Htb_atpair, Htb_dist
 type Htb_inp
     type(Htb_atpair), allocatable :: at(:)
 contains
-    procedure ::    set=> set_ham
+    procedure :: set=> set_ham
+    procedure :: bcast=>bcast_Htb_inp
 end type 
 
 type Htb_atpair
@@ -16,13 +17,16 @@ type Htb_atpair
     integer     :: Nspin(2)
     integer     :: Norb(2)
     type(Htb_dist), allocatable :: dist(:)
+contains
+    procedure :: bcast=> bcast_Htb_atpair
 end type
 
 type Htb_dist
     integer ::  dist=-1
     complex(8),allocatable  ::  Hloc(:,:)
 contains
-    procedure ::     add => add_hampair_entry
+    procedure :: add => add_hampair_entry
+    procedure :: bcast=> bcast_Htb_dist
 end type
 
 contains 
@@ -211,6 +215,64 @@ recursive subroutine add_hampair_entry(this,orbital,spin,val_in,Norb,Nspin)
     this%Hloc(ind(1),ind(2))=this%Hloc(ind(1),ind(2))+val
 end subroutine
 
+subroutine bcast_Htb_inp(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(Htb_inp),intent(inout)    :: this
+    type(mpi_type),intent(in)       :: comm
+#ifdef CPP_MPI
+    integer     ::  i,N
+    N=0
+    if(allocated(this%at)) N=size(this%at)
+    Call bcast(N,comm)
+    if(.not.allocated(this%at).and.N>0) allocate(this%at(N))
+    do i=1,N
+        Call this%at(i)%bcast(comm)
+    enddo
+#else
+    continue
+#endif
+end subroutine
 
+subroutine bcast_Htb_atpair(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(Htb_atpair),intent(inout) :: this
+    type(mpi_type),intent(in)       :: comm
+#ifdef CPP_MPI
+    integer     ::  i,N
+    integer     :: arr(6)
+    
+    arr=[this%atpair(1), this%atpair(2), this%Nspin(1), this%Nspin(2), this%Norb(1), this%Norb(2)]
+    Call bcast(arr,comm)
+    this%atpair=arr(1:2)
+    this%Nspin =arr(3:4)
+    this%Norb  =arr(5:6)
+
+    N=0
+    if(allocated(this%dist)) N=size(this%dist)
+    Call bcast(N,comm)
+    if(.not.allocated(this%dist).and.N>0) allocate(this%dist(N))
+    do i=1,N
+        Call this%dist(i)%bcast(comm)
+    enddo
+#else
+    continue
+#endif
+end subroutine
+
+subroutine bcast_Htb_dist(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(Htb_dist),intent(inout)   :: this
+    type(mpi_type),intent(in)       :: comm
+#ifdef CPP_MPI
+    
+    Call bcast(this%dist,comm)
+    Call bcast_alloc(this%Hloc,comm)
+#else
+    continue
+#endif
+end subroutine
 
 end module

@@ -1,5 +1,5 @@
 module m_H_tb_base
-use m_TB_types, only: parameters_ham_init 
+use m_ham_init_type, only: parameters_ham_init 
 private
 public H_TB
 type,abstract :: H_TB   !
@@ -27,6 +27,8 @@ contains
     procedure,NON_OVERRIDABLE       :: init_otherH
     procedure,NON_OVERRIDABLE       :: get_hinit
 
+    procedure(int_mult),deferred    :: mult_r
+
     procedure(int_init_connect),deferred    :: init_connect
     procedure(int_init_coo),deferred        :: init_coo
     procedure(int_mv),deferred              :: mv
@@ -41,11 +43,14 @@ end type
 
 abstract interface
 
-!    subroutine int_get_eval(this,eval)
-!        import H_TB
-!        class(H_tb),intent(in)              ::  this
-!        real(8),allocatable,intent(out)     ::  eval(:)
-!    end subroutine
+    subroutine int_mult(this,vec,res,alpha,beta)
+        import H_tb
+        class(H_tb),intent(in)          :: this
+        complex(8),intent(in   )        :: vec(this%dimH)
+        complex(8),intent(inout)        :: res(this%dimH)
+        complex(8),intent(in),optional  :: alpha
+        complex(8),intent(in),optional  :: beta
+    end subroutine
 
     subroutine int_mv(this,Hout)
         import H_TB

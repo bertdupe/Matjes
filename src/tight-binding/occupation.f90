@@ -11,7 +11,7 @@ public calc_occupation
 contains 
     
     subroutine calc_occupation(h_par,eigvec,eigval,E_f_in,kt,fname,dist_ptr)
-        type(parameters_TB_Hsolve),intent(in)     ::  h_par
+        type(parameters_TB_IO_H),intent(in)     ::  h_par
         real(8),intent(in)      ::  eigval(:),E_f_in,kt
         complex(8),intent(in)   ::  eigvec(:,:)
         character(len=*),intent(in) ::  fname
@@ -48,9 +48,9 @@ contains
 
     subroutine write_output(h_par,E_F,fname,occ)
         !sum up orbitals of each cell and print out each spin-channel 
-        type(parameters_TB_Hsolve),intent(in)     ::  h_par
-        character(len=*),intent(in) ::  fname
-        real(8),intent(in)          ::  occ(:),E_F
+        type(parameters_TB_IO_H),intent(in) ::  h_par
+        character(len=*),intent(in)         ::  fname
+        real(8),intent(in)                  ::  occ(:),E_F
         
         integer                     :: i,io
         integer                     :: ist,ien !start/end

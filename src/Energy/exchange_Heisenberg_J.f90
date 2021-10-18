@@ -19,7 +19,7 @@ subroutine read_J_input(io_param,fname,io)
     Call get_parameter(io_param,fname,'magnetic_J_fft',io%fft) 
 end subroutine
 
-subroutine get_exchange_J(Ham,io,lat)
+subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get heisenberg symmetric exchange in t_H Hamiltonian format
     use m_H_public
     use m_derived_types, only: lattice
@@ -27,9 +27,11 @@ subroutine get_exchange_J(Ham,io,lat)
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
 
-    class(t_H),intent(inout)    :: Ham  !Hamiltonian in which all contributions are added up
-    type(io_H_J),intent(in)     :: io
-    type(lattice),intent(in)    :: lat
+    class(t_H),intent(inout)                       :: Ham  !Hamiltonian in which all contributions are added up
+    type(io_H_J),intent(in)                        :: io
+    type(lattice),intent(in)                       :: lat
+    real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
+    class(t_H),optional,allocatable,intent(inout)  :: Ham_shell_pos(:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
@@ -54,6 +56,23 @@ subroutine get_exchange_J(Ham,io,lat)
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
+
+        if (present(Ham_shell_pos)) then
+          write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+          i_pair=0
+          do i_atpair=1,N_atpair
+             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+             N_dist=size(io%pair(i_atpair)%dist)
+             do i_dist=1,N_dist
+                do i_shell=1,neigh%Nshell(i_dist)
+                   i_pair=i_pair+1
+                enddo
+             enddo
+          enddo
+          allocate(Ham_shell_pos(i_pair),mold=Ham_tmp)
+          allocate(neighbor_pos_list(3,i_pair))
+        endif
+
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             !get neighbors
@@ -78,6 +97,9 @@ subroutine get_exchange_J(Ham,io,lat)
                     atind_mag(2)=lat%cell%ind_mag(neigh%at_pair(2,i_pair))
                     offset_mag=(atind_mag-1)*3    !offset for magnetic index 
                     Htmp=0.0d0
+
+                    if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=neigh%diff_vec(:,i_pair)
+
                     Htmp(offset_mag(1)+1,offset_mag(2)+1)=J
                     Htmp(offset_mag(1)+2,offset_mag(2)+2)=J
                     Htmp(offset_mag(1)+3,offset_mag(2)+3)=J
@@ -89,7 +111,11 @@ subroutine get_exchange_J(Ham,io,lat)
                     Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"MM",lat,2)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
-                    Call Ham_tmp%destroy()
+                    if (present(Ham_shell_pos)) then
+                       call Ham_tmp%mv(Ham_shell_pos(i_pair))
+                    else
+                       Call Ham_tmp%destroy()
+                    endif
                     connect_bnd(1)=connect_bnd(2)+1
                 enddo 
             enddo

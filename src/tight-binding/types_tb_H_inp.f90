@@ -1,5 +1,8 @@
 module m_types_tb_h_inp
+!module which contains the types which read the manual tight-binding Hamiltonian input
+!it definitely makes sense to put the separate terms in separate files, this got out of hand
 use m_derived_types, only: lattice
+use mpi_basic
 use, intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 private
@@ -9,7 +12,7 @@ contains
     procedure(int_print)  ,deferred :: print_std
     procedure(int_is_zero),deferred :: is_zero
     procedure(int_read),deferred    :: local_read
-    generic :: read(formatted) => local_read
+    procedure(int_bcast),deferred   :: bcast
 end type
 
 abstract interface
@@ -19,21 +22,24 @@ abstract interface
         type(lattice),intent(in)      :: lat
     end subroutine
 
-    subroutine int_read(par, unit, iotype, v_list, iostat, iomsg)
+    subroutine int_bcast(this, comm)
+        import TB_H_par, mpi_type
+        class(TB_H_par),intent(inout)   :: this
+        type(mpi_type),intent(in)       :: comm
+    end subroutine
+
+    subroutine int_read(par, str, iostat)
         import TB_H_par
         class(TB_H_par), intent(inout):: par
-        integer, intent(in)           :: unit
-        character(*), intent(in)      :: iotype
-        integer, intent(in)           :: v_list(:)
+        character(len=*),intent(in)   :: str
         integer, intent(out)          :: iostat
-        character(*), intent(inout)   :: iomsg
     end subroutine
 
     subroutine int_print(this,io_in)
         !prints the set information out to the standart output
         import TB_H_par
         class(TB_H_par),intent(in)     :: this
-        integer,intent(in),optional     :: io_in
+        integer,intent(in),optional    :: io_in
     end subroutine
 
     function int_is_zero(this)result(is_zero)
@@ -57,6 +63,7 @@ type,extends(TB_H_par) :: TB_hopping
     procedure :: print_std => hop_print
     procedure :: is_zero => hopping_is_zero
     procedure :: check => TB_hopping_check
+    procedure :: bcast => TB_hopping_bcast
 end type
 
 type,extends(TB_H_par) :: TB_delta
@@ -71,6 +78,7 @@ type,extends(TB_H_par) :: TB_delta
     procedure :: print_std => del_print
     procedure :: is_zero => delta_is_zero
     procedure :: check => TB_delta_check
+    procedure :: bcast => TB_delta_bcast
 end type
 
 type,extends(TB_H_par) :: TB_Jsd
@@ -85,6 +93,7 @@ type,extends(TB_H_par) :: TB_Jsd
     procedure :: print_std => Jsd_print
     procedure :: is_zero => Jsd_is_zero
     procedure :: check => TB_Jsd_check
+    procedure :: bcast => TB_Jsd_bcast
 end type
 
 type,extends(TB_H_par) :: TBio_delta_onsite_scf
@@ -99,6 +108,7 @@ type,extends(TB_H_par) :: TBio_delta_onsite_scf
     procedure :: print_std => delta_onsite_scf_print
     procedure :: is_zero => delta_onsite_scf_is_zero
     procedure :: check => delta_onsite_scf_check
+    procedure :: bcast => delta_onsite_scf_bcast
 end type
 
 type,extends(TB_H_par) :: TBio_defect
@@ -115,6 +125,7 @@ type,extends(TB_H_par) :: TBio_defect
     procedure :: print_std => defect_print
     procedure :: is_zero => defect_is_zero
     procedure :: check => defect_check
+    procedure :: bcast => defect_bcast
 end type
 
 contains 
@@ -140,29 +151,22 @@ subroutine alloc_TB_H(par,var_name)
     end select
 end subroutine
 
-subroutine defect_read(par, unit, iotype, v_list, iostat, iomsg)
-    class(TBio_defect), intent(inout):: par
-    integer, intent(in)           :: unit
-    character(*), intent(in)      :: iotype
-    integer, intent(in)           :: v_list(:)
-    integer, intent(out)          :: iostat
-    character(*), intent(inout)   :: iomsg
+subroutine defect_read(par, str, iostat)
+    class(TBio_defect), intent(inout)   :: par
+    character(len=*),intent(in)         :: str
+    integer, intent(out)                :: iostat
     
     type(TBio_defect)             :: tmp
    
-    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site
-    backspace(unit)
+    read(str,*,iostat=iostat) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site
     if (iostat > 0)then    !try to read without z-site
-        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site(1:2)
+        read(str,*,iostat=iostat) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site(1:2)
         tmp%site(3)=1
-        backspace(unit)
     endif
     if (iostat > 0)then    !try to read without yz-site
-        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site(1)
+        read(str,*,iostat=iostat) tmp%atom,tmp%orbital,tmp%nonmag,tmp%mag, tmp%site(1)
         tmp%site(2:3)=1
-        backspace(unit)
     endif
-    read(unit,*)    !together with backspace make sure that is advances
     if(iostat==0) par=tmp
 end subroutine
 
@@ -202,24 +206,42 @@ subroutine defect_check(this,lat)
     !will not catch in Hamiltonian is not magnetic but this%spin=2... but that information is not in lat..., either check later,ignore, or include here
 end subroutine
 
+subroutine defect_bcast(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(TBio_defect), intent(inout)   :: this
+    type(mpi_type),intent(in)           :: comm
+#ifdef CPP_MPI
+    integer     :: arr_i(5)
+    real(8)     :: arr_r(2)
+    arr_i=[this%atom,this%orbital,this%site(1),this%site(2),this%site(3)]
+    arr_r=[this%nonmag, this%mag]
 
-subroutine TB_hopping_read(par, unit, iotype, v_list, iostat, iomsg)
-    class(TB_hopping), intent(inout):: par
-    integer, intent(in)           :: unit
-    character(*), intent(in)      :: iotype
-    integer, intent(in)           :: v_list(:)
-    integer, intent(out)          :: iostat
-    character(*), intent(inout)   :: iomsg
+    Call bcast(arr_i,comm)
+    Call bcast(arr_r,comm)
+
+    this%atom =arr_i(1)
+    this%orbital=arr_i(2)
+    this%site   =arr_i(3:5)
+    this%nonmag =arr_r(1)
+    this%mag    =arr_r(2)
+#else
+    continue
+#endif
+end subroutine
+
+
+subroutine TB_hopping_read(par, str, iostat)
+    class(TB_hopping), intent(inout)    :: par
+    character(len=*),intent(in)         :: str
+    integer, intent(out)                :: iostat
     
-    type(TB_hopping)              :: tmp
+    type(TB_hopping)    :: tmp
    
-    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype,tmp%orbital,tmp%spin,tmp%dist,tmp%val
-    backspace(unit)
+    read(str,*,iostat=iostat) tmp%attype,tmp%orbital,tmp%spin,tmp%dist,tmp%val
     if (iostat > 0)then    !try to read without spin
-        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype,tmp%orbital,tmp%dist,tmp%val
-        backspace(unit)
+        read(str,*,iostat=iostat) tmp%attype,tmp%orbital,tmp%dist,tmp%val
     endif
-    read(unit,*)    !together with backspace make sure that is advances
     if(iostat==0) par=tmp
     if(par%attype(1)>par%attype(2))then
         par%attype=tmp%attype(2:1:-1)
@@ -272,23 +294,40 @@ subroutine TB_hopping_check(this,lat)
     endif
 end subroutine
 
-subroutine TB_delta_read(par, unit, iotype, v_list, iostat, iomsg)
-    class(TB_delta), intent(inout):: par
-    integer, intent(in)           :: unit
-    character(*), intent(in)      :: iotype
-    integer, intent(in)           :: v_list(:)
-    integer, intent(out)          :: iostat
-    character(*), intent(inout)   :: iomsg
+subroutine TB_hopping_bcast(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(TB_hopping), intent(inout)    :: this
+    type(mpi_type),intent(in)           :: comm
+#ifdef CPP_MPI
+    integer     :: arr_i(7)
+    arr_i=[this%attype(1),this%attype(2),this%orbital(1),this%orbital(2),this%spin(1),this%spin(2),this%dist]
+
+    Call bcast(arr_i,comm)
+    Call bcast(this%val,comm)
+    this%attype =arr_i(1:2)
+    this%orbital=arr_i(3:4)
+    this%spin   =arr_i(5:6)
+    this%dist   =arr_i(7)
+#else
+    continue
+#endif
+end subroutine
+
+
+subroutine TB_delta_read(par, str, iostat)
+    class(TB_delta), intent(inout)  :: par
+    character(len=*),intent(in)     :: str
+    integer, intent(out)            :: iostat
     
-    type(TB_delta)                :: tmp
+    type(TB_delta)  :: tmp
+    real(8)         :: tmp_val(2)
    
-    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital ,tmp%dist, tmp%val
-    backspace(unit)
+    read(str,*,iostat=iostat) tmp%attype, tmp%orbital ,tmp%dist, tmp%val
     if (iostat > 0)then    !try to read 2 real values format
-        read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital ,tmp%dist, tmp%val%re, tmp%val%im
-        backspace(unit)
+        read(str,*,iostat=iostat) tmp%attype, tmp%orbital ,tmp%dist, tmp_val
+        tmp%val=cmplx(tmp_val(1),tmp_val(2),8)
     endif
-    read(unit,*)    !together with backspace make sure that it advances
     if(iostat==0) par=tmp
     if(par%attype(1)>par%attype(2))then
         par%attype=tmp%attype(2:1:-1)
@@ -331,17 +370,34 @@ subroutine TB_delta_check(this,lat)
     endif
 end subroutine
 
-subroutine TB_Jsd_read(par, unit, iotype, v_list, iostat, iomsg)
+subroutine TB_delta_bcast(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(TB_delta), intent(inout)  :: this
+    type(mpi_type),intent(in)       :: comm
+#ifdef CPP_MPI
+    integer     :: arr_i(5)
+    arr_i=[this%attype(1),this%attype(2),this%orbital(1),this%orbital(2),this%dist]
+
+    Call bcast(arr_i,comm)
+    Call bcast(this%val,comm)
+    this%attype =arr_i(1:2)
+    this%orbital=arr_i(3:4)
+    this%dist   =arr_i(5)
+#else
+    continue
+#endif
+end subroutine
+
+
+subroutine TB_Jsd_read(par, str, iostat)
     class(TB_Jsd), intent(inout)  :: par
-    integer, intent(in)           :: unit
-    character(*), intent(in)      :: iotype
-    integer, intent(in)           :: v_list(:)
+    character(len=*),intent(in)   :: str
     integer, intent(out)          :: iostat
-    character(*), intent(inout)   :: iomsg
     
     type(TB_Jsd)                  :: tmp
    
-    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital , tmp%val
+    read(str,*,iostat=iostat) tmp%attype, tmp%orbital , tmp%val
     if(iostat==0) par=tmp
 end subroutine
 
@@ -374,17 +430,13 @@ subroutine delta_onsite_scf_check(this,lat)
     !check negative value?
 end subroutine
 
-subroutine delta_onsite_scf_read(par, unit, iotype, v_list, iostat, iomsg)
-    class(TBio_delta_onsite_scf), intent(inout)  :: par
-    integer, intent(in)           :: unit
-    character(*), intent(in)      :: iotype
-    integer, intent(in)           :: v_list(:)
-    integer, intent(out)          :: iostat
-    character(*), intent(inout)   :: iomsg
+subroutine delta_onsite_scf_read(par, str, iostat)
+    class(TBio_delta_onsite_scf), intent(inout) :: par
+    character(len=*),intent(in)                 :: str
+    integer, intent(out)                        :: iostat
     
     type(TBio_delta_onsite_scf)        :: tmp
-   
-    read(unit,*,iostat=iostat,iomsg=iomsg) tmp%attype, tmp%orbital , tmp%val
+    read(str,*,iostat=iostat) tmp%attype, tmp%orbital, tmp%val
     if(iostat==0) par=tmp
 end subroutine
 
@@ -397,6 +449,25 @@ subroutine delta_onsite_scf_assign(par,par_in)
     par%orbital=par_in%orbital 
     par%val    =par_in%val        
 end subroutine
+
+subroutine delta_onsite_scf_bcast(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(TBio_delta_onsite_scf), intent(inout) :: this
+    type(mpi_type),intent(in)                   :: comm
+#ifdef CPP_MPI
+    integer     :: arr_i(3)
+    arr_i=[this%attype,this%orbital(1),this%orbital(2)]
+
+    Call bcast(arr_i,comm)
+    Call bcast(this%val,comm)
+    this%attype =arr_i(1)
+    this%orbital=arr_i(2:3)
+#else
+    continue
+#endif
+end subroutine
+
 
 
 subroutine TB_Jsd_check(this,lat)
@@ -416,6 +487,22 @@ subroutine TB_Jsd_check(this,lat)
         Stop "Check input"
     endif
 end subroutine
+
+subroutine TB_Jsd_bcast(this,comm)
+    use mpi_basic
+    use mpi_util
+    class(TB_Jsd), intent(inout)    :: this
+    type(mpi_type),intent(in)       :: comm
+#ifdef CPP_MPI
+
+    Call bcast(this%attype,comm)
+    Call bcast(this%orbital,comm)
+    Call bcast(this%val,comm)
+#else
+    continue
+#endif
+end subroutine
+
 
 subroutine del_print(this,io_in)
     use, intrinsic :: iso_fortran_env, only : output_unit

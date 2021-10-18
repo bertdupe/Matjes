@@ -25,6 +25,7 @@ module m_dipolar_magnetic
 use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_dipole
 use m_derived_types, only: lattice
+use m_lattice_position, only: get_pos_mag
 implicit none
 private
 public read_dip_input, get_dipolar, get_dipolar_fft
@@ -217,7 +218,7 @@ subroutine get_dipolar(Ham,io,lat)
         N=Nmag*lat%Ncell
 
         !get positions
-        Call lat%get_pos_mag(pos)
+        Call get_pos_mag(lat,pos)
         pos3(1:3,1:size(pos)/3)=>pos
 
         !get supercell difference vectors

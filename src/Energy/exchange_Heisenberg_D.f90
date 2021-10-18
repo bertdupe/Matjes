@@ -19,7 +19,7 @@ subroutine read_D_input(io_param,fname,io)
 end subroutine
 
 
-subroutine get_exchange_D(Ham,io,lat)
+subroutine get_exchange_D(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
@@ -27,9 +27,11 @@ subroutine get_exchange_D(Ham,io,lat)
     use m_neighbor_type, only: neighbors
     use m_mode_public
 
-    class(t_H),intent(inout)    :: Ham
-    type(io_H_D),intent(in)     :: io
-    type(lattice),intent(in)    :: lat
+    class(t_H),intent(inout)                       :: Ham
+    type(io_H_D),intent(in)                        :: io
+    type(lattice),intent(in)                       :: lat
+    real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
+    class(t_H),optional,allocatable,intent(inout)  :: Ham_shell_pos(:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
@@ -55,6 +57,23 @@ subroutine get_exchange_D(Ham,io,lat)
         Call get_Htype(Ham_tmp)
         N_attrip=size(io%trip)
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
+
+        if (present(Ham_shell_pos)) then
+          write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+          i_trip=0
+          do i_attrip=1,N_attrip
+             Call neigh%get(io%trip(i_attrip)%attype,io%trip(i_attrip)%dist,lat)
+             N_dist=size(io%trip(i_attrip)%dist)
+             do i_dist=1,N_dist
+                do i_shell=1,neigh%Nshell(i_dist)
+                   i_trip=i_trip+1
+                enddo
+             enddo
+          enddo
+          allocate(Ham_shell_pos(i_trip),mold=Ham_tmp)
+          allocate(neighbor_pos_list(3,i_trip))
+        endif
+
         do i_attrip=1,N_attrip
             !loop over different connected atom types
             Call neigh%get(io%trip(i_attrip)%attype(1:2),io%trip(i_attrip)%dist,lat)
@@ -80,6 +99,8 @@ subroutine get_exchange_D(Ham,io,lat)
                         offset_mag=(atind_mag-1)*3
                         Htmp=0.0d0
 
+                        if (present(neighbor_pos_list)) neighbor_pos_list(:,i_trip)=neigh%diff_vec(:,i_trip)
+
                         Htmp(offset_mag(1)+1,offset_mag(2)+2)= DMI(3) * Hmag
                         Htmp(offset_mag(1)+3,offset_mag(2)+1)= DMI(2) * Hmag
                         Htmp(offset_mag(1)+2,offset_mag(2)+3)= DMI(1) * Hmag
@@ -94,7 +115,12 @@ subroutine get_exchange_D(Ham,io,lat)
                         Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"MM",lat,2)
                         deallocate(val_tmp,ind_tmp)
                         Call Ham%add(Ham_tmp)
-                        Call Ham_tmp%destroy()
+
+                        if (present(Ham_shell_pos)) then
+                           call Ham_tmp%mv(Ham_shell_pos(i_trip))
+                        else
+                           Call Ham_tmp%destroy()
+                        endif
                     endif
                     connect_bnd(1)=connect_bnd(2)+1
                 enddo 

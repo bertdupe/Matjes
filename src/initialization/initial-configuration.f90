@@ -32,7 +32,7 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
     if(exists)then
         io=open_file_read(fname)
     else
-        write(*,'(///A/A///A)') 'FILE:',fname," NOT FOUND",'SKIPPING init_config',"SETTING DEFAULT CONFIGURATION"
+        write(*,'(/3A/A/)') 'FILE: "',trim(fname),'" NOT FOUND','SKIPPING init_config and instead setting default configuration'
     endif
 
     do i=1,number_different_order_parameters
