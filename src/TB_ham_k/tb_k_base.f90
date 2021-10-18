@@ -11,6 +11,10 @@ type,abstract ::    H_k_base
     integer             :: dimH=0       !dimension of Hamiltonian
     integer             :: N_H=0        !number of real-space Hamiltonians considered
     logical,private     :: set=.false.  !check if arrays have been set
+
+    real(8)             ::  Ebnd(2)=0.0d0
+    integer             ::  Ne=0
+    real(8)             ::  diag_acc=0.0d0
 contains
     procedure(int_init),deferred        :: init        !initializes this type
     procedure(int_set_k),deferred       :: set_k       !sets the internal Hamiltonian to a k-point
@@ -19,6 +23,7 @@ contains
     procedure(int_evec),deferred        :: calc_evec   !subroutine to calculate the eigenvectors and eigenvalues using the internally set matrix
 
     procedure                   :: get_size_eval
+    procedure,NON_OVERRIDABLE   :: init_base
     procedure,NON_OVERRIDABLE   :: get_dimH
     procedure,NON_OVERRIDABLE   :: get_eval     !get eigenvalues  for a given k
     procedure,NON_OVERRIDABLE   :: get_evec     !get eigenvectors for a given k
@@ -59,7 +64,7 @@ abstract interface
         integer,intent(in)              :: Nin  !size of eigenvalue input array
         real(8),intent(inout)           :: eval(Nin)    !eigenvalue array
         integer,intent(out)             :: Nout !calculated number of eigenvalues
-        type(work_ham)                      :: work !work array that should be set to correct sizes
+        type(work_ham),intent(inout)    :: work !work array that should be set to correct sizes
     end subroutine
 
     subroutine int_evec(this,Nin,eval,evec,Nout,work)
@@ -69,7 +74,7 @@ abstract interface
         real(8),intent(inout)               :: eval(Nin)
         complex(8),intent(inout)            :: evec(this%dimH,Nin)
         integer,intent(out)                 :: Nout !calculated number of eigenvalues
-        type(work_ham)                      :: work !work array that should be set to correct sizes
+        type(work_ham),intent(inout)        :: work !work array that should be set to correct sizes
     end subroutine
 end interface
 contains
@@ -78,6 +83,21 @@ integer function  get_size_eval(this)
     class(H_k_base),intent(in)      :: this
     get_size_eval=this%dimH
 end function
+
+subroutine init_base(this,Hk_inp,io)
+    class(H_k_base),intent(inout)       :: this
+    type(Hk_inp_t),intent(inout)        :: Hk_inp
+    type(parameters_TB_IO_H),intent(in) :: io
+
+    allocate(this%diffR,source=Hk_inp%diffR)
+    this%dimH=Hk_inp%H(1)%dimH
+    this%N_H=size(this%diffR,2)
+
+    this%Ebnd    =io%Ebnd
+    this%Ne      =io%estNe
+    this%diag_acc=io%diag_acc
+end subroutine
+
 
 subroutine get_eval(this,k,Nin,eval,Nout,work)
     class(H_k_base),intent(inout)   :: this

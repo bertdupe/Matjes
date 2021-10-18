@@ -3,6 +3,7 @@ use m_mode_construction
 use m_type_lattice, only: dim_modes_inner,  lattice,number_different_order_parameters
 use m_coo_mat
 use m_work_ham_single, only:  work_mode, N_work
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
 implicit none
 private
 public F_mode_rankN_sparse_col, col_mat

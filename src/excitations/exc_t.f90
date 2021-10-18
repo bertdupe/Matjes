@@ -55,7 +55,7 @@ subroutine read_excitation_shape_t(io,fname,shapes)
     enddo
 
     if(nread>0)then
-        write(output_unit,'(/AI3A/)') "Found ",nread," excitation_shape_t entries which are read now"
+        write(output_unit,'(/A,I3,A/)') "Found ",nread," excitation_shape_t entries which are read now"
         !return do beginning of excitation data
         do i=1,Nread+1
             backspace(io)

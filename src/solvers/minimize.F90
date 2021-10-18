@@ -1,8 +1,7 @@
 module m_minimize
 use m_H_public
-use m_input_types,only : min_input
+use m_io_minimize,only : min_input
 use m_derived_types, only : io_parameter,lattice
-use m_rw_minimize, only: rw_minimize, min_input
 use m_hamiltonian_collection, only: hamiltonian
 use mpi_basic
 use, intrinsic :: iso_fortran_env, only : error_unit 
@@ -27,7 +26,7 @@ subroutine minimize(lat,io_simu,H,com)
 
     if(com%ismas)then
         if(com%Np>1) write(error_unit,'(//A/A//)') "WARNING, USING MPI-PARALLELIZATION WHICH IS NOT IMPLEMENTED FOR MINIMIZE CALCULATION","this calculation will only run the the master thread" 
-        Call rw_minimize(io_min)
+        Call io_min%read_file()
         Call minimize_run(lat,io_simu,io_min,H)
     endif
 end subroutine
@@ -43,7 +42,7 @@ subroutine minimize_infdamp(lat,io_simu,H,com)
 
     if(com%ismas)then
         if(com%Np>1) write(error_unit,'(//A/A//)') "WARNING, USING MPI-PARALLELIZATION WHICH IS NOT IMPLEMENTED FOR MINIMIZE_INFDAMP CALCULATION","this calculation will only run the the master thread" 
-        Call rw_minimize(io_min)
+        Call io_min%read_file()
         Call minimize_infdamp_run(lat,io_simu,io_min,H)
     endif
 end subroutine

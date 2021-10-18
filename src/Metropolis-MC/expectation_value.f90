@@ -8,7 +8,7 @@ private
 public :: exp_val, measure_add!,measure_eval,print_av
 !public MPI_routines
 public :: measure_scatterv, measure_gatherv, measure_bcast, measure_reduce
-public :: measure_save, measure_read, print_spatial_fluct
+public :: measure_save, measure_read!, print_spatial_fluct
 character(*),parameter  :: save_name='expval_save.dat'
 integer,protected       :: MPI_custom_type          ! mpi variable for direct mpi operations with this type 
 logical,protected       :: MPI_custom_set=.false.   !check is MPI_custom_type is set
@@ -19,7 +19,8 @@ integer,parameter       :: bnd_real(2) =[ 1, 11] !initial and final entry of rea
 integer,parameter       :: bnd_cmplx(2)=[12, 15] !initial and final entry of complex numbers
 integer,parameter       :: bnd_int(2)  =[16, 16] !initial and final entry of integer numbers
 
-type exp_val                                                                                             
+type exp_val
+    sequence !should be sequence for MPI-type
     !! contribution of the different energy parts
     real(8) :: kt=0.0d0 !temperature should always be at first position so it does not get added measure_reduce
     ! energy
@@ -39,9 +40,7 @@ type exp_val
     complex(8)  :: MipMip =cmplx(0.0d0,0.0d0,8) !<Mi+Mi+>
     complex(8)  :: MipMim =cmplx(0.0d0,0.0d0,8) !<Mi+Mi-> (is real)
     complex(8)  :: MipMjp =cmplx(0.0d0,0.0d0,8) !<Mi+Mj+>
-
-	!<Mj+Mi->
-    complex(8),allocatable:: MjpMim_ij(:,:) 
+    complex(8)  :: MjpMim =cmplx(0.0d0,0.0d0,8)
 
     integer :: N_add=0 !counts how often values have been added
 end type
@@ -57,10 +56,9 @@ subroutine measure_save(this)
     write(output_unit,'(/2A/)') "Saving expectation values in file: ",save_name 
     open(newunit=io_unit,file=save_name)
     write(io_unit,*) size(this)
-    ERROR STOP "MEASURE WRITE NO LONGER WORKS SINCE FLUCTUATIONS HAVE BEEN ADDED"
-    !do i=1,size(this)
-    !    write(io_unit,*) this(i)
-    !end do
+    do i=1,size(this)
+        write(io_unit,*) this(i)
+    end do
     close(io_unit)
 end subroutine
 
@@ -81,10 +79,9 @@ subroutine measure_read(this)
     open(newunit=io_unit,file=save_name)
     read(io_unit,*) NT
     if(NT/=size(this)) ERROR STOP "Trying to read expectation values, but the number of temperatures has changes"
-    ERROR STOP "MEASURE READ NO LONGER WORKS SINCE FLUCTUATIONS HAVE BEEN ADDED"
-    !do i=1,size(this)
-    !    read(io_unit,*) this(i)
-    !end do
+    do i=1,size(this)
+        read(io_unit,*) this(i)
+    end do
     close(io_unit)
 end subroutine
 
@@ -117,6 +114,7 @@ subroutine measure_scatterv(this,com)
     integer                         :: ierr
 
     Call set_custom_type()
+
     Call MPI_Scatterv(this(1),com%cnt,com%displ,MPI_custom_type,this(1),com%cnt(com%id+1),MPI_custom_type,com%mas,com%com,ierr)
 #else
     continue
@@ -163,43 +161,13 @@ subroutine measure_bcast(this,com)
 #endif
 end subroutine
 
-!!!!! print spatial distribution for <Mj+Mi->
-subroutine print_spatial_fluct(this,com,io_unit_in)
-    use m_constants, only : k_b
-	use m_convert
-    use mpi_basic, only: mpi_type
-	use m_io_files_utils, only: open_file_write,close_file
-    class(exp_val),intent(inout)    :: this
-    class(mpi_type),intent(in)      :: com
-    integer,optional                :: io_unit_in
-  ! internal
-	integer             :: shape_MiMj(2),io_file(2),iomp
-	character(len=50)   :: file_name(2),form
-    real(8)             :: av_Nadd
-
-    av_Nadd=1.0d0/real(this%N_add,8)
-	shape_MiMj=shape(this%MjpMim_ij)
-	form=convert('(',shape_MiMj(1),'(E20.12E3,2x))')
-
-	file_name(1)=convert('fluct_Re_MjpMim_per_site_',this%kT/k_B,'.dat')
-	io_file(1)=open_file_write(file_name(1))
-   	write(io_file(1),form) real(this%MjpMim_ij)*av_Nadd
-	call close_file(file_name(1),io_file(1))
-
-	file_name(2)=convert('fluct_Im_MjpMim_per_site_',this%kT/k_B,'.dat')
-	io_file(2)=open_file_write(file_name(2))
-   	write(io_file(2),form) aimag(this%MjpMim_ij(:,iomp))*av_Nadd
-	call close_file(file_name(2),io_file(2))
-end subroutine
-
-
 subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     use m_topo_commons
     use m_derived_types,only: lattice
-    class(exp_val),intent(inout)            :: this
+    type(exp_val),intent(inout)             :: this
     type(lattice),intent(in)                :: lat
     type(track_val),intent(in)              :: state_prop
-    integer,intent(in)                      :: Q_neigh(:,:)
+    integer,intent(in),allocatable          :: Q_neigh(:,:)
     type(fluct_parameters),intent(in)       :: fluct_val
 
     !put that into state_prop as well?
@@ -215,21 +183,23 @@ subroutine measure_add(this,lat,state_prop,Q_neigh,fluct_val)
     this%M_sq=this%M_sq+state_prop%Magnetization**2
 
     ! calculate the topocharge
-    dumy=get_charge(lat,Q_neigh)
-    qeulerp=dumy(1)
-    qeulerm=-dumy(2)
+    if(allocated(Q_neigh))then
+        dumy=get_charge(lat,Q_neigh)
+        qeulerp=dumy(1)
+        qeulerm=-dumy(2)
 
-    this%Qp=this%Qp+qeulerp
-    this%Qm=this%Qm+qeulerm
-    this%Q_sq=this%Q_sq+(qeulerp-qeulerm)**2
-    this%Qp_sq=this%Qp+qeulerp**2
-    this%Qm_sq=this%Qm+qeulerm**2
-    this%vortex=this%vortex+dumy(3:5)
+        this%Qp=this%Qp+qeulerp
+        this%Qm=this%Qm+qeulerm
+        this%Q_sq=this%Q_sq+(qeulerp-qeulerm)**2
+        this%Qp_sq=this%Qp+qeulerp**2
+        this%Qm_sq=this%Qm+qeulerm**2
+        this%vortex=this%vortex+dumy(3:5)
+    endif
 
-    if(fluct_val%l_use) Call eval_fluct(this%MjpMim_ij, &
-                                       &this%MipMip, &
+    if(fluct_val%l_use) Call eval_fluct(this%MipMip, &
                                        &this%MipMim, &
                                        &this%MipMjp, &
+                                       &this%MjpMim, &
                                        &lat,fluct_val)
 end subroutine
 end module

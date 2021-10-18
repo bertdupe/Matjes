@@ -10,15 +10,19 @@ type parameters_TB_IO_DOS
     real(8)     :: dE=1.0d-2                        !energy binning size
     real(8)     :: sigma=1.0d-2                     !gauss smearing parameter for dos
     integer     :: kgrid(3)=[1,1,1]                 !number of k-points in each direction in case of k-space dos
+    logical     :: all_states=.false.               !print the dos projected on all states separately
     logical     :: print_kint=.false.               !print out the index of the currently considered k index 
-    type(dos_bnd_io),allocatable    ::  bnd_io(:)   !io for local dos site dependent
-    type(dos_orb_io),allocatable    ::  orb_io(:)   !io for local dos orbital dependent
-    integer,allocatable :: bnd(:,:)                 !local dos bnd parameters (2,number local site dos)
-    integer,allocatable :: orb(:)                   !local dos orbitals (number local orbital dos)
-    character(:),allocatable    ::  fname_kmesh     !file name for kmesh integration grid input
+    real(8),allocatable             :: sigma_arr(:) !gauss smearing array
+    type(dos_bnd_io),allocatable    :: bnd_io(:)    !io for local dos site dependent
+    type(dos_orb_io),allocatable    :: orb_io(:)    !io for local dos orbital dependent
+    integer,allocatable             :: bnd(:,:)     !local dos bnd parameters (2,number local site dos)
+    integer,allocatable             :: orb(:)       !local dos orbitals (number local orbital dos)
+    character(:),allocatable        :: fname_kmesh  !file name for kmesh integration grid input
 
     integer,allocatable :: fermi_orb(:)             !orbital indices of projections for fermi-surfaces
     logical             :: fermi_proj_all=.false.   !get fermi surface projection on all orbitals
+
+    real(8)             :: N_state=0.0d0            !normalization, (if 0.0, it gets automatically set to the number of normal conducting states)
 contains
     procedure   :: read_file
     procedure   :: bcast => bcast_local
@@ -42,6 +46,14 @@ subroutine read_file(this,io,fname)
     call get_parameter(io,fname,'dos_dE',this%dE)
     call get_parameter(io,fname,'dos_kgrid',this%kgrid)
     call get_parameter(io,fname,'dos_print_kint',this%print_kint)
+    call get_parameter(io,fname,'dos_all_states',this%all_states)
+
+    N=0
+    call get_parameter(io,fname,'dos_N_sigma',N)
+    if(N>0)then
+        allocate(this%sigma_arr(N),source=1.0d0)
+        call get_parameter(io,fname,'dos_sigma_arr',this%sigma_arr)
+    endif
 
     str=" "
     Call get_parameter(io,fname,'dos_kmesh_file',str)
@@ -88,6 +100,8 @@ subroutine read_file(this,io,fname)
         call get_parameter(io,fname,'fermi_orb',N,this%fermi_orb)
     endif
     call get_parameter(io,fname,'fermi_proj_all',this%fermi_proj_all)
+
+    call get_parameter(io,fname,'dos_N_state',this%N_state)
 end subroutine
 
 subroutine bcast_local(this,comm)
@@ -104,9 +118,11 @@ subroutine bcast_local(this,comm)
     Call bcast(this%sigma     ,comm)
     Call bcast(this%kgrid     ,comm)
     Call bcast(this%print_kint,comm) 
+    Call bcast(this%all_states,comm) 
 
     !site dependent dos input
     used=allocated(this%bnd_io)
+    N=0
     if(used) N=size(this%bnd_io)
     Call bcast(N ,comm) 
     if(N>0)then
@@ -131,10 +147,13 @@ subroutine bcast_local(this,comm)
     Call bcast_alloc(this%orb,          comm)
     Call bcast_alloc(this%fname_kmesh,  comm)
     Call bcast_alloc(this%fermi_orb,    comm)
+    Call bcast_alloc(this%sigma_arr,    comm)
     Call bcast(this%fermi_proj_all,     comm)
 
     Call bcast_alloc(this%fermi_orb, comm)
     Call bcast(this%fermi_proj_all, comm)
+
+    Call bcast(this%N_state,comm) 
 #else
     continue
 #endif

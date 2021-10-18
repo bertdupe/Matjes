@@ -12,6 +12,7 @@ contains
 ! simple module to write welcome messages for the different parts of the code
 
 subroutine welcome_message()
+    use , intrinsic :: iso_fortran_env, only: output_unit
 implicit none
 
     write(6,'(/,a)') 'Bonjour!! you are now using the Kieler code'
@@ -25,16 +26,21 @@ implicit none
 end subroutine
 
 subroutine welcome
+    use , intrinsic :: iso_fortran_env, only:  compiler_options
 #if CPP_MPI
 use mpi_basic,only: mpi_world
     if(mpi_world%ismas)then
         Call welcome_message()
-        write(6,'(a,I10,2x,a)') 'Congratulations, you are now using',mpi_world%NP,'processors'
+        write(6,'(a,I10,2x,a)') 'Congratulations, you are now using',mpi_world%NP,'MPI threads'
+        Call print_omp(6)
         Call print_preprocessor_flags(6)
+        write(6,'(A/A/)') "Used compiler options:", compiler_options()
     endif
 #else
     Call welcome_message()
+    Call print_omp(6)
     Call print_preprocessor_flags(6)
+    write(6,'(A/A/)') "Used compiler options:", compiler_options()
 #endif
 
 end subroutine 
@@ -74,11 +80,21 @@ endif
 
 end subroutine user_info_raw
 
+subroutine print_omp(io_unit)
+!$  use omp_lib, only: omp_get_max_threads
+    integer,intent(in)  :: io_unit
+!$      if(.true.)then
+!$          write(6,'(A,I6,A/)') "Running with openMP using maximally ", omp_get_max_threads(), " threads."
+!$      else
+            write(6,'(A,/)') "Compiled without openMP."
+!$      endif 
+end subroutine
+
 subroutine print_preprocessor_flags(io_unit)
     integer,intent(in)  :: io_unit
     character(len=*),parameter  :: forma='(2X,A)'
 
-    write(io_unit,'(//A)') "Compiled using the following preprocessor flags:"
+    write(io_unit,'(/A)') "Compiled using the following preprocessor flags:"
 #ifdef CPP_BLAS
     write(io_unit,forma) "CPP_BLAS"
 #endif
@@ -94,6 +110,9 @@ subroutine print_preprocessor_flags(io_unit)
 #ifdef CPP_FFTW3
     write(io_unit,forma) "CPP_FFTW3"
 #endif
+#ifdef CPP_FFTW3_THREAD
+    write(io_unit,forma) "CPP_FFTW3_THREAD"
+#endif
 #ifdef CPP_MKL
     write(io_unit,forma) "CPP_MKL"
 #endif
@@ -102,6 +121,12 @@ subroutine print_preprocessor_flags(io_unit)
 #endif
 #ifdef CPP_MRG
     write(io_unit,forma) "CPP_MRG"
+#endif
+#ifdef CPP_SCRIPT
+    write(io_unit,forma) "CPP_SCRIPT"
+#endif
+#ifdef CPP_USE_WORK
+    write(io_unit,forma) "CPP_USE_WORK"
 #endif
     write(io_unit,'(/)')
 

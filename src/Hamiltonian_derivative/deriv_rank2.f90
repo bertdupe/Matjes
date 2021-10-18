@@ -95,7 +95,7 @@ contains
 
         !get indices of the output vector 
         Call H%mode_r%get_ind_site(comp,site,_dim_,ind_out)  
-        Call H%mult_l_disc(site,lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        Call H%mult_l_disc(lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
 #undef _max_
 #undef _dim_
     end subroutine
@@ -137,7 +137,7 @@ contains
 
         !get indices of the output vector 
         Call H%mode_l%get_ind_site(comp,site,_dim_,ind_out)  
-        Call H%mult_r_disc(site,lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        Call H%mult_r_disc(lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
 #undef _max_
 #undef _dim_
     end subroutine
@@ -177,7 +177,7 @@ contains
 #endif
 
         Call H%mode_r%get_ind_site(comp,site,_dim_,ind_out)  
-        Call H%mult_l_disc(site,lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        Call H%mult_l_disc(lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
         vec=vec*2.0d0
 #undef _max_
 #undef _dim_

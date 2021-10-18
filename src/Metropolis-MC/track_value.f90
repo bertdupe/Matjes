@@ -9,17 +9,16 @@ private
 public track_val
 type track_val
     !values to track the changes during MC-step
-    real(8) :: magnetization(3)=0.0d0
-    real(8) :: E_total=0.0d0
+    real(8) :: magnetization(3)=0.0d0       !total magnetization
+    real(8) :: E_total=0.0d0                !total energy
     ! statistics on the MC
     real(8) :: acc=0.0d0
     real(8) :: rate=0.0d0
     real(8) :: nb=0.0d0
     real(8) :: cone=0.0d0
     !parameters for single evaluation
-    integer :: order=0  !which order parameter is considered
-    integer :: dim_mode_inner  !mode dimension of considered lattice
-    integer :: Nsite=0  !number of sites
+    integer :: order=0          !which order parameter is considered
+    integer :: Nsite=0          !number of sites
 
     procedure(int_sample),pointer   :: spin_sample => null()
     contains
@@ -65,13 +64,7 @@ subroutine init(this,lat,H,io_MC)
         write(error_unit,'(A,' //tmp_char// 'L3)') "Initialized orders:", used
         ERROR STOP 
     endif
-    this%dim_mode_inner=dim_modes_inner(this%order)
     this%Nsite=lat%Ncell*lat%site_per_cell(this%order)
-    !do i=1,number_different_order_parameters
-    !    if(.not.used(i)) cycle 
-    !    this%dim_bnd(1,i)=1
-    !    this%dim_bnd(2,i)=lat%get_order_dim(i)
-    !enddo
 
     if(io_MC%ising)then
         this%spin_sample=>sample_ising

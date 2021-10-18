@@ -609,13 +609,12 @@ subroutine get_sum(N1,N2,vec_in,vec_out)
     vec_out=sum(vec_in,1)
 end subroutine
 
-subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+subroutine mult_l_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the left vector * matrix product for the indices ind_out of the result vector
     USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
     ! input
     class(t_H_base), intent(in)         :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
     integer, intent(in)                 :: N            !number of indices to calculated
     integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output
@@ -631,12 +630,11 @@ subroutine mult_l_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_
     ERROR STOP
 end subroutine 
 
-subroutine mult_r_disc(this,i_m,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+subroutine mult_r_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the matrix * right vector product for the indices ind_out of the result vector
     ! input
     class(t_H_base), intent(in)         :: this
     type(lattice), intent(in)           :: lat
-    integer, intent(in)                 :: i_m          !index of the comp's right mode in the inner dim_mode
     integer, intent(in)                 :: N            !number of indices to calculated
     integer, intent(in)                 :: ind_out(N)   !indices to be calculated
     ! output

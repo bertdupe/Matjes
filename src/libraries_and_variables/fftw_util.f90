@@ -7,7 +7,7 @@ module m_FFTW3
 
 contains 
 subroutine fftw_init()
-#ifdef CPP_FFTW3
+#ifdef CPP_FFTW3_THREAD
 !$  integer :: ierr
 !$  ierr=fftw_init_threads()
 !$  if(ierr==0) STOP "ERROR WITH OPENMP INITIALIZATION OF FFTW3"

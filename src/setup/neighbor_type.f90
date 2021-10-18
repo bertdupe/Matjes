@@ -49,13 +49,13 @@ subroutine prt(neigh,io_in,fmt_pre)
     endif
     inquire(unit=io,opened=isopen)
     if(.not.isopen)then
-        write(error_unit,'(AI6)') "Warning, trying to write the neighbor parameters to unopenend unit:",io
+        write(error_unit,'(A,I6)') "Warning, trying to write the neighbor parameters to unopenend unit:",io
         write(error_unit,'(A)') "Aborting printing of neighbor parameters"
         return
     endif
     write(io,'('//pre//'A,2I6,A,I3,A)') "Neighbors for atom types:",neigh%atid," with ", size(neigh%dist)," distances"
     do i_dist=1,size(neigh%dist)
-        write(io,'('//pre//'AI3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
+        write(io,'('//pre//'A,I3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
         do i_shell=1,neigh%Nshell(i_dist)
             shell=i_shell+sum(neigh%Nshell(:i_dist-1))
             write(io,'('//pre//'A,2I4,A,3F10.6)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)

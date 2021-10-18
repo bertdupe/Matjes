@@ -6,7 +6,7 @@ use m_gneb_parameters, only : do_norm_rx,en_zero
 use m_rotation, only : rotation_axis,rotate
 use m_io_gneb, only: write_path,prn_gneb_progress,write_en
 use m_tangent, only: tang
-use m_input_types,only: GNEB_input
+use m_GNEB_io, only: GNEB_input
 use m_type_lattice,only: lattice
 use m_H_public, only: t_H,energy_all
 use m_hamiltonian_collection, only: hamiltonian

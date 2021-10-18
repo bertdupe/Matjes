@@ -8,6 +8,7 @@ contains
     procedure(int_get_Nk),deferred          :: get_nK
     procedure(int_get_k),deferred           :: get_K
     procedure(int_get_normalize),deferred   :: get_normalize
+    procedure(int_bcast),deferred           :: bcast
 end type
 
 type,extends(kmesh_t) :: k_grid_t
@@ -21,6 +22,7 @@ contains
     procedure :: get_k          => k_grid_get_k
     procedure :: get_Nk         => k_grid_get_Nk
     procedure :: get_normalize  => k_grid_get_normalize
+    procedure :: bcast          => k_grid_bcast
 end type
 
 abstract interface
@@ -42,6 +44,13 @@ abstract interface
         class(kmesh_t),intent(in)    :: this
         real(8)                      :: norm
     end function
+
+    subroutine int_bcast(this,comm)
+        use mpi_basic, only: mpi_type
+        import kmesh_t
+        class(kmesh_t),intent(inout) :: this
+        type(mpi_type),intent(in)    :: comm
+    end subroutine
 
 end interface
 
@@ -84,4 +93,22 @@ function k_grid_get_k(this,i)result(k)
     kint=modulo((i-1)/this%k_offset,this%kgrid)
     k=matmul(kint,this%kdiff)
 end function
+
+subroutine k_grid_bcast(this,comm)
+    use mpi_util,only: bcast, mpi_type
+    class(k_grid_t),intent(inout)   :: this
+    type(mpi_type),intent(in)       :: comm
+#ifdef CPP_MPI
+    integer     :: int_arr(7)
+
+    int_arr(1)  =this%Nk
+    int_arr(2:4)=this%kgrid
+    int_arr(5:7)=this%k_offset
+    Call bcast(int_arr,comm)
+    Call bcast(this%kdiff,comm)
+    this%Nk      =int_arr(1  )
+    this%kgrid   =int_arr(2:4)
+    this%k_offset=int_arr(5:7)
+#endif
+end subroutine
 end module 

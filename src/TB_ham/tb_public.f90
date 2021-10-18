@@ -99,7 +99,49 @@ subroutine set_H_single(H,io)
     logical,save    :: nsaid=.true.
 
     if(allocated(H)) STOP "CANNOT set H which is already set"
-    if(io%sparse)then
+    select case(io%i_diag)
+    case(1)
+#ifdef CPP_LAPACK
+        if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevd algoritm for tight-binding Hamiltonian"
+        allocate(H_zheevd::H)
+#else
+        write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+        ERROR STOP
+#endif
+    case(2)
+#ifdef CPP_LAPACK
+            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheev algoritm for tight-binding Hamiltonian"
+            allocate(H_zheev::H)
+#else
+            write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+            ERROR STOP
+#endif
+    case(3)
+#ifdef CPP_MKL
+        if(nsaid) write(output_unit,'(2/A/)') "Chose dense feast algoritm for tight-binding Hamiltonian"
+        allocate(H_feast_den::H)
+#else
+        write(error_unit,'(//A)') "CANNOT use dense feast algorithm without CPP_MKL"
+        write(error_unit,'(A)')   "Choose different TB_diag  or compile with USE_MKL"
+        ERROR STOP 
+#endif
+    case(4)
+#ifdef CPP_LAPACK
+        if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevr algoritm for tight-binding Hamiltonian"
+        allocate(H_zheevr::H)
+#else
+        write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+        ERROR STOP
+#endif
+    case(5)
+#ifdef CPP_LAPACK
+        if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevx algoritm for tight-binding Hamiltonian"
+        allocate(H_zheevx::H)
+#else
+        write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+        ERROR STOP
+#endif
+    case(6)
 #ifdef CPP_MKL
         write(output_unit,'(2/A/)') "Chose sparse feast algoritm for tight-binding Hamiltonian"
         allocate(H_feast_csr::H)
@@ -108,46 +150,10 @@ subroutine set_H_single(H,io)
         write(error_unit,'(A)')   "Disable sparse TB desription or compile with USE_MKL"
         ERROR STOP 
 #endif
-    else
-        select case(io%i_diag)
-        case(1)
-#ifdef CPP_LAPACK
-            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevd algoritm for tight-binding Hamiltonian"
-            allocate(H_zheevd::H)
-#else
-            write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
-            ERROR STOP
-#endif
-        case(2)
-#ifdef CPP_LAPACK
-            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheev algoritm for tight-binding Hamiltonian"
-            allocate(H_zheev::H)
-#else
-            write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
-            ERROR STOP
-#endif
-        case(3)
-#ifdef CPP_MKL
-            if(nsaid) write(output_unit,'(2/A/)') "Chose dense feast algoritm for tight-binding Hamiltonian"
-            allocate(H_feast_den::H)
-#else
-            write(error_unit,'(//A)') "CANNOT use dense feast algorithm without CPP_MKL"
-            write(error_unit,'(A)')   "Choose different TB_diag  or compile with USE_MKL"
-            ERROR STOP 
-#endif
-        case(4)
-#ifdef CPP_LAPACK
-            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevr algoritm for tight-binding Hamiltonian"
-            allocate(H_zheevr::H)
-#else
-            write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
-            ERROR STOP
-#endif
-        case default
-            write(error_unit,'(2/A,I6,A)') "Unable to choose dense tight-binding Hamiltonian as TB_diag=",io%i_diag," is not implemented"
-            STOP "CHECK INPUT"
-        end select
-    endif
+    case default
+        write(error_unit,'(2/A,I6,A)') "Unable to choose dense tight-binding Hamiltonian as TB_diag=",io%i_diag," is not implemented"
+        STOP "CHECK INPUT"
+    end select
     nsaid=.false.
 end subroutine
 
@@ -158,7 +164,49 @@ subroutine set_H_multiple(H,N,io)
     type(parameters_TB_IO_H),intent(in)     :: io
 
     if(allocated(H)) STOP "CANNOT set H which is already set"
-    if(io%sparse)then
+    select case(io%i_diag)
+    case(1)
+#ifdef CPP_LAPACK
+        write(output_unit,'(2/A/)') "Chose lapack zheevd algoritm for tight-binding Hamiltonian"
+        allocate(H_zheevd::H(N))
+#else
+        write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+        ERROR STOP
+#endif
+    case(2)
+#ifdef CPP_LAPACK
+        write(output_unit,'(2/A/)') "Chose lapack zheev algoritm for tight-binding Hamiltonian"
+        allocate(H_zheev::H(N))
+#else
+        write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+        ERROR STOP
+#endif
+    case(3)
+#ifdef CPP_MKL
+        write(output_unit,'(2/A/)') "Chose dense feast algoritm for tight-binding Hamiltonian"
+        allocate(H_feast_den::H(N))
+#else
+        write(error_unit,'(//A)') "CANNOT use dense feast algorithm without CPP_MKL"
+        write(error_unit,'(A)')   "Choose different TB_diag  or compile with USE_MKL"
+        ERROR STOP 
+#endif
+    case(4)
+#ifdef CPP_LAPACK
+        write(output_unit,'(2/A/)') "Chose lapack zheevr algoritm for tight-binding Hamiltonian"
+        allocate(H_zheevr::H(N))
+#else
+        write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+        ERROR STOP
+#endif
+    case(5)
+#ifdef CPP_LAPACK
+        write(output_unit,'(2/A/)') "Chose lapack zheevx algoritm for tight-binding Hamiltonian"
+        allocate(H_zheevx::H(N))
+#else
+        write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
+        ERROR STOP
+#endif
+    case(6)
 #ifdef CPP_MKL
         write(output_unit,'(2/A/)') "Chose sparse feast algoritm for tight-binding Hamiltonian"
         allocate(H_feast_csr::H(N))
@@ -167,46 +215,10 @@ subroutine set_H_multiple(H,N,io)
         write(error_unit,'(A)')   "Disable sparse TB desription or compile with USE_MKL"
         ERROR STOP 
 #endif
-    else
-        select case(io%i_diag)
-        case(1)
-#ifdef CPP_LAPACK
-            write(output_unit,'(2/A/)') "Chose lapack zheevd algoritm for tight-binding Hamiltonian"
-            allocate(H_zheevd::H(N))
-#else
-            write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
-            ERROR STOP
-#endif
-        case(2)
-#ifdef CPP_LAPACK
-            write(output_unit,'(2/A/)') "Chose lapack zheev algoritm for tight-binding Hamiltonian"
-            allocate(H_zheev::H(N))
-#else
-            write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
-            ERROR STOP
-#endif
-        case(3)
-#ifdef CPP_MKL
-            write(output_unit,'(2/A/)') "Chose dense feast algoritm for tight-binding Hamiltonian"
-            allocate(H_feast_den::H(N))
-#else
-            write(error_unit,'(//A)') "CANNOT use dense feast algorithm without CPP_MKL"
-            write(error_unit,'(A)')   "Choose different TB_diag  or compile with USE_MKL"
-            ERROR STOP 
-#endif
-        case(4)
-#ifdef CPP_LAPACK
-            write(output_unit,'(2/A/)') "Chose lapack zheevr algoritm for tight-binding Hamiltonian"
-            allocate(H_zheevr::H(N))
-#else
-            write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
-            ERROR STOP
-#endif
-        case default
-            write(error_unit,'(2/A,I6,A)') "Unable to choose dense tight-binding Hamiltonian as TB_diag=",io%i_diag," is not implemented"
-            STOP "CHECK INPUT"
-        end select
-    endif
+    case default
+        write(error_unit,'(2/A,I6,A)') "Unable to choose dense tight-binding Hamiltonian as TB_diag=",io%i_diag," is not implemented"
+        STOP "CHECK INPUT"
+    end select
 end subroutine
 
 

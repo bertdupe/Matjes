@@ -15,6 +15,7 @@ type,extends(H_TB_coo_based),abstract :: H_tb_csr
     procedure   :: copy_child
     procedure   :: destroy_child
     procedure   :: mv
+    procedure   :: mult_r
 end type
 
 type,extends(H_TB_csr)  :: H_feast_csr
@@ -123,7 +124,19 @@ subroutine destroy_child(this)
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!  FEAST ROUTINES
+!!!!!!!!!!  multiplication routine
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine mult_r(this,vec,res,alpha,beta)
+    class(H_tb_csr),intent(in)   :: this
+    complex(8),intent(in   )        :: vec(this%dimH)
+    complex(8),intent(inout)        :: res(this%dimH)
+    complex(8),intent(in),optional  :: alpha
+    complex(8),intent(in),optional  :: beta
+    ERROR STOP "IMPLEMENT MULT_R TB_CSR"
+end subroutine
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!  FEAST ROUTINE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine evec_feast(this,eval,evec)
