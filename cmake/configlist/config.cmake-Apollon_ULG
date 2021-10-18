@@ -1,23 +1,22 @@
 #GNU intel Gold with Ubuntu, Eigen and Cuda
 #manually set compiler
-set(CMAKE_CXX_COMPILER "gcc")
+set(CMAKE_CXX_COMPILER "g++")
 set(CMAKE_Fortran_COMPILER "gfortran")
 set(manual_linker_language "CXX")
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
 
 #set faster release flags
 set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math -fopenmp")
 set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=intel")
 
 include_directories( /usr/include ) #FFTW directory include
+include_directories( /usr/include/eigen3/Eigen/ ) # EIGEN directory to include
 link_directories( /usr/lib/x86_64-linux-gnu/ )
 
-set(USE_CUDA TRUE)
+set(USE_CUDA FALSE)
 set(USE_EIGEN TRUE)
 set(USE_MKL TRUE)
 
 set(MKL_linker "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl -lnetcdff") 
-set(CMAKE_CUDA_ARCHITECTURES 75)
 
 #MANUALLY SET PREPROCESSOR FLAGS
 add_compile_definitions(CPP_FFTW3)
