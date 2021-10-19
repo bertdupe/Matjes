@@ -187,14 +187,22 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     logical                     :: conv
     real(8)					    :: dummy(3), Beff(3), torque(3), Beff_norm
     type(work_ham_single)       :: work !type containing work arrays for single energy evaluation
-    
+    real(8),pointer		        ::F_eff3(:,:)
+    real(8),allocatable,target  :: F_eff(:)
+
     write(6,'(/,a,/)') 'entering the infinite damping minimization routine'
     
     N_cell=lat%Ncell
     N_dim=lat%M%dim_mode
     N_mag=(N_dim/3)*N_cell
-    
     M3(1:3,1:N_mag)=>lat%M%all_modes
+    
+    !for global get_eff_field
+ 	allocate(F_eff(N_dim*N_cell),source=0.0d0)
+    F_eff3(1:3,1:N_mag)=>F_eff
+    
+
+
     Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
     gra_log=io_simu%io_Xstruct
     gra_freq=int(io_simu%io_frequency,8)
@@ -215,18 +223,34 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
         !Iteratively align the moments onto local normalized field. Recompute effective field at each site.
         do iomp=1,N_mag
         	!get local normalized field
-         	Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
+         	!Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
+         	!write(*,*) 'Beff from get_eff_field_single= ', Beff(:)
+
+        	!use the global routine
+        	Call H%get_eff_field(lat,F_eff,1)
+        	Beff=F_eff3(:,iomp)
+			!write(*,*) 'Beff from get_eff_field= ', Beff(:)
+
         	Beff_norm=norm(Beff)
         	if(Beff_norm.lt.1.0d-8) stop 'Beff=0, problem in the infinite damping minimization routine' !avoid dividing by 0
         	Beff=Beff/Beff_norm
+        	!write(*,*) 'spin ',iomp, ' Beff= ', Beff(:)
+        	
+
 
         	!get local normalized torque and its largest component
         	torque=cross(M3(:,iomp),Beff,1,3)
+        	!write(*,*) 'torque= ',torque(:)
         	test_torque=maxval(dabs(torque))
+        	!write(*,*) 'test_torque= ',test_torque,' max_torque =', max_torque
       	  	if (test_torque.gt.max_torque ) max_torque=test_torque
-
+			!write(*,*) 'now max_t= ',max_torque 
         	!align moment to field (unless m=0) 
-        	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff 
+        	!write(*,*)'norm(M3)= ',norm(M3(:,iomp)), ' M3= ',M3(:,iomp)
+        	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff
+			!write(*,*) 'now M3= ',M3(:,iomp)
+			
+			!write(*,*) ' -----'
         enddo
         
         !print max_torque every io_min%Efreq iterations
