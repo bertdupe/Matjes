@@ -59,7 +59,7 @@ contains
     end subroutine
 
 
-    subroutine get_l1_single(this,H,lat,site,work,vec)
+    subroutine get_r1_single(this,H,lat,site,work,vec)
         class(t_deriv),intent(in)           :: this
         class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
@@ -100,7 +100,7 @@ contains
 #undef _dim_
     end subroutine
 
-    subroutine get_r1_single(this,H,lat,site,work,vec)
+    subroutine get_l1_single(this,H,lat,site,work,vec)
         class(t_deriv),intent(in)           :: this
         class(t_H_base),intent(in)          :: H
         type(lattice),intent(in)            :: lat
@@ -150,8 +150,8 @@ contains
         integer,intent(in)                  :: site
         type(work_ham_single),intent(inout) :: work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
         real(8),intent(inout)               :: vec(:)
-#define _dim_  H%dim_r_single(H%op_r(1))
-#define _max_  H%col_max
+#define _dim_  H%dim_l_single(H%op_l(1))
+#define _max_  H%row_max
 #ifdef CPP_USE_WORK
         !temporary data slices
         integer,pointer,contiguous          :: ind_out(:)    !indices of all right mode entries which contain the order paramtere order of the site corresponding to i_m
@@ -176,8 +176,8 @@ contains
         real(8)                     :: vec_mult(_dim_*_max_)     !values of discontiguous left mode which has to be evaluated (indices of ind_mult)
 #endif
 
-        Call H%mode_r%get_ind_site(comp,site,_dim_,ind_out)  
-        Call H%mult_l_disc(lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
+        Call H%mode_l%get_ind_site(comp,site,_dim_,ind_out)
+        Call H%mult_r_disc(lat,_dim_,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
         vec=vec*2.0d0
 #undef _max_
 #undef _dim_
