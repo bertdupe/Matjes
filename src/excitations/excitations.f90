@@ -176,7 +176,8 @@ subroutine update_exc(time,lat,dat)
     ! internal
     real(8),pointer,contiguous :: opvec(:,:)        !pointer to locally considered mode
     real(8) :: r(3)                                 !local position
-    real(8) :: shape_t(maxval(dim_modes_inner))     !prefactor defined by the time (constant in space)
+    real(8) :: shape_t(maxval(dim_modes_inner)+1)   !prefactor defined by the time (constant in space)
+    real(8) :: shape_r(2)                           !prefactor for spatial dependence
     !help indices
     integer :: op       !index for considered operator as in lattice
     integer :: dim_mode !dimension of considered mode
@@ -206,7 +207,8 @@ subroutine update_exc(time,lat,dat)
         Call lat%set_order_point_inner(op,opvec)
         do i=1,size(dat%position,2)
             r=dat%position(:,i)
-            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) * dat%shape_r(i_r)%shape_r(r)
+            shape_r(:) = dat%shape_r(i_r)%shape_r(r)
+            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) * shape_r(1) * cos(shape_t(dim_mode+1)+shape_r(2))
         enddo
     enddo
     nullify(opvec)

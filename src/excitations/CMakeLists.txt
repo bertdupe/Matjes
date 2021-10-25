@@ -10,4 +10,5 @@ src/excitations/exc_t_gauss.f90
 src/excitations/exc_t_heaviside.f90
 src/excitations/exc_t_rampe.f90
 src/excitations/exc_t_algebraic.f90
+src/excitations/exc_t_phasor.f90
 )
