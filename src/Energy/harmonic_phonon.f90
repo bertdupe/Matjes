@@ -26,7 +26,7 @@ subroutine read_F_input(io_param,fname,io)
 
 end subroutine
 
-subroutine get_Forces_F(Ham,io,lat,Ham_out,neighbor_pos_list)
+subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
@@ -35,11 +35,11 @@ subroutine get_Forces_F(Ham,io,lat,Ham_out,neighbor_pos_list)
     use m_forces_from_file, only: get_forces_file
     use m_mode_public
 
-    class(t_H),intent(inout)    :: Ham
-    type(io_H_Ph),intent(in)    :: io
-    type(lattice),intent(in)    :: lat
-    real(8),optional,intent(inout)     :: neighbor_pos_list(:,:)
-    class(t_H),optional,intent(inout)    :: Ham_out
+    class(t_H),intent(inout)                         :: Ham
+    type(io_H_Ph),intent(in)                         :: io
+    type(lattice),intent(in)                         :: lat
+    real(8),optional,allocatable,intent(inout)       :: neighbor_pos_list(:,:)
+    class(t_H),optional,allocatable,intent(inout)    :: Ham_shell_pos(:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
@@ -70,6 +70,22 @@ subroutine get_Forces_F(Ham,io,lat,Ham_out,neighbor_pos_list)
         N_atpair=size(io%pair)
         allocate(Htmp(lat%u%dim_mode,lat%u%dim_mode))!local Hamiltonian modified for each shell/neighbor
 
+        if (present(Ham_shell_pos)) then
+          write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+          i_pair=0
+          do i_atpair=1,N_atpair
+             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
+             N_dist=size(io%pair(i_atpair)%dist)
+             do i_dist=1,N_dist
+                do i_shell=1,neigh%Nshell(i_dist)
+                   i_pair=i_pair+1
+                enddo
+             enddo
+          enddo
+          allocate(Ham_shell_pos(i_pair),mold=Ham_tmp)
+          allocate(neighbor_pos_list(3,i_pair))
+        endif
+
         do i_atpair=1,N_atpair
             !loop over different connected atom types
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
@@ -92,6 +108,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_out,neighbor_pos_list)
                     atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_pair))
                     Htmp=0.0d0
                     offset_ph=(atind_ph-1)*3
+                    if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=neigh%diff_vec(:,i_pair)
                     if (read_from_file) then
                        ! (Ha,niltonian , name of the file , relative position of the neighbor , offset)
                        call get_forces_file(Htmp,fname_phonon,neigh%diff_vec(:,i_pair),offset_ph)
@@ -108,9 +125,12 @@ subroutine get_Forces_F(Ham,io,lat,Ham_out,neighbor_pos_list)
                     !fill Hamiltonian type
                     Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"UU",lat,0)
                     deallocate(val_tmp,ind_tmp)
-                    if (present(Ham_out)) call Ham_tmp%copy(Ham_out)
                     Call Ham%add(Ham_tmp)
-                    Call Ham_tmp%destroy()
+                    if (present(Ham_shell_pos)) then
+                       call Ham_tmp%mv(Ham_shell_pos(i_pair))
+                    else
+                       Call Ham_tmp%destroy()
+                    endif
                     connect_bnd(1)=connect_bnd(2)+1
                 enddo 
             enddo
