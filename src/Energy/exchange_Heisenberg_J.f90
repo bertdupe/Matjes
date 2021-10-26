@@ -31,7 +31,7 @@ subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     type(io_H_J),intent(in)                        :: io
     type(lattice),intent(in)                       :: lat
     real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
-    class(t_H),optional,allocatable,intent(inout)  :: Ham_shell_pos(:)
+    real(8),optional,allocatable,intent(inout)     :: Ham_shell_pos(:,:,:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
@@ -69,7 +69,8 @@ subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                 enddo
              enddo
           enddo
-          allocate(Ham_shell_pos(i_pair),mold=Ham_tmp)
+          allocate(Ham_shell_pos(lat%M%dim_mode,lat%M%dim_mode,i_pair))
+          Ham_shell_pos=0.0d0
           allocate(neighbor_pos_list(3,i_pair))
         endif
 
@@ -112,7 +113,7 @@ subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
                     if (present(Ham_shell_pos)) then
-                       call Ham_tmp%mv(Ham_shell_pos(i_pair))
+                       Ham_shell_pos(:,:,i_pair)=Htmp
                     else
                        Call Ham_tmp%destroy()
                     endif

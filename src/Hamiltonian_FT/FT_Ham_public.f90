@@ -36,6 +36,8 @@ subroutine set_H_single(H,io)
 !#endif
 !      end select
 !    else
+write(*,*) io%i_diag
+pause
         select case(io%i_diag)
         case(1)
 #ifdef CPP_LAPACK

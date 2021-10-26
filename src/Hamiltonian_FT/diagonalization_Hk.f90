@@ -56,13 +56,19 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     call mv_kpts(kpts)
 
     ! prepare the Hamiltonian based on the coo matrices for the FT
-    call set_Hamiltonians_FT(FT_Ham,H_io,lat)
-    ! choose with which algoritm you want to work
+    call set_Hamiltonians_FT(FT_Ham,H_io,lat)     ! choose with which algoritm you want to work
+
+    ! get the parameters for the diagonalization
+    io_input=open_file_read('input')
+    call Hk%io_H%read_file(io_input,'input')
+    call close_file('input',io_input)
+
+    Call set_H(Hk,Hk%io_H)   ! choose the Hamiltonian with which you would like to work (sparse, dense...)
 
     ! get the phase of the Hamiltonian
     do i=1,size(kpts,2)
     write(*,*) kpts(:,i)
-       call get_Hk(FT_Ham,kpts(:,i),FT_Ham_k)
+       call get_Hk(FT_Ham,kpts(:,i),Hk)
     pause
     enddo
 
