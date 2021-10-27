@@ -1,9 +1,6 @@
 module m_parameters_FT_Ham
 implicit none
 
-private
-public parameters_FT_HAM_IO
-
 type parameters_FT_HAM_IO
     integer             ::  dimH=-1         !final size of Hamiltonian including all modifications
     !solving parameters
@@ -11,10 +8,13 @@ type parameters_FT_HAM_IO
     logical             ::  sparse=.false.  !do calculation sparse
     real(8)             ::  Ebnd(2)=[-1.0d+99,1.0d+99]     !minimal and maximal energy values to consider in restricted eigensolver routines
     integer             ::  estNe=0                       !estimated number of eigenvalues in interval
-    real(8)             ::  diag_acc=1d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
+    real(8)             ::  diag_acc=1.0d-12    ! accuracy of iterative eigenvalue solution (so far only fpm input)
 contains
     procedure   :: read_file
 end type
+
+private
+public parameters_FT_HAM_IO
 
 contains
 
@@ -26,8 +26,7 @@ subroutine read_file(this,io,fname)
     integer,intent(in)                         :: io
     character(len=*), intent(in)               :: fname
     ! Internal variables
-    integer :: N
-    character(len=100)  :: str
+    logical :: test
 
     call get_parameter(io,fname,'FT_sparse',        this%sparse)
     call get_parameter(io,fname,'FT_diag',          this%i_diag)

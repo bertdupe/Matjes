@@ -1,6 +1,7 @@
 module m_FT_Ham_base
 use m_parameters_FT_Ham
 use m_work_ham_single, only: work_ham, N_work
+use m_FT_Ham_coo_rtok_base
 ! contains the common data to all Hamiltonian
 !
 !
@@ -18,7 +19,7 @@ type,abstract ::    FT_Ham_base
     logical,private              :: set=.false.  !check if arrays have been set
     type(parameters_FT_HAM_IO)   :: io_H         ! parameters for the diagonalization
 contains
-!    procedure(int_init),deferred        :: init        !initializes this type
+    procedure(int_init),deferred        :: init        !initializes this type
     procedure(int_set_k),deferred       :: set_k       !sets the internal Hamiltonian to a k-point
     procedure(int_set_work),deferred    :: set_work    !sets the work arrays to the correct size
     procedure(int_eval),deferred        :: calc_eval   !subroutine to calculate the eigenvalues using the internally set matrix
@@ -34,12 +35,12 @@ end type
 
 
 abstract interface
-!    subroutine int_init(this,Hk_inp,io)
-!        import FT_Ham_base,HK_inp_t,parameters_FT_HAM_IO
-!        class(FT_Ham_base),intent(inout)       :: this
-!        type(Hk_inp_t),intent(inout)        :: Hk_inp
-!        type(parameters_TB_IO_H),intent(in) :: io
-!    end subroutine
+    subroutine int_init(this,Hk_inp,io)
+        import FT_Ham_base,HK_inp_t,parameters_FT_HAM_IO
+        class(FT_Ham_base),intent(inout)       :: this
+        type(H_inp_real_to_k),intent(inout)    :: Hk_inp
+        type(parameters_TB_IO_H),intent(in)    :: io
+    end subroutine
 
     subroutine int_set_work(this,work)
         import FT_Ham_base,work_ham
@@ -53,9 +54,10 @@ abstract interface
         integer,intent(out)                :: eval_size
     end subroutine
 
-    subroutine int_set_k(this,k)
+    subroutine int_set_k(this,Hr,k)
         import FT_Ham_base
         class(FT_Ham_base),intent(inout)   :: this
+        real(8),intent(in)                 :: HR(:,:,:)
         real(8),intent(in)                 :: k(3)
     end subroutine
 

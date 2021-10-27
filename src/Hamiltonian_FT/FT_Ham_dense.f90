@@ -5,25 +5,19 @@ use m_work_ham_single, only:  work_mode, N_work
 use m_H_type
 use m_H_type
 use m_FT_Ham_base
+use m_FT_Ham_coo_rtok_base
 implicit none
 
 type,extends(FT_Ham_base),abstract :: FT_H_dense
     complex(8),allocatable          :: H(:,:)         ! complex dense Hamiltonian
-    complex(8),allocatable          :: H_R(:,:,:)   !real-space Hamiltonians as the given distance by diffR [dimH,dimH,N_H]
 contains
     !necessary routines
-!    procedure :: set_from_Hcoo
-!    procedure :: init_coo
-    procedure :: init_connect
-    procedure :: init_mult_connect_2
-!    procedure :: finish_setup
+    procedure :: init
+    procedure :: set_k
+    procedure :: set_work
+    procedure :: calc_eval   !subroutine to calculate the eigenvalues using the internally set matrix
+    procedure :: calc_evec   !subroutine to calculate the eigenvectors and eigenvalues using the internally set matrix
 
-!    procedure :: add_child
-!    procedure :: destroy_child
-!    procedure :: copy_child
-
-    procedure :: optimize
-    procedure :: mult_r,mult_l
     !MPI
     procedure :: send
     procedure :: recv
@@ -31,74 +25,63 @@ contains
     procedure :: bcast
 end type
 
-!#ifdef CPP_LAPACK
-!public H_zheev, H_zheevd, H_zheevr
-!type,extends(FT_H_dense)  ::  H_zheev
-!    contains
-!    procedure   :: get_eval => eval_zheev
-!    procedure   :: get_evec => evec_zheev
-!end type
-!
-!type,extends(FT_H_dense)  ::  H_zheevd
-!    contains
-!    procedure   :: get_eval => eval_zheevd
-!    procedure   :: get_evec => evec_zheevd
-!end type
-!
-!type,extends(FT_H_dense)  ::  H_zheevr
-!    contains
-!    procedure   :: get_eval => eval_zheevr
-!    procedure   :: get_evec => evec_zheevr
-!end type
-!#endif
-
-!#ifdef CPP_MKL
-!public H_feast_den
-!type,extends(FT_H_dense)  ::  H_feast_den
-!    contains
-!    procedure   :: get_evec => evec_feast
-!end type
-!#endif
 
 private
 public FT_H_dense
 contains
 
-subroutine mult_r(this,lat,res,work,alpha,beta)
-    !mult
-    use m_derived_types, only: lattice
-    class(FT_h_dense),intent(in)     :: this
-    type(lattice), intent(in)        :: lat
-    real(8), intent(inout)           :: res(:)   !result matrix-vector product
-    type(work_mode),intent(inout)    :: work
-    real(8),intent(in),optional      :: alpha
-    real(8),intent(in),optional      :: beta
-    ! internal
 
-    STOP "Cannot use the mult_r with FT_h_dense type with Hamiltonian because type is CMPLX"
+subroutine init(this,Hk_inp,io)
+class(FT_H_dense),intent(inout)       :: this
+type(H_inp_real_to_k),intent(inout)   :: Hk_inp
+type(parameters_TB_IO_H),intent(in)   :: io
+
+integer :: dim_H,test
+    dim_H=this%get_dimH()
+
+    if allocated(this%H) ERROR STOP "H is already allocated in init FT_Ham_dense"
+
+    allocate(this%H(dim_H,dim_H),STAT=test)
+write(*,*) test
+
+pause
+this%H=(0.0d0,0.0d0)
+end subroutine
+
+subroutine set_k(this,Hr,k)
+class(FT_H_dense),intent(inout)       :: this
+real(8),intent(in)                    :: Hr(:,:,:)
+real(8),intent(in)                    :: k(3)
+
+real(8)     :: phase_r
+complex(8)  :: phase_c
+integer  :: iH
+
+    do iH=1,size(Hr,3)
+       phase_r=dot_product(this%diffR(:,iH),k)
+       phase_c=cmplx(cos(phase_r),sin(phase_r),8)
+       this%H=this%H+phase_c*this%H_R(:,:,iH)
+    enddo
 
 end subroutine
 
-subroutine mult_l(this,lat,res,work,alpha,beta)
-    use m_derived_types, only: lattice
-    class(FT_H_dense),intent(in)     :: this
-    type(lattice), intent(in)        :: lat
-    real(8), intent(inout)           :: res(:)
-    type(work_mode),intent(inout)    :: work
-    real(8),intent(in),optional      :: alpha
-    real(8),intent(in),optional      :: beta
-    ! internal
+subroutine set_work(this,Hr,k)
+class(FT_H_dense),intent(inout)       :: this
+real(8),intent(in)                    :: Hr(:,:,:)
+real(8),intent(in)                    :: k(3)
 
-    STOP "Cannot use the mult_l with FT_h_dense type with Hamiltonian because type is CMPLX"
+real(8)     :: phase_r
+complex(8)  :: phase_c
+integer  :: iH
+    class(FT_H_dense),intent(inout)      :: this
+    type(work_ham),intent(inout)        :: work
+    integer                             :: sizes(N_work)
 
-end subroutine
+    sizes=0
+    sizes(1)=max(1,3*this%dimH-2)   !real(RWORK)
+    sizes(3)=max(1,2*this%dimH-1)   !complex(WORK)
+    Call work%set(sizes)
 
-
-subroutine optimize(this)
-    class(FT_H_dense),intent(inout)   :: this
-
-    !nothing to optimize here
-    continue
 end subroutine
 
 !subroutine copy_child(this,Hout)
@@ -171,34 +154,6 @@ end subroutine
 !    enddo
 !
 !end subroutine
-
-subroutine init_connect(this,connect,Hval,Hval_ind,order,lat,mult_M_single)
-    class(FT_H_dense),intent(inout)   :: this
-    type(lattice),intent(in)        :: lat
-    character(2),intent(in)         :: order
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: connect(:,:)
-    integer,intent(in)              :: mult_M_single
-
-    STOP "Cannot use init_connect with FT_h_dense type with Hamiltonian because type is CMPLX"
-
-end subroutine
-
-subroutine init_mult_connect_2(this,connect,Hval,Hval_ind,op_l,op_r,lat,mult_M_single,dim_mode_in)
-    class(FT_H_dense),intent(inout)   :: this
-    type(lattice),intent(in)        :: lat
-    character(*),intent(in)         :: op_l
-    character(*),intent(in)         :: op_r
-    real(8),intent(in)              :: Hval(:)  !all entries between 2 cell sites of considered orderparameter
-    integer,intent(in)              :: Hval_ind(:,:)
-    integer,intent(in)              :: connect(:,:)
-    integer,intent(in)              :: mult_M_single
-    integer,intent(in),optional     :: dim_mode_in(2)   !optional way of putting in dim_mode directly (mainly for custom(not fully unfolded)rankN tensors)
-
-    STOP "Cannot use init_mult_connect_2 with FT_h_dense type with Hamiltonian because type is CMPLX"
-
-end subroutine
 
 !subroutine finish_setup(this)
 !    class(FT_H_dense),intent(inout)    :: this
@@ -276,190 +231,4 @@ subroutine distribute(this,comm)
     ERROR STOP "Inner MPI-parallelization of the FT Hamiltonian is not implemented for dense Hamiltonians"
 end subroutine
 
-!#ifdef CPP_LAPACK
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!  ZHEEV ROUTINES
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!subroutine eval_zheev(this,eval)
-!    class(H_zheev),intent(in)       ::  this
-!    real(8),intent(out),allocatable ::  eval(:)
-!    !internal
-!    complex(8)              :: H(this%io_H%dimH,this%io_H%dimH)
-!    complex(8),allocatable  :: work(:)
-!    complex(8)              :: tmp(1)
-!    integer                 :: info,lwork
-!    real(8)                 :: rwork(max(1,this%io_H%dimH*3-2))
-!    external zheev
-!
-!    if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVALUE AS HAMILTONIAN IS NOT SET"
-!    allocate(eval(this%io_H%dimH),source=0.0d0)
-!    H=this%H
-!    Call zheev('N', 'U', this%io_H%dimH, H, this%io_H%dimH, eval, tmp, -1, rwork, info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!    lwork=int(tmp(1))
-!    allocate(work(lwork))
-!    Call zheev('N', 'U', this%io_H%dimH, H, this%io_H%dimH, eval, work, lwork, rwork, info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!end subroutine
-!
-!subroutine evec_zheev(this,eval,evec)
-!    class(H_zheev),intent(in)           ::  this
-!    real(8),intent(out),allocatable     ::  eval(:)
-!    complex(8),intent(out),allocatable  ::  evec(:,:)
-!    !internal
-!    complex(8),allocatable  :: work(:)
-!    complex(8)              :: tmp(1)
-!    integer                 :: info,lwork
-!    real(8)                 :: rwork(max(1,this%io_H%dimH*3-2))
-!    external zheev
-!    if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVALUE AS HAMILTONIAN IS NOT SET"
-!    allocate(eval(this%io_H%dimH),source=0.0d0)
-!    allocate(evec,source=this%H)
-!    Call zheev('V', 'U', this%io_H%dimH, evec, this%io_H%dimH, eval, tmp, -1, rwork, info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!    lwork=int(tmp(1))
-!    allocate(work(lwork))
-!    Call zheev('V', 'U', this%io_H%dimH, evec, this%io_H%dimH, eval, work, lwork, rwork, info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!end subroutine
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!  ZHEEVD ROUTINES
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-!subroutine eval_zheevd(this,eval)
-!    class(H_zheevd),intent(in)      ::  this
-!    real(8),intent(out),allocatable ::  eval(:)
-!    !internal
-!    complex(8)              :: H(this%io_H%dimH,this%io_H%dimH)
-!    complex(8),allocatable  :: work(:)
-!    real(8),allocatable     :: rwork(:)
-!    integer,allocatable     :: iwork(:)
-!    integer ::  lwork,lrwork,liwork
-!    integer :: size_opt(3)
-!    integer                 :: info
-!    external zheevd
-!    if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVECTOR AS HAMILTONIAN IS NOT SET"
-!    allocate(eval(this%io_H%dimH),source=0.0d0)
-!    H=this%H
-!    allocate(work(1),rwork(1),iwork(1))
-!    size_opt=-1
-!    Call zheevd('N', 'U', this%io_H%dimH, H, this%io_H%dimH, eval, work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!    size_opt=[int(work(1)),int(rwork(1)),iwork]
-!    deallocate(work,rwork,iwork)
-!    allocate(work(size_opt(1)),rwork(size_opt(2)),iwork(size_opt(3)))
-!    !destroys lower triangle of H
-!    Call zheevd('N', 'U', this%io_H%dimH, H, this%io_H%dimH, eval, work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!end subroutine
-!
-!subroutine evec_zheevd(this,eval,evec)
-!    class(H_zheevd),intent(in)          ::  this
-!    real(8),intent(out),allocatable     ::  eval(:)
-!    complex(8),intent(out),allocatable  ::  evec(:,:)
-!    !internal
-!    complex(8),allocatable  :: work(:)
-!    real(8),allocatable     :: rwork(:)
-!    integer,allocatable     :: iwork(:)
-!    integer :: size_opt(3)
-!    integer                 :: info
-!    external zheevd
-!    if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVECTOR AS HAMILTONIAN IS NOT SET"
-!    allocate(eval(this%io_H%dimH),source=0.0d0)
-!    allocate(evec,source=this%H)
-!    allocate(work(1),rwork(1),iwork(1))
-!    size_opt=-1
-!    Call zheevd('V', 'U', this%io_H%dimH, evec, this%io_H%dimH, eval, work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!    size_opt=[int(work(1)),int(rwork(1)),iwork]
-!    deallocate(work,rwork,iwork)
-!    allocate(work(size_opt(1)),rwork(size_opt(2)),iwork(size_opt(3)))
-!    !destroys lower triangle of H
-!    Call zheevd('V', 'U', this%io_H%dimH, evec, this%io_H%dimH, eval, work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!end subroutine
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!  ZHEEVR ROUTINES
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-!subroutine eval_zheevr(this,eval)
-!    class(H_zheevr),intent(in)      ::  this
-!    real(8),intent(out),allocatable ::  eval(:)
-!    !internal
-!    complex(8)              :: H(this%io_H%dimH,this%io_H%dimH)
-!    real(8)                 :: w(this%io_H%dimH) !eigenvalues
-!    !temporary Lapack values
-!    complex(8),allocatable  :: work(:)
-!    real(8),allocatable     :: rwork(:)
-!    integer,allocatable     :: iwork(:)
-!    integer :: size_opt(3)
-!    integer                 :: isuppz(2*this%io_H%dimH)
-!    real(8)                 :: abstol
-!    integer                 :: info,lwork
-!    integer                 :: Nev  !number eigenvalues found
-!    complex(8)              :: z(1) !not referenced here
-!    external zheevr
-!    if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVALUE AS HAMILTONIAN IS NOT SET"
-!    H=this%H
-!    abstol=this%io_H%diag_acc
-!    allocate(work(1),rwork(1),iwork(1))
-!    size_opt=-1
-!    Call zheevr('N', 'V', 'U', this%io_H%dimH, H, this%io_H%dimH, this%io_H%Ebnd(1), this%io_H%Ebnd(2), 0, 0, abstol, Nev, w, z, 1, isuppz, &
-!                & work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!    size_opt=[int(work(1)),int(rwork(1)),iwork]
-!    deallocate(work,rwork,iwork)
-!    allocate(work(size_opt(1)),rwork(size_opt(2)),iwork(size_opt(3)))
-!    Call zheevr('N', 'V', 'U', this%io_H%dimH, H, this%io_H%dimH, this%io_H%Ebnd(1), this%io_H%Ebnd(2), 0, 0, abstol, Nev, w, z, 1, isuppz, &
-!                & work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!    allocate(eval,source=w(1:Nev))
-!end subroutine
-!
-!
-!subroutine evec_zheevr(this,eval,evec)
-!    class(H_zheevr),intent(in)          ::  this
-!    real(8),intent(out),allocatable     ::  eval(:)
-!    complex(8),intent(out),allocatable  ::  evec(:,:)
-!    !internal
-!    complex(8)              :: H(this%io_H%dimH,this%io_H%dimH)
-!    real(8)                 :: w(this%io_H%dimH) !eigenvalues
-!    !temporary Lapack values
-!    complex(8),allocatable  :: work(:)
-!    real(8),allocatable     :: rwork(:)
-!    integer,allocatable     :: iwork(:)
-!    integer :: size_opt(3)
-!    integer                 :: isuppz(2*this%io_H%dimH)
-!    real(8)                 :: abstol
-!    integer                 :: info,lwork
-!    integer                 :: Nev  !number eigenvalues found
-!    complex(8),allocatable  :: z(:,:) !internal eigenvectors
-!    external zheevr
-!
-!    if(.not.this%is_set()) ERROR STOP "CANNOT GET EIGENVALUE AS HAMILTONIAN IS NOT SET"
-!    H=this%H
-!    abstol=this%io_H%diag_acc
-!    allocate(work(1),rwork(1),iwork(1))
-!!    if(this%estNe<1) STOP "estimated number of eigenvalues must be at least 1('TB_diag_estNe')"
-!!    allocate(z(this%dimH,min(this%estNe,this%dimH)))   !reduces memory usage with this?
-!    allocate(z(this%io_H%dimH,this%io_H%dimH))   !reduces memory usage with this?
-!    size_opt=-1
-!    Call zheevr('V', 'V', 'U', this%io_H%dimH, H, this%io_H%dimH, this%io_H%Ebnd(1), this%io_H%Ebnd(2), 0, 0, abstol, Nev, w, z, this%io_H%dimH, isuppz, &
-!                & work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!    size_opt=[int(work(1)),int(rwork(1)),iwork]
-!    deallocate(work,rwork,iwork)
-!    allocate(work(size_opt(1)),rwork(size_opt(2)),iwork(size_opt(3)))
-!!    write(*,*) "If this crashes, increase TB_diag_estNe"
-!    Call zheevr('V', 'V', 'U', this%io_H%dimH, H, this%io_H%dimH, this%io_H%Ebnd(1), this%io_H%Ebnd(2), 0, 0, abstol, Nev, w, z, this%io_H%dimH, isuppz, &
-!                & work, size_opt(1), rwork, size_opt(2), iwork, size_opt(3), info)
-!    if(info/=0) ERROR STOP "LAPACK ERROR"
-!!    write(*,*) "Did not crash"
-!    allocate(eval,source=w(1:Nev))
-!    allocate(evec,source=z(1:this%io_H%dimH,1:Nev))
-!end subroutine
-!
-!#endif
 end module

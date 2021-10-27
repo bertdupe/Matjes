@@ -6,6 +6,7 @@ use m_construction_Hk
 use m_FT_Ham_base
 use m_FT_Ham_coo
 use m_io_files_utils
+use m_parameters_FT_Ham
 ! the following module is used for the TB. You will find the module in the directory tight-binding
 use m_highsym, only : set_highs_path,mv_kpts
 implicit none
@@ -33,9 +34,9 @@ subroutine diagonalize_Ham_FT(H_io,lat)
 
     ! internal Hamiltonians
     type(H_inp_real_to_k),allocatable :: FT_Ham(:)
-    type(H_inp_k_coo) :: FT_Ham_k
-    class(FT_Ham_base),allocatable :: Hk
-
+    type(H_inp_k_coo)                 :: FT_Ham_k
+    class(FT_Ham_base),allocatable    :: Hk
+    type(parameters_FT_HAM_IO)        :: io_H_diag         ! parameters for the diagonalization
     ! high symmetry lines
     type(parameters_IO_HIGHS) :: high_lines
 
@@ -47,9 +48,10 @@ subroutine diagonalize_Ham_FT(H_io,lat)
 
     ! initialization
     k=0.0d0
+    io_input=open_file_read('input')
+    call io_H_diag%read_file(io_input,'input')
 
     ! read the high symmetry lines
-    io_input=open_file_read('input')
     call high_lines%read_file('q',io_input,'input')
     call close_file('input',io_input)
     call set_highs_path(lat,high_lines)
@@ -58,12 +60,7 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     ! prepare the Hamiltonian based on the coo matrices for the FT
     call set_Hamiltonians_FT(FT_Ham,H_io,lat)     ! choose with which algoritm you want to work
 
-    ! get the parameters for the diagonalization
-    io_input=open_file_read('input')
-    call Hk%io_H%read_file(io_input,'input')
-    call close_file('input',io_input)
-
-    Call set_H(Hk,Hk%io_H)   ! choose the Hamiltonian with which you would like to work (sparse, dense...)
+    Call set_H(Hk,io_H_diag)   ! choose the Hamiltonian with which you would like to work (sparse, dense...)
 
     ! get the phase of the Hamiltonian
     do i=1,size(kpts,2)

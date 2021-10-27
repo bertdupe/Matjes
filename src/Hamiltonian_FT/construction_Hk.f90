@@ -18,7 +18,7 @@ subroutine get_Hk(Hk_inp,k,H_out_k)
     class(FT_Ham_base),allocatable       :: Htmp
 
     integer     :: i_ham,N_ham,i_shell
-    complex(8),allocatable  ::  val(:)
+    complex(8)  ::  val
     integer,allocatable     ::  row(:),col(:)
 
     real(8)  :: phase
