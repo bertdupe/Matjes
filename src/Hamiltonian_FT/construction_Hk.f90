@@ -1,5 +1,6 @@
 module m_construction_Hk
 use m_FT_Ham_base
+use m_FT_Ham_dense
 use m_FT_Ham_coo_rtok_base
 use m_setH_util
 use m_FT_Ham_coo
@@ -23,8 +24,8 @@ subroutine get_Hk(Hk_inp,k,H_out_k)
 
     real(8)  :: phase
 
+
     N_ham=size(HK_inp)
-    write(*,*) N_ham
     allocate(Htmp,mold=H_out_k)
 !
     do i_ham=1,N_ham

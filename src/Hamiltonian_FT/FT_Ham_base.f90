@@ -13,7 +13,7 @@ public FT_Ham_base
 
 type,abstract ::    FT_Ham_base
     real(8),allocatable          :: diffR(:,:)   !real-space difference of unit-cells in nm for each H_loc [3,N_H]
-    complex(8),allocatable       :: eval(:)      ! array containing the eigenvalues
+    real(8),allocatable          :: Hr(:,:,:)      !real-space Hamiltonian
     integer                      :: dimH=0       !dimension of Hamiltonian
     integer                      :: N_H=0        !number of real-space Hamiltonians considered
     logical,private              :: set=.false.  !check if arrays have been set
@@ -36,16 +36,15 @@ end type
 
 abstract interface
     subroutine int_init(this,Hk_inp,io)
-        import FT_Ham_base,HK_inp_t,parameters_FT_HAM_IO
-        class(FT_Ham_base),intent(inout)       :: this
-        type(H_inp_real_to_k),intent(inout)    :: Hk_inp
-        type(parameters_TB_IO_H),intent(in)    :: io
+        import FT_Ham_base,H_inp_real_to_k,parameters_FT_HAM_IO
+        class(FT_Ham_base),intent(inout)         :: this
+        type(H_inp_real_to_k),intent(inout)      :: Hk_inp
+        type(parameters_FT_HAM_IO),intent(in)    :: io
     end subroutine
 
-    subroutine int_set_work(this,work)
+    subroutine int_set_work(this)
         import FT_Ham_base,work_ham
         class(FT_Ham_base),intent(inout)   :: this
-        type(work_ham),intent(inout)       :: work
     end subroutine
 
     subroutine int_get_size_eval(this,eval_size)
@@ -54,10 +53,9 @@ abstract interface
         integer,intent(out)                :: eval_size
     end subroutine
 
-    subroutine int_set_k(this,Hr,k)
+    subroutine int_set_k(this,k)
         import FT_Ham_base
         class(FT_Ham_base),intent(inout)   :: this
-        real(8),intent(in)                 :: HR(:,:,:)
         real(8),intent(in)                 :: k(3)
     end subroutine
 

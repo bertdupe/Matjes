@@ -9,7 +9,9 @@ use m_FT_Ham_coo_rtok_base
 implicit none
 
 type,extends(FT_Ham_base),abstract :: FT_H_dense
-    complex(8),allocatable          :: H(:,:)         ! complex dense Hamiltonian
+    complex(8),allocatable          :: Hk(:,:)             ! complex dense Hamiltonian
+    complex(8),allocatable          :: eigenvalues(:)      ! array containing the eigenvalues
+    complex(8),allocatable          :: eigenvectors(:,:)   ! array containing the eigenvectors
 contains
     !necessary routines
     procedure :: init
@@ -50,37 +52,25 @@ end subroutine
 
 subroutine set_k(this,Hr,k)
 class(FT_H_dense),intent(inout)       :: this
-real(8),intent(in)                    :: Hr(:,:,:)
 real(8),intent(in)                    :: k(3)
 
 real(8)     :: phase_r
 complex(8)  :: phase_c
 integer  :: iH
 
-    do iH=1,size(Hr,3)
+    do iH=1,size(this%Hr,3)
        phase_r=dot_product(this%diffR(:,iH),k)
        phase_c=cmplx(cos(phase_r),sin(phase_r),8)
-       this%H=this%H+phase_c*this%H_R(:,:,iH)
+       this%Hk=this%Hk+phase_c*this%H_R(:,:,iH)
     enddo
 
 end subroutine
 
 subroutine set_work(this,Hr,k)
 class(FT_H_dense),intent(inout)       :: this
-real(8),intent(in)                    :: Hr(:,:,:)
-real(8),intent(in)                    :: k(3)
 
-real(8)     :: phase_r
-complex(8)  :: phase_c
-integer  :: iH
-    class(FT_H_dense),intent(inout)      :: this
-    type(work_ham),intent(inout)        :: work
-    integer                             :: sizes(N_work)
-
-    sizes=0
-    sizes(1)=max(1,3*this%dimH-2)   !real(RWORK)
-    sizes(3)=max(1,2*this%dimH-1)   !complex(WORK)
-    Call work%set(sizes)
+    if allocated(this%eigenvalues) ERROR STOP "eigenvalues is already allocated in init FT_Ham_dense"
+this%eigenvalues
 
 end subroutine
 
