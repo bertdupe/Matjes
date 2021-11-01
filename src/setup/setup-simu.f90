@@ -110,15 +110,17 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
 
     if (io_simu%io_fft_Xstruct) call set_k_mesh('input',my_lattice)
     
+
 !    call user_info(6,time,'Start setting fft-Hamiltonians for diagonalization',.false.)
-!    call diagonalize_Ham()
+!    call diagonalize_Ham_FT(H_io,my_lattice)
 !    call user_info(6,time,'End diagonalization',.false.)
 
-    write(output_unit,'(/,a,/)') 'the setup of the simulation is over'
-    write(output_unit,'(I6,a)') my_lattice%ncell, ' unit cells'
-    write(output_unit,'(a)') '-----------------------------------------------'
-    write(output_unit,'(a)') ''
-    write(output_unit,'(a)') '-----------------------------------------------'
+    write(6,'(/,a,/)') 'the setup of the simulation is over'
+    write(6,'(I6,a)') my_lattice%ncell, ' unit cells'
+    write(6,'(a)') '-----------------------------------------------'
+    write(6,'(a)') ''
+    write(6,'(a)') '-----------------------------------------------'
+!    stop 'Bertrand'
 end subroutine setup_simu
 
 subroutine print_positions(lat,time)

@@ -1,56 +1,56 @@
 module m_construction_Hk
-use m_H_public, only : t_h
+use m_FT_Ham_base
+use m_FT_Ham_coo_rtok_base
+use m_FT_Ham_coo
+implicit none
 
-type Hk_inp_t
-! folded Hamiltonian that contains the information about the bounds (useless in the case of the FT)
-    class(t_h),allocatable       :: H_folded
-! Hamiltonian resolved in shell and bound
-    class(t_h),allocatable       :: H(:,:)
-    real(8),allocatable         :: diffR(:,:)
-contains
-!    procedure :: combine => Hk_inp_combine  !combine 2 Hk_inp_t by copying
-!    procedure :: destroy => Hk_inp_destroy
-end type
+private
+public get_Hk
 
 contains
 
-!subroutine get_Hk(Hk_inp,k,H_real,H_compl)
-!    !unfolds the real Hamiltonian into a 2 real Hamiltonians (one for the real and for the complex part)
-!    type(t_h),intent(in)   :: Hk_inp
-!    real(8),intent(in)          :: k(3)
-!    class(t_h),allocatable,intent(out)     :: H_real,H_compl
-!    class(t_h),allocatable                 :: Htmp_real,Htmp_compl
+subroutine get_Hk(Hk_inp,k,H_out_k)
+    !unfolds the real Hamiltonian into a 2 real Hamiltonians (one for the real and for the complex part)
+    type(H_inp_real_to_k),intent(in)     :: Hk_inp(:)
+    real(8),intent(in)                   :: k(3)
+    type(H_inp_k_coo),intent(inout)      :: H_out_k
+    type(H_inp_k_coo),allocatable        :: Htmp
+
+    integer     :: i_ham,N_ham,i_shell
+    complex(8),allocatable  ::  val(:)
+    integer,allocatable     ::  row(:),col(:)
+
+    real(8)  :: phase
+
+    N_ham=size(HK_inp)
+    write(*,*) N_ham
+!    Call set_H(H_out_k)
+!    allocate(Htmp,mold=H_out_k)
 !
-!    type(parameters_ham_init)   :: hinit
-!    integer     :: i_ham,N_ham
-!    complex(8),allocatable  ::  val(:)
-!    integer,allocatable     ::  row(:),col(:)
+    do i_ham=1,N_ham
+
+        do i_shell=1,size(Hk_inp(i_ham)%H)
+
+            phase=dot_product(Hk_inp(i_ham)%diffR(:,i_shell),k)
+            write(*,*) i_shell, Hk_inp(i_ham)%diffR(:,i_shell)
+            write(*,*) phase
+            pause
+!!            Call Hk_inp%H(i_ham)%get_hinit(hinit)
+!!            Call Hk_inp%H(i_ham)%get_par(val,row,col)
 !
-!    real(8)  :: phase
+!            val=val*cmplx(cos(phase),sin(phase),8)
 !
-!    Call set_H(H_real,h_io)
-!    Call set_H(H_compl,h_io)
-!    allocate(Htmp_real,mold=H)
-!    allocate(Htmp_compl,mold=H)
+!            Call H_out_k%init(val,row,col)
 !
-!    N_ham=size(HK_inp%H)
-!    do i_ham=1,N_ham
-!        phase=dot_product(HK_inp%diffR(:,i_ham),k)
-!        Call Hk_inp%H(i_ham)%get_hinit(hinit)
-!        Call Hk_inp%H(i_ham)%get_par(val,row,col)
+!!            Call H_out_k%add(Htmp_real)
 !
-!        val=val*cmplx(cos(phase),sin(phase),8)
-!
-!        Call Htmp_real%init_coo(real(val,8),row,col,hinit)
-!        Call Htmp_compl%init_coo(aimag(val,8),row,col,hinit)
-!
-!        Call H_real%add(Htmp_real)
-!        Call H_compl%add(Htmp_compl)
-!
-!        Call Htmp_real%destroy()
-!        Call Htmp_compl%destroy()
+        enddo
+
+!!        Call Htmp_real%destroy()
+!!        Call Htmp_compl%destroy()
 !        deallocate(val,row,col)
-!    enddo
-!end subroutine
+!
+    enddo
+end subroutine
 
 end module m_construction_Hk
