@@ -15,6 +15,8 @@ type io_parameter
      logical :: io_Tfield=.false.
 ! plot the fourrier tranform of the spin structure (or the order parameter structure)
      logical :: io_fft_Xstruct=.false.
+! plot the Fourier transform of the Hamiltonian
+     logical :: io_fft_Ham=.false.
 ! plot the topological charge density distribution
      logical :: io_topo=.false.
 ! plot the emergent magnetic field

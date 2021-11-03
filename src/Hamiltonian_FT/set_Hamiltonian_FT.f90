@@ -22,8 +22,8 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
     use m_harmonic_phonon,only: get_Forces_F
 
     type(H_inp_real_to_k),allocatable,intent(inout)       :: FT_Ham(:)
-    type(io_h),intent(in)               :: H_io
-    type(lattice), intent(in)           :: lat
+    type(io_h),intent(in)                                 :: H_io
+    type(lattice), intent(in)                             :: lat
 
     ! internal
     integer :: i_H,N_ham

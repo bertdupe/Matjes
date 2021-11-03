@@ -2,13 +2,15 @@ module m_diagonalization_Hk
 use m_parameters_rw_high
 use m_set_Hamiltonian_FT
 use m_FT_Ham_public
-use m_construction_Hk
 use m_FT_Ham_base
-use m_FT_Ham_coo
 use m_io_files_utils
 use m_parameters_FT_Ham
 ! the following module is used for the TB. You will find the module in the directory tight-binding
 use m_highsym, only : set_highs_path,mv_kpts
+use m_input_H_types
+use m_derived_types
+use m_FT_Ham_public
+use m_FT_Ham_coo_rtok_base
 implicit none
 
 !
@@ -26,25 +28,23 @@ public  :: diagonalize_Ham_FT
 contains
 
 subroutine diagonalize_Ham_FT(H_io,lat)
-    use m_input_H_types
-    use m_derived_types
-    use m_FT_Ham_public
     type(io_h),intent(in)               :: H_io
     type(lattice), intent(in)           :: lat
 
     ! internal Hamiltonians
     type(H_inp_real_to_k),allocatable :: FT_Ham(:)
-    type(H_inp_k_coo)                 :: FT_Ham_k
     class(FT_Ham_base),allocatable    :: Hk
     type(parameters_FT_HAM_IO)        :: io_H_diag         ! parameters for the diagonalization
     ! high symmetry lines
-    type(parameters_IO_HIGHS) :: high_lines
+    type(parameters_IO_HIGHS)         :: high_lines
 
     ! dummy variables
     real(8)   :: k(3)
     integer   :: io_input
-    integer   :: i
+    integer   :: i,n_kpts,n_eigen
     real(8), allocatable :: kpts(:,:)
+    real(8),allocatable     :: eigenvalues(:)      ! array containing the eigenvalues
+    complex(8),allocatable  :: eigenvectors(:,:)   ! array containing the eigenvectors
 
     ! initialization
     k=0.0d0
@@ -62,12 +62,16 @@ subroutine diagonalize_Ham_FT(H_io,lat)
 
     Call set_H(Hk,io_H_diag)   ! choose the Hamiltonian with which you would like to work (sparse, dense...)
 
-    ! get the phase of the Hamiltonian
-    do i=1,size(kpts,2)
-    write(*,*) kpts(:,i)
-       call get_Hk(FT_Ham,kpts(:,i),Hk)
-    pause
+    call Hk%init(FT_Ham,io_H_diag)    ! initialize the Hamiltonian matrix
+    call Hk%set_work(eigenvalues,eigenvectors)
+
+    n_kpts=size(kpts,2)
+    do i=1,n_kpts
+       call Hk%set_k(FT_Ham,kpts(:,i))
+       call Hk%calc_eval(3,eigenvalues,n_eigen)
     enddo
+
+
 
 
 end subroutine

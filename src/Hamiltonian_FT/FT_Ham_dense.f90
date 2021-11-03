@@ -6,12 +6,12 @@ use m_H_type
 use m_H_type
 use m_FT_Ham_base
 use m_FT_Ham_coo_rtok_base
+use m_parameters_FT_Ham
+use m_eigen_val_vec
 implicit none
 
-type,extends(FT_Ham_base),abstract :: FT_H_dense
-    complex(8),allocatable          :: Hk(:,:)             ! complex dense Hamiltonian
-    complex(8),allocatable          :: eigenvalues(:)      ! array containing the eigenvalues
-    complex(8),allocatable          :: eigenvectors(:,:)   ! array containing the eigenvectors
+type,extends(FT_Ham_base) :: FT_H_dense
+    complex(8),allocatable :: Hk(:,:)             ! complex dense Hamiltonian
 contains
     !necessary routines
     procedure :: init
@@ -35,96 +35,83 @@ contains
 
 subroutine init(this,Hk_inp,io)
 class(FT_H_dense),intent(inout)       :: this
-type(H_inp_real_to_k),intent(inout)   :: Hk_inp
-type(parameters_TB_IO_H),intent(in)   :: io
+type(H_inp_real_to_k),intent(in)      :: Hk_inp(:)
+type(parameters_FT_HAM_IO),intent(in) :: io
 
 integer :: dim_H,test
-    dim_H=this%get_dimH()
+    dim_H=3
 
-    if allocated(this%H) ERROR STOP "H is already allocated in init FT_Ham_dense"
+    if (allocated(this%Hk)) ERROR STOP "H is already allocated in init FT_Ham_dense"
 
-    allocate(this%H(dim_H,dim_H),STAT=test)
-write(*,*) test
+    allocate(this%Hk(dim_H,dim_H),STAT=test)
+    if (test.ne.0) ERROR STOP "can not allocate Hk in init in FT_Ham_dense"
 
-pause
-this%H=(0.0d0,0.0d0)
+    this%Hk=(0.0d0,0.0d0)
+    this%io_H=io
 end subroutine
 
-subroutine set_k(this,Hr,k)
+subroutine set_k(this,Hk_inp,k)
 class(FT_H_dense),intent(inout)       :: this
+type(H_inp_real_to_k),intent(in)      :: Hk_inp(:)
 real(8),intent(in)                    :: k(3)
 
 real(8)     :: phase_r
 complex(8)  :: phase_c
-integer  :: iH
+integer  :: iH,i_shell,n_Ham
 
-    do iH=1,size(this%Hr,3)
-       phase_r=dot_product(this%diffR(:,iH),k)
-       phase_c=cmplx(cos(phase_r),sin(phase_r),8)
-       this%Hk=this%Hk+phase_c*this%H_R(:,:,iH)
+
+    n_Ham=size(Hk_inp)
+    do iH=1,n_Ham
+       do i_shell=1,size(Hk_inp(iH)%H,3)
+          phase_r=dot_product(Hk_inp(iH)%diffR(:,i_shell),k)
+          phase_c=cmplx(cos(phase_r),sin(phase_r),8)
+          this%Hk=this%Hk+phase_c*Hk_inp(iH)%H(:,:,i_shell)
+       enddo
     enddo
-
 end subroutine
 
-subroutine set_work(this,Hr,k)
+subroutine set_work(this,eval,evec)
 class(FT_H_dense),intent(inout)       :: this
+real(8),allocatable,intent(out)       :: eval(:)      ! array containing the eigenvalues
+complex(8),allocatable,intent(out)    :: evec(:,:)   ! array containing the eigenvectors
 
-    if allocated(this%eigenvalues) ERROR STOP "eigenvalues is already allocated in init FT_Ham_dense"
-this%eigenvalues
+integer :: dim_H,test
+
+    dim_H=this%get_dimH()
+    if (allocated(eval)) ERROR STOP "eigenvalues is already allocated in init FT_Ham_dense"
+    if (allocated(evec)) ERROR STOP "eigenvectors is already allocated in init FT_Ham_dense"
+
+    allocate(eval(dim_H),STAT=test,source=0.0d0)
+    if (test.ne.0) ERROR STOP "can not allocate eigenval in set_work in FT_Ham_dense"
+    allocate(evec(dim_H,dim_H),STAT=test,source=(0.0d0,0.0d0))
+    if (test.ne.0) ERROR STOP "can not allocate eigenvec in set_work in FT_Ham_dense"
 
 end subroutine
 
-!subroutine copy_child(this,Hout)
-!    class(FT_H_dense),intent(in)         :: this
-!    class(t_H_base),intent(inout)        :: Hout
-!
-!    select type(Hout)
-!    class is(H_inp_k_coo)
-!        Call this%copy_child(Hout)
-!    class default
-!        STOP "Cannot copy FT_h_dense type with Hamiltonian that is not a class of t_H_base"
-!    end select
-!end subroutine
+subroutine calc_eval(this,Nin,eval,Nout)
+class(FT_H_dense),intent(inout)       :: this
+integer,intent(in)                    :: Nin  !size of eigenvalue input array
+real(8),intent(inout)                 :: eval(Nin)    !eigenvalue array
+integer,intent(out)                   :: Nout !calculated number of eigenvalues
 
+complex(8)  :: out(Nin,Nin)
+real(8)     :: EPS=10d-8
 
-!subroutine add_child(this,H_in)
-!    class(FT_H_dense),intent(inout)    :: this
-!    class(t_H_base),intent(in)         :: H_in
-!
-!    integer :: i
-!
-!    select type(H_in)
-!    class is(H_inp_k_coo)
-!        call this%add_child(H_in)
-!    class default
-!        STOP "Cannot add FT_h_dense type with Hamiltonian that is not a class of t_H_base"
-!    end select
-!
-!end subroutine
+out=(0.0d0,0.0d0)
+call Jacobi(EPS,Nin,this%Hk,Nin,Nin,eval,Nin,out)
 
-!subroutine destroy_child(this)
-!    class(FT_H_dense),intent(inout)    :: this
-!
-!    if(this%is_set())then
-!        deallocate(this%H)
-!    endif
-!end subroutine
+end subroutine
 
-!subroutine set_from_Hcoo(this,H_coo)
-!    class(FT_H_dense),intent(inout)  :: this
-!    type(H_inp_k_coo),intent(inout)  :: H_coo
-!
-!    !local
-!    integer                 :: nnz,i
-!    complex(8),allocatable  :: val(:)
-!    integer,allocatable     :: rowind(:),colind(:)
-!
-!    Call H_coo%pop_par(this%dimH,nnz,val,rowind,colind)
-!    allocate(this%H(this%dimH(1),this%dimH(2)),source=cmplx(0.0d0,0.0d0,8))
-!    do i=1,nnz
-!        this%H(rowind(i),colind(i))=val(i)
-!    enddo
-!end subroutine
+subroutine calc_evec(this,Nin,eval,evec,Nout)
+class(FT_H_dense),intent(inout)     :: this
+integer,intent(in)                  :: Nin  !size of eigenvalue input array
+complex(8),intent(inout)            :: eval(Nin)
+complex(8),intent(inout)            :: evec(this%dimH,Nin)
+integer,intent(out)                 :: Nout !calculated number of eigenvalues
+
+STOP 'not implemented'
+
+end subroutine
 
 !subroutine init_coo(this,rowind,colind,val,dim_mode,op_l,op_r,lat,mult_M_single)
 !    class(FT_H_dense),intent(inout)     :: this

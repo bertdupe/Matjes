@@ -8,8 +8,8 @@ use m_FT_Ham_zheev
 use m_FT_Ham_dense
 implicit none
 
-private
-public  :: set_H
+private :: set_H_single
+public :: set_H
 
 interface set_H
     module procedure set_H_single
@@ -39,14 +39,14 @@ subroutine set_H_single(H,io)
         select case(io%i_diag)
         case(1)
 #ifdef CPP_LAPACK
-            if(nsaid) write(output_unit,'(2/A/)') "Chose lapack zheevd algoritm for FT Hamiltonian"
+            if(nsaid) write(output_unit,'(2/A/)') "Choose lapack zheevd algoritm for FT Hamiltonian"
             allocate(FT_Ham_zheev::H)
 #else
             write(error_unit,'(//A)') "CANNOT use lapack diagonalization algorithm without CPP_LAPACK"
             ERROR STOP
 #endif
         case(2)
-            if(nsaid) write(output_unit,'(2/A/)') "Chose internal diagonalization algoritm for FT Hamiltonian"
+            if(nsaid) write(output_unit,'(2/A/)') "Choose internal diagonalization algoritm for FT Hamiltonian"
             allocate(FT_H_dense::H)
 !        case(3)
 !#ifdef CPP_MKL
@@ -71,7 +71,6 @@ subroutine set_H_single(H,io)
         end select
 !    endif
     nsaid=.false.
-    H%io_H=io
 end subroutine
 
 end module m_FT_Ham_public

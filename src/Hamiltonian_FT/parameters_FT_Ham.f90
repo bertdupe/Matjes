@@ -4,7 +4,7 @@ implicit none
 type parameters_FT_HAM_IO
     integer             ::  dimH=-1         !final size of Hamiltonian including all modifications
     !solving parameters
-    integer             ::  i_diag=1  !different diagonalization methods
+    integer             ::  i_diag=2  !different diagonalization methods
     logical             ::  sparse=.false.  !do calculation sparse
     real(8)             ::  Ebnd(2)=[-1.0d+99,1.0d+99]     !minimal and maximal energy values to consider in restricted eigensolver routines
     integer             ::  estNe=0                       !estimated number of eigenvalues in interval
