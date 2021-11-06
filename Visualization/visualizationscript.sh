@@ -49,12 +49,16 @@ if [ ! -d "Visualization" ]
 then
 mkdir -p $path/Visualization
 fi
+rm $path/Visualization/*.dat
+rm $path/Visualization/*.png # make a backup if you don't want to loose all your files!
+
 ###########################
 # prepare file for povray #
 ###########################
 
-# states=(start $(seq 1 1 19) end)
-states=(start)
+# states=(start $(seq 1 1 9) end)
+states=(start end)
+# states=(start $(seq 1 1 79) end)
 nb_states=${#states[@]}
 for state in ${states[@]}
 do
@@ -69,7 +73,6 @@ done
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cp $script_dir/povrayscript.pov $path/Visualization
 cd $path/Visualization
-rm *.png # make a backup if you don't want to loose all your files!
 
 # sed for linux, gsed for macos
 if [ $xcut == true ]
