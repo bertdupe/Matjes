@@ -42,7 +42,7 @@ abstract interface
     subroutine int_set_work(this,eval,evec)
         import FT_Ham_base
         class(FT_Ham_base),intent(inout)   :: this
-        real(8),allocatable,intent(out)    :: eval(:)
+        complex(8),allocatable,intent(out) :: eval(:)
         complex(8),allocatable,intent(out) :: evec(:,:)
     end subroutine
 
@@ -63,7 +63,7 @@ abstract interface
         import FT_Ham_base
         class(FT_Ham_base),intent(inout)      :: this
         integer,intent(in)                    :: Nin  !size of eigenvalue input array
-        real(8),intent(inout)                 :: eval(Nin)    !eigenvalue array
+        complex(8),intent(out)                :: eval(Nin)    !eigenvalue array
         integer,intent(out)                   :: Nout !calculated number of eigenvalues
     end subroutine
 
@@ -71,8 +71,8 @@ abstract interface
         import FT_Ham_base
         class(FT_Ham_base),intent(inout)    :: this
         integer,intent(in)                  :: Nin  !size of eigenvalue input array
-        complex(8),intent(inout)            :: eval(Nin)
-        complex(8),intent(inout)            :: evec(this%dimH,Nin)
+        complex(8),intent(out)              :: eval(Nin)
+        complex(8),intent(out)              :: evec(this%dimH,Nin)
         integer,intent(out)                 :: Nout !calculated number of eigenvalues
     end subroutine
 end interface
@@ -86,7 +86,7 @@ end function
 subroutine get_eval(this,Nin,eval,Nout)
     class(FT_Ham_base),intent(inout)   :: this
     integer,intent(in)                 :: Nin  !size of eigenvalue input array
-    real(8),intent(inout)              :: eval(Nin)    !eigenvalue array
+    complex(8),intent(inout)           :: eval(Nin)    !eigenvalue array
     integer,intent(out)                :: Nout !calculated number of eigenvalues
 
     Call this%calc_eval(Nin,eval,Nout)

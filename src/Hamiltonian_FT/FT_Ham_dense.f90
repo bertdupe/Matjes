@@ -8,6 +8,7 @@ use m_FT_Ham_base
 use m_FT_Ham_coo_rtok_base
 use m_parameters_FT_Ham
 use m_eigen_val_vec
+use m_constants, only : pi
 implicit none
 
 type,extends(FT_Ham_base) :: FT_H_dense
@@ -39,11 +40,12 @@ type(H_inp_real_to_k),intent(in)      :: Hk_inp(:)
 type(parameters_FT_HAM_IO),intent(in) :: io
 
 integer :: dim_H,test
-    dim_H=3
+
+    this%dimH=3
 
     if (allocated(this%Hk)) ERROR STOP "H is already allocated in init FT_Ham_dense"
 
-    allocate(this%Hk(dim_H,dim_H),STAT=test)
+    allocate(this%Hk(this%dimH,this%dimH),STAT=test)
     if (test.ne.0) ERROR STOP "can not allocate Hk in init in FT_Ham_dense"
 
     this%Hk=(0.0d0,0.0d0)
@@ -68,20 +70,22 @@ integer  :: iH,i_shell,n_Ham
           this%Hk=this%Hk+phase_c*Hk_inp(iH)%H(:,:,i_shell)
        enddo
     enddo
+
 end subroutine
 
 subroutine set_work(this,eval,evec)
 class(FT_H_dense),intent(inout)       :: this
-real(8),allocatable,intent(out)       :: eval(:)      ! array containing the eigenvalues
+complex(8),allocatable,intent(out)    :: eval(:)      ! array containing the eigenvalues
 complex(8),allocatable,intent(out)    :: evec(:,:)   ! array containing the eigenvectors
 
 integer :: dim_H,test
 
     dim_H=this%get_dimH()
+    write(*,*) dim_H
     if (allocated(eval)) ERROR STOP "eigenvalues is already allocated in init FT_Ham_dense"
     if (allocated(evec)) ERROR STOP "eigenvectors is already allocated in init FT_Ham_dense"
 
-    allocate(eval(dim_H),STAT=test,source=0.0d0)
+    allocate(eval(dim_H),STAT=test,source=(0.0d0,0.0d0))
     if (test.ne.0) ERROR STOP "can not allocate eigenval in set_work in FT_Ham_dense"
     allocate(evec(dim_H,dim_H),STAT=test,source=(0.0d0,0.0d0))
     if (test.ne.0) ERROR STOP "can not allocate eigenvec in set_work in FT_Ham_dense"
@@ -91,22 +95,25 @@ end subroutine
 subroutine calc_eval(this,Nin,eval,Nout)
 class(FT_H_dense),intent(inout)       :: this
 integer,intent(in)                    :: Nin  !size of eigenvalue input array
-real(8),intent(inout)                 :: eval(Nin)    !eigenvalue array
+complex(8),intent(out)                :: eval(Nin)    !eigenvalue array
 integer,intent(out)                   :: Nout !calculated number of eigenvalues
 
-complex(8)  :: out(Nin,Nin)
+complex(8)  :: eigenvec(Nin,Nin)
 real(8)     :: EPS=10d-8
 
-out=(0.0d0,0.0d0)
-call Jacobi(EPS,Nin,this%Hk,Nin,Nin,eval,Nin,out)
+eigenvec=(0.0d0,0.0d0)
+Nout=3
+call Jacobi(EPS,Nin,this%Hk,Nin,eval,eigenvec,Nin,1)
+
+write(*,*) eval
 
 end subroutine
 
 subroutine calc_evec(this,Nin,eval,evec,Nout)
 class(FT_H_dense),intent(inout)     :: this
 integer,intent(in)                  :: Nin  !size of eigenvalue input array
-complex(8),intent(inout)            :: eval(Nin)
-complex(8),intent(inout)            :: evec(this%dimH,Nin)
+complex(8),intent(out)              :: eval(Nin)
+complex(8),intent(out)              :: evec(this%dimH,Nin)
 integer,intent(out)                 :: Nout !calculated number of eigenvalues
 
 STOP 'not implemented'

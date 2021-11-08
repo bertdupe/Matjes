@@ -21,7 +21,7 @@ contains
 
 subroutine set_work(this,eval,evec)
     class(FT_Ham_zheev),intent(inout)     :: this
-    real(8),allocatable,intent(out)       :: eval(:)      ! array containing the eigenvalues
+    complex(8),allocatable,intent(out)    :: eval(:)      ! array containing the eigenvalues
     complex(8),allocatable,intent(out)    :: evec(:,:)   ! array containing the eigenvectors
 
     integer                             :: n_real,n_cmplx
@@ -29,7 +29,7 @@ subroutine set_work(this,eval,evec)
     n_real=max(1,3*this%io_H%dimH-2)   !real(RWORK)
     n_cmplx=max(1,2*this%io_H%dimH-1)   !complex(WORK)
 
-    allocate(eval(this%io_H%dimH),source=0.0d0)
+    allocate(eval(this%io_H%dimH),source=(0.0d0,0.0d0))
     allocate(evec(this%io_H%dimH,this%io_H%dimH),source=(0.0d0,0.0d0))
 
     if(n_real>0) allocate(this%real_arr(n_real),source=0.0d0)
@@ -40,7 +40,7 @@ end subroutine
 subroutine calc_eval(this,Nin,eval,Nout)
     class(FT_Ham_zheev),intent(inout)  :: this
     integer,intent(in)                 :: Nin  !size of eigenvalue input array
-    real(8),intent(inout)              :: eval(Nin)    !eigenvalue array
+    complex(8),intent(out)             :: eval(Nin)    !eigenvalue array
     integer,intent(out)                :: Nout !calculated number of eigenvalues
     !internal
     integer                 :: info,lcwork,lrwork
@@ -69,8 +69,8 @@ end subroutine
 subroutine calc_evec(this,Nin,eval,evec,Nout)
     class(FT_Ham_zheev),intent(inout)   :: this
     integer,intent(in)                  :: Nin  !size of eigenvalue input array
-    complex(8),intent(inout)            :: eval(Nin)
-    complex(8),intent(inout)            :: evec(this%io_H%dimH,Nin)
+    complex(8),intent(out)              :: eval(Nin)
+    complex(8),intent(out)              :: evec(this%io_H%dimH,Nin)
     integer,intent(out)                 :: Nout !calculated number of eigenvalues
     !internal
     integer                 :: info,lcwork,lrwork

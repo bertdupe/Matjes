@@ -43,7 +43,7 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     integer   :: io_input
     integer   :: i,n_kpts,n_eigen
     real(8), allocatable :: kpts(:,:)
-    real(8),allocatable     :: eigenvalues(:)      ! array containing the eigenvalues
+    complex(8),allocatable  :: eigenvalues(:)      ! array containing the eigenvalues
     complex(8),allocatable  :: eigenvectors(:,:)   ! array containing the eigenvectors
 
     ! initialization
@@ -64,11 +64,14 @@ subroutine diagonalize_Ham_FT(H_io,lat)
 
     call Hk%init(FT_Ham,io_H_diag)    ! initialize the Hamiltonian matrix
     call Hk%set_work(eigenvalues,eigenvectors)
+    write(*,*) eigenvalues
 
     n_kpts=size(kpts,2)
     do i=1,n_kpts
        call Hk%set_k(FT_Ham,kpts(:,i))
        call Hk%calc_eval(3,eigenvalues,n_eigen)
+       write(*,*) eigenvalues,n_eigen
+       pause
     enddo
 
 
