@@ -61,7 +61,7 @@ real(8)     :: phase_r
 complex(8)  :: phase_c
 integer  :: iH,i_shell,n_Ham
 
-
+    this%Hk=(0.0d0,0.0d0)
     n_Ham=size(Hk_inp)
     do iH=1,n_Ham
        do i_shell=1,size(Hk_inp(iH)%H,3)
@@ -81,7 +81,7 @@ complex(8),allocatable,intent(out)    :: evec(:,:)   ! array containing the eige
 integer :: dim_H,test
 
     dim_H=this%get_dimH()
-    write(*,*) dim_H
+
     if (allocated(eval)) ERROR STOP "eigenvalues is already allocated in init FT_Ham_dense"
     if (allocated(evec)) ERROR STOP "eigenvectors is already allocated in init FT_Ham_dense"
 
@@ -104,8 +104,6 @@ real(8)     :: EPS=10d-8
 eigenvec=(0.0d0,0.0d0)
 Nout=3
 call Jacobi(EPS,Nin,this%Hk,Nin,eval,eigenvec,Nin,1)
-
-write(*,*) eval
 
 end subroutine
 

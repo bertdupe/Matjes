@@ -45,6 +45,7 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     real(8), allocatable :: kpts(:,:)
     complex(8),allocatable  :: eigenvalues(:)      ! array containing the eigenvalues
     complex(8),allocatable  :: eigenvectors(:,:)   ! array containing the eigenvectors
+    character(len=100)       :: form
 
     ! initialization
     k=0.0d0
@@ -64,19 +65,19 @@ subroutine diagonalize_Ham_FT(H_io,lat)
 
     call Hk%init(FT_Ham,io_H_diag)    ! initialize the Hamiltonian matrix
     call Hk%set_work(eigenvalues,eigenvectors)
-    write(*,*) eigenvalues
+
+    io_input=open_file_write('dispersion.dat')
+    write(form,'( "(3E20.12E3,", I10, "(x,E20.12E3,x,E20.12E3))" )') size(eigenvalues)
 
     n_kpts=size(kpts,2)
     do i=1,n_kpts
        call Hk%set_k(FT_Ham,kpts(:,i))
        call Hk%calc_eval(3,eigenvalues,n_eigen)
-       write(*,*) eigenvalues,n_eigen
-       pause
+       write(io_input,form) kpts(:,i),real(eigenvalues),aimag(eigenvalues)
     enddo
 
-
-
-
+    call close_file('dispersion.dat',io_input)
+    stop 'dispersion done'
 end subroutine
 
 end module m_diagonalization_Hk
