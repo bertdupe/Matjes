@@ -28,6 +28,16 @@ contains
     procedure,NON_OVERRIDABLE   :: get_evec     !get eigenvectors for a given k
     procedure,NON_OVERRIDABLE   :: do_set       !set set logical
     procedure,NON_OVERRIDABLE   :: is_set       !returns set logical
+
+    !MPI-stuff
+    procedure,NON_OVERRIDABLE               :: send_base
+    procedure,NON_OVERRIDABLE               :: recv_base
+    procedure,NON_OVERRIDABLE               :: bcast_base
+    procedure(int_send),deferred            :: send
+    procedure(int_recv),deferred            :: recv
+    procedure(int_mpicom),deferred          :: distribute
+    procedure(int_mpicom),deferred          :: bcast
+
 end type
 
 
@@ -75,6 +85,29 @@ abstract interface
         complex(8),intent(out)              :: evec(this%dimH,Nin)
         integer,intent(out)                 :: Nout !calculated number of eigenvalues
     end subroutine
+
+    subroutine int_mpicom(this,comm)
+        use mpi_basic
+        import FT_Ham_base
+        class(FT_Ham_base),intent(inout)   ::  this
+        type(mpi_type),intent(in)          ::  comm
+    end subroutine
+
+    subroutine int_send(this,ithread,tag,com)
+        import FT_Ham_base
+        class(FT_Ham_base),intent(in)      :: this
+        integer,intent(in)                 :: ithread
+        integer,intent(in)                 :: tag
+        integer,intent(in)                 :: com
+    end subroutine
+
+    subroutine int_recv(this,ithread,tag,com)
+        import FT_Ham_base
+        class(FT_Ham_base),intent(inout)   :: this
+        integer,intent(in)                 :: ithread
+        integer,intent(in)                 :: tag
+        integer,intent(in)                 :: com
+    end subroutine
 end interface
 contains
 
@@ -121,5 +154,70 @@ integer function get_dimH(this)
 end function
 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!            MPI ROUTINES           !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    subroutine bcast_base(this,comm)
+        use mpi_basic
+        class(FT_Ham_base),intent(inout)        ::  this
+        type(mpi_type),intent(in)               ::  comm
+#ifdef CPP_MPI
+        integer     :: ierr
+        integer     :: N(2)
+        integer     :: mode_ident(2)
+
+        Call MPI_Bcast(this%dimH         ,   1, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%N_H          ,   1, MPI_INTEGER  , comm%mas, comm%com,ierr)
+        Call MPI_Bcast(this%set          ,   1, MPI_LOGICAL  , comm%mas, comm%com,ierr)
+
+#else
+        continue
+#endif
+    end subroutine
+
+subroutine send_base(this,ithread,tag,com)
+    use mpi_basic
+    class(FT_Ham_base),intent(in)   :: this
+    integer,intent(in)              :: ithread
+    integer,intent(in)              :: tag
+    integer,intent(in)              :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+
+    if(.not.this%is_set()) ERROR STOP "CANNOT SEND HAMILTONIAN WHEN THE ORIGIN IS NOT SET"
+
+
+    Call MPI_SEND(this%dimH,          1,               MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%N_H,           1,               MPI_INTEGER,   ithread, tag, com, ierr)
+    Call MPI_SEND(this%set,           1,               MPI_LOGICAL,   ithread, tag, com, ierr)
+
+#else
+    continue
+#endif
+end subroutine
+
+subroutine recv_base(this,ithread,tag,com)
+    use mpi_basic
+    class(FT_Ham_base),intent(inout)  :: this
+    integer,intent(in)                :: ithread
+    integer,intent(in)                :: tag
+    integer,intent(in)                :: com
+
+#ifdef CPP_MPI
+    integer     :: ierr
+    integer     :: stat(MPI_STATUS_SIZE)
+
+    if(this%is_set()) ERROR STOP "CANNOT RECV HAMILTONIAN WHEN THE ORIGIN IS ALREADY SET"
+
+    Call MPI_RECV(this%dimH,          1,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%N_H,           1,               MPI_INTEGER,   ithread, tag, com, stat, ierr)
+    Call MPI_RECV(this%set,           1,               MPI_LOGICAL,   ithread, tag, com, stat, ierr)
+
+#else
+    continue
+#endif
+end subroutine
 
 end module m_FT_Ham_base
