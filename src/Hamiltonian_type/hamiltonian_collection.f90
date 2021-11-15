@@ -364,12 +364,12 @@ subroutine energy_single(this,i_m,order,lat,work,E)
     use m_derived_types, only: number_different_order_parameters
     use mpi_distrib_v
     !returns the total energy caused by a single entry !needs some updating 
-    class(hamiltonian),intent(in)   :: this
-    integer,intent(in)              :: i_m
-    type (lattice),intent(in)       :: lat
-    integer,intent(in)              :: order
+    class(hamiltonian),intent(inout)    :: this
+    integer,intent(in)                  :: i_m
+    type (lattice),intent(in)           :: lat
+    integer,intent(in)                  :: order
     type(work_ham_single),intent(inout) ::  work
-    real(8),intent(out)             :: E
+    real(8),intent(out)                 :: E
 
     real(8)     ::  tmp_E(this%N_total)
     integer     ::  iH
@@ -382,9 +382,13 @@ subroutine energy_single(this,i_m,order,lat,work,E)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
 
-    if(this%NHF_local>0) STOP "IMPLEMENT THIS FOR FFT"
+    ! take care of the dipole dipole Hamiltonian if necessary
+    do iH=1,this%NHF_total
+       Call this%H_fft(ih)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
+    enddo
 
     E=sum(tmp_E)
+
 end subroutine 
 
 subroutine get_eff_field(this,lat,B,Ham_type)
