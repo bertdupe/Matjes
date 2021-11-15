@@ -55,6 +55,7 @@ interface get_parameter
  module procedure get_atomtype
  module procedure get_cell
  module procedure get_H_pair
+ module procedure get_H_pair_tensor
  module procedure get_H_triple
 end interface get_parameter
 
@@ -657,6 +658,126 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
 
     Call check_further_entry(io,fname,var_name)
 end subroutine 
+
+subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
+    use m_input_H_types, only: reduce_Hr_tensor_pair,Hr_pair_tensor,Hr_pair_single_tensor
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)                            :: io
+    character(len=*), intent(in)                   :: fname,var_name
+    type(Hr_pair_tensor), intent(out), allocatable :: Hpairs_tensor(:)
+    logical,intent(out)                            :: success
+    ! internal variable
+    type(Hr_pair_single_tensor),allocatable        :: Hpair_tmp(:)
+    type(Hr_pair_tensor), allocatable              :: Hpairs_tensor_tmp(:)
+    integer :: attype(2),dist
+    real(8) :: val(9)
+
+    integer :: Npair,Nnonzero
+    integer :: nread,i,ii,j
+    integer :: stat
+    character(len=100) :: str
+
+    nread=0
+    val=0.0d0
+    Call set_pos_entry(io,fname,var_name,success)
+    read(io,'(a)',iostat=stat) str
+    if(success)then
+        !find out how many entries there are
+        success=.false.
+        Npair=0; Nnonzero=0
+        nread=nread+1
+        do
+            read(io,'(a)',iostat=stat) str
+            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) attype,dist,val
+            if (stat /= 0) exit
+            Npair=Npair+1
+            do i=1,9
+               if(val(i)/=0.0d0) then
+                   Nnonzero=Nnonzero+1
+                   exit
+               endif
+            enddo
+        enddo
+        if(Npair<1)then
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        if(Nnonzero<1)then
+            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+        !allocate correct size of entries and move IO to beginning of data
+        allocate(Hpair_tmp(Nnonzero))
+        do i=1,Npair+1
+            backspace(io)
+        enddo
+        !read in data
+        ii=1
+        do i=1,Npair
+            val=0.0d0
+            read(io,*,iostat=stat) attype,dist,val
+            if(all(val==0.0d0)) cycle
+            if(attype(2)<attype(1))then
+                j        =attype(2)
+                attype(2)=attype(1)
+                attype(1)=j
+            endif
+            Hpair_tmp(ii)%attype=attype
+            Hpair_tmp(ii)%dist=dist
+            Hpair_tmp(ii)%val=val
+            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+            write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
+            write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
+            write(output_unit,'(A,9E16.8/)') '  energy    :', Hpair_tmp(ii)%val
+            ii=ii+1
+        enddo
+
+        !combines single entries into arrays with same atom types
+        Call reduce_Hr_tensor_pair(Hpair_tmp,Hpairs_tensor)
+        !check if any entry appears more than once
+        do i=1,size(Hpairs_tensor)
+            do j=2,size(Hpairs_tensor(i)%dist)
+                if(any(Hpairs_tensor(i)%dist(j)==Hpairs_tensor(i)%dist(:j-1)))then
+                    write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
+                    write(output_unit,*) "       at atom indices  :",Hpairs_tensor(i)%attype
+                    write(output_unit,*) "       with the distance:",Hpairs_tensor(i)%dist(j)
+                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
+                endif
+            enddo
+        enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        if(any(Hpairs_tensor%attype(1)/=Hpairs_tensor%attype(2)))then
+            Call move_alloc(Hpairs_tensor,Hpairs_tensor_tmp)
+            allocate(Hpairs_tensor(size(Hpairs_tensor_tmp)+count(Hpairs_tensor_tmp%attype(1)/=Hpairs_tensor_tmp%attype(2))))
+            ii=0
+            do i=1,size(Hpairs_tensor_tmp)
+                ii=ii+1
+                Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
+                if(Hpairs_tensor_tmp(i)%attype(1)/=Hpairs_tensor_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
+                    Hpairs_tensor(ii)%attype=[Hpairs_tensor_tmp(i)%attype(2),Hpairs_tensor_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Hpairs_tensor_tmp)
+        endif
+
+        success=.true.
+    endif
+
+    Call check_further_entry(io,fname,var_name)
+
+end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Get cell based on atomtype
@@ -1287,7 +1408,6 @@ check=check_read(nread,vname,fname)
 if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', vec
 
 end subroutine get_1D_vec_cmplx
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get a 2D REAL vector parameter (check the string and so on)

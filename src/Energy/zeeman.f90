@@ -1,4 +1,5 @@
 module m_zeeman
+use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
 private
 character(len=*),parameter  :: ham_desc="Zeeman energy"
@@ -26,7 +27,7 @@ subroutine read_zeeman_input(io_param,fname,io)
     io%is_set=enable_zeeman.or.norm2(h_ext).ge.1.0d-8.or.abs(h_ext_lat(4)).ge.1.0d-8
 end subroutine
 
-subroutine get_zeeman_H(Ham,io,lat)
+subroutine get_zeeman_H(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get zeeman in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
@@ -38,6 +39,8 @@ subroutine get_zeeman_H(Ham,io,lat)
     class(t_H),intent(inout)    :: Ham
     type(io_H_zeeman),intent(in):: io
     type(lattice),intent(in)    :: lat
+    real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
+    real(8),optional,allocatable,intent(inout)     :: Ham_shell_pos(:,:,:)
     !local parameters
     real(8),allocatable     :: magmom(:)
     integer                 :: i
@@ -50,6 +53,14 @@ subroutine get_zeeman_H(Ham,io,lat)
 
     if(io%is_set)then
         allocate(Htmp(3,lat%M%dim_mode),source=0.d0) !assume shape of B-field has to be 3
+        if (present(Ham_shell_pos)) then
+           write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+           allocate(Ham_shell_pos(lat%M%dim_mode,lat%M%dim_mode,1))
+           allocate(neighbor_pos_list(3,1))
+           Ham_shell_pos=0.0d0
+           neighbor_pos_list=0.0d0
+        endif
+
         Call lat%cell%get_mag_magmom(magmom)
         do i=1,size(magmom)
             Htmp(1,(i-1)*3+1)=magmom(i)
@@ -58,6 +69,7 @@ subroutine get_zeeman_H(Ham,io,lat)
         enddo
         Htmp=(mu_0*mu_B*io%c_zeeman) * Htmp
 
+        if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Htmp
         !get local Hamiltonian in coo format
         Call get_coo(Htmp,val_tmp,ind_tmp)
 

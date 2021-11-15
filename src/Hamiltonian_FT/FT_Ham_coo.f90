@@ -32,6 +32,7 @@ type,extends(t_H_base) :: H_inp_k_coo
     procedure :: destroy_coo
     procedure :: init
     procedure :: pop_par
+    procedure :: get_par
 
     !necessary t_H routines
     procedure :: destroy_child
@@ -150,6 +151,16 @@ subroutine pop_par(this,dimH,nnz,val,row,col)
     Call MOVE_ALLOC(this%row,row)
     Call MOVE_ALLOC(this%col,col)
     Call this%destroy
+end subroutine
+
+subroutine get_par(this,val,row,col)
+    class(H_inp_k_coo),intent(in)       :: this
+    complex(8),allocatable,intent(out)  :: val(:)
+    integer,allocatable,intent(out)     :: row(:),col(:)
+
+    val=this%val
+    row=this%row
+    col=this%col
 end subroutine
 
 subroutine destroy_coo(this)

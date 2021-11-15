@@ -2,12 +2,15 @@ module m_diagonalization_Hk
 use m_parameters_rw_high
 use m_set_Hamiltonian_FT
 use m_FT_Ham_public
-use m_construction_Hk
 use m_FT_Ham_base
-use m_FT_Ham_coo
 use m_io_files_utils
+use m_parameters_FT_Ham
 ! the following module is used for the TB. You will find the module in the directory tight-binding
 use m_highsym, only : set_highs_path,mv_kpts
+use m_input_H_types
+use m_derived_types
+use m_FT_Ham_public
+use m_FT_Ham_coo_rtok_base
 implicit none
 
 !
@@ -25,48 +28,56 @@ public  :: diagonalize_Ham_FT
 contains
 
 subroutine diagonalize_Ham_FT(H_io,lat)
-    use m_input_H_types
-    use m_derived_types
-    use m_FT_Ham_public
     type(io_h),intent(in)               :: H_io
     type(lattice), intent(in)           :: lat
 
     ! internal Hamiltonians
     type(H_inp_real_to_k),allocatable :: FT_Ham(:)
-    type(H_inp_k_coo) :: FT_Ham_k
-    class(FT_Ham_base),allocatable :: Hk
-
+    class(FT_Ham_base),allocatable    :: Hk
+    type(parameters_FT_HAM_IO)        :: io_H_diag         ! parameters for the diagonalization
     ! high symmetry lines
-    type(parameters_IO_HIGHS) :: high_lines
+    type(parameters_IO_HIGHS)         :: high_lines
 
     ! dummy variables
     real(8)   :: k(3)
     integer   :: io_input
-    integer   :: i
+    integer   :: i,n_kpts,n_eigen
     real(8), allocatable :: kpts(:,:)
+    complex(8),allocatable  :: eigenvalues(:)      ! array containing the eigenvalues
+    complex(8),allocatable  :: eigenvectors(:,:)   ! array containing the eigenvectors
+    character(len=100)       :: form
 
     ! initialization
     k=0.0d0
+    io_input=open_file_read('input')
+    call io_H_diag%read_file(io_input,'input')
 
     ! read the high symmetry lines
-    io_input=open_file_read('input')
     call high_lines%read_file('q',io_input,'input')
     call close_file('input',io_input)
     call set_highs_path(lat,high_lines)
     call mv_kpts(kpts)
 
     ! prepare the Hamiltonian based on the coo matrices for the FT
-    call set_Hamiltonians_FT(FT_Ham,H_io,lat)
-    ! choose with which algoritm you want to work
+    call set_Hamiltonians_FT(FT_Ham,H_io,lat)     ! choose with which algoritm you want to work
 
-    ! get the phase of the Hamiltonian
-    do i=1,size(kpts,2)
-    write(*,*) kpts(:,i)
-       call get_Hk(FT_Ham,kpts(:,i),FT_Ham_k)
-    pause
+    Call set_H(Hk,io_H_diag)   ! choose the Hamiltonian with which you would like to work (sparse, dense...)
+
+    call Hk%init(FT_Ham,io_H_diag)    ! initialize the Hamiltonian matrix
+    call Hk%set_work(eigenvalues,eigenvectors)
+
+    io_input=open_file_write('dispersion.dat')
+    write(form,'( "(3E20.12E3,", I10, "(x,E20.12E3,x,E20.12E3))" )') size(eigenvalues)
+
+    n_kpts=size(kpts,2)
+    do i=1,n_kpts
+       call Hk%set_k(FT_Ham,kpts(:,i))
+       call Hk%calc_eval(3,eigenvalues,n_eigen)
+       write(io_input,form) kpts(:,i),real(eigenvalues),aimag(eigenvalues)
     enddo
 
-
+    call close_file('dispersion.dat',io_input)
+    stop 'dispersion done'
 end subroutine
 
 end module m_diagonalization_Hk
