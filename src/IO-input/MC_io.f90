@@ -33,6 +33,7 @@ type MC_input
     logical     :: do_fluct=.True.                      !calculate fluctuation parameters
     logical     :: do_fluct_spatial=.True.              !calculate fluctuation parameters resolved in unit-cell
     real(8)     :: fluct_dir(3)=[1.0d0,0.0d0,0.0d0]     !direction with respect to which the fluctuation parameters are calculated
+
 contains
     procedure   :: bcast => bcast_MC
     procedure   :: read_file => rw_MC
