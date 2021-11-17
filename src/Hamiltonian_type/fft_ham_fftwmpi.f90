@@ -4,6 +4,7 @@ module m_fft_H_fftwmpi
 !the type is used by first calling init_shape, followed by init_op with the operator as described in more detail for the dipolar_fft interaction
 
 use,intrinsic :: ISO_FORTRAN_ENV, only: error_unit
+use m_fftwmpi
 use m_fftw3
 use m_fft_H_base, only: fft_H
 use m_type_lattice,only: lattice
@@ -122,7 +123,7 @@ subroutine destroy(this)
     class(fft_H_fftwmpi),intent(inout)     :: this
 
     Call this%fft_H%destroy()
-#ifdef CPP_FFTW3
+#ifdef CPP_FFTWMPI
     if(c_associated(this%plan_mag_f)) Call fftw_destroy_plan(this%plan_mag_f)
     if(c_associated(this%plan_H_I))   Call fftw_destroy_plan(this%plan_H_I)
 #else
@@ -140,7 +141,7 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     real(8),intent(inout),allocatable          :: K_n(:,:,:)
     character(len=*),intent(in),optional       :: desc_in
 
-#ifdef CPP_FFTW3
+#ifdef CPP_FFTWMPI
     integer         :: Nk_tot           !number of state considered in FT (product of N_rep)
     integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
@@ -216,7 +217,7 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
     endif
 
     Call this%fft_H%init_shape(dim_mode,periodic,dim_lat,Kbd,N_rep)
-#ifdef CPP_FFTW3_THREAD
+#ifdef CPP_FFTWMPI_THREAD
 !$  Call fftw_plan_with_nthreads(omp_get_max_threads())
 #endif
     !set order work arrays and fourier transform
@@ -243,7 +244,7 @@ subroutine get_H(this,lat,Hout)
     class(fft_H_fftwmpi),intent(inout)    ::  this
     type(lattice),intent(in)              ::  lat
     real(8),intent(inout)                 ::  Hout(:,:)
-#ifdef CPP_FFTW3
+#ifdef CPP_FFTWMPI
     integer ::  i,j,l
 
     Call this%set_M(lat)
@@ -269,7 +270,7 @@ subroutine get_H_single(this,lat,site,Hout)
     type(lattice),intent(in)              ::  lat
     integer,intent(in)                    ::  site
     real(8),intent(inout)                 ::  Hout(3)
-#ifdef CPP_FFTW3
+#ifdef CPP_FFTWMPI
     integer ::  i,j,l
 
     Call this%set_M(lat)
@@ -284,7 +285,7 @@ subroutine get_H_single(this,lat,site,Hout)
     Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
     Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
 #else
-    ERROR STOP "fft_H_fftw%get_H_single requires CPP_FFTW3"
+    ERROR STOP "fft_H_fftw%get_H_single requires CPP_FFTWMPI"
 #endif
 end subroutine
 
@@ -294,7 +295,7 @@ subroutine set_plans(this)
     integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
 
-#ifdef CPP_FFTW3
+#ifdef CPP_FFTWMPI
     if(.not.allocated(this%M_n)) ERROR STOP "cannot set fftw_plans as M_n not allocated"
     if(.not.allocated(this%M_F)) ERROR STOP "cannot set fftw_plans as M_F not allocated"
     if(.not.allocated(this%H_n)) ERROR STOP "cannot set fftw_plans as H_n not allocated"
@@ -316,7 +317,7 @@ subroutine set_plans(this)
                                          &howmany,      int(1,C_int), &
                                          &FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
 #else
-    ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTW3)"
+    ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTWMPI)"
 #endif
 end subroutine
 
