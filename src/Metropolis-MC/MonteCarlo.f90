@@ -73,7 +73,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     type(fluct_parameters)      :: fluct_val    !parameters for fluctuation calculation    
     complex(8),allocatable      :: fluct_spatial(:,:)   !save the spatial distribution of the fluctuations
     !mpi parameters
-    type(mpi_type)              :: com_inner    !communicator for inner parallelization, so far ignored (get_two_level_comm) has to be checked first)
+    type(mpi_type)              :: com_inner    !communicator for inner parallelization, so far ignored (get_two_level_comm)
     type(mpi_distv)             :: com_outer    !communicator for parallelization of Temperatures
     !unimportant local parameters
     real(8),allocatable         :: kt_all(:)
@@ -85,13 +85,14 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     N_spin=lat%Ncell*lat%nmag
     NT_global=io_MC%n_Tsteps
     Nstep_auto=max(1,io_MC%T_auto*N_spin)   !max for  at least one step 
-    if(com_all%ismas) write(io_status,'(/,a,I6,a,/)') "you are calculating",NT_global," temperatures"
+
+    if(com_all%ismas) write(io_status,'(/,a,I6,a,I6,a/)') "you are calculating",io_MC%n_Tsteps," temperatures on ", com_all%NP," procs"
 
     !find out how to parallelize
     Call get_two_level_comm(com_all,NT_global,com_outer,com_inner)
     NT_local=com_outer%cnt(com_outer%id+1)
 
-    !initialize all values that exist on all threads, but need to be gathered at on master occationally
+    !initialize all values that exist on all threads, but need to be gathered at on master occasionally
     size_collect=NT_local
     if(com_all%isMas) size_collect=NT_global
     allocate(measure(size_collect))

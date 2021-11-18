@@ -168,7 +168,6 @@ subroutine bcast_hamil(this,comm)
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif
-        if(allocated(this%H_fft)) ERROR STOP "IMPLEMENT FFT CASE Bcast in hamiltonian"
     endif
 
     N_tmp=[this%N_total,this%NH_total,this%NHF_total,this%NH_local,this%NHF_local]

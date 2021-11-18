@@ -158,7 +158,7 @@ subroutine send(this,ithread,tag,com)
 #ifdef CPP_MPI
     integer     :: ierr
     Call this%send_base(ithread,tag,com)
-    Call MPI_Send(this%H, size(this%H), MPI_DOUBLE_COMPLEX, ithread, tag, com, ierr)
+    Call MPI_Send(this%Hk, size(this%Hk), MPI_DOUBLE_COMPLEX, ithread, tag, com, ierr)
 #else
     continue
 #endif
@@ -176,8 +176,8 @@ subroutine recv(this,ithread,tag,com)
     integer     :: ierr
 
     Call this%recv_base(ithread,tag,com)
-    allocate(this%H(this%dimH(1),this%dimH(2)))
-    Call MPI_RECV(this%H, size(this%H), MPI_DOUBLE_COMPLEX, ithread, tag, com, stat, ierr)
+    allocate(this%Hk(this%dimH,this%dimH))
+    Call MPI_RECV(this%Hk, size(this%Hk), MPI_DOUBLE_COMPLEX, ithread, tag, com, stat, ierr)
 #else
     continue
 #endif
@@ -193,13 +193,13 @@ subroutine bcast(this,comm)
 
     Call this%bcast_base(comm)
     if(comm%ismas)then
-        N=shape(this%H)
+        N=shape(this%Hk)
     endif
     Call MPI_Bcast(N, 2, MPI_INTEGER, comm%mas, comm%com,ierr)
     if(.not.comm%ismas)then
-        allocate(this%H(N(1),N(2)))
+        allocate(this%Hk(N(1),N(2)))
     endif
-    Call MPI_Bcast(this%H,size(this%H), MPI_COMPLEX8, comm%mas, comm%com,ierr)
+    Call MPI_Bcast(this%Hk,size(this%Hk), MPI_COMPLEX8, comm%mas, comm%com,ierr)
 #else
     continue
 #endif
