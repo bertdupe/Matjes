@@ -56,7 +56,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
     type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
     real(8)         :: F                !magnitude of Hamiltonian parameter
-    integer         :: atind_ph(2)      !index of considered atom in basis of phonon atoms (1:Nmag)
+    integer         :: atind_ph(2)      !index of considered atom in basis of phonon atoms (1:NPh)
     integer         :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
 
     ! conversion factor Ha/Bohr2 to eV/nm2

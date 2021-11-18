@@ -45,6 +45,19 @@ contains
     procedure   ::  prt=>prt_Hr_triple
 end type
 
+type :: Hr_quadruplet_single !hamiltonian real triple
+    integer     ::  attype(4)=[0,0,0,0] !atom types which are connected
+    integer     ::  dist=0      !nth distance (1=nearest neighbor)
+    real(8)     ::  val=0.0     !value for this pair of atom-types at distance(dist)
+end type
+
+type :: Hr_quadruplet !hamiltonian real pair
+    integer     ::  attype(4)=[0,0,0,0] !atom types which are connected
+    integer,allocatable     ::  dist(:)    !nth distance (1=nearest neighbor)
+    real(8),allocatable     ::  val(:)     !value for this pair of atom-types at distance(dist)
+contains
+!    procedure   ::  prt=>prt_Hr_quadruplet
+end type
 
 type :: io_H_base
     logical :: is_set=.false.   !gets set to true if sensible input is read
@@ -117,6 +130,12 @@ type,extends(io_H_base) :: io_H_Mag_Biq
     type(Hr_pair),allocatable   :: pair(:)
 end type
 
+type,extends(io_H_base) :: io_H_SC_D
+    type(Hr_triple),allocatable   :: triplet(:)
+    integer,allocatable     :: at_type(:)
+    real(8)     :: c_SC=-1.0d0
+end type
+
 type :: io_H
     type(io_H_aniso)            :: aniso
     type(io_H_zeeman)           :: zeeman
@@ -132,6 +151,7 @@ type :: io_H
     type(io_H_Mag_Biq)          :: M_biq
     type(io_H_dipole)           :: dip
     type(io_H_Exchten)          :: Exchten
+    type(io_H_SC_D)             :: SC
 end type
 
 contains

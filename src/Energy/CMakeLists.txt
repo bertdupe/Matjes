@@ -20,4 +20,5 @@ src/Energy/mag_biquadratic.f90
 src/Energy/forces_from_file.f90
 src/Energy/4spin.f90
 src/Energy/Exchange_Heisenberg_general.f90
+src/Energy/energy_Spincurrent.f90
 )
