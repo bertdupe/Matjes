@@ -65,6 +65,7 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
 
     pos_3(1:3,1:size(pos)/3)=>pos
     state_3(1:3,1:size(pos)/3)=>state
+
     do i=1,size(state_3,2)
         state_3(:,i)=(cos(dot_product(qvec,pos_3(:,i)))*Rq+ &
                       sin(dot_product(qvec,pos_3(:,i)))*Iq)* &

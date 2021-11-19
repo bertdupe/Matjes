@@ -38,17 +38,21 @@ end subroutine
 
 subroutine get_pos_vec(lat,dim_mode,ordname,pos)
     use m_derived_types,only: lattice 
-    use m_lattice_position, only: get_pos_mag, get_pos_center
+    use m_lattice_position, only: get_pos_mag, get_pos_center, get_pos_ph
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
     integer,intent(in)              :: dim_mode
     character(*),intent(in)         :: ordname  !name of the order parameter
     real(8),allocatable,intent(out) :: pos(:)
-    integer     :: nmag
+    integer     :: nmag,nph
     
     nmag=lat%nmag
-    if(dim_mode==nmag*3)then
+    nph=lat%nph
+    if(nmag.ne.0)then
         !choose position of magnetic atoms for initialization
         Call get_pos_mag(lat,pos)
+    elseif(nph.ne.0)then
+        !choose position of phonon atoms for initialization
+        Call get_pos_ph(lat,pos)
     elseif(dim_mode==3)then
         !use center of cell as position
         Call get_pos_center(lat,pos)
