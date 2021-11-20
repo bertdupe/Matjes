@@ -20,7 +20,7 @@ subroutine read_SC_input(io_param,fname,io)
 
 end subroutine
 
-subroutine get_coupling_SC(Ham,io,lat)
+subroutine get_coupling_SC(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
@@ -32,6 +32,8 @@ subroutine get_coupling_SC(Ham,io,lat)
     class(t_H),intent(inout)    :: Ham
     type(io_H_SC_D),intent(in)  :: io
     type(lattice),intent(in)    :: lat
+    real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
+    real(8),optional,allocatable,intent(inout)     :: Ham_shell_pos(:,:,:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)
@@ -64,6 +66,24 @@ subroutine get_coupling_SC(Ham,io,lat)
         N_attriplet=size(io%triplet)
         dim_modes_r=[lat%M%dim_mode,lat%u%dim_mode]
         allocate(Htmp(lat%M%dim_mode,product(dim_modes_r)))!local Hamiltonian modified for each shell/neighbor
+
+        if (present(Ham_shell_pos)) then
+          write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+          i_triplet=0
+          do i_attriplet=1,N_attriplet
+             Call neigh%get(io%triplet(i_attriplet)%attype,io%triplet(i_attriplet)%dist,lat)
+             N_dist=size(io%triplet(i_attriplet)%dist)
+             do i_dist=1,N_dist
+                do i_shell=1,neigh%Nshell(i_dist)
+                   i_triplet=i_triplet+1
+                enddo
+             enddo
+          enddo
+          allocate(Ham_shell_pos(lat%M%dim_mode,product(dim_modes_r),i_triplet))
+          Ham_shell_pos=0.0d0
+          allocate(neighbor_pos_list(3,i_triplet))
+        endif
+
         do i_attriplet=1,N_attriplet
             !loop over different connected atom types
             Call neigh%get(io%triplet(i_attriplet)%attype,io%triplet(i_attriplet)%dist,lat)

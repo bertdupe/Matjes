@@ -34,6 +34,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     use m_neighbor_type, only: neighbors
     use m_forces_from_file, only: get_forces_file
     use m_mode_public
+    use m_vector, only : norm
 
     class(t_H),intent(inout)                         :: Ham
     type(io_H_Ph),intent(in)                         :: io
@@ -58,6 +59,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     real(8)         :: F                !magnitude of Hamiltonian parameter
     integer         :: atind_ph(2)      !index of considered atom in basis of phonon atoms (1:NPh)
     integer         :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
+    real(8)         :: norm_vec_neigh,vec_neigh(3)
 
     ! conversion factor Ha/Bohr2 to eV/nm2
     ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
@@ -107,17 +109,19 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     !set local Hamiltonian in basis of displacement orderparameter
                     atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_pair))
                     atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_pair))
+                    vec_neigh=neigh%diff_vec(:,i_pair)
                     Htmp=0.0d0
                     offset_ph=(atind_ph-1)*3
-                    if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=neigh%diff_vec(:,i_pair)
+                    if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=vec_neigh
                     if (read_from_file) then
                        ! (Ha,niltonian , name of the file , relative position of the neighbor , offset)
                        call get_forces_file(Htmp,fname_phonon,neigh%diff_vec(:,i_pair),offset_ph)
                        Htmp=Htmp*HaBohrsq_to_Evnmsq
                     else
-                       Htmp(offset_ph(1)+1,offset_ph(2)+1)=F
-                       Htmp(offset_ph(1)+2,offset_ph(2)+2)=F
-                       Htmp(offset_ph(1)+3,offset_ph(2)+3)=F
+                       norm_vec_neigh=norm(vec_neigh)
+                       Htmp(offset_ph(1)+1,offset_ph(2)+1)=F*abs(vec_neigh(1))/norm_vec_neigh
+                       Htmp(offset_ph(1)+2,offset_ph(2)+2)=F*abs(vec_neigh(2))/norm_vec_neigh
+                       Htmp(offset_ph(1)+3,offset_ph(2)+3)=F*abs(vec_neigh(3))/norm_vec_neigh
                     endif
                     connect_bnd(2)=neigh%ishell(i_pair)
 
