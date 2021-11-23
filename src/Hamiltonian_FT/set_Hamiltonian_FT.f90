@@ -22,6 +22,7 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
     use m_harmonic_phonon,only: get_Forces_F
     use m_exchange_heisenberg_general, only : get_exchange_ExchG
     use m_spincurrent, only :get_coupling_SC
+    use m_ASR_phonon, only : get_ASR_Ph
 
     type(H_inp_real_to_k),allocatable,intent(inout)       :: FT_Ham(:)
     type(io_h),intent(in)                                 :: H_io
@@ -29,7 +30,7 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
 
     ! internal
     integer :: i_H,N_ham
-    logical :: use_Ham(7)
+    logical :: use_Ham(8)
 
 
     use_ham(1)=H_io%J%is_set
@@ -37,8 +38,9 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
     use_ham(3)=H_io%aniso%is_set
     use_ham(4)=H_io%zeeman%is_set
     use_ham(5)=H_io%F%is_set
-    use_ham(6)=H_io%Exchten%is_set
-    use_ham(7)=H_io%SC%is_set
+    use_ham(6)=H_io%ASR_ph%is_set
+    use_ham(7)=H_io%Exchten%is_set
+    use_ham(8)=H_io%SC%is_set
 
     N_ham=count(use_ham)
     if (.not.allocated(FT_Ham)) allocate(FT_Ham(N_ham))
@@ -74,14 +76,20 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
         Call get_Forces_F(FT_Ham(i_H)%H_folded,H_io%F,lat,FT_Ham(i_H)%H,FT_Ham(i_H)%diffR)
         if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1
     endif
-    !General exchange tensor
+    !ASR of Harmonic phonon (F)
     if(use_ham(6))then
+        call get_Htype(FT_Ham(i_H)%H_folded)
+        Call get_ASR_Ph(FT_Ham(i_H)%H_folded,H_io%ASR_Ph,lat,FT_Ham(i_H)%H,FT_Ham(i_H)%diffR)
+        if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1
+    endif
+    !General exchange tensor
+    if(use_ham(7))then
         call get_Htype(FT_Ham(i_H)%H_folded)
         Call get_exchange_ExchG(FT_Ham(i_H)%H_folded,H_io%Exchten,lat,FT_Ham(i_H)%H,FT_Ham(i_H)%diffR)
         if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1
     endif
     !spin current model
-    if(use_ham(7))then
+    if(use_ham(8))then
         call get_Htype(FT_Ham(i_H)%H_folded)
         Call get_coupling_SC(FT_Ham(i_H)%H_folded,H_io%SC,lat,FT_Ham(i_H)%H,FT_Ham(i_H)%diffR)
         if(FT_Ham(i_H)%H_folded%is_set()) i_H=i_H+1

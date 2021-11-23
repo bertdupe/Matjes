@@ -744,6 +744,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
         !combines single entries into arrays with same atom types
         Call reduce_Hr_tensor_pair(Hpair_tmp,Hpairs_tensor)
         !check if any entry appears more than once
+
         do i=1,size(Hpairs_tensor)
             do j=2,size(Hpairs_tensor(i)%dist)
                 if(any(Hpairs_tensor(i)%dist(j)==Hpairs_tensor(i)%dist(:j-1)))then
@@ -755,7 +756,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
             enddo
         enddo
 
-        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are duplicated with [2 1]
         if(any(Hpairs_tensor%attype(1)/=Hpairs_tensor%attype(2)))then
             Call move_alloc(Hpairs_tensor,Hpairs_tensor_tmp)
             allocate(Hpairs_tensor(size(Hpairs_tensor_tmp)+count(Hpairs_tensor_tmp%attype(1)/=Hpairs_tensor_tmp%attype(2))))
@@ -767,6 +768,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
                     ii=ii+1
                     Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
                     Hpairs_tensor(ii)%attype=[Hpairs_tensor_tmp(i)%attype(2),Hpairs_tensor_tmp(i)%attype(1)]
+
                 endif
             enddo
             deallocate(Hpairs_tensor_tmp)

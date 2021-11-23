@@ -4,6 +4,7 @@ use m_set_Hamiltonian_FT
 use m_FT_Ham_public
 use m_FT_Ham_base
 use m_io_files_utils
+use m_io_utils, only : get_parameter
 use m_parameters_FT_Ham
 ! the following module is used for the TB. You will find the module in the directory tight-binding
 use m_highsym, only : set_highs_path,mv_kpts
@@ -45,12 +46,15 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     real(8), allocatable :: kpts(:,:)
     complex(8),allocatable  :: eigenvalues(:)      ! array containing the eigenvalues
     complex(8),allocatable  :: eigenvectors(:,:)   ! array containing the eigenvectors
-    character(len=100)       :: form
+    character(len=100)      :: form
+    logical                 :: do_highs_k = .True.
 
     ! initialization
     k=0.0d0
     io_input=open_file_read('input')
     call io_H_diag%read_file(io_input,'input')
+
+    call get_parameter(io_input,'input','do_highs_k',do_highs_k)
 
     ! read the high symmetry lines
     call high_lines%read_file('q',io_input,'input')

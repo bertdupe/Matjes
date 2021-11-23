@@ -31,17 +31,20 @@ subroutine read_ASR_Ph_input(io_param,fname,io)
 
 end subroutine
 
-subroutine get_ASR_Ph(Ham,io,lat)
+subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get anisotropy in t_H Hamiltonian format
     use m_H_public
     use m_derived_types, only: lattice
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
     use m_mode_public
+    use m_vector, only : norm
 
     class(t_H),intent(inout)    :: Ham
     type(io_U_ASR),intent(in)   :: io
     type(lattice),intent(in)    :: lat
+    real(8),optional,allocatable,intent(inout)       :: neighbor_pos_list(:,:)
+    real(8),optional,allocatable,intent(inout)       :: Ham_shell_pos(:,:,:)
     !local
 
     class(t_H),allocatable    :: Ham_tmp    !temporary Hamiltonian type used to add up Ham
@@ -57,6 +60,7 @@ subroutine get_ASR_Ph(Ham,io,lat)
     integer             :: atind_ph(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer,allocatable :: all_pairs(:,:)
     integer             :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
+    real(8)             :: norm_vec_neigh,vec_neigh(3)
 
     ! conversion factor Ha/Bohr2 to eV/nm2
     ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
@@ -70,6 +74,8 @@ subroutine get_ASR_Ph(Ham,io,lat)
         N_atpair=size(io%pair)
         !set local Hamiltonian
         allocate(Htmp(lat%u%dim_mode,lat%u%dim_mode),source=0.d0)
+        if (present(Ham_shell_pos)) allocate (Ham_shell_pos(lat%u%dim_mode,lat%u%dim_mode,1),source=0.d0)
+        if (present(neighbor_pos_list)) allocate (neighbor_pos_list(3,1),source=0.d0)
 
         if (read_from_file) then
 
@@ -116,10 +122,11 @@ subroutine get_ASR_Ph(Ham,io,lat)
 
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor) also called shell
-                F=io%pair(i_atpair)%val(i_dist)*HaBohrsq_to_Evnmsq
+                write(output_unit,'(/2A)') 'Hamiltonian from input file is in eV/nm2'
+                F=io%pair(i_atpair)%val(i_dist)
 
                 do i_shell=1,neigh%Nshell(i_dist)
-                    write(*,*) 'i_shell',i_shell
+
                     !loop over all different connections with the same distance
                     i_pair=i_pair+1
                     connect_bnd(2)=neigh%ishell(i_pair)
@@ -127,13 +134,17 @@ subroutine get_ASR_Ph(Ham,io,lat)
                     !set local Hamiltonian in basis of magnetic orderparameter
                     atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_pair))
                     atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_pair))
+                    vec_neigh=neigh%diff_vec(:,i_pair)
+                    norm_vec_neigh=norm(vec_neigh)
 
                     allocate( all_pairs,source=neigh%pairs(:,connect_bnd(1):connect_bnd(2)) )
                     Htmp=0.0d0
 
-                    Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F/2.0d0
-                    Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F/2.0d0
-                    Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F/2.0d0
+                    Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F*abs(vec_neigh(1))/norm_vec_neigh/2.0d0
+                    Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F*abs(vec_neigh(2))/norm_vec_neigh/2.0d0
+                    Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F*abs(vec_neigh(3))/norm_vec_neigh/2.0d0
+
+                    if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Ham_shell_pos(:,:,1)+Htmp
 
                     all_pairs(2,:)=neigh%pairs(1,connect_bnd(1):connect_bnd(2))
 
@@ -151,9 +162,11 @@ subroutine get_ASR_Ph(Ham,io,lat)
 
                     Htmp=0.0d0
 
-                    Htmp(atind_ph(2)*3-2,atind_ph(2)*3-2)=io%c_ASR*F/2.0d0
-                    Htmp(atind_ph(2)*3-1,atind_ph(2)*3-1)=io%c_ASR*F/2.0d0
-                    Htmp(atind_ph(2)*3  ,atind_ph(2)*3  )=io%c_ASR*F/2.0d0
+                    Htmp(atind_ph(2)*3-2,atind_ph(2)*3-2)=io%c_ASR*F*abs(vec_neigh(1))/norm_vec_neigh/2.0d0
+                    Htmp(atind_ph(2)*3-1,atind_ph(2)*3-1)=io%c_ASR*F*abs(vec_neigh(2))/norm_vec_neigh/2.0d0
+                    Htmp(atind_ph(2)*3  ,atind_ph(2)*3  )=io%c_ASR*F*abs(vec_neigh(3))/norm_vec_neigh/2.0d0
+
+                    if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Ham_shell_pos(:,:,1)+Htmp
 
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 

@@ -114,7 +114,7 @@ end type
 type,extends(io_H_base) :: io_U_ASR
     type(Hr_pair),allocatable   :: pair(:)
     integer,allocatable         ::  attype(:)
-    real(8)     :: c_ASR=-1.0d0 ! to enforce the acoustic sum rule for the phonon energy
+    real(8)     :: c_ASR=1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
 
 type,extends(io_H_base) :: io_H_dipole
