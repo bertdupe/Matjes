@@ -20,6 +20,7 @@ subroutine read_ExchG_input(io_param,fname,io)
 
     Call get_parameter(io_param,fname,'magnetic_r2_tensor',io%pair,io%is_set)
     Call get_parameter(io_param,fname,'magnetic_tensor_fft',io%fft)
+
 end subroutine
 
 subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
@@ -97,7 +98,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
             connect_bnd=1 !initialization for lower bound
 
             do i_dist=1,N_dist
-                !loop over distances (nearest, next nearest,... neighbor)
+                !loop over distances (nearest, next nearest,... neighbor
                 J=reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/))
 
                 do i_shell=1,neigh%Nshell(i_dist)

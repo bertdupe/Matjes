@@ -290,7 +290,7 @@ subroutine reduce_Hr_tensor_pair(Hr_pair_in,Hr_pair_out)
         allocate(Hr_pair_out(1))
         Hr_pair_out(1)%attype= Hr_pair_in(1)%attype
         Hr_pair_out(1)%dist  =[Hr_pair_in(1)%dist          ]
-        Hr_pair_out(1)%val   =reshape([Hr_pair_in(1)%val,1.0d0],(/1,1/))
+        Hr_pair_out(1)%val   =reshape([Hr_pair_in(1)%val,1.0d0],(/9,1/))
         return
     endif
     !intializations and set first unique pairs entry

@@ -743,6 +743,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
 
         !combines single entries into arrays with same atom types
         Call reduce_Hr_tensor_pair(Hpair_tmp,Hpairs_tensor)
+
         !check if any entry appears more than once
 
         do i=1,size(Hpairs_tensor)
@@ -768,7 +769,6 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
                     ii=ii+1
                     Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
                     Hpairs_tensor(ii)%attype=[Hpairs_tensor_tmp(i)%attype(2),Hpairs_tensor_tmp(i)%attype(1)]
-
                 endif
             enddo
             deallocate(Hpairs_tensor_tmp)
