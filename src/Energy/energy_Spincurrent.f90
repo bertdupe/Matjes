@@ -141,7 +141,11 @@ subroutine get_coupling_SC(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     Call Ham_tmp%init_mult_connect_2(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"M","MU",lat,2)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
-                    Call Ham_tmp%destroy()
+                    if (present(Ham_shell_pos)) then
+                       Ham_shell_pos(:,:,i_triplet)=Htmp
+                    else
+                       Call Ham_tmp%destroy()
+                    endif
                     connect_bnd(1)=connect_bnd(2)+1
                 enddo
             enddo
