@@ -71,7 +71,7 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     call Hk%set_work(eigenvalues,eigenvectors)
 
     io_input=open_file_write('dispersion.dat')
-    write(form,'( "(3E20.12E3,", I10, "(x,E20.12E3,x,E20.12E3))" )') size(eigenvalues)
+    write(form,'( "(3(E20.12E3,x),", I10, "(x,E20.12E3,x,E20.12E3))" )') size(eigenvalues)
 
     n_kpts=size(kpts,2)
     do i=1,n_kpts
