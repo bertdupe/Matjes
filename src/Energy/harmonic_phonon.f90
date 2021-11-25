@@ -20,6 +20,7 @@ subroutine read_F_input(io_param,fname,io)
 
     write(6,'(a)') 'reading forces in Ha/Bohr^2'
     Call get_parameter(io_param,fname,'phonon_harmonic',io%pair,io%is_set)
+    if (io%is_set) Call get_parameter(io_param,fname,'c_ph',io%c_ph)
 
     inquire(file=fname_phonon,exist=read_from_file)
     if (read_from_file) write(6,'(a)') 'reading phonon from phonon_harmonic.in'
@@ -34,6 +35,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     use m_neighbor_type, only: neighbors
     use m_forces_from_file, only: get_forces_file
     use m_mode_public
+    use m_vector, only : norm
 
     class(t_H),intent(inout)                         :: Ham
     type(io_H_Ph),intent(in)                         :: io
@@ -56,8 +58,9 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
     type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
     real(8)         :: F                !magnitude of Hamiltonian parameter
-    integer         :: atind_ph(2)      !index of considered atom in basis of phonon atoms (1:Nmag)
+    integer         :: atind_ph(2)      !index of considered atom in basis of phonon atoms (1:NPh)
     integer         :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
+    real(8)         :: norm_vec_neigh,vec_neigh(3)
 
     ! conversion factor Ha/Bohr2 to eV/nm2
     ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
@@ -98,7 +101,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                F=io%pair(i_atpair)%val(i_dist)*HaBohrsq_to_Evnmsq
+                F=io%pair(i_atpair)%val(i_dist)
 
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
@@ -107,19 +110,28 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     !set local Hamiltonian in basis of displacement orderparameter
                     atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_pair))
                     atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_pair))
+                    vec_neigh=neigh%diff_vec(:,i_pair)
+
                     Htmp=0.0d0
                     offset_ph=(atind_ph-1)*3
-                    if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=neigh%diff_vec(:,i_pair)
+                    if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=vec_neigh
                     if (read_from_file) then
-                       ! (Ha,niltonian , name of the file , relative position of the neighbor , offset)
+                       ! (Hamiltonian , name of the file , relative position of the neighbor , offset)
+                       write(output_unit,'(/2A)') 'Hamiltonian from DFT is in Ha/Bohr2'
+                       F=F*HaBohrsq_to_Evnmsq
                        call get_forces_file(Htmp,fname_phonon,neigh%diff_vec(:,i_pair),offset_ph)
                        Htmp=Htmp*HaBohrsq_to_Evnmsq
                     else
-                       Htmp(offset_ph(1)+1,offset_ph(2)+1)=F
-                       Htmp(offset_ph(1)+2,offset_ph(2)+2)=F
-                       Htmp(offset_ph(1)+3,offset_ph(2)+3)=F
+                       write(output_unit,'(/2A)') 'Hamiltonian directly from input is in eV/nm2'
+                       norm_vec_neigh=norm(vec_neigh)
+                       Htmp(offset_ph(1)+1,offset_ph(2)+1)=F*abs(vec_neigh(1))/norm_vec_neigh
+                       Htmp(offset_ph(1)+2,offset_ph(2)+2)=F*abs(vec_neigh(2))/norm_vec_neigh
+                       Htmp(offset_ph(1)+3,offset_ph(2)+3)=F*abs(vec_neigh(3))/norm_vec_neigh
                     endif
                     connect_bnd(2)=neigh%ishell(i_pair)
+
+                    Htmp=Htmp*io%c_ph
+
 
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 

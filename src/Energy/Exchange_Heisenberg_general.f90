@@ -20,6 +20,7 @@ subroutine read_ExchG_input(io_param,fname,io)
 
     Call get_parameter(io_param,fname,'magnetic_r2_tensor',io%pair,io%is_set)
     Call get_parameter(io_param,fname,'magnetic_tensor_fft',io%fft)
+
 end subroutine
 
 subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
@@ -29,6 +30,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     use m_mode_public
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
+    use m_constants, only : pi
 
     class(t_H),intent(inout)                       :: Ham  !Hamiltonian in which all contributions are added up
     type(io_H_Exchten),intent(in)                  :: io
@@ -54,12 +56,13 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
     real(8)         :: vec_1(3)         ! first vector along which the interactions are given. It MUST be x=(1.0,0.0,0.0)
-    real(8)         :: axis(3),angle,vec_tmp(3)
+    real(8)         :: axis(3),angle,vec_tmp(3),scalaire
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
+
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
 
         if (present(Ham_shell_pos)) then
@@ -84,6 +87,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
             !get neighbors
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
             vec_1=neigh%diff_vec(:,1)/norm(neigh%diff_vec(:,1))
+
             !write information out
             Call io%pair(i_atpair)%prt(output_unit,'2X')
             Call neigh%prt(output_unit,'2X')
@@ -92,9 +96,11 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
             N_dist=size(io%pair(i_atpair)%dist)
             i_pair=0
             connect_bnd=1 !initialization for lower bound
+
             do i_dist=1,N_dist
-                !loop over distances (nearest, next nearest,... neighbor)
+                !loop over distances (nearest, next nearest,... neighbor
                 J=reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/))
+
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_pair=i_pair+1
@@ -112,7 +118,15 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
                     axis=rotation_axis(vec_1,vec_tmp)
                     if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
-                    angle=acos(dot_product(vec_1,vec_tmp))
+                    scalaire=dot_product(vec_1,vec_tmp)
+                    if (scalaire.ge.1.0d0) then
+                        angle=0.0d0
+                      elseif (scalaire.le.-1.0d0) then
+                        angle=pi
+                      else
+                        angle=acos(scalaire)
+                    endif
+
                     call rotate_matrix(J,angle,axis)
 
                     Htmp(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3)=J

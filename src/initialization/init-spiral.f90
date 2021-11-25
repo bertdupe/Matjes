@@ -57,7 +57,7 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     Iq=Iq/norm2(Iq)
 
     call get_parameter(io,fname,'q_norm_'//ordname,3,qnorm)
-    qnorm=matmul(qnorm,lat%areal)
+    qnorm=matmul(qnorm,transpose(lat%astar))
 
     call get_parameter(io,fname,'norm_'//ordname,norm)
 
@@ -65,6 +65,7 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
 
     pos_3(1:3,1:size(pos)/dim_mode)=>pos
     state_3(1:3,1:size(pos)/dim_mode)=>state
+
     do i=1,size(state_3,2)
         state_3(:,i)=(cos(dot_product(qvec,pos_3(:,i)))*Rq+ &
                       sin(dot_product(qvec,pos_3(:,i)))*Iq)* &

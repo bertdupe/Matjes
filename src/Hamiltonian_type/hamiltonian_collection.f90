@@ -86,6 +86,7 @@ subroutine distribute(this,com_in)
             write(error_unit,*) "WARNING, MPI-distributions for H_fft is not checked"
         endif
     endif
+    Call bcast(this%N_total,com_in)
     Call bcast(this%NH_total,com_in)
     this%NH_local=this%NH_total
     if(com_in%Np==1) return
@@ -129,7 +130,6 @@ subroutine distribute(this,com_in)
             do i=1,this%NH_local
                 Call this%H(i)%recv(0,i,com_outer%com)
             enddo
-            Call set_work_mode(this)
         endif
         this%is_set=.true.
     endif
@@ -147,10 +147,12 @@ subroutine distribute(this,com_in)
     this%com_outer=com_outer
     this%com_inner=com_inner
     this%com_global=com_in
+
+    Call set_work_mode(this)
+
 #else
     continue
 #endif
-
 end subroutine
 
 subroutine bcast_hamil(this,comm)

@@ -265,6 +265,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             if (mod(j-1,io_dyn%Efreq).eq.0) then
                 !get values to plot (Mavg,topo)
                 Mdy=sum(mag_lattice%M%modes_3,2)/real(N_cell,8)  !sums over all magnetic atoms in unit cell ( not sure if this is wanted)
+
                 if(io_simu%calc_topo)then
                     if(mag_lattice%nmag>1)then
                         write(error_unit,'(2/A)') "Trying to calculate topological charge which is not implemented for nmag>1"

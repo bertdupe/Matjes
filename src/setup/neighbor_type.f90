@@ -190,7 +190,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
                                                 !0 distance is included in this counting
     type(lattice),intent(in)    :: lat          !the all-knowing lattice providing all required information
     real(8),intent(out)         :: dist_out(size(neighval))
-    real(8),intent(out),allocatable,optional    ::  diff_vec(:,:)
+    real(8),intent(inout),allocatable,optional    ::  diff_vec(:,:)
     logical,optional            :: success
 
     integer,allocatable     :: pair_ind(:,:) !integer array containing the information how which atoms are corrected by the distance([[ia1,ia2,ix,iy,iz],[:]])
@@ -311,6 +311,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     enddo
 
     if(present(diff_vec))then
+        if(allocated(diff_vec)) deallocate(diff_vec)
         allocate(diff_vec(3,Npair))
         do i=1,Npair
             diff_vec(:,i)=atpos2(:,pair_ind(2,i))-atpos1(:,pair_ind(1,i))+matmul(pair_ind(3:5,i),lat%areal)

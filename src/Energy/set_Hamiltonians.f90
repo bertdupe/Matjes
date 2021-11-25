@@ -27,6 +27,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_4spin, only: get_4spin
     use m_dipolar_magnetic, only: get_dipolar
     use m_exchange_heisenberg_general, only : get_exchange_ExchG
+    use m_spincurrent, only : get_coupling_SC
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -34,7 +35,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(in)           :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(13)
+    logical :: use_Ham(14)
 
 
     use_ham(1)=H_io%J%is_set.and..not.H_io%J%fft
@@ -50,6 +51,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(11)=H_io%sp4%is_set
     use_ham(12)=H_io%dip%is_set.and..not.H_io%dip%fft
     use_ham(13)=H_io%Exchten%is_set.and..not.H_io%Exchten%fft
+    use_ham(14)=H_io%SC%is_set
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
@@ -117,6 +119,11 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     !plugin the general exchange tensor
     if(use_ham(13))then
         Call get_exchange_ExchG(Ham_res(i_H),H_io%Exchten,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin the spin current DMI
+    if(use_ham(14))then
+        Call get_coupling_SC(Ham_res(i_H),H_io%SC,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
 
