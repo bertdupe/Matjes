@@ -121,12 +121,12 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    !!!! allocate the element of integrations and associate the pointers to them
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   allocate(Feff(my_lattice%u%dim_mode*N_cell),source=0.0d0)
-   Feff_v(1:my_lattice%u%dim_mode,1:N_cell)=>Feff
+   allocate(Feff(dim_mode*N_cell),source=0.0d0)
+   Feff_v(1:dim_mode,1:N_cell)=>Feff
    Feff_3(1:3,1:N_cell*(dim_mode/3))=>Feff
 
-   allocate(Du(my_lattice%u%dim_mode,N_cell,N_loop),source=0.0d0)
-   allocate(Du_int(my_lattice%u%dim_mode,N_cell),source=0.0d0)
+   allocate(Du(dim_mode,N_cell,N_loop),source=0.0d0)
+   allocate(Du_int(dim_mode,N_cell),source=0.0d0)
    Du_3(1:3,1:N_cell*(dim_mode/3),1:N_loop)=>Du
    Du_int_3(1:3,1:N_cell*(dim_mode/3))=>Du_int
 
@@ -135,16 +135,16 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    allocate(acceleration(my_lattice%u%dim_mode,N_cell),source=0.0d0)
 
    ! get the lattice of the masses
-   allocate(masses(my_lattice%u%dim_mode*N_cell),source=0.0d0)
+   allocate(masses(dim_mode*N_cell),source=0.0d0)
    Call my_lattice%cell%get_M_phonon(masses_motif)
    do i=1,N_cell
-     do j=1,my_lattice%u%dim_mode
-       masses(j+(i-1)*my_lattice%u%dim_mode)=masses_motif((j-1)/3+1)
+     do j=1,dim_mode
+       masses(j+(i-1)*dim_mode)=masses_motif((j-1)/3+1)
      enddo
    enddo
    masses_3(1:3,1:N_cell*(dim_mode/3))=>masses
 
-   allocate(FT_eff(my_lattice%u%dim_mode*N_cell),source=0.0d0)
+   allocate(FT_eff(dim_mode*N_cell),source=0.0d0)
    FT_eff_3(1:3,1:N_cell*(dim_mode/3))=>FT_eff
 
    call initialize_velocities(V_1)
