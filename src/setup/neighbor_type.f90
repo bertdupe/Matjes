@@ -221,6 +221,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
         enddo
    enddo
 
+
     Ncheck=maxval(neighval) !this might actually be chosen much smaller, depending of the geometry...
     if(lat%dim_lat(1)>1.or.lat%periodic(1))then
         ind1=[(-Ncheck+i,i=0,2*Ncheck)]
@@ -316,5 +317,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
             diff_vec(:,i)=atpos2(:,pair_ind(2,i))-atpos1(:,pair_ind(1,i))+matmul(pair_ind(3:5,i),lat%areal)
         enddo
     endif
+
 end subroutine
+
 end module

@@ -47,6 +47,7 @@ subroutine get_pos_vec(lat,dim_mode,ordname,pos)
     
     nmag=lat%nmag
     nph=lat%nph
+
     if(nmag.ne.0)then
         !choose position of magnetic atoms for initialization
         Call get_pos_mag(lat,pos)

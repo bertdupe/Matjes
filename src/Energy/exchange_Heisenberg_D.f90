@@ -286,7 +286,8 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
 
     !get real-space positions of magnetic atoms and center(obeying supercell-symmetry)
     ind4_mag(1:3,1)=lat%index_1_3(pair_mag(1)) 
-    ind4_mag(1:3,2)=lat%index_1_3(pair_mag(2)) 
+    ind4_mag(1:3,2)=lat%index_1_3(pair_mag(2))
+
     ind4_mag(4,:)=atom_mag
     Call lat%pos_ind(ind4_mag(:,1),pos_mag(:,1))
     Call lat%pos_ind(ind4_mag(:,2),pos_mag(:,2))
@@ -304,6 +305,7 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
     do i=1,size(id_nonM)
         atpos_nonM(:,i)=lat%cell%atomic(id_nonM(i))%position
     enddo
+
     !get all considered non-magnetic atoms with minimal distance from pos_center_uc
     Call get_neigh_distances(reshape(pos_center_uc,[3,1]),atpos_nonM,[1],lat,pairs,Nshell,distance)
 

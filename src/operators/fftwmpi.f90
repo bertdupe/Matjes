@@ -4,19 +4,11 @@ module m_fftwmpi
     integer, protected, public :: N_kpoint(3)
     real(kind=8), protected, public, allocatable :: kmesh(:,:)
 
-!    ! FFT of the dipolar martix D(r)
+!    ! FFTMPI of the dipolar martix D(r)
 !    complex(kind=8), allocatable, protected, public :: FFT_pos_D(:,:,:)
 !
-!    interface calculate_fft
-!      module procedure calculate_fft_vec_point,calculate_FFT_matrix
-!    end interface
-!
-!    interface get_FFT
-!      module procedure get_FFT_vec_point,get_FFT_matrix,get_FFT_Dr_matrix,get_E_k_local, Fourier_transform_H,Fourier_H_at_k
-!    end interface
 
     private
-!    public :: calculate_fft,calculate_FFT_Dr,get_FFT, Fourier_H_at_k
     contains
 #if 0
 #ifdef CPP_FFTWMPI
@@ -46,7 +38,7 @@ module m_fftwmpi
 
             do i=1,N
                 rtrans(1:Nx,1:Ny,1:Nz)=rmat(i,1:Nx,1:Ny,1:Nz)
-                call fftw_execute_dft_r2c(plan,rtrans,ctrans)
+                call fftw_mpi_execute_dft_r2c(plan,rtrans,ctrans)
                 cmat(i,1:Nx,1:Ny,1:Nz)=ctrans(1:Nx,1:Ny,1:Nz)
             enddo
         end subroutine fft_depol_r2c
@@ -80,7 +72,7 @@ module m_fftwmpi
 
             do i=1,N
                 ctrans(1:Nx,1:Ny,1:Nz)=cmat(i,1:Nx,1:Ny,1:Nz)
-                call fftw_execute_dft_c2r(plan,ctrans,rtrans)
+                call fftw_mpi_execute_dft_c2r(plan,ctrans,rtrans)
                 rmat(i,1:Nx,1:Ny,1:Nz)=rtrans(1:Nx,1:Ny,1:Nz)/dble(Nx*Ny*Nz)
             enddo
             !      call fftw_destroy_plan(plan)
