@@ -46,12 +46,16 @@ subroutine get_pos_vec(lat,dim_mode,ordname,pos)
     integer     :: nmag
     
     nmag=lat%nmag
+    nph=lat%nph
     if(dim_mode==nmag*3)then
         !choose position of magnetic atoms for initialization
         Call get_pos_mag(lat,pos)
     elseif(dim_mode==3)then
         !use center of cell as position
         Call get_pos_center(lat,pos)
+    elseif(dim_mode==nph*3)then
+        !choose position of phonon atoms for initialization
+        Call get_pos_mag(lat,pos)
     else
         write(*,*) "CANNOT USE GET_POS_VEC FOR",ordname,"as its dim_mode is neither 3 nor 3*nmag"
         return
