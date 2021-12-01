@@ -111,7 +111,7 @@ real(kind=8) :: r(3,3)
 
 
 N(2:4)=my_lattice%dim_lat
-Natom_motif=my_lattice%nmag
+Natom_motif=(my_lattice%nmag+my_lattice%nph)
 N(1)=3*Natom_motif
 r=my_lattice%areal
 
@@ -144,7 +144,7 @@ integer :: N(4),Natom_motif,io
 real(kind=8) :: r(3,3)
 
 N(2:4)=my_lattice%dim_lat
-Natom_motif=my_lattice%nmag
+Natom_motif=(my_lattice%nmag+my_lattice%nph)
 N(1)=3*Natom_motif
 r=my_lattice%areal
 

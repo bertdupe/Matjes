@@ -112,20 +112,24 @@ implicit none
 integer, intent(in) :: io
 real(kind=8), intent(in) :: spin(:,:)
 ! internale variables
-Integer :: i,shape_spin(2)
+Integer :: i,shape_spin(2),j,counter
 real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi
 
 !     Constants used for the color definition
 widthc=5.0d0
 Delta =pi*2.0d0/3.0d0
 shape_spin=shape(spin)
+counter=0
 
 do i=1,shape_spin(2)
+  do j=1,shape_spin(1),3
 
-   call get_colors(Rc,Gc,Bc,theta,phi,spin(:,i))
+   counter=counter+1
 
-   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(i),',',Rc,',',Bc,',',Gc,')'
+   call get_colors(Rc,Gc,Bc,theta,phi,spin(j:j+2,i))
 
+   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(counter),',',Rc,',',Bc,',',Gc,')'
+  enddo
 enddo
 
 end subroutine dump_config_spinse_spin
@@ -422,7 +426,6 @@ do i=1,N
    integer_number=convert(i)
    var_name_local=convert(var_name,integer_number)
    length_string=len_trim(var_name_local)
-   write(*,*) var_name_local
    call get_parameter(io,fname,var_name_local(1:length_string),stride,coeff((i-1)*stride+1:i*stride))
 enddo
 
