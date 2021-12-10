@@ -123,6 +123,7 @@ subroutine get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chirality,pos,state
         state(1,i) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi)
         state(2,i) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi)
         state(3,i) = Cos(Theta)
+
     enddo
 end subroutine 
 

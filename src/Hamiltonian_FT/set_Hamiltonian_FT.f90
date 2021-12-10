@@ -25,6 +25,7 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
     use m_ASR_phonon, only : get_ASR_Ph
 
     type(H_inp_real_to_k),allocatable,intent(inout)       :: FT_Ham(:)
+    class(t_H),allocatable                                :: Ham_comb(:)
     type(io_h),intent(in)                                 :: H_io
     type(lattice), intent(in)                             :: lat
 
@@ -101,11 +102,68 @@ subroutine set_Hamiltonians_FT(FT_Ham,H_io,lat)
     enddo
     write(output_unit,'(//)')
 
-!    Call combine_Hamiltonians(keep_res,Ham_res,Ham_comb)
-!    do i_H=1,size(Ham_comb)
-!        Call Ham_comb(i_h)%optimize()
-!        Call Ham_comb(i_h)%finish_setup()
-!    enddo
+    do i_H=1,N_ham
+        if(.not. FT_Ham(i_h)%H_folded%is_set()) STOP "not all Hamiltonians are set"
+        Call FT_Ham(i_H)%H_folded%optimize()
+        Call FT_Ham(i_H)%H_folded%finish_setup()
+    enddo
+
+    Call combine_Hamiltonians(FT_Ham,Ham_comb)
+    do i_H=1,size(Ham_comb)
+        Call Ham_comb(i_h)%optimize()
+        Call Ham_comb(i_h)%finish_setup()
+    enddo
+
+end subroutine
+
+subroutine combine_Hamiltonians(H_in,H_comb)
+    !subroutine which combines Hamiltonians from the input array, if they act on the same space
+    !THIS NEEDS TO BE UPDATED IF THE SPACE IS NOT UNIQUE ANYMORE (eg. terms in one dimension that are not onsite)
+    class(H_inp_real_to_k),intent(inout)    :: H_in(:)
+    class(t_H),allocatable,intent(inout)    :: H_comb(:)
+    !internal
+    integer         :: N_in,N_out
+    integer         :: max_dim
+    integer,allocatable ::  space(:,:,:)    !save all space indicators
+    integer         ::  i_unique(size(H_in))
+    integer         ::  i,j
+
+    !find out which operators are in which space
+    N_in=size(H_in)
+    max_dim=0
+    do i=1,N_in
+        max_dim=max(max_dim,size(H_in(i)%H_folded%op_l))
+        max_dim=max(max_dim,size(H_in(i)%H_folded%op_r))
+    enddo
+
+    allocate(space(max_dim,2,N_in),source=0)
+    do i=1,N_in
+        do j=1,size(H_in(i)%H_folded%op_l)
+            space(j,1,i)=H_in(i)%H_folded%op_l(j)
+        enddo
+        do j=1,size(H_in(i)%H_folded%op_r)
+            space(j,2,i)=H_in(i)%H_folded%op_r(j)
+        enddo
+    enddo
+
+    N_out=0
+    outer:do j=1,N_in
+        do i=1,j-1
+            if(all(space(:,:,j)==space(:,:,i)))then
+                if(H_in(j)%H_folded%same_space(H_in(i)%H_folded))then
+                    i_unique(j)=i_unique(i)
+                    cycle outer
+                endif
+            endif
+        enddo
+        N_out=N_out+1
+        i_unique(j)=N_out
+    enddo outer
+
+    Call get_Htype_N(H_comb,N_out)
+    do i=1,N_in
+        Call H_comb(i_unique(i))%add(H_in(i)%H_folded)
+    enddo
 
 end subroutine
 
