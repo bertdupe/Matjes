@@ -108,7 +108,7 @@ complex(8)  :: eigenvec(Nin,Nin)
 real(8)     :: EPS=10d-8
 
 eigenvec=(0.0d0,0.0d0)
-Nout=3
+Nout=Nin
 call Jacobi(EPS,Nin,this%Hk,Nin,eval,eigenvec,Nin,1)
 
 end subroutine
