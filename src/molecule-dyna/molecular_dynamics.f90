@@ -67,19 +67,21 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    real(8) :: E_potential,E_kinetic,E_total
    real(8),allocatable :: masses_motif(:)
    logical :: used(number_different_order_parameters)
-   real(8) :: damp_S,damp_F,damp_NVT       ! solid and fluid damping
+   real(8) :: damp_S,damp_F,damp_NVT       ! solid and fluid damping, currently only damp_F is used
 
    ! arrays to take into account the dynamics
    real(8),allocatable,target       :: Du(:,:,:),Du_int(:,:),V_1(:,:),V_2(:,:),acceleration(:,:)
-   real(8),allocatable,target       :: Feff(:),FT_eff(:),masses(:)
-   real(8),pointer,contiguous       :: Feff_v(:,:),Feff_3(:,:),FT_eff_3(:,:),masses_3(:,:)
+   real(8),allocatable,target       :: Feff(:),FT_eff(:),masses(:),sigma_u(:),sigma_v(:),c_uv(:), delta_vg(:), delta_ug(:)
+   real(8),pointer,contiguous       :: Feff_v(:,:),Feff_3(:,:),FT_eff_3(:,:),masses_3(:,:),sigma_u3(:,:),sigma_v3(:,:),c_uv3(:,:), delta_vg3(:,:), delta_ug3(:,:)
    real(8),pointer,contiguous       :: Du_3(:,:,:),Du_int_3(:,:)
-
+   
    ! conversion factor to go from uam.nm/fs^2 to eV/nm
-   real(8), parameter :: uamnmfs_to_eVnm = 9.648526549495E-5  ! to convert the force into an accelaration times a mass
+   real(8), parameter :: uamnmfs_to_eVnm = 9.648526549495E-5  ! to convert the force into an acceleration times a mass
    ! conversion factor to go from uam.nm^2/fs^2 to eV
    real(8), parameter :: uamnmfs_to_eV = 1.0364277E4   ! to convert the kinetic energy in eV
-
+	!conversion from sqrt(eV*uam) to eV.fs/nm
+   real(8), parameter ::  convf = uamnmfs_to_eVnm *   0.009822766376641  ! convert sqrt(kBT.M) to velocity dimension eV.fs/nm
+   
    ! IOs
    integer :: io_results
 
@@ -94,6 +96,8 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    real(8) :: dumy(5),q_plus,q_moins,vortex(3)
    integer,allocatable ::  Q_neigh(:,:)
    real(8) :: time = 0.0d0
+   real(8) :: ldc(4)  !Langevin dynamics coefficients
+   !real(8),allocatable :: sigma_v(:,:),sigma_u(:,:), c_uv(:,:), delta_vg(:,:), delta_ug(:,:)  !gaussian distrib parameters for LD Verlet algorithm, stochastic integrals
 
    ! prepare the matrices for integration
 
@@ -144,8 +148,16 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    enddo
    masses_3(1:3,1:N_cell*(dim_mode/3))=>masses
 
-   allocate(FT_eff(my_lattice%u%dim_mode*N_cell),source=0.0d0)
-   FT_eff_3(1:3,1:N_cell*(dim_mode/3))=>FT_eff
+   allocate(sigma_u(my_lattice%u%dim_mode*N_cell),sigma_v(my_lattice%u%dim_mode*N_cell),c_uv(my_lattice%u%dim_mode*N_cell), &
+   			delta_ug(my_lattice%u%dim_mode*N_cell),delta_vg(my_lattice%u%dim_mode*N_cell),source=0.0d0)
+   sigma_u3(1:3,1:N_cell*(dim_mode/3))=>sigma_u
+   sigma_v3(1:3,1:N_cell*(dim_mode/3))=>sigma_v
+   c_uv3(1:3,1:N_cell*(dim_mode/3))=>c_uv
+   delta_ug3(1:3,1:N_cell*(dim_mode/3))=>delta_ug
+   delta_vg3(1:3,1:N_cell*(dim_mode/3))=>delta_vg
+   
+  !allocate(sigma_u(1:3,1:N_cell*(dim_mode/3)),sigma_v(1:3,1:N_cell*(dim_mode/3)),c_uv(1:3,1:N_cell*(dim_mode/3)), &
+   !			delta_ug(1:3,1:N_cell*(dim_mode/3)),delta_vg(1:3,1:N_cell*(dim_mode/3)),source=0.0d0)
 
    call initialize_velocities(V_1)
 
@@ -157,7 +169,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    io_stochafield=io_simu%io_Tfield
    gra_freq=io_simu%io_frequency
    gra_topo=io_simu%io_topo
-   ktini=ext_param%ktini
+   ktini=ext_param%ktini !kBT?
    ktfin=ext_param%ktfin
    kt=ktini
    Eold=100.0d0
@@ -168,7 +180,24 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    said_it_once=.False.
    security=0.0d0
    damp_NVT=0.0d0
+   
+   !initalize the Langevin parameters [Paterlini and Ferguson, Chem. Phys. 236, 243 (1998)]
+   dt=timestep_int !if dt varies the following lines must be moved into the iterations
+   ldc(1)=exp(-damp_F*dt) !damp_F is in fs^-1
+   ldc(2)=1/(damp_F*dt)*(1-ldc(1))
+   ldc(3)=1/(damp_F*dt)*(1-ldc(2))
+   ldc(4)=1/(damp_F*dt)*(0.5d0-ldc(3))
+   sigma_v(:)=  convf*sqrt( kT*masses(:) * (1.0d0-exp(-2.0d0*damp_F*dt)) )  	!bivariate gaussian distrib variance 1,  in unit of the velocities=eV.fs/nm
+   sigma_u(:)=  convf*sqrt( dt**2*kT/masses(:)\(damp_F*dt) * ( 2.0d0 - (3.0d0 - 4.0d0*exp(-damp_F*dt) + exp(-2.0*damp_F*dt)) / (damp_F*dt) ) )  !bivariate gaussian distrib variance 2, in unit of the u=nm
+   c_uv(:)= kT/ (masses(:)*(sigma_u(:)*sigma_v(:)*damp_F) * (1.0d0 - exp(-damp_F*dt) )**2  !correlation coefficient
 
+
+	write(*,*)'ldc(:)= ',ldc
+	write(*,*)'dt= ',dt,' damp_F=',damp_F
+	write(6,'(a,3(2x,E20.12E3))') 'Warning: thermostat implementation in MD for constant timestep only, change it for variable timestep.'
+	write(*,*) 'kT=',kT,' masses=',masses_3(:,:)
+	write(*,*) 'sigma_u=',sigma_u,' sigma_v=',sigma_v
+	
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! initialize the simulation
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -207,12 +236,12 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
          &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T=', &
          &  '16:Epot=','17:Ek=','18:Ex','19:Ey=','20:Ez=','21:Hx','22:Hy=','23:Hz='
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! beginning of the simulation
     do j=1,duration
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         call truncate(lat_1,used)
-        dt=timestep_int
+        !dt=timestep_int
 
         !!!!!!!!!!!!!!!!!!!
         ! Verlet algorithm
@@ -220,18 +249,19 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
 
            !get forces on the phonon lattice
            Call H%get_eff_field(lat_1,Feff,5)
-!           if (kt.gt.1.0d-8) call Bolzmann(kt,1.0d0,masses,FT_eff)
-           if (kt.gt.1.0d-8) damp_NVT=E_kinetic-kt*1.5d0
-           acceleration=(uamnmfs_to_eVnm*(Feff_3+FT_eff_3)-damp_NVT*V_1-damp_F*V_1)/masses_3
-
-           V_2=acceleration*dt/2.0d0+V_1      ! ( v of t+dt/2  )
-           lat_2%u%modes_3=V_2*dt+lat_1%u%modes_3       ! ( r of t+dt  )
+           acceleration=uamnmfs_to_eVnm*Feff_3/masses_3 !in eV/nm
+                      
+           !if non zero temperature: draw random numbers delta_vg, delta_ug           
+           if (kt.gt.1.0d-8) call draw_stocha_integrals(sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
+ 
+ 		   !half-step velocities, update positions
+           V_2=  ldc(1)*V_1 + ldc(1)*ldc(3)/ldc(2)*acceleration*dt + delta_vg3     !  v(t+dt/2) in eV*fs/nm
+           lat_2%u%modes_3= lat_1%u%modes_3  + ldc(2)*V_2*dt + ldc(3)*acceleration*dt**2 + delta_ug3     !u(t+dt)
 
            !get forces on the phonon lattice
-
            Call H%get_eff_field(lat_2,Feff,5)
-           acceleration=(uamnmfs_to_eVnm*Feff_3-damp_NVT*V_1-damp_F*V_2)/masses_3
-           V_1=acceleration*dt/2.0d0+V_2      ! ( v of t+dt  )
+           acceleration=(uamnmfs_to_eVnm*Feff_3)/masses_3 !a(t+dt/2)
+           V_1= V_2 + (1.0d0-ldc(1)/ldc(2))/(damp_F)*acceleration !v(t+dt)
 
         !!!!!!!!!!!!!!!!!!!
         ! end Verlet algorithm
