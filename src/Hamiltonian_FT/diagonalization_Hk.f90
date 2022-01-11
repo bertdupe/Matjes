@@ -76,7 +76,7 @@ subroutine diagonalize_Ham_FT(H_io,lat)
     n_kpts=size(kpts,2)
     do i=1,n_kpts
        call Hk%set_k(FT_Ham,kpts(:,i))
-       call Hk%calc_eval(3,eigenvalues,n_eigen)
+       call Hk%calc_eval(size(eigenvalues),eigenvalues,n_eigen)
        write(io_input,form) kpts(:,i),real(eigenvalues),aimag(eigenvalues)
     enddo
 

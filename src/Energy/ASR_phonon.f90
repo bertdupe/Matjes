@@ -174,6 +174,7 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,2)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
+
                     Call Ham_tmp%destroy()
 
                     connect_bnd(1)=connect_bnd(2)+1

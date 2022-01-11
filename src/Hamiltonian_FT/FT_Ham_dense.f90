@@ -39,9 +39,15 @@ class(FT_H_dense),intent(inout)       :: this
 type(H_inp_real_to_k),intent(in)      :: Hk_inp(:)
 type(parameters_FT_HAM_IO),intent(in) :: io
 
-integer :: dim_H,test
+integer :: dim_H,test,i,dimH,shape_ham(3)
 
-    this%dimH=3
+    dimH=0
+    do i=1,size(Hk_inp)
+       shape_ham=shape(Hk_inp(i)%H)
+       if (shape_ham(1).ne.shape_ham(2)) stop "in FT_HAM_DENSE non square Hamiltonian found"
+       dimH=max(dimH,shape_ham(1))
+    enddo
+    this%dimH=dimH
 
     if (allocated(this%Hk)) ERROR STOP "H is already allocated in init FT_Ham_dense"
 
@@ -102,7 +108,7 @@ complex(8)  :: eigenvec(Nin,Nin)
 real(8)     :: EPS=10d-8
 
 eigenvec=(0.0d0,0.0d0)
-Nout=3
+Nout=Nin
 call Jacobi(EPS,Nin,this%Hk,Nin,eval,eigenvec,Nin,1)
 
 end subroutine
