@@ -674,7 +674,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
     type(Hr_pair_single_tensor),allocatable        :: Hpair_tmp(:)
     type(Hr_pair_tensor), allocatable              :: Hpairs_tensor_tmp(:)
     integer :: attype(2),dist
-    real(8) :: val(9)
+    real(8) :: val(9),bound(3)
 
     integer :: Npair,Nnonzero
     integer :: nread,i,ii,j
@@ -683,6 +683,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
 
     nread=0
     val=0.0d0
+    bound=0.0d0
     Call set_pos_entry(io,fname,var_name,success)
     read(io,'(a)',iostat=stat) str
     if(success)then
@@ -727,7 +728,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
         ii=1
         do i=1,Npair
             val=0.0d0
-            read(io,*,iostat=stat) attype,dist,val
+            read(io,*,iostat=stat) attype,dist,val,bound
             if(all(val==0.0d0)) cycle
             if(attype(2)<attype(1))then
                 j        =attype(2)
@@ -737,10 +738,12 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
             Hpair_tmp(ii)%attype=attype
             Hpair_tmp(ii)%dist=dist
             Hpair_tmp(ii)%val=val
+            Hpair_tmp(ii)%bound=bound
             write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
             write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
             write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
-            write(output_unit,'(A,9E16.8/)') '  energy    :', Hpair_tmp(ii)%val
+            write(output_unit,'(A,9E16.8)') '  energy    :', Hpair_tmp(ii)%val
+            write(output_unit,'(A,3E16.8/)') ' along the bound :', Hpair_tmp(ii)%bound
             ii=ii+1
         enddo
 

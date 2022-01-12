@@ -5,12 +5,13 @@ use m_vector, only : norm
 use m_constants, only : pi
 use m_user_info
 use m_io_files_utils
+use, intrinsic :: iso_fortran_env, only : output_unit
 
 ! private variable
 !type(symop),allocatable :: sym_operations(:)
 
 private
-public :: get_group,read_symmetries,get_num_sym_file
+public :: get_group,read_symmetries,get_num_sym_file,get_sym_local
 contains
 !
 ! find all the symmetry operations that apply to the lattice and the uni cell
@@ -18,9 +19,44 @@ contains
 ! subroutine: get_latt_sym   gets all the symmetry operations that leave the lattice invariant
 !             get_pt_sym     gets all the symmetry operations that leave the lattice and the motif invariant
 !             write_symmetries     write all the symmetry operations into 'symmetries.out'
+!             get_sym_local    find the local symmetry operation that apply to a particular bound
 ! function:   get_symop      get all possible symmetry operations
 !             look_translation    find the equivalent position in the unit cell
 !
+
+subroutine get_sym_local(sym_mat,success,v_1,v_2)
+implicit none
+real(8), intent(out)   :: sym_mat(3,3)          ! symmetry operation that was found
+logical, intent(out)   :: success          ! if the symmetry was found
+real(8), intent(in)    :: v_1(3),v_2(3)    ! test vectors
+!internal
+type(symop) :: ROTMAT(64)
+real(8)     :: v_tmp(3)
+integer     :: i
+
+success=.false.
+sym_mat=0.0d0
+
+call get_symop(rotmat)
+
+do i=1,64
+
+   v_tmp=matmul(rotmat(i)%mat,v_1)
+   if (norm(v_tmp-v_2).lt.1.0d-8) then
+      write(output_unit,'(A,A)') 'symmetry found  ', rotmat(i)%name
+      sym_mat=rotmat(i)%mat
+      success=.true.
+      return
+   endif
+
+enddo
+
+
+end subroutine
+
+
+
+
 subroutine get_group(areal,my_motif,periodic,dim_lat)
 implicit none
 real(kind=8), intent(in) :: areal(3,3)

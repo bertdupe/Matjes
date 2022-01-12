@@ -7,6 +7,7 @@ type :: Hr_pair_tensor !tensor hamiltonian real pair
     integer     ::  attype(2)=[0,0] !atom types which are connected
     integer,allocatable     ::  dist(:)    !nth distance (1=nearest neighbor)
     real(8),allocatable     ::  val(:,:)     !value for this tensor pair of atom-types at distance(dist)
+    real(8),allocatable     ::  bound(:,:)    !bound along which the tensor should apply
 contains
     procedure   ::  prt=>prt_Hr_pair_tensor
 end type
@@ -29,6 +30,7 @@ type :: Hr_pair_single_tensor !hamiltonian tensor real pair
     integer     ::  attype(2)=[0,0] !atom types which are connected
     integer     ::  dist=0      !nth distance (1=nearest neighbor)
     real(8)     ::  val(9)=0.0     !value of the tensor for this pair of atom-types at distance(dist)
+    real(8)     ::  bound(3)=0.0    !bound along which the tensor should apply
 end type
 
 type :: Hr_triple_single !hamiltonian real triple
@@ -289,8 +291,9 @@ subroutine reduce_Hr_tensor_pair(Hr_pair_in,Hr_pair_out)
         !do nothing if only one entry is present
         allocate(Hr_pair_out(1))
         Hr_pair_out(1)%attype= Hr_pair_in(1)%attype
-        Hr_pair_out(1)%dist  =[Hr_pair_in(1)%dist          ]
+        Hr_pair_out(1)%dist  =[ Hr_pair_in(1)%dist          ]
         Hr_pair_out(1)%val   =reshape([Hr_pair_in(1)%val,1.0d0],(/9,1/))
+        Hr_pair_out(1)%bound =reshape([Hr_pair_in(1)%bound,1.0d0],(/3,1/))
         return
     endif
     !intializations and set first unique pairs entry
@@ -322,6 +325,7 @@ subroutine reduce_Hr_tensor_pair(Hr_pair_in,Hr_pair_out)
         Hr_pair_out(i)%attype=at_pairs_unique(:,i)
         allocate(Hr_pair_out(i)%dist(N_pair(i)))
         allocate(Hr_pair_out(i)%val(9,N_pair(i)))
+        allocate(Hr_pair_out(i)%bound(3,N_pair(i)))
     enddo
     N_pair=0
     do i=1,size(hr_pair_in)
@@ -329,6 +333,7 @@ subroutine reduce_Hr_tensor_pair(Hr_pair_in,Hr_pair_out)
         N_pair(j)=N_pair(j)+1
         Hr_pair_out(j)%val(:,N_pair(j))=Hr_pair_in(i)%val
         Hr_pair_out(j)%dist(N_pair(j))=Hr_pair_in(i)%dist
+        Hr_pair_out(j)%bound(:,N_pair(j))=Hr_pair_in(i)%bound
     enddo
 end subroutine
 
