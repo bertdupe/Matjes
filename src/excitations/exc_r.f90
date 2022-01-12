@@ -109,6 +109,7 @@ subroutine read_string(this,string,success)
     integer                                 :: Nreal
 
     success=.false.
+
     read(string,*,iostat=stat)  dummy_name, shape_r_name
     if(stat/=0) return
 

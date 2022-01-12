@@ -46,9 +46,13 @@ subroutine get_default_value(ordname,dim_mode,extpar_io,def_val)
                 def_val(1+(i-1)*3:i*3)=[0.0d0,0.0d0,1.0d0]
             enddo
         case('Efield')
-            def_val=extpar_io%E
+            do i=1,dim_mode/3
+                def_val(1+(i-1)*3:i*3)=extpar_io%E
+            enddo
         case('Bfield')
-            def_val=extpar_io%H
+            do i=1,dim_mode/3
+                def_val(1+(i-1)*3:i*3)=extpar_io%H
+            enddo
         case('temperature')
             def_val=extpar_io%T(1)
         case('phonon')
