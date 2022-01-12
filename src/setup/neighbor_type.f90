@@ -58,7 +58,7 @@ subroutine prt(neigh,io_in,fmt_pre)
         write(io,'('//pre//'A,I3,A,I5,A,F10.6)') "  Distance ",neigh%dist(i_dist), " with ",neigh%Nshell(i_dist)," entries and length", norm2(neigh%diff_vec(:,sum(neigh%Nshell(:i_dist-1))+1))
         do i_shell=1,neigh%Nshell(i_dist)
             shell=i_shell+sum(neigh%Nshell(:i_dist-1))
-            write(io,'('//pre//'A,2I4,A,3F10.6)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)
+            write(io,'('//pre//'A,2I4,A,3F14.10)')    "    Atom indices:", neigh%at_pair(:,shell),"    Difference vector:", neigh%diff_vec(:,shell)
         enddo
     enddo
 end subroutine

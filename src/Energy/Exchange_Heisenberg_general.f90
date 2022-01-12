@@ -1,6 +1,6 @@
 module m_exchange_heisenberg_general
 use m_input_H_types, only : io_H_Exchten
-use m_rotation_matrix, only : rotate_matrix
+use m_rotation_matrix, only : rotate_matrix,check_rotate_matrix
 use m_rotation, only : rotation_axis
 use m_vector, only : norm
 use, intrinsic :: iso_fortran_env, only : output_unit
@@ -52,11 +52,12 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer         :: i_shell          !counting the number of unique connection for given atom types and a distance
     integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
     type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
-    real(8)         :: J(3,3)           !magnitude of Hamiltonian parameter
+    real(8)         :: J(3,3),J_init(3,3)           !magnitude of Hamiltonian parameter
     integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
-    real(8)         :: vec_1(3)         ! first vector along which the interactions are given. It MUST be x=(1.0,0.0,0.0)
+    real(8)         :: bound_input(3)         ! first vector along which the interactions are given. It MUST be x=(1.0,0.0,0.0)
     real(8)         :: axis(3),angle,vec_tmp(3),scalaire
+    integer         :: shell
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
@@ -86,7 +87,6 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
             !loop over different connected atom types
             !get neighbors
             Call neigh%get(io%pair(i_atpair)%attype,io%pair(i_atpair)%dist,lat)
-            vec_1=neigh%diff_vec(:,1)/norm(neigh%diff_vec(:,1))
 
             !write information out
             Call io%pair(i_atpair)%prt(output_unit,'2X')
@@ -99,11 +99,14 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor
-                J=reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/))
+                J_init=reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/))
+                bound_input=io%pair(i_atpair)%bound(:,i_dist)/norm(io%pair(i_atpair)%bound(:,i_dist))
+                shell=0
 
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_pair=i_pair+1
+                    shell=1+shell
 
                     !set local Hamiltonian in basis of magnetic orderparameter
                     atind_mag(1)=lat%cell%ind_mag(neigh%at_pair(1,i_pair))
@@ -116,18 +119,28 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     ! rotate the exchange matrix to align it with the neighbor direction
                      ! rotation axis
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
-                    axis=rotation_axis(vec_1,vec_tmp)
+
+                    axis=rotation_axis(bound_input,vec_tmp)
                     if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
-                    scalaire=dot_product(vec_1,vec_tmp)
+                    scalaire=dot_product(bound_input,vec_tmp)
                     if (scalaire.ge.1.0d0) then
                         angle=0.0d0
-                      elseif (scalaire.le.-1.0d0) then
+                    elseif (scalaire.le.-1.0d0) then
                         angle=pi
-                      else
+                    else
                         angle=acos(scalaire)
                     endif
 
-                    call rotate_matrix(J,angle,axis)
+                    call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
+                    call rotate_matrix(J,J_init,angle,axis)
+
+                    !endif
+
+                    write(output_unit,'(A,I6,A)')   ' Applying exchange tensor along bound ',i_shell,':'
+                    write(output_unit,'(A,2I6)')    '  atom types:', neigh%at_pair(:,shell)
+                    write(output_unit,'(A,2I6)')    '  distance  :', io%pair(i_atpair)%dist(i_dist)
+                    write(output_unit,'(A,9E16.8)') '  energy    :', J
+                    write(output_unit,'(A,3E16.8/)') ' along the bound :', neigh%diff_vec(:,i_pair)
 
                     Htmp(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3)=J
                     connect_bnd(2)=neigh%ishell(i_pair)
@@ -162,6 +175,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
     use m_derived_types, only: lattice
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
+    use m_constants, only : pi
 
     class(fft_H),intent(inout)    :: H_fft
     type(io_H_Exchten),intent(in) :: io
@@ -183,7 +197,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
     integer         :: i_shell          !counting the number of unique connection for given atom types and a distance
     integer         :: connect_bnd(2)   !indices keeping track of which pairs are used for the particular connection
     type(neighbors) :: neigh            !all neighbor information for a given atom-type pair
-    real(8)         :: J(3,3)           !magnitude of Hamiltonian parameter
+    real(8)         :: J(3,3),J_init(3,3)           !magnitude of Hamiltonian parameter
     integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
 
@@ -191,7 +205,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
     integer         :: ind3(3)          !index to calculate Karr position in each dimension
     integer         :: ind_mult(3)      !constant multiplicator to calculate ind from ind3
     integer         :: i
-    real(8)         :: axis(3),angle,vec_tmp(3),vec_1(3)
+    real(8)         :: axis(3),angle,vec_tmp(3),bound_input(3),scalaire
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
@@ -218,7 +232,9 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                J=-reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/)) !negative sign for compatibility with previous implementatoins
+                J_init=-reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/)) !negative sign for compatibility with previous implementatoins
+                bound_input=io%pair(i_atpair)%bound(:,i_dist)/norm(io%pair(i_atpair)%bound(:,i_dist))
+
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_pair=i_pair+1
@@ -235,10 +251,19 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
                     ! rotate the exchange matrix to align it with the neighbor direction
                      ! rotation axis
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
-                    axis=rotation_axis(vec_1,vec_tmp)
+                    axis=rotation_axis(bound_input,vec_tmp)
                     if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
-                    angle=acos(dot_product(vec_1,vec_tmp))
-                    call rotate_matrix(J,angle,axis)
+                    scalaire=dot_product(bound_input,vec_tmp)
+                    if (scalaire.ge.1.0d0) then
+                        angle=0.0d0
+                    elseif (scalaire.le.-1.0d0) then
+                        angle=pi
+                    else
+                        angle=acos(scalaire)
+                    endif
+
+                    call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
+                    call rotate_matrix(J,J_init,angle,axis)
 
                     !set the contributions in the operator array
                     Karr(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3,ind)=J
