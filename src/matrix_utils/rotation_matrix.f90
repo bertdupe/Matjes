@@ -23,7 +23,7 @@ contains
 
    vec_tmp=matmul(rot_mat,bound_input)
 
-   if (norm(vec_tmp-vec).gt.1.0d-8) STOP 'angle not correct in check_rotate_matrix'
+   if (norm(vec_tmp-vec).gt.1.0d-5) STOP 'angle not correct in check_rotate_matrix'
 
    end subroutine
 
