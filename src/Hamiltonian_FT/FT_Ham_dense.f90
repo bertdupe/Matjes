@@ -117,10 +117,14 @@ subroutine calc_evec(this,Nin,eval,evec,Nout)
 class(FT_H_dense),intent(inout)     :: this
 integer,intent(in)                  :: Nin  !size of eigenvalue input array
 complex(8),intent(out)              :: eval(Nin)
-complex(8),intent(out)              :: evec(this%dimH,Nin)
+complex(8),intent(out)              :: evec(Nin,Nin)
 integer,intent(out)                 :: Nout !calculated number of eigenvalues
 
-STOP 'not implemented'
+real(8)     :: EPS=10d-8
+
+evec=(0.0d0,0.0d0)
+Nout=Nin
+call Jacobi(EPS,Nin,this%Hk,Nin,eval,evec,Nin,1)
 
 end subroutine
 

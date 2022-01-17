@@ -132,7 +132,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     endif
 
                     call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
-                    call rotate_matrix(J,J_init,angle,axis)
+                    call rotate_exchange(J,J_init,angle,axis)
 
                     !endif
 
@@ -263,7 +263,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
                     endif
 
                     call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
-                    call rotate_matrix(J,J_init,angle,axis)
+                    call rotate_exchange(J,J_init,angle,axis)
 
                     !set the contributions in the operator array
                     Karr(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3,ind)=J
@@ -272,6 +272,33 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
         enddo
         Call H_fft%init_op(3*Nmag,Karr,ham_desc)
     endif
+end subroutine
+
+
+
+subroutine rotate_exchange(mat_out,mat_in,theta,rotation_axis)
+   real(8), intent(out)   :: mat_out(:,:)
+   real(8), intent(in)    :: mat_in(:,:)
+   real(8), intent(in)    :: theta,rotation_axis(:)
+
+   real(8)                :: mat(3,3),sym_part(3,3),antisym_part(3,3)
+
+   if (abs(theta).lt.1.0d-8) then
+       mat_out=mat_in
+       return
+   endif
+
+! decompose in symmetric and antisymmetric part
+
+   sym_part=(mat_in+transpose(mat_in))/2.0d0
+   antisym_part=(mat_in-transpose(mat_in))/2.0d0
+
+! rotate only the antisymmetric part
+
+   call rotate_matrix(mat,antisym_part,theta,rotation_axis)
+
+   mat_out=sym_part+mat
+
 end subroutine
 
 end module
