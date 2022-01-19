@@ -29,7 +29,7 @@ subroutine init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
   
     qSklattice=0.02d0 
     call get_parameter(io,fname,'qSklattice',qSklattice) !legecy without ordname?
-    call get_parameter(io,fname,'qSklattice'//ordname,qSklattice) !legecy without ordname?
+    call get_parameter(io,fname,'qSklattice_'//ordname,qSklattice) !legecy without ordname?
     
     Nsk=nint(qSklattice*lat%dim_lat(1:2))
     NSkyAdd=product(Nsk)

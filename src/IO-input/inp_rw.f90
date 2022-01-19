@@ -24,6 +24,7 @@ io_input=open_file_read('input')
 
 ! io variables
 call get_parameter(io_input,'input','gra_fft',io_simu%io_fft_Xstruct)
+call get_parameter(io_input,'input','gra_ft_Ham',io_simu%io_fft_Ham)
 call get_parameter(io_input,'input','gra_topo',io_simu%io_topo)
 call get_parameter(io_input,'input','warnings',io_simu%io_warning)
 call get_parameter(io_input,'input','gra_log',io_simu%io_Xstruct)

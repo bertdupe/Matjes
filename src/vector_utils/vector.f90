@@ -522,6 +522,7 @@ if (abs(pr).lt.1.0d-8) then
 else
     area=2.0d0*atan2(M33DET(JACNN),pr)
 endif
+
 end function area
 
 ! function used to TEST the calculation of the topological charge

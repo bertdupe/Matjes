@@ -18,6 +18,8 @@ module m_rw_H
         use m_Mag_Biq, only : read_Mag_Biq_input
         use m_4spin, only: read_sp4_input
         use m_dipolar_magnetic, only: read_dip_input
+        use m_exchange_heisenberg_general, only : read_ExchG_input
+        use m_spincurrent, only : read_SC_input
         
         type(io_H),intent(out)      :: H_io
         character(*),parameter      :: fname='input'
@@ -38,6 +40,8 @@ module m_rw_H
         call read_Mag_Biq_input(io_param,fname,H_io%M_biq)
         call read_sp4_input(io_param,fname,H_io%sp4)
         call read_dip_input(io_param,fname,H_io%dip)
+        call read_ExchG_input(io_param,fname,H_io%Exchten)
+        call read_SC_input(io_param,fname,H_io%SC)
 
         call close_file(fname,io_param)
     end subroutine

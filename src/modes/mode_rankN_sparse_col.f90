@@ -86,9 +86,6 @@ subroutine get_mode_single_size(this,order,dim_mode)
         order_ind=findloc(order==this%order,.true.,dim=1)
         dim_mode=dim_modes_inner(order)*this%ratio(order_ind)
     else
-#ifdef CPP_DEBUG
-        write(error_unit,'(A)') "Failed to get a single mode which is in the investigated order"
-#endif
         dim_mode=0
     endif
 end subroutine

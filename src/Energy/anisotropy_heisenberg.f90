@@ -145,7 +145,7 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals,success)
     if(present(success)) success=.true.
 end subroutine
 
-subroutine get_anisotropy_H(Ham,io,lat)
+subroutine get_anisotropy_H(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get anisotropy in t_H Hamiltonian format
     use m_H_public, only: t_H
     use m_setH_util,only: get_coo
@@ -154,6 +154,8 @@ subroutine get_anisotropy_H(Ham,io,lat)
     class(t_H),intent(inout)    :: Ham
     type(io_H_aniso),intent(in) :: io
     type(lattice),intent(in)    :: lat
+    real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
+    real(8),optional,allocatable,intent(inout)     :: Ham_shell_pos(:,:,:)
     !local 
     integer :: i
     real(8),allocatable :: Htmp(:,:)
@@ -166,7 +168,20 @@ subroutine get_anisotropy_H(Ham,io,lat)
         !set local Hamiltonian 
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode),source=0.d0)
         !add anisotropy input in cartesian input coordinates to unit-cell Hamiltonian
-        Call get_Haniso_unitcell(io,lat,Htmp)            
+
+        if (present(Ham_shell_pos)) then
+          write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+          allocate(Ham_shell_pos(lat%M%dim_mode,lat%M%dim_mode,1))
+          Ham_shell_pos=0.0d0
+          allocate(neighbor_pos_list(3,1))
+          neighbor_pos_list=0.0d0
+        endif
+
+        Call get_Haniso_unitcell(io,lat,Htmp)
+
+        if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Htmp
+        if (present(neighbor_pos_list)) neighbor_pos_list(:,1)=0.0d0
+
         !get local Hamiltonian in coo format
         Call get_coo(Htmp,val_tmp,ind_tmp)
         !Anisotropy only has simple onsite terms
