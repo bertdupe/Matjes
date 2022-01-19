@@ -12,7 +12,6 @@ use m_highsym, only : set_highs_path,mv_kpts
 use m_kgrid_FT
 use m_input_H_types
 use m_derived_types
-use m_FT_Ham_public
 use m_FT_Ham_coo_rtok_base
 implicit none
 
