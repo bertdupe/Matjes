@@ -21,12 +21,12 @@ subroutine draw_stocha_integrals(sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
 		!draw in normal distrib of stdev 1, mean 0
 		temp(1)=randist(1.0d0)
 		temp(2)=randist(1.0d0)
-		write(*,*)'temp1 and 2= ',temp(1),' ',temp(2)
+		!write(*,*)'temp1 and 2= ',temp(1),' ',temp(2)
 		!draw in bivariate gaussian distribution
 		delta_ug(i) = sigma_u(i) * temp(1)
 		delta_vg(i) = sigma_v(i) * (c_uv(i)*temp(1) + sqrt(1.0d0- c_uv(i)**2) *temp(2) )
 		
-		write(*,*)'delta_ug(i)= ',delta_ug(i),'delta_vg(i)= ',delta_vg(i)
+		!write(*,*)'delta_ug(i)= ',delta_ug(i),'delta_vg(i)= ',delta_vg(i)
 	enddo
 	
 end subroutine draw_stocha_integrals
