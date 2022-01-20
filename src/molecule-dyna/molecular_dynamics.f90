@@ -49,6 +49,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    use m_topo_commons, only: get_charge, neighbor_Q
    use m_user_info, only: user_info
    use m_FTeff_MD
+   use m_vector
 
    !!!!!!!!!!!!!!!!!!!!!!!
    ! arguments
@@ -81,7 +82,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    !real(8), parameter :: uamnmfs_to_eV = 1.0364277E4   ! to convert the kinetic energy in eV
    
 	!conversion of sqrt(kBT/m) in sqrt(eV/uam) to velocity dimension nm/fs
-   real(8), parameter ::  convf_v =   0.009822694750253 
+   real(8), parameter ::  convf_v = 9.82269475025328e-03
 	! conversion of acceleration in eV/(uma.nm) to nm/fs^2
 	real(8), parameter :: convf_a=9.648533215665327e-05
     
@@ -94,13 +95,14 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    real(8) :: real_time,Eold,security,Einitial
    real(8) :: kt,ktini,ktfin,Pdy(3),temperature
    logical :: said_it_once,gra_log,io_stochafield,gra_topo
-   integer :: dim_mode !dim_mode of the iterated order parameter
+   integer :: dim_mode,iomp !dim_mode of the iterated order parameter
    character(len=100) :: file
    real(8) :: dumy(5),q_plus,q_moins,vortex(3)
    integer,allocatable ::  Q_neigh(:,:)
    real(8) :: time = 0.0d0
    real(8) :: ldc(3)  !Langevin dynamics coefficients
-
+   real(8),allocatable :: u_norm(:)
+	
    ! prepare the matrices for integration
 
    call rw_dyna_MD(timestep_int,Efreq,duration,file,damp_S,damp_F,ensemble)
@@ -150,9 +152,10 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    enddo
    masses_3(1:3,1:N_cell*(dim_mode/3))=>masses
 
-
-   allocate(sigma_u(my_lattice%u%dim_mode*N_cell),sigma_v(my_lattice%u%dim_mode*N_cell),c_uv(my_lattice%u%dim_mode*N_cell), &
+   allocate(u_norm(N_cell),source=0.0d0)
+	allocate(sigma_u(my_lattice%u%dim_mode*N_cell),sigma_v(my_lattice%u%dim_mode*N_cell),c_uv(my_lattice%u%dim_mode*N_cell), &
    			delta_ug(my_lattice%u%dim_mode*N_cell),delta_vg(my_lattice%u%dim_mode*N_cell),source=0.0d0)
+
    sigma_u3(1:3,1:N_cell*(dim_mode/3))=>sigma_u
    sigma_v3(1:3,1:N_cell*(dim_mode/3))=>sigma_v
    c_uv3(1:3,1:N_cell*(dim_mode/3))=>c_uv
@@ -249,50 +252,57 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
                     
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! beginning of the simulation
-    do j=1,duration
+	do j=1,duration
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        call truncate(lat_1,used)
-        !dt=timestep_int
+		call truncate(lat_1,used)
+      !dt=timestep_int
 
-        !!!!!!!!!!!!!!!!!!!
-        ! Stochastic Velocity Verlet algorithm
-        !!!!!!!!!!!!!!!!!!!
+      !!!!!!!!!!!!!!!!!!!
+      ! Stochastic Velocity Verlet algorithm
+		!!!!!!!!!!!!!!!!!!!
         
-         !get forces on the phonon lattice
+		!get forces on the phonon lattice
     	Call H%get_eff_field(lat_1,Feff,5) !Feff here is in eV/nm2 
-   		Feff_3=Feff_3*lat_1%u%modes_3 ! F_eff,i= K*ui  to convert to eV/nm
-   		acc_1=convf_a*Feff_3/masses_3 !in nm/fs^2 a(t)
+    	u_norm=norm2(lat_1%u%modes_3,1) !norm of u
+    	!write(*,*)'u=',lat_1%u%modes_3,' norm of u=',norm2(lat_1%u%modes_3,1)
+    	do iomp=1,N_cell*(dim_mode/3)
+    		Feff_3(:,iomp)=Feff_3(:,iomp)*u_norm(iomp)  ! F_eff,i= K*ui  to convert to eV/nm 
+    	enddo
+   	acc_1=convf_a*Feff_3/masses_3 !in nm/fs^2 a(t)
 
-           !if non zero temperature: draw random numbers delta_vg, delta_ug           
-           if (kt.gt.1.0d-8) call draw_stocha_integrals(sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
+      !if non zero temperature: draw random numbers delta_vg, delta_ug           
+      if (kt.gt.1.0d-8) call draw_stocha_integrals(sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
  		   
- 		   !half-step velocities
-           V_2=  ldc(1)*V_1 + ldc(1)*ldc(3)/ldc(2)*acc_1*dt + delta_vg3     !  v(t+dt/2) in nm/fs
+ 		!half-step velocities
+      !V_2=  ldc(1)*V_1 + ldc(1)*ldc(3)/ldc(2)*acc_1*dt + delta_vg3     !  v(t+dt/2) in nm/fs
            
-		   !update positions
-           lat_2%u%modes_3= lat_1%u%modes_3  + ldc(2)*V_1*dt + ldc(3)*acc_1*dt**2 + delta_ug3     !u(t+dt) in nm
+		!update positions
+       lat_2%u%modes_3= lat_1%u%modes_3  + ldc(2)*V_1*dt + ldc(3)*acc_1*dt**2 + delta_ug3     !u(t+dt) in nm
 
-           !update accelerations
-           Call H%get_eff_field(lat_2,Feff,5)
-           Feff_3=Feff_3*lat_2%u%modes_3
-           acc_2=convf_a*Feff_3/masses_3 !a(t+dt)
+      !update accelerations
+      Call H%get_eff_field(lat_2,Feff,5)
+      u_norm=norm2(lat_2%u%modes_3,1) !norm of u
+    	do iomp=1,N_cell*(dim_mode/3)
+    		Feff_3(:,iomp)=Feff_3(:,iomp)*u_norm(iomp)  ! F_eff,i= K*ui  to convert to eV/nm 
+    	enddo
+      acc_2=convf_a*Feff_3/masses_3 !a(t+dt)
 
-			!update velocities
-            V_1=ldc(1)*V_1 + (ldc(2)-ldc(3))*acc_1*dt+ldc(3)*acc_2*dt + delta_vg3   !v(t+dt) 
+		!update velocities
+       V_1=ldc(1)*V_1 + (ldc(2)-ldc(3))*acc_1*dt + ldc(3)*acc_2*dt + delta_vg3   !v(t+dt) 
 
-			!acc_1=acc_2
-        !!!!!!!!!!!!!!!!!!!
-        ! end Verlet algorithm
-        !!!!!!!!!!!!!!!!!!!
+      !!!!!!!!!!!!!!!!!!!
+      ! end Verlet algorithm
+      !!!!!!!!!!!!!!!!!!!
 
-        Call lat_2%u%copy_val(lat_1%u)
-        call truncate(lat_1,used)
+      Call lat_2%u%copy_val(lat_1%u)
+      call truncate(lat_1,used)
 
-!write(*,*)'V_1=',V_1,' V_2=',V_2,' lat_2%u%modes_3=', lat_2%u%modes_3,' acc_1=',acc_1,' acc_2=',acc_2,' lat_1=',lat_1%u%modes_3,' lat_2=',lat_2%u%modes_3
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        !!!!!!!!!!!!!!! plotting with graphical frequency
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if(mod(j-1,gra_freq)==0)then
+		write(*,*)'V_1=',V_1,' lat_2%u%modes_3=', lat_2%u%modes_3,' acc_2=',acc_2
+		
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !!!!!!!!!!!!!!! plotting with graphical frequency
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      if(mod(j-1,gra_freq)==0)then
             tag=j/gra_freq
 
             E_potential=H%energy(lat_1)/real(N_cell,8)
@@ -330,7 +340,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
         ! update timestep
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!        call update_time(timestep_int,Feff_v,damping)
+!        call update_time(timestep_int,Feff_v,damping)tail 
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!!!!!!!!!!!!! end of a timestep
