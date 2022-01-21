@@ -84,8 +84,8 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
 	!conversion of sqrt(kBT/m) in sqrt(eV/uam) to velocity dimension nm/fs
    real(8), parameter ::  convf_v = 9.82269475025328e-03
 	! conversion of acceleration in eV/(uma.nm) to nm/fs^2
-	real(8), parameter :: convf_a=9.648533215665327e-05
-    
+	real(8), parameter :: convf_a= 96.4853321566533e-006
+
    ! IOs
    integer :: io_results
 
@@ -262,12 +262,12 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
 		!!!!!!!!!!!!!!!!!!!
         
 		!get forces on the phonon lattice
-    	Call H%get_eff_field(lat_1,Feff,5) !Feff here is in eV/nm2 
+    	Call H%get_eff_field(lat_1,Feff,5) !Feff here is in eV/nm2 (apparently not it seems to be in eV/nm...)
     	u_norm=norm2(lat_1%u%modes_3,1) !norm of u
     	!write(*,*)'u=',lat_1%u%modes_3,' norm of u=',norm2(lat_1%u%modes_3,1)
-    	do iomp=1,N_cell*(dim_mode/3)
-    		Feff_3(:,iomp)=Feff_3(:,iomp)*u_norm(iomp)  ! F_eff,i= K*ui  to convert to eV/nm 
-    	enddo
+    	!do iomp=1,N_cell*(dim_mode/3)
+    	!	Feff_3(:,iomp)=Feff_3(:,iomp)*u_norm(iomp)  ! F_eff,i= K*ui  to convert to eV/nm 
+    !	enddo
    	acc_1=convf_a*Feff_3/masses_3 !in nm/fs^2 a(t)
 
       !if non zero temperature: draw random numbers delta_vg, delta_ug           
@@ -282,9 +282,9 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
       !update accelerations
       Call H%get_eff_field(lat_2,Feff,5)
       u_norm=norm2(lat_2%u%modes_3,1) !norm of u
-    	do iomp=1,N_cell*(dim_mode/3)
-    		Feff_3(:,iomp)=Feff_3(:,iomp)*u_norm(iomp)  ! F_eff,i= K*ui  to convert to eV/nm 
-    	enddo
+    	!do iomp=1,N_cell*(dim_mode/3)
+    		!Feff_3(:,iomp)=Feff_3(:,iomp)*u_norm(iomp)  ! F_eff,i= K*ui  to convert to eV/nm 
+    	!enddo
       acc_2=convf_a*Feff_3/masses_3 !a(t+dt)
 
 		!update velocities
@@ -297,7 +297,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
       Call lat_2%u%copy_val(lat_1%u)
       call truncate(lat_1,used)
 
-		write(*,*)'V_1=',V_1,' lat_2%u%modes_3=', lat_2%u%modes_3,' acc_2=',acc_2
+		!write(*,*)'V_1=',V_1,' lat_2%u%modes_3=', lat_2%u%modes_3,' acc_2=',acc_2
 		
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !!!!!!!!!!!!!!! plotting with graphical frequency
