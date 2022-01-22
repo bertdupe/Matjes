@@ -5,4 +5,5 @@ src/symmetries/sym_public.f90
 src/symmetries/sym_dense.f90
 src/symmetries/sym_base.f90
 src/symmetries/sym_symlib.f90
+src/symmetries/sym_utils.f90
 )

@@ -3,15 +3,19 @@ use m_vector, only : norm
 use m_constants, only : identity
 implicit none
 private
-public :: rotate_matrix,check_rotate_matrix
+public :: rotate_matrix,check_rotate_matrix,rotation_matrix_real
 
 interface rotate_matrix
-   module procedure rotation_matrix_int,rotation_matrix_real_sym_op,rotate_matrix_real
+   module procedure rotation_matrix_int,rotation_matrix_real_sym_op,rotate_matrix_real,rotation_matrix_real_symop_matout
 end interface rotate_matrix
+
+interface check_rotate_matrix
+   module procedure check_RM_angaxisin,check_RM_matin_boolout
+end interface check_rotate_matrix
 
 contains
 
-   subroutine check_rotate_matrix(theta,rotation_axis,bound_input,vec)
+   subroutine check_RM_angaxisin(theta,rotation_axis,bound_input,vec)
    real(8), intent(inout) :: theta
    real(8), intent(in)    :: rotation_axis(3),bound_input(3),vec(3)
 
@@ -27,6 +31,20 @@ contains
 
    end subroutine
 
+   subroutine check_RM_matin_boolout(rotmat,bound_input,vec,found)
+   logical, intent(out)   :: found
+   real(8), intent(in)    :: rotmat(3,3),bound_input(3),vec(3)
+
+   real(8) :: vec_tmp(3)
+
+   found=.false.
+
+   vec_tmp=matmul(rotmat,bound_input)
+
+   if (norm(vec_tmp-vec).lt.1.0d-5) found=.true.
+
+   end subroutine
+
    subroutine rotation_matrix_real_sym_op(mat_in,sym_op)
    real(8), intent(inout) :: mat_in(:,:)
    real(8), intent(in)    :: sym_op(:,:)
@@ -39,6 +57,22 @@ contains
 
    mat=matmul(mat_in,sym_op)
    mat_in=matmul(transpose(sym_op),mat)
+
+   end subroutine
+
+   subroutine rotation_matrix_real_symop_matout(mat_out,mat_in,sym_op)
+   real(8), intent(in)    :: mat_in(:,:)
+   real(8), intent(in)    :: sym_op(:,:)
+   real(8), intent(out)   :: mat_out(:,:)
+
+   real(8)                :: mat(3,3)
+   integer                :: shape_mat_in(2)
+
+   shape_mat_in=shape(mat_in)
+   if ((shape_mat_in(1).ne.3).or.(shape_mat_in(2).ne.3)) STOP "ERROR the matrix should be 3x3"
+
+   mat=matmul(mat_in,sym_op)
+   mat_out=matmul(transpose(sym_op),mat)
 
    end subroutine
 

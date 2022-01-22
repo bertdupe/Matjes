@@ -59,10 +59,11 @@ phase=size(DM_vector,3)
 inquire_file=.false.
 inquire(file='symmetries.out',exist=inquire_file)
 if (.not.inquire_file) then
-   call get_group(my_lattice%areal,my_motif,my_lattice%periodic,my_lattice%dim_lat)
+!   call get_group(my_lattice%areal,my_motif,my_lattice%periodic,my_lattice%dim_lat)
 endif
 
-n_sym=get_num_sym_file()
+!n_sym=get_num_sym_file()
+stop 'uncomment 65 in setup_DM and 62'
 allocate(symmetries(n_sym))
 call read_symmetries(n_sym,symmetries)
 

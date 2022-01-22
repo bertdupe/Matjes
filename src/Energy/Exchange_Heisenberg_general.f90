@@ -1,8 +1,10 @@
 module m_exchange_heisenberg_general
 use m_input_H_types, only : io_H_Exchten
-use m_rotation_matrix, only : rotate_matrix,check_rotate_matrix
+use m_rotation_matrix, only : rotate_matrix,check_rotate_matrix,rotation_matrix_real
 use m_rotation, only : rotation_axis
 use m_vector, only : norm
+use m_sym_public
+use m_symmetry_base
 use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
 private
@@ -56,8 +58,11 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
     real(8)         :: bound_input(3)         ! first vector along which the interactions are given. It MUST be x=(1.0,0.0,0.0)
-    real(8)         :: axis(3),angle,vec_tmp(3),scalaire
-    integer         :: shell
+    real(8)         :: axis(3),angle,vec_tmp(3),scalaire,symop(3,3)
+    integer         :: shell,k
+    logical         :: found_sym
+    class(pt_grp),allocatable :: my_symmetries
+    character(len=30) :: name_sym
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
@@ -82,6 +87,10 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
           Ham_shell_pos=0.0d0
           allocate(neighbor_pos_list(3,i_pair))
         endif
+
+        ! get the symmetries
+        call set_sym_type(my_symmetries)
+        call my_symmetries%read_sym()
 
         do i_atpair=1,N_atpair
             !loop over different connected atom types
@@ -120,23 +129,42 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                      ! rotation axis
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
 
-                    axis=rotation_axis(bound_input,vec_tmp)
-                    if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
-                    scalaire=dot_product(bound_input,vec_tmp)
-                    if (scalaire.ge.1.0d0) then
-                        angle=0.0d0
-                    elseif (scalaire.le.-1.0d0) then
-                        angle=pi
+                    do k=1,my_symmetries%n_sym
+                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                       if (found_sym) exit
+                    enddo
+
+                    if (k.gt.my_symmetries%n_sym) then
+                       write(output_unit,'(/a)') 'WARNING: symmetry not found - I use an arbitrary rotation'
+                       axis=rotation_axis(bound_input,vec_tmp)
+                       if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
+                       scalaire=dot_product(bound_input,vec_tmp)
+                       if (scalaire.ge.1.0d0) then
+                          angle=0.0d0
+                       elseif (scalaire.le.-1.0d0) then
+                          angle=pi
+                       else
+                          angle=acos(scalaire)
+                       endif
+                       call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
+                       call rotation_matrix_real(symop,angle,axis)
+                       name_sym="rotation matrix"
+                       write(output_unit,'(a,f8.3)') 'angle ', angle*180.0/pi
+                       write(output_unit,'(a,3f8.3/)') 'axis ', axis
+
                     else
-                        angle=acos(scalaire)
+
+                       symop=my_symmetries%rotmat(k)%mat
+                       name_sym=my_symmetries%rotmat(k)%name
+
                     endif
 
-                    call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
-                    call rotate_exchange(J,J_init,angle,axis)
+                    call rotate_exchange(J,J_init,symop)
 
                     !endif
 
                     write(output_unit,'(A,I6,A)')   ' Applying exchange tensor along bound ',i_shell,':'
+                    write(output_unit,'(2A)')       ' Applying symmetry operation ', trim(name_sym)
                     write(output_unit,'(A,2I6)')    '  atom types:', neigh%at_pair(:,shell)
                     write(output_unit,'(A,2I6)')    '  distance  :', io%pair(i_atpair)%dist(i_dist)
                     write(output_unit,'(A,9E16.8)') '  energy    :', J
@@ -204,8 +232,11 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
     integer         :: ind              !index in Karr space for given cell difference
     integer         :: ind3(3)          !index to calculate Karr position in each dimension
     integer         :: ind_mult(3)      !constant multiplicator to calculate ind from ind3
-    integer         :: i
-    real(8)         :: axis(3),angle,vec_tmp(3),bound_input(3),scalaire
+    integer         :: i,k
+    real(8)         :: axis(3),angle,vec_tmp(3),bound_input(3),scalaire,symop(3,3)
+    logical         :: found_sym
+    class(pt_grp),allocatable :: my_symmetries
+    character(len=30) :: name_sym
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
@@ -251,19 +282,37 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
                     ! rotate the exchange matrix to align it with the neighbor direction
                      ! rotation axis
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
-                    axis=rotation_axis(bound_input,vec_tmp)
-                    if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
-                    scalaire=dot_product(bound_input,vec_tmp)
-                    if (scalaire.ge.1.0d0) then
-                        angle=0.0d0
-                    elseif (scalaire.le.-1.0d0) then
-                        angle=pi
+                    do k=1,my_symmetries%n_sym
+                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                       if (found_sym) exit
+                    enddo
+
+                    if (k.gt.my_symmetries%n_sym) then
+                       write(output_unit,'(/a)') 'WARNING: symmetry not found - I use an arbitrary rotation'
+                       axis=rotation_axis(bound_input,vec_tmp)
+                       if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
+                       scalaire=dot_product(bound_input,vec_tmp)
+                       if (scalaire.ge.1.0d0) then
+                          angle=0.0d0
+                       elseif (scalaire.le.-1.0d0) then
+                          angle=pi
+                       else
+                          angle=acos(scalaire)
+                       endif
+                       call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
+                       call rotation_matrix_real(symop,angle,axis)
+                       name_sym="rotation matrix"
+                       write(output_unit,'(a,f8.3)') 'angle ', angle*180.0/pi
+                       write(output_unit,'(a,3f8.3/)') 'axis ', axis
+
                     else
-                        angle=acos(scalaire)
+
+                       symop=my_symmetries%rotmat(k)%mat
+                       name_sym=my_symmetries%rotmat(k)%name
+
                     endif
 
-                    call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
-                    call rotate_exchange(J,J_init,angle,axis)
+                    call rotate_exchange(J,J_init,symop)
 
                     !set the contributions in the operator array
                     Karr(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3,ind)=J
@@ -276,17 +325,12 @@ end subroutine
 
 
 
-subroutine rotate_exchange(mat_out,mat_in,theta,rotation_axis)
+subroutine rotate_exchange(mat_out,mat_in,rotmat)
    real(8), intent(out)   :: mat_out(:,:)
    real(8), intent(in)    :: mat_in(:,:)
-   real(8), intent(in)    :: theta,rotation_axis(:)
+   real(8), intent(in)    :: rotmat(:,:)
 
    real(8)                :: mat(3,3),sym_part(3,3),antisym_part(3,3)
-
-   if (abs(theta).lt.1.0d-8) then
-       mat_out=mat_in
-       return
-   endif
 
 ! decompose in symmetric and antisymmetric part
 
@@ -295,7 +339,7 @@ subroutine rotate_exchange(mat_out,mat_in,theta,rotation_axis)
 
 ! rotate only the antisymmetric part
 
-   call rotate_matrix(mat,antisym_part,theta,rotation_axis)
+   call rotate_matrix(mat,antisym_part,rotmat)
 
    mat_out=sym_part+mat
 

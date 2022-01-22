@@ -39,8 +39,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
 
     ! variable of the system
     type(t_cell)        :: my_motif
-    real(8),allocatable :: pos(:)
-    integer             :: io
     real(8)             :: time
     type(extpar_input)  :: extpar_io
     ! dummy variable
@@ -95,7 +93,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
 
     ! get the space group and the point group
     call find_group(my_lattice%areal,my_motif,my_lattice%periodic,my_lattice%dim_lat)
-    stop
 
     write(output_unit,'(///)') 
     call user_info(output_unit,time,'Start setting Hamiltonians',.false.)
