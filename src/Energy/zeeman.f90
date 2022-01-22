@@ -52,10 +52,10 @@ subroutine get_zeeman_H(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer,allocatable     :: connect(:,:)
 
     if(io%is_set)then
-        allocate(Htmp(3,lat%M%dim_mode),source=0.d0) !assume shape of B-field has to be 3
+        allocate(Htmp(lat%B%dim_mode,lat%B%dim_mode),source=0.d0) !assume shape of B-field has to be 3
         if (present(Ham_shell_pos)) then
            write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
-           allocate(Ham_shell_pos(lat%M%dim_mode,lat%M%dim_mode,1))
+           allocate(Ham_shell_pos(lat%B%dim_mode,lat%B%dim_mode,1))
            allocate(neighbor_pos_list(3,1))
            Ham_shell_pos=0.0d0
            neighbor_pos_list=0.0d0
@@ -63,9 +63,9 @@ subroutine get_zeeman_H(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
         Call lat%cell%get_mag_magmom(magmom)
         do i=1,size(magmom)
-            Htmp(1,(i-1)*3+1)=magmom(i)
-            Htmp(2,(i-1)*3+2)=magmom(i)
-            Htmp(3,(i-1)*3+3)=magmom(i)
+            Htmp((i-1)*3+1,(i-1)*3+1)=magmom(i)
+            Htmp((i-1)*3+1,(i-1)*3+2)=magmom(i)
+            Htmp((i-1)*3+1,(i-1)*3+3)=magmom(i)
         enddo
         Htmp=(mu_0*mu_B*io%c_zeeman) * Htmp
 

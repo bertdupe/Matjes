@@ -1,4 +1,4 @@
-      module m_sym_utils
+module m_sym_utils
 
       integer, allocatable :: corners(:,:)
       interface rot_mat
@@ -14,9 +14,9 @@
        module procedure pos_between2at_2D
       end interface pos_nei
 
-      contains
+contains
 !calculate the order of the z axis
-      integer function order_zaxis(r)
+integer function order_zaxis(r)
       use m_constants
       use m_vector, only : norm
       implicit none
@@ -45,7 +45,7 @@
       angle=dacos(ss)
       angle_oriented=angle*dsign(1.0d0,dasin(dsqrt(1-ss**2)))
 
-      end function angle_oriented
+end function angle_oriented
 
 ! ===============================================================
       ! calculate the reciprocal-mesh
@@ -53,7 +53,7 @@
       ! date 11/19/2013
       ! email deuchlerl@gmail.com
       !
-      integer function mesh_bz(order_z_axis,r,N)
+integer function mesh_bz(order_z_axis,r,N)
       use m_constants
       use m_vector, only : norm
 ! intent(in)
@@ -121,14 +121,14 @@
        stop
       endif
 
-      end function mesh_bz
+end function mesh_bz
 
 !
 ! function that gives the position of closest symmetry equivalent non magnetic atom
 ! between 2 magnetic atoms
 !
 
-      function pos_between2at_2D(pos_ref,pos,pos2,r)
+function pos_between2at_2D(pos_ref,pos,pos2,r)
       use m_vector, only : norm
       implicit none
       real(kind=8) :: pos_between2at_2D(3)
@@ -175,13 +175,13 @@
        endif
       enddo
 
-      end function pos_between2at_2D
+end function pos_between2at_2D
 
 !
 ! function that gives the position closest neighbor among the different supercell image
 ! with periodic boundary condition
 !
-      function pos_nei_2D(ix,iy,pos,r,dim_lat)
+function pos_nei_2D(ix,iy,pos,r,dim_lat)
       use m_vector, only : norm
       implicit none
       real(kind=8) :: pos_nei_2D(3)
@@ -210,13 +210,13 @@
       min_dist=minloc(table_dist,1)
       pos_nei_2D=table_pos(min_dist,:)
 
-      end function pos_nei_2D
+end function pos_nei_2D
 
 !
 ! function that gives the position closest neighbor among the different supercell image
 ! with periodic boundary condition. The position might not be on a spin but between the spin
 !
-      function pos_nei_2D_real(tip,site,r,dim_lat)
+function pos_nei_2D_real(tip,site,r,dim_lat)
       implicit none
       real(kind=8) :: pos_nei_2D_real(2)
       integer, intent(in) :: dim_lat(3)
@@ -278,12 +278,12 @@
       min_dist=minloc(table_dist,1)
       pos_nei_2D_user=table_pos(min_dist,:)
 
-      end function pos_nei_2D_user
+end function pos_nei_2D_user
 !
 ! function that gives the position closest neighbor among the different supercell image
 ! with periodic boundary condition
 !
-      function pos_nei_3D_SL(ix,iy,iz,pos,r,dim_lat)
+function pos_nei_3D_SL(ix,iy,iz,pos,r,dim_lat)
       use m_vector, only : norm
       implicit none
       real(kind=8) :: pos_nei_3D_SL(3)
@@ -312,13 +312,13 @@
       min_dist=minloc(table_dist,1)
       pos_nei_3D_SL=table_pos(min_dist,:)
 
-      end function pos_nei_3D_SL
+end function pos_nei_3D_SL
 !
 ! function that construct the rotation matrix of angle theta (in deg) with respect to arbitrary axis a
 ! source wikipedia.org/wiki/matrice_de_rotation
 ! +90 means that you are rotation anti clockwise
 !
-      function rot_mat_I(theta,a)
+function rot_mat_I(theta,a)
       use m_vector, only : norm
       use m_constants, only : pi
       implicit none
@@ -338,7 +338,7 @@
                 an(1)*an(3)*(1-c)-an(2)*s,an(2)*an(3)*(1-c)-an(1)*s,an(3)**2+(1-an(3)**2)*c/) &
                 ,(/3,3/))
 
-      end function rot_mat_I
+end function rot_mat_I
 
       function rot_mat_R(theta,a)
       use m_vector, only : norm
@@ -359,18 +359,61 @@
                 an(1)*an(3)*(1-c)-an(2)*s,an(2)*an(3)*(1-c)-an(1)*s,an(3)**2+(1-an(3)**2)*c/) &
                 ,(/3,3/))
 
-      end function rot_mat_R
+end function rot_mat_R
 
-      end module
+!
+! find the R(3) lattice vectors so that P.R-R=0
+!
+function look_translation(areal_rot,areal,periodic,dim_lat,translation)
+use m_vector, only : norm
+implicit none
+real(kind=8), intent(in) :: areal_rot(3),areal(3,3)
+real(kind=8), intent(in), optional :: translation(3)
+integer, intent(in) :: dim_lat(:)
+logical :: look_translation,periodic(:)
+!internal
+integer :: u,v,w
+real(kind=8) :: test_vec(3),eps(3)
+
+if (present(translation)) then
+   eps=translation
+else
+   eps=0.0d0
+endif
+
+look_translation=.false.
+do u=-2,2,1
+   do v=-2,2,1
+      do w=-2,2,1
+
+         test_vec=areal_rot-eps
+         if ((periodic(1)).and.(dim_lat(1).ne.1)) test_vec=test_vec+real(u)*areal(1,:)
+
+         if ((periodic(2)).and.(dim_lat(2).ne.1)) test_vec=test_vec+real(v)*areal(2,:)
+
+         if ((periodic(3)).and.(dim_lat(3).ne.1)) test_vec=test_vec+real(w)*areal(3,:)
+
+!
+! be very carefull here! If the positions are not given with enough precision, the symetries will not be found
+!
+
+         if (norm(test_vec).lt.1.0d-6) then
+            look_translation=.true.
+            return
+         endif
+
+      enddo
+   enddo
+enddo
+end function look_translation
 
 ! give all the possible corners of the direct space unit cell as a function of i_s
 ! the form of the output is
 ! ipu=is+corners(1)
 ! ipv=is+corners(2)
 ! ipuv=is+corners(3)
-      subroutine givemecorners(r,zorder)
+subroutine givemecorners(r,zorder)
       use m_constants, only : pi
-      use m_sym_utils
       use m_vector, only : norm
       implicit none
       integer  :: zorder
@@ -462,4 +505,7 @@
       enddo
 #endif
  
-      end subroutine givemecorners
+end subroutine givemecorners
+
+
+end module
