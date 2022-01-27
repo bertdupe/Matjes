@@ -244,7 +244,7 @@ H_out=0.0d0
 ! n_sym=get_num_sym_file()
 stop 'uncomment line 244 in symmetry_operators'
 allocate(symmetries(n_sym),invert_symmetries(n_sym))
-call read_symmetries(n_sym,symmetries)
+! call read_symmetries(n_sym,symmetries)
 
 do i=1,n_sym
   invert_symmetries(i)%name=symmetries(i)%name
