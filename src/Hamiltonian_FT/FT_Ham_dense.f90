@@ -61,7 +61,7 @@ end subroutine
 subroutine set_k(this,Hk_inp,k)
 class(FT_H_dense),intent(inout)       :: this
 type(H_inp_real_to_k),intent(in)      :: Hk_inp(:)
-real(8),intent(in)                    :: k(3)
+real(8),intent(in)                    :: k(:)
 
 real(8)     :: phase_r
 complex(8)  :: phase_c
