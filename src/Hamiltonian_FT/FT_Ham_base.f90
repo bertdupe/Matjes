@@ -66,14 +66,14 @@ abstract interface
         import FT_Ham_base,H_inp_real_to_k
         class(FT_Ham_base),intent(inout)   :: this
         type(H_inp_real_to_k),intent(in)   :: Hk_inp(:)
-        real(8),intent(in)                 :: k(3)
+        real(8),intent(in)                 :: k(:)
     end subroutine
 
     subroutine int_eval(this,Nin,eval,Nout)
         import FT_Ham_base
         class(FT_Ham_base),intent(inout)      :: this
         integer,intent(in)                    :: Nin  !size of eigenvalue input array
-        complex(8),intent(out)                :: eval(Nin)    !eigenvalue array
+        complex(8),intent(out)                :: eval(:)    !eigenvalue array
         integer,intent(out)                   :: Nout !calculated number of eigenvalues
     end subroutine
 
@@ -81,8 +81,8 @@ abstract interface
         import FT_Ham_base
         class(FT_Ham_base),intent(inout)    :: this
         integer,intent(in)                  :: Nin  !size of eigenvalue input array
-        complex(8),intent(out)              :: eval(Nin)
-        complex(8),intent(out)              :: evec(this%dimH,Nin)
+        complex(8),intent(out)              :: eval(:)
+        complex(8),intent(out)              :: evec(:,:)
         integer,intent(out)                 :: Nout !calculated number of eigenvalues
     end subroutine
 
