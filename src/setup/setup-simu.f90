@@ -120,7 +120,7 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     endif
 
     write(6,'(/,a,/)') 'the setup of the simulation is over'
-    write(6,'(I6,a)') my_lattice%ncell, ' unit cells'
+    write(6,'(I15,a)') my_lattice%ncell, ' unit cells'
     write(6,'(a)') '-----------------------------------------------'
     write(6,'(a)') ''
     write(6,'(a)') '-----------------------------------------------'

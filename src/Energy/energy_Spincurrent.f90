@@ -117,6 +117,7 @@ subroutine get_coupling_SC(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     atind_mag(2)=lat%cell%ind_mag(neigh%at_pair(2,i_triplet))
                     offset_mag=(atind_mag-1)*3
 
+
                     !positive contributions
                     Htmp(offset_mag(1)+2,ind(dim_modes_r,[offset_mag(2)+1,1]))= Hmag*diff_pos(2)     ! Mj_y Mi_x E_x r_y
                     Htmp(offset_mag(1)+3,ind(dim_modes_r,[offset_mag(2)+1,1]))= Hmag*diff_pos(3)     ! Mj_z Mi_x E_x r_z
@@ -161,5 +162,7 @@ subroutine get_coupling_SC(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
         Call mode_set_rankN_sparse(Ham%mode_r,"MU",lat,mat,1)
 #endif
     endif
+
 end subroutine
+
 end module
