@@ -5,6 +5,7 @@ use m_rotation, only : rotation_axis
 use m_vector, only : norm
 use m_sym_public
 use m_symmetry_base
+use m_sym_utils
 use, intrinsic :: iso_fortran_env, only : output_unit
 implicit none
 private
@@ -134,30 +135,33 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                        if (found_sym) exit
                     enddo
 
-                    if (k.gt.my_symmetries%n_sym) then
-                       write(output_unit,'(/a)') 'WARNING: symmetry not found - I use an arbitrary rotation'
-                       axis=rotation_axis(bound_input,vec_tmp)
-                       if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
-                       scalaire=dot_product(bound_input,vec_tmp)
-                       if (scalaire.ge.1.0d0) then
-                          angle=0.0d0
-                       elseif (scalaire.le.-1.0d0) then
-                          angle=pi
-                       else
-                          angle=acos(scalaire)
-                       endif
-                       call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
-                       call rotation_matrix_real(symop,angle,axis)
-                       name_sym="rotation matrix"
-                       write(output_unit,'(a,f8.3)') 'angle ', angle*180.0/pi
-                       write(output_unit,'(a,3f8.3/)') 'axis ', axis
+                    symop=my_symmetries%rotmat(k)%mat
+                    name_sym=my_symmetries%rotmat(k)%name
 
-                    else
-
-                       symop=my_symmetries%rotmat(k)%mat
-                       name_sym=my_symmetries%rotmat(k)%name
-
-                    endif
+!                    if (k.gt.my_symmetries%n_sym) then
+!                       write(output_unit,'(/a)') 'WARNING: symmetry not found - I use an arbitrary rotation'
+!                       axis=rotation_axis(bound_input,vec_tmp)
+!                       if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
+!                       scalaire=dot_product(bound_input,vec_tmp)
+!                       if (scalaire.ge.1.0d0) then
+!                          angle=0.0d0
+!                       elseif (scalaire.le.-1.0d0) then
+!                          angle=pi
+!                       else
+!                          angle=acos(scalaire)
+!                       endif
+!                       call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
+!                       call rotation_matrix_real(symop,angle,axis)
+!                       name_sym="rotation matrix"
+!                       write(output_unit,'(a,f8.3)') 'angle ', angle*180.0/pi
+!                       write(output_unit,'(a,3f8.3/)') 'axis ', axis
+!
+!                    else
+!
+!                       symop=my_symmetries%rotmat(k)%mat
+!                       name_sym=my_symmetries%rotmat(k)%name
+!
+!                    endif
 
                     call rotate_exchange(J,J_init,symop)
 
@@ -321,28 +325,6 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
         enddo
         Call H_fft%init_op(3*Nmag,Karr,ham_desc)
     endif
-end subroutine
-
-
-
-subroutine rotate_exchange(mat_out,mat_in,rotmat)
-   real(8), intent(out)   :: mat_out(:,:)
-   real(8), intent(in)    :: mat_in(:,:)
-   real(8), intent(in)    :: rotmat(:,:)
-
-   real(8)                :: mat(3,3),sym_part(3,3),antisym_part(3,3)
-
-! decompose in symmetric and antisymmetric part
-
-   sym_part=(mat_in+transpose(mat_in))/2.0d0
-   antisym_part=(mat_in-transpose(mat_in))/2.0d0
-
-! rotate only the antisymmetric part
-
-   call rotate_matrix(mat,antisym_part,rotmat)
-
-   mat_out=sym_part+mat
-
 end subroutine
 
 end module

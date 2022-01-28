@@ -115,6 +115,7 @@ end type
 
 type,extends(io_H_base) :: io_U_ASR
     type(Hr_pair),allocatable   :: pair(:)
+    type(Hr_pair_tensor),allocatable   :: pair_tensor(:)
     integer,allocatable         ::  attype(:)
     real(8)     :: c_ASR=1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
@@ -138,6 +139,20 @@ type,extends(io_H_base) :: io_H_SC_D
     real(8)     :: c_SC=-1.0d0
 end type
 
+type,extends(io_H_base) :: io_H_Ph4
+    integer,allocatable     :: at_type(:)
+    real(8),allocatable     :: val(:)
+end type
+
+type,extends(io_H_base) :: io_H_Ph_Biq
+    type(Hr_pair),allocatable   :: pair(:)
+end type
+
+type,extends(io_H_base) :: io_H_Force_tensor
+    type(Hr_pair_tensor),allocatable   :: pair(:)
+    real(8)     :: c_phtensor=-1.0d0
+end type
+
 type :: io_H
     type(io_H_aniso)            :: aniso
     type(io_H_zeeman)           :: zeeman
@@ -154,6 +169,9 @@ type :: io_H
     type(io_H_dipole)           :: dip
     type(io_H_Exchten)          :: Exchten
     type(io_H_SC_D)             :: SC
+    type(io_H_Ph4)              :: Ph4
+    type(io_H_Ph_Biq)           :: U_biq
+    type(io_H_Force_tensor)     :: U_foten
 end type
 
 contains

@@ -29,14 +29,16 @@ contains
 ! find the linear combination so that (P.R-R) must be 0
 ! Continue until there are no symmetry operation left
 !
-subroutine get_latt_sym(this,areal,number_sym,sym_index)
+subroutine get_latt_sym(this,areal,number_sym,sym_index,periodic,dim_lat)
 class(pt_grp_dense), intent(in)    :: this
 real(kind=8)       , intent(in)    :: areal(3,3)
 integer            , intent(inout) :: number_sym,sym_index(:)
+integer      ,intent(in)     :: dim_lat(:)
+logical      ,intent(in)     :: periodic(:)
 
 integer :: i,j
 real(kind=8) :: rtest(3,3)
-logical :: found(3)
+logical :: found
 
 number_sym=0
 ! loop over all symmetry
@@ -53,11 +55,9 @@ do i=1,size(sym_index)
 ! I have to take the transpose of rtest to have it written in lign again
 !
 
-    do j=1,3
-       found(j)=look_translation(rtest(:,j),areal,(/.true.,.true.,.true./),(/2,2,2/))
-    enddo
+    found=look_translation(rtest,areal,periodic,dim_lat)
 
-    if (all(found)) then
+    if (found) then
        number_sym=number_sym+1
        sym_index(number_sym)=i
     endif

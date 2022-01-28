@@ -22,12 +22,13 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(in)               :: lat
     character(len=len_desc)     :: desc=""
     integer                     :: i_H,N_ham
-    logical                     :: use_Ham(4)
+    logical                     :: use_Ham(5)
 
     use_ham(1)=H_io%J%is_set.and.H_io%J%fft
     use_ham(2)=H_io%D%is_set.and.H_io%D%fft
     use_ham(3)=H_io%aniso%is_set.and.H_io%aniso%fft
     use_ham(4)=H_io%dip%is_set.and.H_io%dip%fft
+    use_ham(5)=H_io%SC%is_set.and.H_io%SC%fft
 
     N_ham=count(use_ham)
     if(N_ham<1) return  !nothing to do here
@@ -53,6 +54,11 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_dipolar_fft(Ham_res(i_H),H_io%dip,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
+    !spin current DMI
+!    if(use_ham(5))then
+!        Call get_coupling_SC_fft(Ham_res(i_H),H_io%SC,lat)
+!        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+!    endif
 
     write(output_unit,'(//A,I3,A)') "The following ",N_ham," Hamiltonians in fourier-space have been set:"
     do i_H=1,N_ham

@@ -2,7 +2,7 @@ module m_setup_DM
 use m_grp_sym
 use m_derived_types, only : t_cell
 use m_derived_types, only : lattice
-use m_basic_types, only : symop
+use m_basic_types
 use m_vector, only : cross,norm
 
 
@@ -61,6 +61,7 @@ inquire(file='symmetries.out',exist=inquire_file)
 if (.not.inquire_file) then
 !   call get_group(my_lattice%areal,my_motif,my_lattice%periodic,my_lattice%dim_lat)
 endif
+
 
 ! n_sym=get_num_sym_file()
 stop 'uncomment 65 in setup_DM and 62'

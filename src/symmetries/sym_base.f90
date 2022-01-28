@@ -56,11 +56,13 @@ abstract interface
         integer                        :: N
     end function
 
-    subroutine latt_sym(this,areal,number_sym,sym_index)
+    subroutine latt_sym(this,areal,number_sym,sym_index,periodic,dim_lat)
         import pt_grp
         class(pt_grp),intent(in)       :: this
         real(8)      ,intent(in)       :: areal(3,3)
         integer      ,intent(inout)    :: number_sym,sym_index(:)
+        integer      ,intent(in)     :: dim_lat(:)
+        logical      ,intent(in)     :: periodic(:)
     end subroutine
 
     subroutine pt_sym(this,areal,number_sym,sym_index,my_motif,periodic,dim_lat)
