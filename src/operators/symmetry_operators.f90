@@ -215,16 +215,6 @@ end subroutine
 
 
 
-
-
-
-
-
-
-
-
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 ! subroutine that print stupid error message
