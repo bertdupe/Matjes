@@ -1,7 +1,11 @@
 module m_general_force_tensor
 use, intrinsic :: iso_fortran_env, only : output_unit
-use m_input_H_types, only: io_H_FoTens
+use m_input_H_types, only: io_H_Force_tensor
+use m_rotation, only : rotation_axis
 use m_sym_public
+use m_symmetry_base
+use m_rotation_matrix
+use m_sym_utils
 implicit none
 
 character(len=*),parameter  :: ham_desc="Force tensor"
@@ -17,10 +21,11 @@ subroutine read_Ftensor_input(io_param,fname,io)
     use m_io_utils
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
-    type(io_H_Ph),intent(out)        :: io
+    type(io_H_Force_tensor),intent(out)        :: io
 
     write(6,'(a)') 'reading forces in Ha/Bohr^2'
     Call get_parameter(io_param,fname,'force_tensor',io%pair,io%is_set)
+    if (io%is_set) Call get_parameter(io_param,fname,'c_phtensor',io%c_phtensor)
 
     inquire(file=fname_phonon,exist=read_from_file)
     if (read_from_file) write(6,'(a)') 'reading phonon from phonon_harmonic.in'
@@ -30,15 +35,16 @@ end subroutine
 subroutine get_Forces_tensor(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get coupling in t_H Hamiltonian format
     use m_H_public
-    use m_derived_types
+    use m_derived_types, only: lattice
     use m_setH_util,only: get_coo
     use m_neighbor_type, only: neighbors
     use m_forces_from_file, only: get_forces_file
     use m_mode_public
     use m_vector, only : norm
+    use m_constants, only : pi
 
     class(t_H),intent(inout)                         :: Ham
-    type(io_H_Ph),intent(in)                         :: io
+    type(io_H_Force_tensor),intent(in)               :: io
     type(lattice),intent(in)                         :: lat
     real(8),optional,allocatable,intent(inout)       :: neighbor_pos_list(:,:)
     real(8),optional,allocatable,intent(inout)       :: Ham_shell_pos(:,:,:)
@@ -60,9 +66,12 @@ subroutine get_Forces_tensor(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     real(8)         :: F(3,3),F_init(3,3)            !magnitude of Hamiltonian parameter
     integer         :: atind_ph(2)      !index of considered atom in basis of phonon atoms (1:NPh)
     integer         :: offset_ph(2)     !offset for start in dim_mode of chosed phonon atom
-    real(8)         :: norm_vec_neigh,vec_neigh(3)
+    real(8)         :: bound_input(3)         ! first vector along which the interactions are given. It MUST be x=(1.0,0.0,0.0)
+    real(8)         :: vec_neigh(3),axis(3),angle,vec_tmp(3),scalaire,symop(3,3)
     class(pt_grp),allocatable :: my_symmetries
     character(len=30) :: name_sym
+    logical         :: found_sym
+    integer         :: k,shell
 
     ! conversion factor Ha/Bohr2 to eV/nm2
     ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
@@ -124,22 +133,60 @@ subroutine get_Forces_tensor(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     Htmp=0.0d0
                     offset_ph=(atind_ph-1)*3
                     if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=vec_neigh
-                    if (read_from_file) then
-                       ! (Hamiltonian , name of the file , relative position of the neighbor , offset)
-                       write(output_unit,'(/2A)') 'Hamiltonian from DFT is in Ha/Bohr2'
-                       F=F*HaBohrsq_to_Evnmsq
-                       call get_forces_file(Htmp,fname_phonon,neigh%diff_vec(:,i_pair),offset_ph)
-                       Htmp=Htmp*HaBohrsq_to_Evnmsq
-                    else
-                       write(output_unit,'(/2A)') 'Hamiltonian directly from input is in eV/nm2'
-                       norm_vec_neigh=norm(vec_neigh)
-                       Htmp(offset_ph(1)+1,offset_ph(2)+1)=F*abs(vec_neigh(1))/norm_vec_neigh
-                       Htmp(offset_ph(1)+2,offset_ph(2)+2)=F*abs(vec_neigh(2))/norm_vec_neigh
-                       Htmp(offset_ph(1)+3,offset_ph(2)+3)=F*abs(vec_neigh(3))/norm_vec_neigh
-                    endif
+
+                    ! rotate the exchange matrix to align it with the neighbor direction
+                     ! rotation axis
+                    vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
+
+                    do k=1,my_symmetries%n_sym
+                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                       if (found_sym) exit
+                    enddo
+
+                    symop=my_symmetries%rotmat(k)%mat
+                    name_sym=my_symmetries%rotmat(k)%name
+
+!                    if (k.gt.my_symmetries%n_sym) then
+!                       write(output_unit,'(/a)') 'WARNING: symmetry not found - I use an arbitrary rotation'
+!                       axis=rotation_axis(bound_input,vec_tmp)
+!                       if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
+!                       scalaire=dot_product(bound_input,vec_tmp)
+!                       if (scalaire.ge.1.0d0) then
+!                          angle=0.0d0
+!                       elseif (scalaire.le.-1.0d0) then
+!                          angle=pi
+!                       else
+!                          angle=acos(scalaire)
+!                       endif
+!                       call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
+!                       call rotation_matrix_real(symop,angle,axis)
+!                       name_sym="rotation matrix"
+!                       write(output_unit,'(a,f8.3)') 'angle ', angle*180.0/pi
+!                       write(output_unit,'(a,3f8.3/)') 'axis ', axis
+!
+!                    else
+!
+!                       symop=my_symmetries%rotmat(k)%mat
+!                       name_sym=my_symmetries%rotmat(k)%name
+!
+!                    endif
+
+                    call rotate_force(F,F_init,symop)
+
+                    !endif
+
+                    write(output_unit,'(A,I6,A)')   ' Applying exchange tensor along bound ',i_shell,':'
+                    write(output_unit,'(2A)')       ' Applying symmetry operation ', trim(name_sym)
+                    write(output_unit,'(A,2I6)')    '  atom types:', neigh%at_pair(:,shell)
+                    write(output_unit,'(A,2I6)')    '  distance  :', io%pair(i_atpair)%dist(i_dist)
+                    write(output_unit,'(A,9E16.8)') '  energy    :', F
+                    write(output_unit,'(A,3E16.8/)') ' along the bound :', neigh%diff_vec(:,i_pair)
+
+                    Htmp(offset_ph(1)+1:offset_ph(1)+3,offset_ph(2)+1:offset_ph(2)+3)=F
+
                     connect_bnd(2)=neigh%ishell(i_pair)
 
-                    Htmp=Htmp*io%c_ph
+                    Htmp=Htmp*io%c_phtensor
 
 
                     Call get_coo(Htmp,val_tmp,ind_tmp)

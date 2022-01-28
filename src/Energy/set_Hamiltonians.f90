@@ -144,7 +144,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
     !plugin general force tensor
-    if(use_ham(16))then
+    if(use_ham(17))then
         Call get_Forces_tensor(Ham_res(i_H),H_io%U_foten,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif

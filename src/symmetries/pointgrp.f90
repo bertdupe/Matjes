@@ -39,7 +39,7 @@ number_sym_lat=all_symmetries%get_N_sym()
 number_sym=number_sym_lat
 allocate(sym_index(number_sym_lat),source=0)
 
-call all_symmetries%get_latt_sym(areal,number_sym_lat,sym_index)
+call all_symmetries%get_latt_sym(areal,number_sym_lat,sym_index,periodic,dim_lat)
 
 write(output_unit,'(/,a,I2,a,/)') 'The lattice has  ',number_sym_lat,'  symmetrie operations'
 
@@ -55,7 +55,6 @@ deallocate(all_symmetries,my_symmetries)
 call user_info(output_unit,time,'done',.true.)
 
 end subroutine find_group
-
 
 
 end module m_grp_sym

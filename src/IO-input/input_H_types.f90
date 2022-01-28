@@ -115,6 +115,7 @@ end type
 
 type,extends(io_H_base) :: io_U_ASR
     type(Hr_pair),allocatable   :: pair(:)
+    type(Hr_pair_tensor),allocatable   :: pair_tensor(:)
     integer,allocatable         ::  attype(:)
     real(8)     :: c_ASR=1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
@@ -149,6 +150,7 @@ end type
 
 type,extends(io_H_base) :: io_H_Force_tensor
     type(Hr_pair_tensor),allocatable   :: pair(:)
+    real(8)     :: c_phtensor=-1.0d0
 end type
 
 type :: io_H

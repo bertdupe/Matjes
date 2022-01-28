@@ -38,7 +38,7 @@ module m_rw_H
         Call read_ME_J_input(io_param,fname,H_io%ME_J)
         Call read_ME_D_input(io_param,fname,H_io%ME_D)
         Call read_F_input(io_param,fname,H_io%F)
-        Call read_ASR_Ph_input(io_param,fname,H_io%ASR_Ph)
+        Call read_ASR_Ph_input(io_param,fname,H_io%ASR_ph)
         Call read_stark_input(io_param,fname,H_io%stark)
         call read_Mag_Biq_input(io_param,fname,H_io%M_biq)
         call read_sp4_input(io_param,fname,H_io%sp4)
@@ -47,7 +47,7 @@ module m_rw_H
         call read_PH4_input(io_param,fname,H_io%Ph4)
         call read_SC_input(io_param,fname,H_io%SC)
         call read_Ph_Biq_input(io_param,fname,H_io%U_biq)
-        call read_Ftensor_input(io_param,fname,H_io%U_biq)
+        call read_Ftensor_input(io_param,fname,H_io%U_foten)
 
         call close_file(fname,io_param)
     end subroutine
