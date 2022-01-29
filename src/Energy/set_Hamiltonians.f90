@@ -31,6 +31,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_phonon_rank4, only : get_PH4
     use m_Ph_Biq, only : get_Ph_Biq
     use m_general_force_tensor, only : get_Forces_tensor
+    use m_dipolar_phonon, only: get_dipolar_ph
 !    use m_phonon_rank4, only : get_PH4
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
@@ -39,7 +40,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(in)           :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(17)
+    logical :: use_Ham(18)
 
 
     use_ham(1)=H_io%J%is_set.and..not.H_io%J%fft
@@ -59,6 +60,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(15)=H_io%PH4%is_set
     use_ham(16)=H_io%U_biq%is_set
     use_ham(17)=H_io%U_foten%is_set
+    use_ham(18)=H_io%dip_ph%is_set.and..not.H_io%dip_ph%fft
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
@@ -146,6 +148,11 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     !plugin general force tensor
     if(use_ham(17))then
         Call get_Forces_tensor(Ham_res(i_H),H_io%U_foten,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin dipolar phonon
+    if(use_ham(18))then
+        Call get_dipolar_ph(Ham_res(i_H),H_io%dip_ph,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
 
