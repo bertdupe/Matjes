@@ -6,8 +6,12 @@ real(kind=8), Parameter :: k_B=0.000086173324d0
 real(kind=8), Parameter :: mu_0=1.0d0
 ! bohr magneton, units eV/T
 real(kind=8), Parameter :: mu_B=0.0000578838180661d0
-! dielectric permeability of vacuum, units fs**2/nm**2
-real(kind=8), Parameter :: epsilon_0=0.00001112650056053618d0
+! dielectric permeability of vacuum, units C**2.s**2/kg/m**3=C**2.m**2/J/m**3
+! real(kind=8), Parameter :: epsilon_0=8.8541878128d-12
+! dielectric permeability of vacuum, units C**2.nm**2/eV/nm**3
+! dielectric permeability of vacuum, units C**2.m**2/J/m**3=1.0d18*C**2.nm**2/6.242d18/eV/1.0d27*nm**3
+! dielectric permeability of vacuum, units C**2.nm**2/eV/nm**3
+real(kind=8), Parameter :: epsilon_0=1.41848571175905158603d-39
 ! speed of light, units nm/fs
 real(kind=8), Parameter :: c=299.792458d0
 !      real(kind=8), Parameter :: mu_B=1.0d0
@@ -17,8 +21,30 @@ real(kind=8), Parameter :: c=299.792458d0
 real(kind=8), parameter :: hbar=6.58211928d-1
 !      real(kind=8), parameter :: hbar=1.0d0
 !electron charge in Coulomb
-real(kind=8), parameter :: qel=1.60217657d-19
+real(8), parameter :: qel=1.60217657d-19
 real(8),parameter       :: pi= 3.14159265358979323846264338327950288d0
+
+! basic unit convert
+!!!!!!!!!!!!!!!!!!!!
+! Energies
+!!!!!!!!!!!!!!!!!!!!
+real(8), parameter :: J_to_eV=6.242d18
+real(8), parameter :: Ha_to_eV=27.2114d0
+!!!!!!!!!!!!!!!!!!!!
+! length
+!!!!!!!!!!!!!!!!!!!!
+real(8), parameter :: m_to_nm=1.0d9
+real(8), parameter :: A_to_nm=0.1d0
+real(8), parameter :: bohr_to_nm=0.0529177d0
+!!!!!!!!!!!!!!!!!!!!
+! masses
+!!!!!!!!!!!!!!!!!!!!
+real(8), parameter :: kg_to_amu=6.022d26
+!!!!!!!!!!!!!!!!!!!!
+! time
+!!!!!!!!!!!!!!!!!!!!
+real(8), parameter :: s_to_fs=1.0d15
+
 contains
 
 ! function that spits out the unit matrix
