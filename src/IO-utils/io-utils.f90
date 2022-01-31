@@ -112,20 +112,24 @@ implicit none
 integer, intent(in) :: io
 real(kind=8), intent(in) :: spin(:,:)
 ! internale variables
-Integer :: i,shape_spin(2)
+Integer :: i,shape_spin(2),j,counter
 real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi
 
 !     Constants used for the color definition
 widthc=5.0d0
 Delta =pi*2.0d0/3.0d0
 shape_spin=shape(spin)
+counter=0
 
 do i=1,shape_spin(2)
+  do j=1,shape_spin(1),3
 
-   call get_colors(Rc,Gc,Bc,theta,phi,spin(:,i))
+   counter=counter+1
 
-   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(i),',',Rc,',',Bc,',',Gc,')'
+   call get_colors(Rc,Gc,Bc,theta,phi,spin(j:j+2,i))
 
+   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(counter),',',Rc,',',Bc,',',Gc,')'
+  enddo
 enddo
 
 end subroutine dump_config_spinse_spin
@@ -422,7 +426,6 @@ do i=1,N
    integer_number=convert(i)
    var_name_local=convert(var_name,integer_number)
    length_string=len_trim(var_name_local)
-   write(*,*) var_name_local
    call get_parameter(io,fname,var_name_local(1:length_string),stride,coeff((i-1)*stride+1:i*stride))
 enddo
 
@@ -671,7 +674,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
     type(Hr_pair_single_tensor),allocatable        :: Hpair_tmp(:)
     type(Hr_pair_tensor), allocatable              :: Hpairs_tensor_tmp(:)
     integer :: attype(2),dist
-    real(8) :: val(9)
+    real(8) :: val(9),bound(3)
 
     integer :: Npair,Nnonzero
     integer :: nread,i,ii,j
@@ -680,6 +683,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
 
     nread=0
     val=0.0d0
+    bound=0.0d0
     Call set_pos_entry(io,fname,var_name,success)
     read(io,'(a)',iostat=stat) str
     if(success)then
@@ -724,7 +728,7 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
         ii=1
         do i=1,Npair
             val=0.0d0
-            read(io,*,iostat=stat) attype,dist,val
+            read(io,*,iostat=stat) attype,dist,val,bound
             if(all(val==0.0d0)) cycle
             if(attype(2)<attype(1))then
                 j        =attype(2)
@@ -734,10 +738,12 @@ subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
             Hpair_tmp(ii)%attype=attype
             Hpair_tmp(ii)%dist=dist
             Hpair_tmp(ii)%val=val
+            Hpair_tmp(ii)%bound=bound
             write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
             write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
             write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
-            write(output_unit,'(A,9E16.8/)') '  energy    :', Hpair_tmp(ii)%val
+            write(output_unit,'(A,9E16.8)') '  energy    :', Hpair_tmp(ii)%val
+            write(output_unit,'(A,3E16.8/)') ' along the bound :', Hpair_tmp(ii)%bound
             ii=ii+1
         enddo
 

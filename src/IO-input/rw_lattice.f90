@@ -33,6 +33,7 @@ do j=1,3
    ss=norm(net(j,:))
    if (ss.lt.1.0d-8) stop 'lattice vectors are crap'
    net(j,:)=net(j,:)/ss
+   a(j)=a(j)*ss
 enddo
 
 rot_angles=0.0d0

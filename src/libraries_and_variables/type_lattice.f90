@@ -245,8 +245,8 @@ subroutine init_order(this,cell,extpar_io)
         STOP 'Please tell Bertrand if you do not think this should crash'
     endif
     this%dim_modes(1)=this%nmag*3
-    if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) this%dim_modes(2)=3
-    if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) this%dim_modes(3)=3
+    if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) this%dim_modes(2)=3*(this%nph+this%nmag)
+    if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) this%dim_modes(3)=3*(this%nph+this%nmag)
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) this%dim_modes(4)=1
     this%dim_modes(5)=this%nph*3
     if(extpar_io%enable_w)then

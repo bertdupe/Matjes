@@ -22,6 +22,7 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     use m_neighbor_type
     use m_hamiltonian_collection, only: hamiltonian
     use m_diagonalization_Hk
+    use m_grp_sym
     
     ! this subroutine is used only to setup the simulation box
     ! it reads first the parameters of the simulation i.e. inp file
@@ -38,8 +39,6 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
 
     ! variable of the system
     type(t_cell)        :: my_motif
-    real(8),allocatable :: pos(:)
-    integer             :: io
     real(8)             :: time
     type(extpar_input)  :: extpar_io
     ! dummy variable
@@ -92,6 +91,9 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     ! write the positions into a file
     Call print_positions(my_lattice,time)
 
+    ! get the space group and the point group
+    call find_group(my_lattice%areal,my_motif,my_lattice%periodic,my_lattice%dim_lat)
+
     write(output_unit,'(///)') 
     call user_info(output_unit,time,'Start setting Hamiltonians',.false.)
     keep_resolved_H=io_simu%io_Energy_detail.or..True.  !need to change where all Hamiltonian data is kept
@@ -118,7 +120,7 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     endif
 
     write(6,'(/,a,/)') 'the setup of the simulation is over'
-    write(6,'(I6,a)') my_lattice%ncell, ' unit cells'
+    write(6,'(I15,a)') my_lattice%ncell, ' unit cells'
     write(6,'(a)') '-----------------------------------------------'
     write(6,'(a)') ''
     write(6,'(a)') '-----------------------------------------------'

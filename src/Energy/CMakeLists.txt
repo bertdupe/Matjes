@@ -21,4 +21,7 @@ src/Energy/forces_from_file.f90
 src/Energy/4spin.f90
 src/Energy/Exchange_Heisenberg_general.f90
 src/Energy/energy_Spincurrent.f90
+src/Energy/phonon_biquadratic.f90
+src/Energy/phonon_rank4.f90
+src/Energy/general_force_tensor.f90
 )

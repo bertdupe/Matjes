@@ -40,7 +40,7 @@ end subroutine
 subroutine calc_eval(this,Nin,eval,Nout)
     class(FT_Ham_zheev),intent(inout)  :: this
     integer,intent(in)                 :: Nin  !size of eigenvalue input array
-    complex(8),intent(out)             :: eval(Nin)    !eigenvalue array
+    complex(8),intent(out)             :: eval(:)    !eigenvalue array
     integer,intent(out)                :: Nout !calculated number of eigenvalues
     !internal
     integer                 :: info,lcwork,lrwork
@@ -69,8 +69,8 @@ end subroutine
 subroutine calc_evec(this,Nin,eval,evec,Nout)
     class(FT_Ham_zheev),intent(inout)   :: this
     integer,intent(in)                  :: Nin  !size of eigenvalue input array
-    complex(8),intent(out)              :: eval(Nin)
-    complex(8),intent(out)              :: evec(this%io_H%dimH,Nin)
+    complex(8),intent(out)              :: eval(:)
+    complex(8),intent(out)              :: evec(:,:)
     integer,intent(out)                 :: Nout !calculated number of eigenvalues
     !internal
     integer                 :: info,lcwork,lrwork
