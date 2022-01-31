@@ -172,6 +172,7 @@ type :: io_H
     type(io_H_Ph4)              :: Ph4
     type(io_H_Ph_Biq)           :: U_biq
     type(io_H_Force_tensor)     :: U_foten
+    type(io_H_dipole)           :: dip_ph
 end type
 
 contains
