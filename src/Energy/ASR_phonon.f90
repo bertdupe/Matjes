@@ -20,13 +20,13 @@ subroutine read_ASR_Ph_input(io_param,fname,io)
     integer,intent(in)              :: io_param
     character(len=*), intent(in)    :: fname
     type(io_U_ASR),intent(out)      :: io
-    logical                         :: cancel_ASR
+    logical                         :: dumy_ASR
 
-    cancel_ASR=.False.
-    Call get_parameter(io_param,fname,'cancel_ASR',cancel_ASR)
-    if (.not.cancel_ASR) then
-      Call get_parameter(io_param,fname,'phonon_harmonic',io%pair,io%is_set)
-      Call get_parameter(io_param,fname,'force_tensor',io%pair_tensor,io%is_set)
+    Call get_parameter(io_param,fname,'set_ASR',io%is_set)
+
+    if (io%is_set) then
+      Call get_parameter(io_param,fname,'phonon_harmonic',io%pair,dumy_ASR)
+      Call get_parameter(io_param,fname,'force_tensor',io%pair_tensor,dumy_ASR)
 
       inquire(file='phonon_harmonic.in',exist=read_from_file)
       if (read_from_file) write(6,'(a)') 'reading ASR from phonon_harmonic.in'
@@ -74,7 +74,6 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
     real(8), parameter  :: HaBohrsq_to_Evnmsq = 9717.38d0
     real(8), parameter  :: HaBohr_to_Evnm = 514.2208619083232d0
-
 
     if(io%is_set)then
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
@@ -165,9 +164,9 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     Htmp=0.0d0
 
                     if (allocated(io%pair)) then
-                       Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F*abs(vec_neigh(1))/norm_vec_neigh/2.0d0
-                       Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F*abs(vec_neigh(2))/norm_vec_neigh/2.0d0
-                       Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F*abs(vec_neigh(3))/norm_vec_neigh/2.0d0
+                       Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F*abs(vec_neigh(1))/norm_vec_neigh
+                       Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F*abs(vec_neigh(2))/norm_vec_neigh
+                       Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F*abs(vec_neigh(3))/norm_vec_neigh
                     endif
 
                     if (allocated(io%pair_tensor)) then
@@ -183,8 +182,10 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                        call rotate_exchange(F_rot,F_tens,symop)
 
-                       Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=F_rot
+                       Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=io%c_ASR*F_rot
                     endif
+
+                    Htmp=Htmp/2.0d0
 
                     if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Ham_shell_pos(:,:,1)+Htmp
 
@@ -194,7 +195,7 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
 
                     !fill Hamiltonian type
-                    Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,2)
+                    Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,1)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
                     Call Ham_tmp%destroy()
@@ -206,9 +207,9 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     Htmp=0.0d0
 
                     if (allocated(io%pair)) then
-                       Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F*abs(vec_neigh(1))/norm_vec_neigh/2.0d0
-                       Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F*abs(vec_neigh(2))/norm_vec_neigh/2.0d0
-                       Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F*abs(vec_neigh(3))/norm_vec_neigh/2.0d0
+                       Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F*abs(vec_neigh(1))/norm_vec_neigh
+                       Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F*abs(vec_neigh(2))/norm_vec_neigh
+                       Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F*abs(vec_neigh(3))/norm_vec_neigh
                     endif
 
                     if (allocated(io%pair_tensor)) then
@@ -223,15 +224,17 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                        call rotate_exchange(F_rot,F_tens,symop)
 
-                       Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=F_rot
+                       Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=io%c_ASR*F_rot
                     endif
+
+                    Htmp=Htmp/2.0d0
 
                     if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Ham_shell_pos(:,:,1)+Htmp
 
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type
-                    Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,2)
+                    Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,1)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
 

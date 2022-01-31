@@ -136,7 +136,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type
-                    Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"UU",lat,0)
+                    Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"UU",lat,2)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
                     if (present(Ham_shell_pos)) then
