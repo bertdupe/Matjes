@@ -1,9 +1,9 @@
 module m_dipolar_phonon
-!module which contains the type to calculate the magnetic dipolar interaction using the discrete fourier-transformation of the FFTW3 library (and the slow explicit routine get_dipolar not described here anymore).
+!module which contains the type to calculate the electrical dipolar interaction using the discrete fourier-transformation of the FFTW3 library (and the slow explicit routine get_dipolar not described here anymore).
 
 !The main procedure is implemented along: N. Hayashi et al., Jpn. J. Appl. Phys. 35 6065 (1996)
-!The basic idea is that the effective field H of the dipolar interaction (DDI) is a convolution between the magnetic moments (M) and the demagnetization tensor (K).
-!Hence the effective field can be calculated as the inverse fourier transform of the product between the fourier-transformed magnetic moments and the fourier-transformed demagnetization tensor.
+!The basic idea is that the effective field H of the dipolar interaction (DDI) is a convolution between the electrical dipole moments (M) and the depolarization tensor (K).
+!Hence the effective field can be calculated as the inverse fourier transform of the product between the fourier-transformed dipolar moments and the fourier-transformed depolarization tensor.
 !The FT of K has to be calculated only once.
 
 !In case of periodic boundary conditions that is relatively straight-forwards, only the contributions of the periodic images of K have to be summed up to a certain cutoff.
@@ -12,14 +12,14 @@ module m_dipolar_phonon
 !However, I seemingly failed to understand how exactly the enlarged K has to be constructed and implemented something of which I am not sure if it is what is described in the paper, however it seems to work and makes sense to me.
 !if K(i) corresponds to the interaction between the M at the 0-site and at the -i-site ((-N+1,...,-1,0,1,...N-1)-sites), then I implemented the K-array as
 ![K(0),K(1),...,K(N-1),0,K(-N+1),...,K(-1)], instead of what is in the paper which I am not sure I correctly understand
-!the corresponding M array is [M(0),M(1),...,M(N-1),0,...,0]
-!notice that K(1) is actually a (3*Nmag,3*Nmag) tensor and M(1) is [Mx,My,Mz], so for H there also has to be a matrix.vector product.
+!the corresponding M array is [U(0),U(1),...,U(N-1),0,...,0]
+!notice that K(1) is actually a (3*Nph,3*Nph) tensor and U(1) is [Ux,Uy,Uz], so for H there also has to be a matrix.vector product.
 !The FT in of each component is done using the howmany-feature from FFTW3.
 
-!The K (3*Nmag,3*Nmag) components are expressed as:  K(\alpha,\beta)= 1/2*\mu_0 /(4*\pi) \sum_{ij,i/=j} \mu_i \mu_j \frac{3 f({\alpha,\beta}) - \delta_{\alpha,\beta}}{r^3}
-!where \mu_0 is the vacuum permeability, \mu_i is the magetic moment of the atom_i, r is the distance between site i and j, f{\alpha,\beta} gives the normalized position difference product of the \alpha and \beta component, and
+!The K (3*Nph,3*Nph) components are expressed as:  K(\alpha,\beta)= 1/2/\epsilon_0 /(4*\pi) \sum_{ij,i/=j} \Z_i \Z_j \frac{3 f({\alpha,\beta}) - \delta_{\alpha,\beta}}{r^3}
+!where \epsilon_0 is the vacuum permeability, \Z_i is the electrical dipole moment of the atom_i, r is the distance between site i and j, f{\alpha,\beta} gives the normalized position difference product of the \alpha and \beta component, and
 !\delta_{\alpha,\beta} is the kronecker delta between \alpha and \beta
-!This corresponds to the conventional DDI Hamiltonian definitions, replacing the M_{\alpha} M_{\beta} with the compenents only.
+!This corresponds to the conventional DDI Hamiltonian definitions, replacing the U_{\alpha} U_{\beta} with the compenents only.
 
 
 use, intrinsic :: iso_fortran_env, only : output_unit
@@ -32,13 +32,11 @@ public read_dip_ph_input, get_dipolar_ph, get_dipolar_ph_fft
 
 character(len=*),parameter  :: ham_desc="phonon dipolar"
 
-!Matjes length scale is nm, magnetic moments are in bohr magneton mu_b, energy shall be in eV
+!Matjes length scale is nm, dipolar moments are in C.nm, energy shall be in eV
 !mu_0*mu_b^2/(nm^3)  * J_to_eV
-!mu_0=1.25663706212d-6  kg*m/s^2/A^2
-!mu_b=9.2740100783d-24  A*m^2
-!nm=1.0d-9  m
-!J_to_eV=1/1.602176634d-19
-real(8),parameter   ::  dip_pref=6.745817653234234066975d-7
+!epsilon_0=1.25663706212d-6  kg*m/s^2/A^2
+! dielectric permeability of vacuum, units C**2.nm**2/eV/nm**3
+! epsilon_0=1.41848571175905158603d-39
 
 contains
 
@@ -57,8 +55,8 @@ end subroutine
 
 subroutine get_dipolar_ph_fft(dip,io,lat)
     !main routine to describe the dipolar interaction using the discrete fourier transformation
-    use m_constants, only : pi
-    use m_fft_H_base, only: fft_H
+    use m_constants, only : pi,epsilon_0
+    use m_fft_H_base, only : fft_H
 !$  use omp_lib
     class(fft_H),intent(inout)              :: dip
     type(io_H_dipole),intent(in)            :: io
@@ -171,7 +169,7 @@ subroutine get_dipolar_ph_fft(dip,io,lat)
             Karr(:,:,i_k)=Karr(:,:,i_k)*Zborn_prod
         enddo
         !get correct prefractor for K
-        Karr=-Karr*dip_pref*0.5d0*0.25d0/pi
+        Karr=-Karr/epsilon_0*0.5d0*0.25d0/pi
         Call dip%init_op(3*Nph,Karr,ham_desc)
     endif
 end subroutine
@@ -186,7 +184,7 @@ subroutine get_dipolar_ph(Ham,io,lat)
     use m_mode_public
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
-    use m_constants, only : pi
+    use m_constants, only : pi,epsilon_0
 
     class(t_H),intent(inout)            :: Ham  !Hamiltonian in which all contributions are added up
     type(io_H_dipole),intent(in)        :: io   !input parameters
@@ -260,7 +258,7 @@ subroutine get_dipolar_ph(Ham,io,lat)
                 ii=ii+9
             enddo
         enddo
-        val=-val*dip_pref*0.5d0*0.25d0/pi
+        val=-val/epsilon_0*0.5d0*0.25d0/pi
 
         !initialize Hamiltonian array with calculated parameters
         Call Ham%init_coo(rowind,colind,val,[Nph*3,Nph*3],"U","U",lat,2)
