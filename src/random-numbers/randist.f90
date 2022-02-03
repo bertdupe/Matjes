@@ -1,40 +1,110 @@
-include 'mkl_vsl.f90'
-
 module m_randist
-#ifdef CPP_MKL
-use MKL_VSL
-use MKL_VSL_TYPE
-#endif
+use mtprng
+use m_random_base
+use iso_fortran_env, only: int64
+use m_io_files_utils
+use m_io_utils
+implicit none
 
 private
-public :: randist
+public :: ranint,randist
+
+type,extends(ranbase) :: ranint
+
+  contains
+
+    procedure  :: init_seed
+    procedure  :: get_list
+    procedure  :: destroy
+    procedure  :: get_extract_list
+    procedure  :: read_option
+
+end type
 
  interface randist
-    module procedure gaussianran_mkl
     module procedure gaussianran
     module procedure wiener
  end interface
 
-!interface
-!    !manually write interface again since these interfaces seem to differ between different mkl versions
-!    function vRngGaussian_fort(method,stream,n,resu,kt,sigma) bind(c, name='vRngGaussian')
-!      use iso_c_binding
-!      integer(C_int), intent(in)  :: method   ! Generation method ( VSL_RNG_METHOD_GAUSSIAN_BOXMULLER , )
-!      type(VSLStreamStatePtr), intent(in)     :: stream   ! Pointer to the stream state structure
-!      integer(C_int), intent(in)  :: n        ! Number of random values to be generated.
-!      real(C_DOUBLE), intent(in)  :: kt       ! Mean value a.
-!      real(C_DOUBLE), intent(in)  :: sigma    ! Standard deviation σ.
-!      real(C_DOUBLE), intent(out) :: resu(n)     ! result
-!    end function
-!
-!end interface
-
 contains
+
+
+subroutine get_list(this,a,b)
+class(ranint), intent(inout)  :: this
+real(8), intent(in)           :: a,b
+
+integer :: i
+
+do i=1,this%N
+   this%x(i)=randist(a)
+enddo
+
+end subroutine
+
+subroutine get_extract_list(this,a,b,resu)
+class(ranint), intent(inout)  :: this
+real(8), intent(in)           :: a,b
+real(8), intent(inout)        :: resu(:)
+
+resu=0.0d0
+
+call this%get_list(a,b)
+
+call this%extract_list(resu)
+
+end subroutine
+
+subroutine destroy(this)
+class(ranint), intent(in)  :: this
+
+return
+
+end subroutine
+
+
+subroutine init_seed(this)
+class(ranint), intent(in)  :: this
+
+integer, allocatable :: seed(:)
+integer :: i, n, un, istat, dt(8), pid
+integer(int64) :: t
+
+   call random_seed(size = n)
+   allocate(seed(n))
+   ! First try if the OS provides a random number generator
+   open(newunit=un, file="/dev/urandom", access="stream", &
+    form="unformatted", action="read", status="old", iostat=istat)
+   if (istat == 0) then
+      read(un) seed
+      close(un)
+   else
+   ! Fallback to XOR:ing the current time and pid. The PID is
+   ! useful in case one launches multiple instances of the same
+   ! program in parallel.
+      call system_clock(t)
+      if (t == 0) then
+         call date_and_time(values=dt)
+         t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
+             + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
+             + dt(3) * 24_int64 * 60 * 60 * 1000 &
+             + dt(5) * 60 * 60 * 1000 &
+             + dt(6) * 60 * 1000 + dt(7) * 1000 &
+             + dt(8)
+      end if
+      pid = getpid()
+      t = ieor(t, int(pid, kind(t)))
+      do i = 1, n
+         seed(i) = lcg(t)
+      end do
+   end if
+   call random_seed(put=seed)
+
+end subroutine init_seed
 
 !!!! the different ways to generate random forces
 real(kind=8) function gaussianran(kt)
-implicit none
 real(kind=8), intent(in) :: kt
+
 real(kind=8) :: Choice1, Choice2
 
 Choice1=10.0d0
@@ -58,8 +128,6 @@ end function
 
 !!!! wiener process
 real(kind=8) function wiener()
-use mtprng
-implicit none
 !dummy
 type(mtprng_state) :: state
 real(kind=8) :: Choice
@@ -71,33 +139,36 @@ CALL RANDOM_NUMBER(Choice)
 #endif
 
 wiener=(Choice*2.0d0-1.0d0)
-
 end function wiener
 
-#ifdef CPP_MKL
-!!!! Gaussian random number generator of MKL
-function gaussianran_mkl(kt,sigma)
-implicit none
-real(8), intent(in)     :: kt,sigma
-integer(4)              :: stat
-type(VSL_STREAM_STATE)  :: stream
-integer                 :: brng,method,seed,n
-real(8)                 :: gaussianran_mkl(1)
 
-brng=VSL_BRNG_MT19937
-method=VSL_RNG_METHOD_GAUSSIAN_BOXMULLER
-seed=7
+! This simple PRNG might not be good enough for real work, but is
+! sufficient for seeding a better PRNG.
+function lcg(s)
+integer :: lcg
+integer(int64) :: s
+if (s == 0) then
+   s = 104729
+else
+   s = mod(s, 4294967296_int64)
+end if
+s = mod(s * 279470273_int64, 4294967291_int64)
+lcg = int(mod(s, int(huge(0), int64)), kind(0))
+end function lcg
 
-    ! initialization
-    stat=vslnewstream( stream, brng,  seed )
 
-    stat=vdrnggaussian(method,stream,1,gaussianran_mkl,kt,sigma)
 
-    ! destroy
-    stat=vsldeletestream( stream )
 
-end function
 
-#endif
+subroutine read_option(this)
+    class(ranint), intent(inout)  :: this
+
+    integer :: io_in
+
+    io_in=open_file_read('input')
+    call get_parameter(io_in,'input','print_rnd',this%print)
+    call close_file('input',io_in)
+
+end subroutine
 
 end module m_randist

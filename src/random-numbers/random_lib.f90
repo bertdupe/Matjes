@@ -21,8 +21,59 @@ MODULE m_random_number_library
 !
 ! Non uniform random Number Generators in Fortran
 !
-real(kind=8), PARAMETER :: PI=3.141592653589793238462
+use m_constants, only : pi
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
+use m_random_base
+use m_io_files_utils
+use m_io_utils
+!implicit none
+
+!private
+!public :: julia_ran
+!
+!type,extends(ranbase) :: julia_ran
+!    integer    :: random_type = 1
+!  contains
+!
+!    procedure  :: init_seed
+!    procedure  :: get_extract_list
+!    procedure  :: get_list
+!    procedure  :: destroy
+!    procedure  :: read_option
+!end type
+!
 CONTAINS
+!
+!subroutine read_option(this)
+!    class(julia_ran),intent(inout)   :: this
+!
+!    integer :: io_in
+!
+!    io_in=open_file_read('input')
+!    call get_parameter(io_in,'input','julia_type',this%random_type)
+!    call close_file('input',io_in)
+!
+!
+!
+!end subroutine
+!
+!
+!
+!!!!! initialize and destroy
+!subroutine init_seed(this)
+!    class(julia_ran),intent(in)   :: this
+!
+!end subroutine
+!
+!subroutine destroy(this)
+!    class(julia_ran),intent(in)   :: this
+!
+!end subroutine
+
+
+
+
+
 
 FUNCTION rand_uniform(a,b) RESULT(c)
 implicit none
@@ -40,7 +91,7 @@ real(kind=8) :: mean,stdev,c,temp(2),r,theta
 c=0.0d0
 IF(stdev <= 0.0d0) THEN
 
-  WRITE(*,*) "Standard Deviation must be +ve"
+  WRITE(output_unit,'(a)') "Standard Deviation must be +ve"
 ELSE
   CALL RANDOM_NUMBER(temp)
   r=(-2.0d0*log(temp(1)))**0.5
@@ -58,7 +109,7 @@ real(kind=8) :: mean,c,temp
 c=0.0d0
 IF (mean <= 0.0d0) THEN
 
-   WRITE(*,*) "mean must be positive"
+   WRITE(output_unit,'(a)') "mean must be positive"
 ELSE
    CALL RANDOM_NUMBER(temp)
    c=-mean*log(temp)
@@ -73,11 +124,11 @@ implicit none
 real(kind=8) SHAPE,scale,u,w,d,c,x,xsq,g,ans,v
 IF (shape <= 0.0d0) THEN
 
-   WRITE(*,*) "Shape PARAMETER must be positive"
+   WRITE(output_unit,'(a)') "Shape PARAMETER must be positive"
 END IF
 IF (scale <= 0.0d0) THEN
 
-   WRITE(*,*) "Scale PARAMETER must be positive"
+   WRITE(output_unit,'(a)') "Scale PARAMETER must be positive"
 END IF
 !
 ! ## Implementation based on "A Simple Method for Generating Gamma Variables"
@@ -145,11 +196,11 @@ implicit none
 real(kind=8) SHAPE,scale,temp,ans
 IF (shape <= 0.0d0) THEN
 
-   WRITE(*,*) "Shape PARAMETER must be positive"
+   WRITE(output_unit,'(a)') "Shape PARAMETER must be positive"
 END IF
 IF (scale <= 0.0d0) THEN
 
-   WRITE(*,*) "Scale PARAMETER must be positive"
+   WRITE(output_unit,'(a)') "Scale PARAMETER must be positive"
 END IF
 CALL RANDOM_NUMBER(temp)
 ans= SCALE * (-log(temp))**(1.0 / SHAPE)
@@ -164,7 +215,7 @@ real(kind=8) ans,median,scale,p
 
 IF (scale <= 0.0d0) THEN
 
-   WRITE(*,*) "Scale PARAMETER must be positive"
+   WRITE(output_unit,'(a)') "Scale PARAMETER must be positive"
 END IF
 CALL RANDOM_NUMBER(p)
 ans = median + SCALE*tan(PI*(p - 0.5))
@@ -178,7 +229,7 @@ implicit none
 real(kind=8) ans,dof,y1,y2
 IF (dof <= 0.d0) THEN
 
-   WRITE(*,*) "Degrees of freedom must be positive"
+   WRITE(output_unit,'(a)') "Degrees of freedom must be positive"
 END IF
 !
 ! ## See Seminumerical Algorithms by Knuth
@@ -198,7 +249,7 @@ implicit none
 real(kind=8) ans,mean,scale,u
 IF (scale <= 0.0d0) THEN
 
-   WRITE(*,*) "Scale PARAMETER must be positive"
+   WRITE(output_unit,'(a)') "Scale PARAMETER must be positive"
 END IF
 CALL RANDOM_NUMBER(u)
 IF (u < 0.5d0) THEN
@@ -226,7 +277,7 @@ implicit none
 real(kind=8) a,b,ans,u,v
 IF ((a <= 0.0d0) .OR. (b <= 0.0d0)) THEN
 
-   WRITE(*,*) "Beta PARAMETERs must be positive"
+   WRITE(output_unit,'(a)') "Beta PARAMETERs must be positive"
 END IF
 
 ! ## There are more efficient methods for generating beta samples.
