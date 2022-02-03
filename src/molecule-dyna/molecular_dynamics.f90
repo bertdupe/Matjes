@@ -270,7 +270,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
             q_moins=dumy(2)/pi/4.0d0
             vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
 
-            call thermal_noise%print_base(j)
+            if (thermal_noise%print) call thermal_noise%print_base(j)
 
             if(gra_log) then
                 call CreateSpinFile(tag,lat_1%u)
