@@ -264,24 +264,24 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
 		!get forces on the phonon lattice
     	Call H%get_eff_field(lat_1,Feff,5) !Feff here is eV/nm
    	acc_1=convf_a*Feff_3/masses_3 !in nm/fs^2 a(t)
-write(*,*) 'acc_1=',acc_1
+!write(*,*) 'acc_1=',acc_1
       !if non zero temperature: draw random numbers delta_vg, delta_ug           
       if (kt.gt.1.0d-8) call draw_stocha_integrals(sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
-write(*,*)'delta_ug3=',delta_ug3,' delta_vg3=',delta_vg3
+!write(*,*)'delta_ug3=',delta_ug3,' delta_vg3=',delta_vg3
  		   
 		!update positions
        lat_2%u%modes_3= lat_1%u%modes_3  + ldc(2)*V_1*dt + ldc(3)*acc_1*dt**2 + delta_ug3     !u(t+dt) in nm
-write(*,*) 'lat_1=',lat_1%u%modes_3,' lat_2=',lat_2%u%modes_3
+!write(*,*) 'lat_1=',lat_1%u%modes_3,' lat_2=',lat_2%u%modes_3
       
       !update accelerations
       Call H%get_eff_field(lat_2,Feff,5)
       acc_2=convf_a*Feff_3/masses_3 !a(t+dt)
-write(*,*) 'acc_2=',acc_2,'Feff=',Feff
+!write(*,*) 'acc_2=',acc_2,'Feff=',Feff
 		
 		!update velocities
        V_1=ldc(1)*V_1 + (ldc(2)-ldc(3))*acc_1*dt + ldc(3)*acc_2*dt + delta_vg3   !v(t+dt) 
-      ! V_1=ldc(1)*V_1 + ldc(1)*ldc(3)/ldc(2) * acc_1*dt + (1.0d0-ldc(1)/ldc(2))/damp_F *acc_2 + delta_vg3  !using eq 11
-write(*,*) 'V=',V_1
+      !V_1=ldc(1)*V_1 + ldc(1)*ldc(3)/ldc(2) * acc_1*dt + (1.0d0-ldc(1)/ldc(2))/damp_F *acc_2 + delta_vg3  !using eq 11
+!write(*,*) 'V=',V_1
       !!!!!!!!!!!!!!!!!!!
       ! end Verlet algorithm
       !!!!!!!!!!!!!!!!!!!

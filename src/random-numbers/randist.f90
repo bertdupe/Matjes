@@ -40,12 +40,18 @@ real(kind=8) :: Choice1, Choice2
 Choice1=10.0d0
 Choice2=10.0d0
 
+  !	open(3,file='unif.dat', access = 'append')
 do while (Choice1**2+Choice2**2.gt.1.0d0)
   call RANDOM_NUMBER(Choice1)
   call RANDOM_NUMBER(Choice2)
+!write(3,*) Choice1, " " ,Choice2
+  		
+  		
   Choice1=(Choice1*2.0d0-1.0d0)
   Choice2=(Choice2*2.0d0-1.0d0)
 enddo
+
+! close(3)
 
 !
 ! according to the PhD of Schieback (2010) from Constanz p. 35
