@@ -1,5 +1,5 @@
 module m_constants
-    implicit none
+implicit none
 ! Boltzmannfactor in eV/K
 real(kind=8), Parameter :: k_B=0.000086173324d0
 ! magnetic constant
