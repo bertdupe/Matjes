@@ -6,6 +6,7 @@ use m_derived_types, only : io_parameter,simulation_parameters
 use m_hamiltonian_collection, only: hamiltonian
 use mpi_basic, only: mpi_type
 use m_H_public
+use m_random_public
 use,intrinsic :: iso_fortran_env, only : error_unit, output_unit
 
 implicit none
@@ -101,8 +102,8 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    integer,allocatable ::  Q_neigh(:,:)
    real(8) :: time = 0.0d0
    real(8) :: ldc(3)  !Langevin dynamics coefficients
-   real(8),allocatable :: u_norm(:)
-	
+   class(ranbase), allocatable :: thermal_noise
+
    ! prepare the matrices for integration
 
    call rw_dyna_MD(timestep_int,Efreq,duration,file,damp_S,damp_F,ensemble)
@@ -220,6 +221,15 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
     call user_info(6,time,'done',.true.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! initialize the random number in case of thermal noise
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    if (kt.gt.1.0d-8) then
+       call get_ran_type(thermal_noise)
+       call thermal_noise%init_base(dim_mode*N_cell)
+    endif
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! initialize Energy
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -264,24 +274,25 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
 		!get forces on the phonon lattice
     	Call H%get_eff_field(lat_1,Feff,5) !Feff here is eV/nm
    	acc_1=convf_a*Feff_3/masses_3 !in nm/fs^2 a(t)
-write(*,*) 'acc_1=',acc_1
+!write(*,*) 'acc_1=',acc_1
       !if non zero temperature: draw random numbers delta_vg, delta_ug           
       if (kt.gt.1.0d-8) call draw_stocha_integrals(sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
-write(*,*)'delta_ug3=',delta_ug3,' delta_vg3=',delta_vg3
+      !           if (kt.gt.1.0d-8) call thermal_noise%get_extract_list(0.0d0,kt,FT_eff) move to draw stocha integrals
+!write(*,*)'delta_ug3=',delta_ug3,' delta_vg3=',delta_vg3
  		   
 		!update positions
        lat_2%u%modes_3= lat_1%u%modes_3  + ldc(2)*V_1*dt + ldc(3)*acc_1*dt**2 + delta_ug3     !u(t+dt) in nm
-write(*,*) 'lat_1=',lat_1%u%modes_3,' lat_2=',lat_2%u%modes_3
+!write(*,*) 'lat_1=',lat_1%u%modes_3,' lat_2=',lat_2%u%modes_3
       
       !update accelerations
       Call H%get_eff_field(lat_2,Feff,5)
       acc_2=convf_a*Feff_3/masses_3 !a(t+dt)
-write(*,*) 'acc_2=',acc_2,'Feff=',Feff
+!write(*,*) 'acc_2=',acc_2,'Feff=',Feff
 		
 		!update velocities
        V_1=ldc(1)*V_1 + (ldc(2)-ldc(3))*acc_1*dt + ldc(3)*acc_2*dt + delta_vg3   !v(t+dt) 
       ! V_1=ldc(1)*V_1 + ldc(1)*ldc(3)/ldc(2) * acc_1*dt + (1.0d0-ldc(1)/ldc(2))/damp_F *acc_2 + delta_vg3  !using eq 11
-write(*,*) 'V=',V_1
+!write(*,*) 'V=',V_1
       !!!!!!!!!!!!!!!!!!!
       ! end Verlet algorithm
       !!!!!!!!!!!!!!!!!!!
@@ -307,9 +318,12 @@ write(*,*) 'V=',V_1
             q_moins=dumy(2)/pi/4.0d0
             vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
 
+            if (thermal_noise%print) call thermal_noise%print_base(j)
+
             if(gra_log) then
                 call CreateSpinFile(tag,lat_1%u)
                 Call write_config(tag,lat_1)
+
 !                call write_netcdf('test',lat_1,real_time)
                 write(6,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
                 write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
