@@ -1,4 +1,5 @@
 module m_user_info
+use , intrinsic :: iso_fortran_env, only: output_unit
 implicit none
 
 interface user_info
@@ -12,17 +13,17 @@ contains
 ! simple module to write welcome messages for the different parts of the code
 
 subroutine welcome_message()
-    use , intrinsic :: iso_fortran_env, only: output_unit
 implicit none
 
-    write(6,'(/,a)') 'Bonjour!! you are now using the Kieler code'
+    write(6,'(/,a)') 'Bonjour!! you are now using the Matjes code'
     write(6,'(a)') 'All the developers hope that you will enjoy this moment.'
     write(6,'(a)') 'If you have a problem, if you are happy with the code or if you wish to chat a bit'
-    write(6,'(a)') 'send an email to bertrand.dupe@gmail.com'
+    write(6,'(a)') 'send an email to bertrand.dupe@uliege.be'
+
 #ifdef CPP_VERSIONGIT
-    write(6,'(/2a)') "You are using the git-version: ",CPP_VERSIONGIT
+    write(output_unit,'(/2a)') "You are using the git-version: ",CPP_VERSIONGIT
 #endif
-    write(6,'(/)') 
+    write(output_unit,'(/)')
 end subroutine
 
 subroutine welcome
@@ -31,16 +32,16 @@ subroutine welcome
 use mpi_basic,only: mpi_world
     if(mpi_world%ismas)then
         Call welcome_message()
-        write(6,'(a,I10,2x,a)') 'Congratulations, you are now using',mpi_world%NP,'MPI threads'
+        write(output_unit,'(a,I10,2x,a)') 'Congratulations, you are now using',mpi_world%NP,'MPI threads'
         Call print_omp(6)
         Call print_preprocessor_flags(6)
-        write(6,'(A/A/)') "Used compiler options:", compiler_options()
+        write(output_unit,'(A/A/)') "Used compiler options:", compiler_options()
     endif
 #else
     Call welcome_message()
     Call print_omp(6)
     Call print_preprocessor_flags(6)
-    write(6,'(A/A/)') "Used compiler options:", compiler_options()
+    write(output_unit,'(A/A/)') "Used compiler options:", compiler_options()
 #endif
 
 end subroutine 
