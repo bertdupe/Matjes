@@ -20,7 +20,7 @@ public :: ranmkl
 
 type,extends(ranbase) :: ranmkl
     type(VSL_STREAM_STATE)  :: stream                     ! Pointer to the stream state structure
-    integer                 :: brng = VSL_BRNG_MT19937    ! something
+    integer                 :: brng = VSL_BRNG_MT19937    ! mersenne twister prng
     integer                 :: method = VSL_RNG_METHOD_GAUSSIAN_BOXMULLER                    ! Generation method ( VSL_RNG_METHOD_GAUSSIAN_BOXMULLER , )
     integer                 :: seed = -717                ! seed for the random number generator
 
@@ -37,7 +37,7 @@ contains
 
 !interface
 !    !manually write interface again since these interfaces seem to differ between different mkl versions
-!    function vRngGaussian_fort(method,stream,n,resu,kt,sigma) bind(c, name='vRngGaussian')
+!    function vRngGaussian_fort(method,stream,n,resu,mean,sigma) bind(c, name='vRngGaussian')
 !      use iso_c_binding
 !      integer(C_int), intent(in)  :: method   ! Generation method ( VSL_RNG_METHOD_GAUSSIAN_BOXMULLER , )
 !      type(VSLStreamStatePtr), intent(in)     :: stream   ! Pointer to the stream state structure
@@ -89,7 +89,7 @@ end subroutine
 !!!! Gaussian random number generator of MKL
 subroutine get_list(this,a,b)
     class(ranmkl),intent(inout)  :: this
-    real(8), intent(in)          :: a,b ! a=kt  ;  b=sigma
+    real(8), intent(in)          :: a,b ! a=mean  ;  b=sigma
 
 
     integer(4)  :: stat

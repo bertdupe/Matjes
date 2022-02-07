@@ -4,65 +4,28 @@ use m_randist
 use m_random_number_library
 use m_constants, only : hbar
 use m_random_number_library
+use m_random_public
 
 private
-public :: draw_stocha_integrals !Bolzmann
+public :: draw_stocha_integrals 
 contains
 
 
-subroutine draw_stocha_integrals(sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
+subroutine draw_stocha_integrals(thermal_noise,rand1,rand2,sigma_u,sigma_v,c_uv,delta_ug,delta_vg)
 	implicit none
-   	real(8),intent(in) :: sigma_v(:),sigma_u(:), c_uv(:)  !gaussian distrib parameters
-   	real(8),intent(inout) :: delta_vg(:), delta_ug(:) !stochastic integrals of u and v to draw from bivariate gaussian 
-	!internal
-	real(8) :: temp(2) !dummies
-	integer :: i
-	!write(*,*)'size(delta_ug)',size(delta_ug),' shape(delta_ug)=',shape(delta_ug)
+	class(ranbase), intent(inout) :: thermal_noise !for drawing N*dim(mode) random numbers
+	real(8),intent(inout) :: rand1(:),rand2(:) !to draw random numbers
+   real(8),intent(in) :: sigma_v(:),sigma_u(:), c_uv(:)  !gaussian distrib parameters
+   real(8),intent(inout) :: delta_vg(:), delta_ug(:) !stochastic integrals of u and v to draw from bivariate gaussian 
 	
-	!write to file
-	!open(1,file='normal.dat', access = 'append')
-!	open(2,file='delta_ug_vg.dat' ,access = 'append')
-	do i=1,size(delta_ug)
-		!draw in normal distrib of stdev 1, mean 0
-		temp(1)=randist(1.0d0)
-		temp(2)=randist(1.0d0)
+	!this could be replaced by a single call to VSL_RNG_METHOD_GAUSSIANMV_BOXMULLER2
+	call thermal_noise%get_extract_list(0.0d0,1.0d0,rand1) !mean,sigma,resu
+	call thermal_noise%get_extract_list(0.0d0,1.0d0,rand2) !mean,sigma,resu
 
-		!temp(1)=rand_normal(0.0d0,1.0d0)
-		!temp(2)=rand_normal(0.0d0,1.0d0)
-	!write(1,*) temp(:)
+	delta_ug = sigma_u *rand1
+	delta_vg = sigma_v * ( c_uv*rand1 + sqrt(1.0d0 - c_uv**2) * rand2 )
 
-		!draw in bivariate gaussian distribution
-	!	u = m1 + s1 * X;
-	!	v = m2 + s2 * (rho * X + sqrt(1 - rho^2) * Y);
-
-		delta_ug(i) = sigma_u(i) * temp(1)
-		delta_vg(i) = sigma_v(i) * ( c_uv(i)*temp(1) + sqrt(1.0d0 - c_uv(i)**2) * temp(2) )
-	! write(2,*) delta_ug(i), '	',delta_vg(i)
-	!write(*,*)'delta_ug(i)= ',delta_ug(i),'delta_vg(i)= ',delta_vg(i)
-	enddo
-	!close(1)
-	!close(2)
 end subroutine draw_stocha_integrals
-
-
-
-
-
-
-
-!not used
-subroutine Bolzmann(kt,damping,masses,FT)
-implicit none
-real(kind=8), intent(in) :: kt,damping,masses(:)
-real(kind=8), intent(inout) :: FT(:)
-! internal
-integer :: i
-
-do i=1,size(FT)
-   FT(i)=sqrt(damping*masses(i))*randist(kt)
-enddo
-
-end subroutine Bolzmann
 
 
 

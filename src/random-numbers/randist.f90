@@ -42,7 +42,7 @@ enddo
 end subroutine
 
 subroutine get_extract_list(this,a,b,resu)
-class(ranint), intent(inout)  :: this
+ class(ranint), intent(inout)  :: this
 real(8), intent(in)           :: a,b
 real(8), intent(inout)        :: resu(:)
 
@@ -55,7 +55,7 @@ call this%extract_list(resu)
 end subroutine
 
 subroutine destroy(this)
-class(ranint), intent(in)  :: this
+ class(ranint), intent(in)  :: this
 
 return
 
