@@ -185,7 +185,14 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     integer                     :: N_cell,N_dim,N_mag
     real(8),pointer             :: M3(:,:)
     logical                     :: conv
-    real(8)					    :: dummy(3), Beff(3), torque(3), Beff_norm
+    real(8)					    	  :: dummy(3), Beff(3), torque(3), Beff_norm
+
+	!for convergence check before loop
+    real(8),allocatable,target  :: F_eff(:)
+    real(8),allocatable         :: F_norm(:) ,torque_all(:)
+    real(8),pointer             :: F_eff3(:,:)
+
+
     type(work_ham_single)       :: work !type containing work arrays for single energy evaluation
 
     write(6,'(/,a,/)') 'entering the infinite damping minimization routine'
@@ -198,6 +205,10 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     gra_log=io_simu%io_Xstruct
     gra_freq=int(io_simu%io_frequency,8)
     
+    allocate(F_norm(N_mag),source=0.0d0)
+    allocate(F_eff(N_dim*N_cell),torque_all(N_dim*N_cell),source=0.0d0)
+    F_eff3(1:3,1:N_mag)=>F_eff
+    
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Prepare the calculation of the energy and the effective field
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -206,55 +217,73 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',Edy/real(N_cell,8)
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !           Test for convergence before entering loop
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    
+    Call H%get_eff_field(lat,F_eff,1)
+    F_norm=norm2(F_eff3,1)
+    if(any(F_norm.lt.1.0d-8)) stop 'problem in the infinite damping minimization routine' 
+    torque_all=cross(lat%M%all_modes,F_eff,1,N_dim*N_cell)
+    test_torque=max(maxval(torque_all),-minval(torque_all))
+    if ( abs(test_torque).gt.max_torque ) max_torque=test_torque
+    conv=max_torque.lt.io_min%conv_torque
+    write(6,'(/a,2x,E20.12E3/)')'Initial Max_torque=',max_torque
+    if(conv)then
+    	   write(6,'(/a,2x,E20.12E3/)') 'Tolerance reached, the energy is already minimized.'
+    endif
+    
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !           Begin minimization
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    do iter=1,io_min%N_minimization
-        max_torque=0.0d0
+   if(.not.conv)then
+		do iter=1,io_min%N_minimization
+			max_torque=0.0d0
 
-        !Iteratively align the moments onto local normalized field. Recompute effective field at each site.
-        do iomp=1,N_mag
-        	!get local normalized field
-         	Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
-        	Beff_norm=norm(Beff)
-        	if(Beff_norm.lt.1.0d-8) stop 'Beff=0, problem in the infinite damping minimization routine' !avoid dividing by 0
-        	Beff=Beff/Beff_norm
+		   !Iteratively align the moments onto local normalized field. Recompute effective field at each site.
+		   do iomp=1,N_mag
+				!get local normalized field
+		      Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
+		     	Beff_norm=norm(Beff)
+		     	if(Beff_norm.lt.1.0d-8) stop 'Beff=0, problem in the infinite damping minimization routine' !avoid dividing by 0
+		     	Beff=Beff/Beff_norm
 
-        	!get local normalized torque and its largest component
-        	torque=cross(M3(:,iomp),Beff,1,3)
-        	test_torque=maxval(dabs(torque))
-      	  	if (test_torque.gt.max_torque ) max_torque=test_torque
-      	  	
-        	!align moment to field (unless m=0) 
-        	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff
+		     	!get local normalized torque and its largest component
+		     	torque=cross(M3(:,iomp),Beff,1,3)
+		     	test_torque=maxval(dabs(torque))
+		   	if (test_torque.gt.max_torque ) max_torque=test_torque
+		   	  	
+		     	!align moment to field (unless m=0) 
+		     	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff
+			enddo
+		     
+			!print max_torque every io_min%Efreq iterations
+			if (mod(iter,io_min%Efreq).eq.0) write(*,*) 'Max torque =',max_torque
+		 
+			!write config to files
+			if ((gra_log).and.(mod(iter,gra_freq).eq.0)) then
+				gra_int=int((iter-1)/int(gra_freq,8),4)
+				call WriteSpinAndCorrFile(gra_int,lat%M%modes_v,'spin_minimization')
+				call CreateSpinFile(gra_int,lat%M)
+				write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq
+			endif
+		     
+			!test convergence
+			conv=max_torque.lt.io_min%conv_torque
+			if(conv)then
+				write(*,*) 'Max_torque=',max_torque,' tolerance reached, minimization completed in ',iter,' iterations.'
+		   	exit
+			endif
 		enddo
-        
-        !print max_torque every io_min%Efreq iterations
-        if (mod(iter,io_min%Efreq).eq.0) write(*,*) 'Max torque =',max_torque
-    
-        !write config to files
-        if ((gra_log).and.(mod(iter,gra_freq).eq.0)) then
-            gra_int=int((iter-1)/int(gra_freq,8),4)
-            call WriteSpinAndCorrFile(gra_int,lat%M%modes_v,'spin_minimization')
-            call CreateSpinFile(gra_int,lat%M)
-            write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq
-        endif
-        
-        !test convergence
-        conv=max_torque.lt.io_min%conv_torque
-        if(conv)then
-            write(*,*) 'Max_torque=',max_torque,' tolerance reached, minimization completed in ',iter,' iterations.'
-            exit
-        endif
-    enddo
-    if(.not.conv)then
+	endif
+   if(.not.conv)then
         write(*,'(///A)') "WARNING, minimization routine did not reach minimium"
         write(*,*) 'Max_torque=            ',max_torque
         write(*,*) 'Convergence criterion= ',io_min%conv_torque
         write(*,'(///)')
-    endif
-    Edy=H%energy(lat)
-    write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell,8)
-    nullify(M3)
+	endif
+   Edy=H%energy(lat)
+   write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell,8)
+   nullify(M3)
 end subroutine
 
 end module m_minimize
