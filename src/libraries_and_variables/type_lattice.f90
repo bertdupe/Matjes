@@ -257,8 +257,8 @@ subroutine init_order(this,cell,extpar_io)
     !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
     this%order_set=this%dim_modes>0
     if(this%order_set(1)) this%site_per_cell(1)=this%nmag
-    if(this%order_set(2)) this%site_per_cell(2)=1
-    if(this%order_set(3)) this%site_per_cell(3)=1
+    if(this%order_set(2)) this%site_per_cell(2)=this%nmag+this%nph
+    if(this%order_set(3)) this%site_per_cell(3)=this%nmag+this%nph
     if(this%order_set(4)) this%site_per_cell(4)=1
     if(this%order_set(5)) this%site_per_cell(5)=this%nph
     if(this%order_set(6)) this%site_per_cell(6)=this%norb
