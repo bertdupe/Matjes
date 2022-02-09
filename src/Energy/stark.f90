@@ -48,12 +48,12 @@ subroutine get_stark_E(Ham,io,lat)
     integer,allocatable     :: connect(:,:)
 
     if(io%is_set)then
-        allocate(Htmp(3,lat%u%dim_mode),source=0.d0) !assume shape of E-field has to be 3
+        allocate(Htmp(lat%E%dim_mode,lat%u%dim_mode),source=0.d0) !assume shape of E-field has to be 3
         Call lat%cell%get_Z_phonon(Zborn)
         do i=1,size(Zborn)
-            Htmp(1,(i-1)*3+1)=Zborn(i)
-            Htmp(2,(i-1)*3+2)=Zborn(i)
-            Htmp(3,(i-1)*3+3)=Zborn(i)
+            Htmp((i-1)*3+1,(i-1)*3+1)=Zborn(i)
+            Htmp((i-1)*3+2,(i-1)*3+2)=Zborn(i)
+            Htmp((i-1)*3+3,(i-1)*3+3)=Zborn(i)
         enddo
         Htmp=(io%c_stark) * Htmp * J_to_eV
 

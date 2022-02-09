@@ -234,7 +234,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 if (l_excitation) then
                     Call update_exc(real_time+dt,mag_lattice,excitations)
                     Call update_exc(real_time+dt,lat_1      ,excitations)
-
                 endif
             endif
 
@@ -246,8 +245,8 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 !do integration
                 Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop))
                 Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
-                lat_2%M%modes_3=get_integrator_field(mag_lattice%M%modes_3,Dmag_int_3,dt)
-                !copy magnetic texture to 1 
+                lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3,dt)
+                !copy magnetic texture to 1
                 Call lat_2%M%copy_val(lat_1%M)
             endif
         enddo
