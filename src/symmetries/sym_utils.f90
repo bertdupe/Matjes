@@ -1,5 +1,6 @@
 module m_sym_utils
 use m_rotation_matrix, only : rotate_matrix,check_rotate_matrix,rotation_matrix_real
+use m_determinant, only : determinant
 implicit none
 
 private
@@ -16,18 +17,18 @@ subroutine rotate_exchange(mat_out,mat_in,rotmat)
    real(8), intent(in)    :: mat_in(:,:)
    real(8), intent(in)    :: rotmat(:,:)
 
-   real(8)                :: mat(3,3),sym_part(3,3),antisym_part(3,3)
+   real(8)                :: mat_asym(3,3),mat_sym(3,3),sym_part(3,3),antisym_part(3,3)
 
 ! decompose in symmetric and antisymmetric part
 
    sym_part=(mat_in+transpose(mat_in))/2.0d0
    antisym_part=(mat_in-transpose(mat_in))/2.0d0
 
-! rotate only the antisymmetric part
+   call rotate_matrix(mat_sym,sym_part,rotmat)
+! rotate only the antisymmetric part. This part is DMI related so it is an axial vector symmetry which has to be multiplied by det(sym_mat)
+   call rotate_matrix(mat_asym,antisym_part,rotmat)
 
-   call rotate_matrix(mat,antisym_part,rotmat)
-
-   mat_out=sym_part+mat
+   mat_out=mat_sym+mat_asym*determinant(1.0d-8,3,rotmat)
 
 end subroutine
 

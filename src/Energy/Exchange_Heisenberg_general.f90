@@ -137,32 +137,6 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                     symop=my_symmetries%rotmat(k)%mat
                     name_sym=my_symmetries%rotmat(k)%name
-
-!                    if (k.gt.my_symmetries%n_sym) then
-!                       write(output_unit,'(/a)') 'WARNING: symmetry not found - I use an arbitrary rotation'
-!                       axis=rotation_axis(bound_input,vec_tmp)
-!                       if (norm(axis).lt.1.0d-8) axis=(/0.0d0,0.0d0,1.0d0/)
-!                       scalaire=dot_product(bound_input,vec_tmp)
-!                       if (scalaire.ge.1.0d0) then
-!                          angle=0.0d0
-!                       elseif (scalaire.le.-1.0d0) then
-!                          angle=pi
-!                       else
-!                          angle=acos(scalaire)
-!                       endif
-!                       call check_rotate_matrix(angle,axis,bound_input,vec_tmp)
-!                       call rotation_matrix_real(symop,angle,axis)
-!                       name_sym="rotation matrix"
-!                       write(output_unit,'(a,f8.3)') 'angle ', angle*180.0/pi
-!                       write(output_unit,'(a,3f8.3/)') 'axis ', axis
-!
-!                    else
-!
-!                       symop=my_symmetries%rotmat(k)%mat
-!                       name_sym=my_symmetries%rotmat(k)%name
-!
-!                    endif
-
                     call rotate_exchange(J,J_init,symop)
 
                     !endif
