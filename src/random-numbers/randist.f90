@@ -66,7 +66,7 @@ subroutine init_seed(this)
 class(ranint), intent(in)  :: this
 
 integer, allocatable :: seed(:)
-integer :: i, n, un, istat, dt(8), pid
+integer :: i, n, un, istat, dt(8), pid, getpid
 integer(int64) :: t
 
    call random_seed(size = n)
