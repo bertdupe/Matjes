@@ -15,10 +15,11 @@ contains
 subroutine welcome_message()
 implicit none
 
-    write(output_unit,'(/,a)') 'Bonjour!! you are now using the Kieler code'
-    write(output_unit,'(a)') 'All the developers hope that you will enjoy this moment.'
-    write(output_unit,'(a)') 'If you have a problem, if you are happy with the code or if you wish to chat a bit'
-    write(output_unit,'(a)') 'send an email to bertrand.dupe@uliege.be'
+    write(6,'(/,a)') 'Bonjour!! you are now using the Matjes code'
+    write(6,'(a)') 'All the developers hope that you will enjoy this moment.'
+    write(6,'(a)') 'If you have a problem, if you are happy with the code or if you wish to chat a bit'
+    write(6,'(a)') 'send an email to bertrand.dupe@uliege.be'
+
 #ifdef CPP_VERSIONGIT
     write(output_unit,'(/2a)') "You are using the git-version: ",CPP_VERSIONGIT
 #endif

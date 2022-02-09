@@ -42,7 +42,7 @@ enddo
 end subroutine
 
 subroutine get_extract_list(this,a,b,resu)
-class(ranint), intent(inout)  :: this
+ class(ranint), intent(inout)  :: this
 real(8), intent(in)           :: a,b
 real(8), intent(inout)        :: resu(:)
 
@@ -55,7 +55,7 @@ call this%extract_list(resu)
 end subroutine
 
 subroutine destroy(this)
-class(ranint), intent(in)  :: this
+ class(ranint), intent(in)  :: this
 
 return
 
@@ -110,19 +110,25 @@ real(kind=8) :: Choice1, Choice2
 Choice1=10.0d0
 Choice2=10.0d0
 
+  !	open(3,file='unif.dat', access = 'append')
 do while (Choice1**2+Choice2**2.gt.1.0d0)
   call RANDOM_NUMBER(Choice1)
   call RANDOM_NUMBER(Choice2)
+!write(3,*) Choice1, " " ,Choice2
+  		
+  		
   Choice1=(Choice1*2.0d0-1.0d0)
   Choice2=(Choice2*2.0d0-1.0d0)
 enddo
+
+! close(3)
 
 !
 ! according to the PhD of Schieback (2010) from Constanz p. 35
 !
 
 gaussianran=sqrt(2.0d0*kT)*Choice1*sqrt(-2.0d0*dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
-
+!gaussianran=sqrt(kT)*Choice1*sqrt(-2.0d0*dlog(Choice1**2+Choice2**2)/(Choice1**2+Choice2**2))
 end function
 
 

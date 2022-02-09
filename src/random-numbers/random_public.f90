@@ -38,7 +38,7 @@ subroutine get_ran_type(ran_out)
 !           call ran_out%read_option()
 
         case(-1)
-            ERROR STOP "cannot found the chosen random number generator"
+            ERROR STOP "cannot find the chosen random number generator"
 
         case default
             ERROR STOP "unknown random number generator"

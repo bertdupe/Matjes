@@ -1,0 +1,26 @@
+#module load os/el7 mkl/18.0.2 impi/18.0.2 gcc/10.2.1 cmake/3.13.3 fftw/3.3.8  intel/21.2.0 
+#manually set compiler
+set(CMAKE_CXX_COMPILER "mpiicc")
+set(CMAKE_Fortran_COMPILER "mpiifort")
+
+#set faster release flags
+set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -fno-protect-parens -ffast-math -fopenmp")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -march=native -mtune=intel")
+
+#include_directories( /usr/lib64/ ) #FFTW directory include
+set(FFTW3_INC $ENV{FFTW_HOME})
+set(add_inc ${add_inc} "${FFTW3_INC}/include" )
+
+set(USE_CUDA FALSE)
+set(USE_EIGEN FALSE)
+set(USE_MKL TRUE)
+
+set(MKL_linker "-Wl,--no-as-needed -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl") 
+set(CMAKE_CUDA_ARCHITECTURES 75)
+
+#MANUALLY SET PREPROCESSOR FLAGS
+add_compile_definitions(CPP_FFTW3)
+add_compile_definitions(CPP_MPI)
+add_compile_definitions(CPP_MRG)
+add_compile_definitions(CPP_BLAS)
+#add_compile_definitions(CPP_DEBUG)
