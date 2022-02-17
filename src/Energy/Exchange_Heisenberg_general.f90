@@ -60,7 +60,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
     real(8)         :: bound_input(3)         ! first vector along which the interactions are given. It MUST be x=(1.0,0.0,0.0)
     real(8)         :: axis(3),angle,vec_tmp(3),scalaire,symop(3,3)
-    integer         :: shell,k
+    integer         :: shell,k,i_op
     logical         :: found_sym
     class(pt_grp),allocatable :: my_symmetries
     character(len=30) :: name_sym
@@ -91,7 +91,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
         ! get the symmetries
         call set_sym_type(my_symmetries)
-        call my_symmetries%read_sym()
+        call my_symmetries%read_sym('symmetries.out')
 
         do i_atpair=1,N_atpair
             !loop over different connected atom types
@@ -129,14 +129,21 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     ! rotate the exchange matrix to align it with the neighbor direction
                      ! rotation axis
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
+                    write(*,*) neigh%diff_vec(:,i_pair),vec_tmp
 
                     do k=1,my_symmetries%n_sym
+                       write(*,*) my_symmetries%rotmat(k)%name
                        call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
-                       if (found_sym) exit
+                       if (found_sym) then
+                          i_op=k
+                          exit
+                         else
+                          if (k.eq.my_symmetries%n_sym) STOP 'symmetry operation not found in Exchange_Heisenberg_general'
+                       endif
                     enddo
 
-                    symop=my_symmetries%rotmat(k)%mat
-                    name_sym=my_symmetries%rotmat(k)%name
+                    symop=my_symmetries%rotmat(i_op)%mat
+                    name_sym=my_symmetries%rotmat(i_op)%name
                     call rotate_exchange(J,J_init,symop)
 
                     !endif

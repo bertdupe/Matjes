@@ -17,6 +17,7 @@ contains
    procedure :: get_latt_sym
    procedure :: write_sym,read_sym
    procedure :: get_pt_sym
+   procedure :: get_all_symetries
 
 end type
 
@@ -32,7 +33,8 @@ contains
 subroutine get_latt_sym(this,areal,number_sym,sym_index,periodic,dim_lat)
 class(pt_grp_dense), intent(in)    :: this
 real(kind=8)       , intent(in)    :: areal(3,3)
-integer            , intent(inout) :: number_sym,sym_index(:)
+integer            , intent(out)   :: number_sym
+integer            , intent(inout) :: sym_index(:)
 integer      ,intent(in)     :: dim_lat(:)
 logical      ,intent(in)     :: periodic(:)
 
@@ -64,7 +66,7 @@ do i=1,size(sym_index)
 
 enddo
 
-write(output_unit,'(/a,I4,a)') 'number of lattice symmetries found  ', number_sym, '/64'
+write(output_unit,'(/a,I4,a,I4)') 'number of lattice symmetries found  ', number_sym, '/',this%N_sym
 do j=1,number_sym
    write(output_unit,'(a)') trim(this%rotmat(sym_index(j))%name)
    do i=1,3
@@ -96,12 +98,13 @@ type(t_cell)       , intent(in)     :: my_motif
 integer :: natom,i,j,i_sim,k
 integer,allocatable ::  new_index(:),mask_index(:)
 real(kind=8) :: test_vec(3),pos(3),sym_mat(3,3),test_pos(3)
-logical :: found
+logical,allocatable :: found(:)
 
 sym_mat=0.0d0
 natom=size(my_motif%atomic)
 allocate(new_index(number_sym),source=0)
 allocate(mask_index(number_sym),source=0)
+allocate(found(natom))
 
 write(output_unit,'(I4,a)') natom, ' atoms found in the unit cell'
 
@@ -111,6 +114,7 @@ do j=1,number_sym
    if (i_sim.eq.0) cycle  ! if the symmetry does not apply to the lattice cycle
 
    sym_mat=this%rotmat(i_sim)%mat
+   found=.false.
 
    do i=1,natom  ! loop over the number of atoms
 
@@ -119,17 +123,24 @@ do j=1,number_sym
 
       do k=1,natom   ! check if any of the other atoms is equivalent
 
-         test_pos=my_motif%atomic(k)%position
-         found=look_translation(test_vec,areal,periodic,dim_lat,test_pos)
+         ! sites must have the name name (same atom type) otherwise cycle
+         if (my_motif%atomic(k)%name.ne.my_motif%atomic(i)%name) cycle
 
-         if (found) then
-             write(output_unit,'(3a,3f8.3)') "atom : ", trim(my_motif%atomic(i)%name), " at : ", my_motif%atomic(i)%position
-             write(output_unit,'(3a,3f8.3)') "equivalent to atom : ", trim(my_motif%atomic(k)%name), " at : ", my_motif%atomic(k)%position
-             write(output_unit,'(2a/)') "via symmetry : ", trim(this%rotmat(i_sim)%name)
-             mask_index(j)=1
-         endif
+         test_pos=my_motif%atomic(k)%position
+         found(i)=look_translation(test_vec,areal,periodic,dim_lat,test_pos)
+
+         ! if an equivalent atom was found then accept the symmetry operation
+
+         if (found(i)) exit
 
       enddo
+
+      if (all(found)) then
+         write(output_unit,'(3a,3f8.3)') "atom : ", trim(my_motif%atomic(i)%name), " at : ", my_motif%atomic(i)%position
+         write(output_unit,'(3a,3f8.3)') "equivalent to atom : ", trim(my_motif%atomic(k)%name), " at : ", my_motif%atomic(k)%position
+         write(output_unit,'(2a/)') "via symmetry : ", trim(this%rotmat(i_sim)%name)
+         mask_index(j)=1
+      endif
 
    enddo
 
@@ -177,12 +188,23 @@ subroutine load(this,index_sym,all_sym)
  integer            , intent(in)    :: index_sym(:)
 
  integer :: i,j
+ logical :: if_file
 
+ if_file=.false.
+ inquire(file='symmetries.in',exist=if_file)
+! if file found
+if (if_file) then
+ write(output_unit,'(a/)') 'symmetries read from symmetries.out'
+ call this%read_sym('symmetries.in')
+else
+
+! if file not found
  do i=1,this%N_sym
      j=index_sym(i)
-     this%rotmat(i)%mat = all_sym%rotmat(j)%mat
+     this%rotmat(i)%mat = transpose(all_sym%rotmat(j)%mat)
      this%rotmat(i)%name = all_sym%rotmat(j)%name
  end do
+endif
 
 end subroutine
 
@@ -230,15 +252,16 @@ integer :: i,j
 
 end subroutine
 
-subroutine read_sym(this)
+subroutine read_sym(this,fname)
     use m_io_files_utils
     class(pt_grp_dense),intent(inout) :: this
+    character(len=*), intent(in) :: fname
 
     ! internal
     integer :: io_sym,i,j,N_sym
 
 
-    io_sym=open_file_read('symmetries.out')
+    io_sym=open_file_read(fname)
 
     read(io_sym,*)N_sym
     call this%init(N_sym)
@@ -251,7 +274,81 @@ subroutine read_sym(this)
         enddo
     enddo
 
-    call close_file('symmetries.out',io_sym)
+    call close_file(fname,io_sym)
+
+end subroutine
+
+subroutine get_all_symetries(this,N,out)
+    class(pt_grp_dense),intent(in)    :: this
+    integer            ,intent(out)   :: N
+    class(pt_grp)      ,intent(inout) :: out
+
+    integer :: i,dim_table,j,k,fin
+    type(pt_grp_dense) :: tmp_op
+    real(8) :: tmp_mat(3,3)
+    logical :: found
+
+    dim_table=this%n_sym**2
+    allocate(tmp_op%rotmat(dim_table))
+
+    do i=1,this%n_sym
+       tmp_op%rotmat(i)%mat=this%rotmat(i)%mat
+       tmp_op%rotmat(i)%name=this%rotmat(i)%name
+    enddo
+
+    fin=this%n_sym
+    do i=1,this%n_sym
+       do j=1,this%n_sym
+       tmp_mat=matmul(tmp_op%rotmat(i)%mat,tmp_op%rotmat(j)%mat)
+
+          found=.false.
+          do k=1,fin
+             if (all(abs(tmp_mat-tmp_op%rotmat(k)%mat).lt.1.0d-6)) then
+                found=.true.
+                exit
+             endif
+          enddo
+
+          if (.not.found) then
+             tmp_op%rotmat(fin+1)%mat=tmp_mat
+             tmp_op%rotmat(fin+1)%name=trim(this%rotmat(i)%name)//'*'//trim(tmp_op%rotmat(j)%name)
+             fin=fin+1
+          endif
+       enddo
+    enddo
+
+    write(output_unit,'(I5,2x,a)') fin,'different symmetry operations found'
+
+    allocate(out%rotmat(fin))
+    out%n_sym=fin
+    N=fin
+    do i=1,N
+       out%rotmat(i)%mat=tmp_op%rotmat(i)%mat
+       out%rotmat(i)%name=tmp_op%rotmat(i)%name
+    enddo
+
+end subroutine
+
+!
+!
+! get the multiplication table for all the symmetry operations
+!
+subroutine get_multiplication_table(this,out)
+    class(pt_grp_dense),intent(in)    :: this
+    class(pt_grp_dense),intent(inout) :: out
+
+    type(pt_grp_dense) :: tmp_op
+    integer :: dim_table,i
+
+    dim_table=this%n_sym**2
+
+    allocate(tmp_op%rotmat(dim_table))
+
+    do i=1,this%n_sym
+       tmp_op%rotmat(i)%mat=this%rotmat(i)%mat
+       tmp_op%rotmat(i)%name=this%rotmat(i)%name
+    enddo
+
 
 end subroutine
 

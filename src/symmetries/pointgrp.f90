@@ -23,34 +23,34 @@ integer, intent(in) :: dim_lat(:)
 integer :: number_sym,number_sym_lat
 integer, allocatable :: sym_index(:)
 real(kind=8) :: time
-class(pt_grp),allocatable :: all_symmetries,my_symmetries
+class(pt_grp),allocatable :: base_symmetries,all_symmetries,my_symmetries
 ! first step determine the lattice symmetries
 
 time=0.0d0
 call user_info(output_unit,time,'calculating the symmetry operations',.false.)
 
-call set_sym_type(all_symmetries)
+call set_sym_type(base_symmetries)
 call set_sym_type(my_symmetries)
+call set_sym_type(all_symmetries)
 
-call all_symmetries%init_base()
-call all_symmetries%load_base()
+call base_symmetries%init_base()
+call base_symmetries%load_base()
+call base_symmetries%get_all_symetries(number_sym,all_symmetries)
 
-number_sym_lat=all_symmetries%get_N_sym()
-number_sym=number_sym_lat
-allocate(sym_index(number_sym_lat),source=0)
+allocate(sym_index(number_sym),source=0)
 
-call all_symmetries%get_latt_sym(areal,number_sym_lat,sym_index,periodic,dim_lat)
+call all_symmetries%get_latt_sym(areal,number_sym_lat,sym_index,(/.True.,.True.,.True./),dim_lat)
 
 write(output_unit,'(/,a,I2,a,/)') 'The lattice has  ',number_sym_lat,'  symmetrie operations'
 
-call all_symmetries%get_pt_sym(areal,number_sym,sym_index,my_motif,periodic,dim_lat)
+call all_symmetries%get_pt_sym(areal,number_sym,sym_index,my_motif,(/.True.,.True.,.True./),dim_lat)
 
 call my_symmetries%init(number_sym)
 call my_symmetries%load(sym_index,all_symmetries)
 
 call my_symmetries%write_sym()
 
-deallocate(all_symmetries,my_symmetries)
+deallocate(base_symmetries,all_symmetries,my_symmetries)
 
 call user_info(output_unit,time,'done',.true.)
 
