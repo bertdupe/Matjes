@@ -67,14 +67,13 @@ abstract interface
         logical      ,intent(in)       :: periodic(:)
     end subroutine
 
-    subroutine pt_sym(this,areal,number_sym,sym_index,my_motif,periodic,dim_lat)
+    subroutine pt_sym(this,my_lattice,number_sym,sym_index,my_motif)
         use m_derived_types, only : t_cell
+        use m_type_lattice , only : lattice
         import pt_grp
         class(pt_grp),intent(in)     :: this
+        type(lattice), intent(in)    :: my_lattice
         integer      , intent(inout) :: number_sym,sym_index(:)
-        real(8)      ,intent(in)     :: areal(3,3)
-        integer      ,intent(in)     :: dim_lat(:)
-        logical      ,intent(in)     :: periodic(:)
         type(t_cell) ,intent(in)     :: my_motif
     end subroutine
 

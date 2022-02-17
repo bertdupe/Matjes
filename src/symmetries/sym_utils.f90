@@ -68,24 +68,12 @@ do u=-2,2,1
    do v=-2,2,1
       do w=-2,2,1
 
-         test_vec=areal_rot-eps
-         if ((periodic(1)).or.(dim_lat(1).ne.1)) then
-            test_vec=test_vec+real(u)*areal(1,:)
-         else
-            if (abs(dot_product(test_vec,areal(1,:))).gt.1.0d-6) test_vec=test_vec-areal(1,:)
-         endif
+         test_vec=areal_rot+eps
+         if ((periodic(1)).or.(dim_lat(1).ne.1)) test_vec=test_vec+real(u)*areal(1,:)
 
-         if ((periodic(2)).or.(dim_lat(2).ne.1)) then
-            test_vec=test_vec+real(v)*areal(2,:)
-         else
-            if (abs(dot_product(test_vec,areal(2,:))).gt.1.0d-6) test_vec=test_vec-areal(2,:)
-         endif
+         if ((periodic(2)).or.(dim_lat(2).ne.1)) test_vec=test_vec+real(v)*areal(2,:)
 
-         if ((periodic(3)).or.(dim_lat(3).ne.1)) then
-            test_vec=test_vec+real(w)*areal(3,:)
-         else
-            if (abs(dot_product(test_vec,areal(3,:))).gt.1.0d-6) test_vec=test_vec-areal(3,:)
-         endif
+         if ((periodic(3)).or.(dim_lat(3).ne.1)) test_vec=test_vec+real(w)*areal(3,:)
 
 !
 ! be very carefull here! If the positions are not given with enough precision, the symetries will not be found

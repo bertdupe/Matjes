@@ -2,7 +2,10 @@ module m_sym_dense
 use m_symmetry_base
 use m_sym_utils, only : look_translation
 use m_derived_types, only : t_cell
+use m_type_lattice, only : lattice
+use m_lattice_position
 use, intrinsic :: iso_fortran_env, only : output_unit
+use m_invert, only : invert
 implicit none
 
 private
@@ -57,7 +60,7 @@ do i=1,size(sym_index)
 ! I have to take the transpose of rtest to have it written in lign again
 !
 
-    found=look_translation(rtest,transpose(areal),periodic,dim_lat)
+    found=look_translation(rtest,transpose(areal),(/.True.,.True.,.True./),dim_lat)
 
     if (found) then
        number_sym=number_sym+1
@@ -86,64 +89,54 @@ end subroutine get_latt_sym
 ! find the linear combination so that (P.(R.rho)-R) must be 0
 ! Continue until there are no symmetry operation left
 !
-subroutine get_pt_sym(this,areal,number_sym,sym_index,my_motif,periodic,dim_lat)
+subroutine get_pt_sym(this,my_lattice,number_sym,sym_index,my_motif)
 use m_vector, only : norm
-class(pt_grp_dense), intent(in)     :: this
-integer            , intent(inout)  :: number_sym,sym_index(:)
-real(8)            , intent(in)     :: areal(3,3)
-integer            , intent(in)     :: dim_lat(:)
-logical            , intent(in)     :: periodic(:)
-type(t_cell)       , intent(in)     :: my_motif
+class(pt_grp_dense), intent(in) :: this
+type(lattice), intent(in)       :: my_lattice
+integer      , intent(inout)    :: number_sym,sym_index(:)
+type(t_cell) , intent(in)       :: my_motif
 !internal
-integer :: natom,i,j,i_sim,k
-integer,allocatable ::  new_index(:),mask_index(:)
-real(kind=8) :: test_vec(3),pos(3),sym_mat(3,3),test_pos(3)
-logical,allocatable :: found(:)
+integer :: natom,i,j,i_sim,k,nattype,size_pos,ii
+integer,allocatable ::  new_index(:),mask_index(:),ind(:)
+real(kind=8) :: test_vec(3),pos(3),sym_mat(3,3),test_pos(3),translation(3)
+logical :: found
 
 sym_mat=0.0d0
 natom=size(my_motif%atomic)
 allocate(new_index(number_sym),source=0)
 allocate(mask_index(number_sym),source=0)
-allocate(found(natom))
 
 write(output_unit,'(I4,a)') natom, ' atoms found in the unit cell'
 
-! loop over all the symmetries
-do j=1,number_sym
-   i_sim=sym_index(j)
-   if (i_sim.eq.0) cycle  ! if the symmetry does not apply to the lattice cycle
+nattype=my_motif%n_attype
 
-   sym_mat=this%rotmat(i_sim)%mat
-   found=.false.
+do i=1,nattype  ! loop over the number of atom type
 
-   do i=1,natom  ! loop over the number of atoms
+   pos=my_motif%atomic(i)%position
+   call my_motif%ind_attype(i,ind)
+   nattype=size(ind)
+   if ((norm(pos).lt.1.0d-8).and.(nattype.eq.1)) cycle    !the atom is at the origin so the symmetries are the symmetries of the lattice
 
-      pos=my_motif%atomic(i)%position
-      test_vec=matmul(sym_mat,pos)
+   do ii=1,size(ind)
 
-      do k=1,natom   ! check if any of the other atoms is equivalent
+      pos=my_motif%atomic(ind(ii))%position ! take a test position
 
-         ! sites must have the name name (same atom type) otherwise cycle
-         if (my_motif%atomic(k)%name.ne.my_motif%atomic(i)%name) cycle
+      ! loop over all the symmetries
+      do j=1,number_sym
+         i_sim=sym_index(j)
+         if (i_sim.eq.0) cycle  ! if the symmetry does not apply to the lattice cycle
 
-         test_pos=my_motif%atomic(k)%position
-         found(i)=look_translation(test_vec,areal,periodic,dim_lat,test_pos)
+         sym_mat=this%rotmat(i_sim)%mat
+         test_vec=matmul(sym_mat,pos)    ! image of the test position by the symmetry operations
 
-         ! if an equivalent atom was found then accept the symmetry operation
-
-         if (found(i)) exit
+         do k=1,size(ind)
+            test_pos=my_motif%atomic(ind(k))%position
+            found=look_translation(test_vec,my_lattice%areal,my_lattice%periodic,my_lattice%dim_lat,test_pos)
+            if (found) mask_index(j)=1
+         enddo
 
       enddo
-
-      if (all(found)) then
-         write(output_unit,'(3a,3f8.3)') "atom : ", trim(my_motif%atomic(i)%name), " at : ", my_motif%atomic(i)%position
-         write(output_unit,'(3a,3f8.3)') "equivalent to atom : ", trim(my_motif%atomic(k)%name), " at : ", my_motif%atomic(k)%position
-         write(output_unit,'(2a/)') "via symmetry : ", trim(this%rotmat(i_sim)%name)
-         mask_index(j)=1
-      endif
-
    enddo
-
 enddo
 
 sym_index=sym_index*mask_index

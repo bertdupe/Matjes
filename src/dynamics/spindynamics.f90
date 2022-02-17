@@ -219,8 +219,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             ave_torque=0.0d0
             test_torque=0.0d0
             dt=timestep_int
-!            !why is this outside of the integration order loop? time changes there
-!            call update_ext_EM_fields(real_time,check)
+
         endif
        !
        ! loop over the integration order

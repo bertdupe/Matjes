@@ -6,6 +6,7 @@ use m_constants, only : pi
 use m_user_info
 use m_sym_public
 use m_symmetry_base
+use m_type_lattice, only : lattice
 
 private
 public :: find_group!,read_symmetries,get_num_sym_file,get_sym_local
@@ -13,12 +14,10 @@ public :: find_group!,read_symmetries,get_num_sym_file,get_sym_local
 contains
 
 
-subroutine find_group(areal,my_motif,periodic,dim_lat)
+subroutine find_group(my_lattice,my_motif)
 implicit none
-real(kind=8), intent(in) :: areal(3,3)
-type(t_cell), intent(in) :: my_motif
-logical, intent(in) :: periodic(:)
-integer, intent(in) :: dim_lat(:)
+type(lattice), intent(in) :: my_lattice
+type(t_cell), intent(in)  :: my_motif
 ! internal variables
 integer :: number_sym,number_sym_lat
 integer, allocatable :: sym_index(:)
@@ -39,11 +38,11 @@ call base_symmetries%get_all_symetries(number_sym,all_symmetries)
 
 allocate(sym_index(number_sym),source=0)
 
-call all_symmetries%get_latt_sym(areal,number_sym_lat,sym_index,(/.True.,.True.,.True./),dim_lat)
+call all_symmetries%get_latt_sym(my_lattice%areal,number_sym_lat,sym_index,my_lattice%periodic,my_lattice%dim_lat)
 
 write(output_unit,'(/,a,I2,a,/)') 'The lattice has  ',number_sym_lat,'  symmetrie operations'
 
-call all_symmetries%get_pt_sym(areal,number_sym,sym_index,my_motif,(/.True.,.True.,.True./),dim_lat)
+call all_symmetries%get_pt_sym(my_lattice,number_sym,sym_index,my_motif)
 
 call my_symmetries%init(number_sym)
 call my_symmetries%load(sym_index,all_symmetries)
