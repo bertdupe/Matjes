@@ -9,19 +9,39 @@ echo "povray -w1000 -h1000 povrayscript.pov"
 echo "Here, -w1000 -h1000 defines the resolution for width and height"
 echo ""
 
+# usage examples of -s|--states option:
+# ./visualizationScript.sh -s "(start 25 50 75 end)"
+# ./visualizationScript.sh -s "(start $(seq 25 25 75) end)"
+
 xcut=false
 cutpos_y=0
+s_option=false
+os=false
 while [ -n "$1" ]
 do
-case "$1" in
--x | --xcut) # cut along the x axis at y=cutpos_y=cste
-xcut=true
-if [[ -n "$2" ]] # && "$2" != "-"* ]] # uncomment if you want to implement other options
-then cutpos_y=$2
-fi
-;;
-esac
-shift
+    case "$1" in
+    -x | --xcut) # cut along the x axis at y=cutpos_y=cste
+        xcut=true
+        if [[ -n "$2" ]]
+        then cutpos_y=$2
+        else
+            echo "error not enough paramters given for -x/--xcut option"
+        fi
+        ;;
+    -s | --states) # gives a list of states
+        # if [[ -n "$2" ]]
+        #     then echo "error not enough paramters given for -s/--states option"
+        #     exit
+        # fi
+        s_option=true
+        echo $2
+        states=$2
+        eval states=$2
+        ;;
+    -os) # output files have the input sates as suffixes
+        os=true
+    esac
+    shift
 done
 
 posx_min=$(cat positions.dat | gawk '{print $1}' | LC_ALL=C sort -k 1 -g | head -n 1)
@@ -50,23 +70,28 @@ then
 mkdir -p $path/Visualization
 fi
 rm $path/Visualization/*.dat
-rm $path/Visualization/*.png # make a backup if you don't want to loose all your files!
+rm $path/Visualization/spinstructure_[[:digit:]].png # make a backup if you don't want to loose all your files!
 
 ###########################
 # prepare file for povray #
 ###########################
 
-# states=(start $(seq 1 1 9) end)
-states=(start end)
-# states=(start $(seq 1 1 79) end)
+if [ $s_option == false ] # if no states were given
+then
+    # states=(start $(seq 1 1 4) end)
+    states=(start end)
+    # states=(start $(seq 1 1 79) end)
+fi
 nb_states=${#states[@]}
 for state in ${states[@]}
 do
 if [ $xcut == true ]
 then
 paste positions.dat magnetic_$state.dat | gawk -v y_cut="$cutpos_y" '{if (strtonum($2) == strtonum(y_cut)) { for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
+# paste positions.dat spin_minimization$state.dat | gawk -v y_cut="$cutpos_y" '{if (strtonum($2) == strtonum(y_cut)) { for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
 else
 paste positions.dat magnetic_$state.dat | gawk '{ for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
+# paste positions.dat spin_minimization$state.dat | gawk '{ for (i=1;i<=NF;i++) printf "%.10f%s", $i, (i<NF?OFS:ORS)}' | gawk '{print "Spin(", "\t", $1",\t",  $2",\t", $3",\t", $4",\t", $5",\t", $6")"}' > Visualization/position_magnetization_$state.dat
 fi
 done
 
@@ -82,7 +107,12 @@ else
 gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $loc_y, 0 > /}" povrayscript.pov
 fi
 
-image_num=($(seq -w 0 1 $nb_states))
+if [ $os == true ]
+then
+    image_num=(${states[@]})
+else
+    image_num=($(seq -w 0 1 $nb_states))
+fi
 i=0
 for state in ${states[@]}
 do
