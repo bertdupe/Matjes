@@ -52,9 +52,12 @@ function shape_phasor(this,time) result(val)
     associate( I0     => this%real_var(1                :  this%dim_mode  ),&
                period => this%real_var(1+this%dim_mode),&
                phi    => this%real_var(2+this%dim_mode))
-    val(1:this%dim_mode) = I0
-    val(this%dim_mode+1) = -2.0d0*pi/period * time + phi * pi
-    ! print *, val
+    if(time < this%t_start .or. time > this%t_end) then
+        val = 0.0d0
+    else
+        val(1:this%dim_mode) = I0
+        val(this%dim_mode+1) = -2.0d0*pi/period * time + phi * pi
+    endif
     end associate
 end function
 
