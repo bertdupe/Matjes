@@ -129,10 +129,8 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     ! rotate the exchange matrix to align it with the neighbor direction
                      ! rotation axis
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
-                    write(*,*) neigh%diff_vec(:,i_pair),vec_tmp
 
                     do k=1,my_symmetries%n_sym
-                       write(*,*) my_symmetries%rotmat(k)%name
                        call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
                        if (found_sym) then
                           i_op=k

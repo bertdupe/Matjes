@@ -7,6 +7,7 @@ use m_user_info
 use m_sym_public
 use m_symmetry_base
 use m_type_lattice, only : lattice
+use m_rw_sym
 
 private
 public :: find_group!,read_symmetries,get_num_sym_file,get_sym_local
@@ -19,13 +20,20 @@ implicit none
 type(lattice), intent(in) :: my_lattice
 type(t_cell), intent(in)  :: my_motif
 ! internal variables
-integer :: number_sym,number_sym_lat
+integer :: number_sym,number_sym_lat,mode
 integer, allocatable :: sym_index(:)
 real(kind=8) :: time
 class(pt_grp),allocatable :: base_symmetries,all_symmetries,my_symmetries
+logical :: cal_sym
 ! first step determine the lattice symmetries
 
 time=0.0d0
+mode=1
+cal_sym=.false.
+call rw_sym(mode,cal_sym)
+if (.not.cal_sym) return
+
+call set_mode(mode)
 call user_info(output_unit,time,'calculating the symmetry operations',.false.)
 
 call set_sym_type(base_symmetries)

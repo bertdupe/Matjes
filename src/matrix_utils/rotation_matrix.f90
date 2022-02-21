@@ -42,7 +42,6 @@ contains
 
    vec_tmp=matmul(rotmat,bound_input)
 
-   write(*,*) norm(vec_tmp-vec),vec_tmp,vec
    if (norm(vec_tmp-vec).lt.1.0d-5) found=.true.
 
    end subroutine
