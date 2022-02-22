@@ -135,11 +135,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        
         if(io_simu%calc_topo)then
-            call user_info(6,time,'topological operators',.false.)
+            if (comm%ismas) call user_info(6,time,'topological operators',.false.)
             Call neighbor_Q(mag_lattice,Q_neigh)
-            call user_info(6,time,'done',.true.)
+            if (comm%ismas) call user_info(6,time,'done',.true.)
         else
-            write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
+            if (comm%ismas) write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
         endif
         
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

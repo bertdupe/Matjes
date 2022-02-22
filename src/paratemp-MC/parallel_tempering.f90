@@ -23,7 +23,6 @@ end subroutine
 
 subroutine parallel_tempering_run(my_lattice,io_simu,ext_param,H,com)
     use mpi_distrib_v
-    use m_topocharge_all
     use m_set_temp
     use m_constants, only : k_b
     use m_vector, only : norm

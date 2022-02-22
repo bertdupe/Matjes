@@ -34,9 +34,7 @@ type lattice
      integer        :: dim_modes(number_different_order_parameters)=0 !saves the dimension of the set order_parameters
      integer        :: site_per_cell(number_different_order_parameters)=0 !number of sites of order parameter per unit-cell (like nmag, nph)
 
-     integer                :: n_system !no clue what this does
-     integer, allocatable   :: world(:)
-     logical                :: periodic(3) !lattice periodic in direction
+     logical         :: periodic(3) !lattice periodic in direction
      logical,private :: order_set(number_different_order_parameters)=.false. !logical variable which saves which orderparameters has been set
 
      !convenience parameters 
@@ -555,12 +553,10 @@ subroutine copy_lattice(this,copy)
     copy%a_sc_inv=this%a_sc_inv
     copy%dim_lat=this%dim_lat
     copy%ncell=this%ncell
-    copy%n_system=this%n_system
     copy%dim_modes=this%dim_modes
     copy%nmag=this%nmag
     copy%nph=this%nph
     copy%periodic=this%periodic
-    if(allocated(this%world)) allocate(copy%world,source=this%world)
     if(allocated(this%sc_vec_period)) allocate(copy%sc_vec_period,source=this%sc_vec_period)
     copy%order_set=this%order_set
     copy%site_per_cell=this%site_per_cell
@@ -660,21 +656,15 @@ use mpi_basic
     Call MPI_Bcast(this%a_sc         , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%a_sc_inv     , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%dim_modes    , size(this%dim_modes)             , MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%n_system     , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%nmag         , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%nph          , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%periodic     , 3                                , MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%order_set    , size(this%order_set)             , MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%site_per_cell, number_different_order_parameters, MPI_INTEGER, comm%mas, comm%com,ierr)
 
-    if(comm%ismas) N=size(this%world)
+    if(comm%ismas) N=size(this%sc_vec_period,2)
     Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    if(.not.comm%ismas) allocate(this%world(N))
-    Call MPI_Bcast(this%world, N, MPI_INTEGER, comm%mas, comm%com,ierr)
-
-    if(comm%ismas) N=size(this%world)
-    Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    if(.not.comm%ismas) allocate(this%sc_vec_period(3,N/3))
+    if(.not.comm%ismas) allocate(this%sc_vec_period(3,N))
     Call MPI_Bcast(this%sc_vec_period, N, MPI_REAL8, comm%mas, comm%com,ierr)
 
     if(this%order_set(1)) Call this%M%bcast(comm)

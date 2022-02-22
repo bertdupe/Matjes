@@ -89,7 +89,7 @@ subroutine distribute(this,com_in)
     Call bcast(this%N_total,com_in)
     Call bcast(this%NH_total,com_in)
     this%NH_local=this%NH_total
-    if(com_in%Np==1) return
+    if(com_in%Np.eq.1) return
     !decide how to parallelize Hamiltonian
     Call get_two_level_comm(com_in,this%NH_total,com_outer,com_inner)
 
