@@ -1,0 +1,10 @@
+# example of compiling command (I always forget)
+
+gfortran -I/usr/include/ fftw.f90 -L/usr/lib/x86_64-linux-gnu/ -lfftw3
+
+# on MAC intel
+gfortran -I/opt/intel/compilers_and_libraries_2020.3.279/mac/mkl/include -fallow-invalid-boz mkl_vsl_random.f90 -L/opt/intel/compilers_and_libraries_2020.3.279/mac/mkl/lib -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lm -ldl
+
+gfortran -I/opt/intel/compilers_and_libraries_2020.3.279/mac/mkl/include spblas_mkl.f90 -L/opt/intel/compilers_and_libraries_2020.3.279/mac/mkl/lib -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lm -ldl
+
+

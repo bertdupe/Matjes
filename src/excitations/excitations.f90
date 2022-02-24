@@ -62,12 +62,14 @@ subroutine read_all_excitations(fname,excitations)
         return
     endif
     !get different excitation shape_r
+
     Call read_excitation_shape_r(io,fname,excitations%shape_r)
-    
+
     !get different excitation shape_t
     Call read_excitation_shape_t(io,fname,excitations%shape_t)
 
     !read excitation combinations
+
     Call read_excitation_io(io,fname,io_exc)
 
     close(io)
@@ -191,7 +193,7 @@ subroutine update_exc(time,lat,dat)
             opvec=0.0d0
         endif
     enddo
- 
+
     do j=1,size(dat%exc)
         !set help parameters
         i_r=dat%exc(j)%int_shape_r
@@ -213,4 +215,5 @@ subroutine update_exc(time,lat,dat)
     enddo
     nullify(opvec)
 end subroutine
+
 end module m_excitations

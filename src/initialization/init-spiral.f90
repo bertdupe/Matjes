@@ -27,7 +27,7 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     real(8),allocatable,target :: pos(:)
 !    real(8),allocatable ::  position(:)
     real(8),pointer :: pos_3(:,:),state_3(:,:)
-    integer         :: i
+    integer         :: i,N_atom_unitcell
    
     qvec=0.0d0
     Rq=[0.0d0,0.0d0,1.0d0]
@@ -57,19 +57,23 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state)
     Iq=Iq/norm2(Iq)
 
     call get_parameter(io,fname,'q_norm_'//ordname,3,qnorm)
-    qnorm=matmul(qnorm,lat%areal)
+    qnorm=matmul(qnorm,transpose(lat%astar))
 
     call get_parameter(io,fname,'norm_'//ordname,norm)
 
     Call get_pos_vec(lat,dim_mode,ordname,pos)
 
-    pos_3(1:3,1:size(pos)/3)=>pos
-    state_3(1:3,1:size(pos)/3)=>state
+    N_atom_unitcell=1
+    if (dim_mode.gt.3) N_atom_unitcell=dim_mode/3
+    pos_3(1:3,1:size(pos)/dim_mode*N_atom_unitcell)=>pos
+    state_3(1:3,1:size(pos)/dim_mode*N_atom_unitcell)=>state
+
     do i=1,size(state_3,2)
         state_3(:,i)=(cos(dot_product(qvec,pos_3(:,i)))*Rq+ &
                       sin(dot_product(qvec,pos_3(:,i)))*Iq)* &
                       norm*cos(dot_product(qnorm,pos_3(:,i)))
     enddo
+
     nullify(pos_3,state_3)
     deallocate(pos)
 end subroutine

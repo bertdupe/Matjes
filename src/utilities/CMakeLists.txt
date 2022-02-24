@@ -7,6 +7,5 @@ src/utilities/qorien.f90
 src/utilities/rotation.f90
 src/utilities/SkX_utils.f90
 src/utilities/spline.f90
-src/utilities/topocharge_all.f90
 src/utilities/topocharge_local.f90
 )

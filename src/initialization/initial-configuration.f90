@@ -58,6 +58,9 @@ subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
     use m_init_Sklattice
     use m_init_spiral
     use m_init_random
+    use m_init_hopfion
+    use m_init_bobber
+    use m_init_AFMskyrmion
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
@@ -90,6 +93,15 @@ subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
         case('skyrmionla')
             call init_spiral(io,fname,lat,ordname,dim_mode,state)
             call init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
+        case('hopfion')
+            call init_spiral(io,fname,lat,ordname,dim_mode,state)
+            call init_hopfion(io,fname,lat,ordname,dim_mode,state)
+        case('bobber')
+            call init_spiral(io,fname,lat,ordname,dim_mode,state)
+            call init_bobber(io,fname,lat,ordname,dim_mode,state)
+        case('AFMskyrmion')
+            call init_spiral(io,fname,lat,ordname,dim_mode,state)
+            call init_AFMskyrmion(io,fname,lat,ordname,dim_mode,state)
         case('random')
             write(6,'(3a)') 'random configuration for ',ordname,' was chosen'
             call init_random(dim_mode,state)

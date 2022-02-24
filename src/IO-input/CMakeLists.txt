@@ -11,8 +11,8 @@ src/IO-input/rw_dyna_MD.f90
 src/IO-input/rw_extpar.f90
 src/IO-input/rw_H.f90
 src/IO-input/rw_lattice.f90
-src/IO-input/rw_motif.f90
 src/IO-input/rw_zdir.f90
 src/IO-input/write_tableNN.f90
 src/IO-input/rw_high.f90
+src/IO-input/rw_sym.f90
 )

@@ -86,9 +86,10 @@ subroutine distribute(this,com_in)
             write(error_unit,*) "WARNING, MPI-distributions for H_fft is not checked"
         endif
     endif
+    Call bcast(this%N_total,com_in)
     Call bcast(this%NH_total,com_in)
     this%NH_local=this%NH_total
-    if(com_in%Np==1) return
+    if(com_in%Np.eq.1) return
     !decide how to parallelize Hamiltonian
     Call get_two_level_comm(com_in,this%NH_total,com_outer,com_inner)
 
@@ -129,7 +130,6 @@ subroutine distribute(this,com_in)
             do i=1,this%NH_local
                 Call this%H(i)%recv(0,i,com_outer%com)
             enddo
-            Call set_work_mode(this)
         endif
         this%is_set=.true.
     endif
@@ -147,10 +147,12 @@ subroutine distribute(this,com_in)
     this%com_outer=com_outer
     this%com_inner=com_inner
     this%com_global=com_in
+
+    Call set_work_mode(this)
+
 #else
     continue
 #endif
-
 end subroutine
 
 subroutine bcast_hamil(this,comm)
@@ -166,7 +168,6 @@ subroutine bcast_hamil(this,comm)
             write(error_unit,'(3/A)') "Cannot broadcast Hamiltonian, since it appearst the Hamiltonian already has been scattered"  !world master only contains a part of the full Hamiltonian
             Error STOP
         endif
-        if(allocated(this%H_fft)) ERROR STOP "IMPLEMENT FFT CASE Bcast in hamiltonian"
     endif
 
     N_tmp=[this%N_total,this%NH_total,this%NHF_total,this%NH_local,this%NHF_local]
@@ -364,12 +365,12 @@ subroutine energy_single(this,i_m,order,lat,work,E)
     use m_derived_types, only: number_different_order_parameters
     use mpi_distrib_v
     !returns the total energy caused by a single entry !needs some updating 
-    class(hamiltonian),intent(in)   :: this
-    integer,intent(in)              :: i_m
-    type (lattice),intent(in)       :: lat
-    integer,intent(in)              :: order
+    class(hamiltonian),intent(inout)    :: this
+    integer,intent(in)                  :: i_m
+    type (lattice),intent(in)           :: lat
+    integer,intent(in)                  :: order
     type(work_ham_single),intent(inout) ::  work
-    real(8),intent(out)             :: E
+    real(8),intent(out)                 :: E
 
     real(8)     ::  tmp_E(this%N_total)
     integer     ::  iH
@@ -382,9 +383,13 @@ subroutine energy_single(this,i_m,order,lat,work,E)
     enddo
     tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
 
-    if(this%NHF_local>0) STOP "IMPLEMENT THIS FOR FFT"
+    ! take care of the dipole dipole Hamiltonian if necessary
+    do iH=1,this%NHF_total
+       Call this%H_fft(ih)%get_E_single(lat,i_m,tmp_E(this%NH_total+iH))
+    enddo
 
     E=sum(tmp_E)
+
 end subroutine 
 
 subroutine get_eff_field(this,lat,B,Ham_type)

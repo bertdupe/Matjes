@@ -29,7 +29,7 @@ abstract interface
     function integrator(m,Dmag_int,dt)result(Mout)
         real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:)
         real(8),intent(in)              ::  dt
-        real(8)                         ::  Mout(size(M,1),size(M,2))
+        real(8),allocatable             ::  Mout(:,:)
     end function
 
 

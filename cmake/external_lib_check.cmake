@@ -182,6 +182,60 @@ else(NOT FOUND_FFTW AND NOT USE_FFTW)
 endif()
 
 
+#check for FFTW3_MPI
+message("\n\n Searching for FFTW3_MPI")
+if(NOT DEFINED USE_FFTWMPI OR (DEFINED USE_FFTWMPI AND USE_FFTWMPI))
+
+    if(DEFINED FFTWMPI_library_path)
+            message(" Using manually set FFTW_MPI library path: ${FFTWMPI_library_path}")
+    else()
+        set(FFTWMPI_library_path "/usr/lib")
+             message(" Using default FFTW library path: ${FFTWMPI_library_path}")
+    endif()
+
+    if(DEFINED FFTWMPI_include_path)
+            message(" Using manually set FFTW_MPI include path: ${FFTWMPI_include_path}")
+    else()
+        set(FFTWMPI_include_path "/usr/include")
+            message(" Using default FFTW include path: ${FFTWMPI_include_path}")
+    endif()
+
+    if(DEFINED FFTWMPI_linker)
+        message(" Using manually set FFTW_MPI linker: ${FFTWMPI_linker}")
+    else()
+        set(FFTWMPI_linker "-lfftw3 -lfftw3_mpi -lm")
+        message(" Using default FFTW_MPI linker: ${FFTWMPI_linker}")
+    endif()
+
+    try_compile(FOUND_FFTWMPI "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_mpi.f90"
+       CMAKE_FLAGS
+                 "-DINCLUDE_DIRECTORIES=${FFTW_include_path}"
+                 "-DLINK_DIRECTORIES=${FFTW_library_path}"
+        LINK_LIBRARIES "${FFTW_linker}"
+        OUTPUT_VARIABLE FFTW_test_output
+        )
+    if(FOUND_FFTWMPI)
+        message(" Success testing FFTW_MPI.\n Compiling with CPP_FFTWMPI")
+        add_compile_definitions(CPP_FFTWMPI)
+        set(USE_FFTWMPI TRUE)
+    elseif(USE_FFTWMPI AND NOT FOUND_FFTWMPI)
+        message("Error information testing FFTW_MPI:")
+        message("${FFTW_test_output}")
+        message("\n")
+        message( FATAL_ERROR "Unsuccessfull FFTW_MPI test.\n USE_FFTW_MPI has been set to TRUE, thus aborting.")
+    else()
+        message("Unsuccessfull FFTW_MPI test.\n Compiling without FFTWMPI.")
+        set(USE_FFTWMPI FALSE)
+    endif()
+
+elseif(FOUND_FFTWMPI)
+    message("FFTW_MPI implementation already found, skipping search of explicit FFTW_MPI implementation.")
+else(NOT FOUND_FFTWMPI AND NOT USE_FFTWMPI)
+    message("Skipping FFTW_MPI as USE_FFTWMPI=FALSE.")
+endif()
+
+
+
 
 #check for BLAS
 message("\n\n Search for BLAS")

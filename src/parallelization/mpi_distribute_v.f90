@@ -30,7 +30,9 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     integer     :: mpi_comm_tmp !temporary MPI_comm
     integer     :: ierr,i
 
-    if(N>=com_in%NP)then
+    write(*,*) 'Bertrand: problem with the MPI parallelization here'
+    stop
+    if(N.ge.com_in%NP)then
         Call com_outer%init(com_in)
         com_outer%cnt=N/com_in%NP
         com_outer%cnt(1:modulo(N,com_in%NP))=com_outer%cnt(1:modulo(N,com_in%NP))+1
@@ -38,7 +40,7 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
         do i=2,com_in%NP
             com_outer%displ(i)=sum(com_outer%cnt(1:i-1))
         enddo
-        Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
+        Call MPI_COMM_SPLIT(com_in%com,i,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
         Call com_inner%set(mpi_comm_tmp)
     else
         div=(com_in%Np-1)/N+1
@@ -59,7 +61,6 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     Call com_outer%init(com_in)
     com_outer%cnt=N
 #endif
-
 
 end subroutine
 

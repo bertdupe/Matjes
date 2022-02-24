@@ -28,8 +28,9 @@ subroutine get_stark_E(Ham,io,lat)
     !get stark in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
-    use m_setH_util,only: get_coo
-    use m_input_H_types, only: io_H_stark
+    use m_setH_util,only : get_coo
+    use m_constants, only : J_to_eV
+    use m_input_H_types, only : io_H_stark
     use m_constants, only : mu_B,epsilon_0
     use m_mode_public
 
@@ -37,7 +38,7 @@ subroutine get_stark_E(Ham,io,lat)
     type(io_H_stark),intent(in) :: io
     type(lattice),intent(in)    :: lat
     !local parameters
-    real(8),allocatable     :: phonon(:)
+    real(8),allocatable     :: Zborn(:)
     integer                 :: i
     !describe local Hamiltonian
     real(8),allocatable     :: Htmp(:,:)
@@ -47,14 +48,14 @@ subroutine get_stark_E(Ham,io,lat)
     integer,allocatable     :: connect(:,:)
 
     if(io%is_set)then
-        allocate(Htmp(3,lat%u%dim_mode),source=0.d0) !assume shape of E-field has to be 3
-        Call lat%cell%get_Z_phonon(phonon)
-        do i=1,size(phonon)
-            Htmp(1,(i-1)*3+1)=phonon(i)
-            Htmp(2,(i-1)*3+2)=phonon(i)
-            Htmp(3,(i-1)*3+3)=phonon(i)
+        allocate(Htmp(lat%E%dim_mode,lat%u%dim_mode),source=0.d0) !assume shape of E-field has to be 3
+        Call lat%cell%get_Z_phonon(Zborn)
+        do i=1,size(Zborn)
+            Htmp((i-1)*3+1,(i-1)*3+1)=Zborn(i)
+            Htmp((i-1)*3+2,(i-1)*3+2)=Zborn(i)
+            Htmp((i-1)*3+3,(i-1)*3+3)=Zborn(i)
         enddo
-        Htmp=(epsilon_0*io%c_stark) * Htmp
+        Htmp=(io%c_stark) * Htmp * J_to_eV
 
         !get local Hamiltonian in coo format
         Call get_coo(Htmp,val_tmp,ind_tmp)

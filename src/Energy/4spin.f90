@@ -2,7 +2,7 @@ module m_4spin
 use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_sp4
 use m_derived_types, only: lattice
-use m_neighbor_pair, only: pair_dat_t, get_pair_dat
+use m_neighbor_pair, only: pair_dat_t, get_pair_dat_M
 
 !use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 implicit none
@@ -114,7 +114,7 @@ subroutine get_4spin(Ham,io,lat)
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N4spin=size(io%val)
-        Call get_pair_dat(lat,io%at_type,[1,2],pair_dat)    !get all pairs of same atom type for nearest and next-nearest neighbor
+        Call get_pair_dat_M(lat,io%at_type,[1,2],pair_dat)    !get all pairs of same atom type for nearest and next-nearest neighbor
         N_con=sum(pair_dat%Npair)
         dim_mode=[3*N_con,3*N_con]
         do i_4spin=1,N4spin

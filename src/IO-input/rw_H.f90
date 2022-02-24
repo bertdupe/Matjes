@@ -18,6 +18,12 @@ module m_rw_H
         use m_Mag_Biq, only : read_Mag_Biq_input
         use m_4spin, only: read_sp4_input
         use m_dipolar_magnetic, only: read_dip_input
+        use m_exchange_heisenberg_general, only : read_ExchG_input
+        use m_spincurrent, only : read_SC_input
+        use m_phonon_rank4, only : read_PH4_input
+        use m_Ph_Biq, only : read_Ph_Biq_input
+        use m_general_force_tensor, only : read_Ftensor_input
+        use m_dipolar_phonon, only: read_dip_ph_input
         
         type(io_H),intent(out)      :: H_io
         character(*),parameter      :: fname='input'
@@ -33,11 +39,17 @@ module m_rw_H
         Call read_ME_J_input(io_param,fname,H_io%ME_J)
         Call read_ME_D_input(io_param,fname,H_io%ME_D)
         Call read_F_input(io_param,fname,H_io%F)
-        Call read_ASR_Ph_input(io_param,fname,H_io%ASR_Ph)
+        Call read_ASR_Ph_input(io_param,fname,H_io%ASR_ph)
         Call read_stark_input(io_param,fname,H_io%stark)
         call read_Mag_Biq_input(io_param,fname,H_io%M_biq)
         call read_sp4_input(io_param,fname,H_io%sp4)
         call read_dip_input(io_param,fname,H_io%dip)
+        call read_ExchG_input(io_param,fname,H_io%Exchten)
+        call read_PH4_input(io_param,fname,H_io%Ph4)
+        call read_SC_input(io_param,fname,H_io%SC)
+        call read_Ph_Biq_input(io_param,fname,H_io%U_biq)
+        call read_Ftensor_input(io_param,fname,H_io%U_foten)
+        call read_dip_ph_input(io_param,fname,H_io%dip_ph)
 
         call close_file(fname,io_param)
     end subroutine

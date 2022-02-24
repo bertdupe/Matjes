@@ -2,7 +2,7 @@ module m_lattice_position
 !module which contains several routines to get or print position information for the lattice type
 use m_type_lattice, only: lattice
 private
-public get_pos_mag, get_pos_center
+public get_pos_mag, get_pos_center, get_pos_ph, get_pos_at_Id
 public print_pos_ind
 
 contains
@@ -37,6 +37,18 @@ subroutine get_pos_atom(this,pos_out)
     Call get_pos_ind(this,ind,pos_out)
 end subroutine
 
+subroutine get_pos_at_Id(this,Id,pos_out)
+    !get the real-space position of each magnetic atom in the supercell
+    class(lattice),intent(in)               :: this
+    integer       ,intent(in)               :: Id
+    real(8),allocatable,intent(inout)       :: pos_out(:)
+
+    integer, allocatable            :: ind(:)
+
+    Call this%cell%ind_attype(Id,ind)
+    Call get_pos_ind(this,ind,pos_out)
+end subroutine
+
 subroutine get_pos_mag(this,pos_out)
     !get the real-space position of each magnetic atom in the supercell
     class(lattice),intent(in)               :: this
@@ -46,6 +58,18 @@ subroutine get_pos_mag(this,pos_out)
 
     Call this%cell%ind_mag_all(ind)
     Call get_pos_ind(this,ind,pos_out)
+end subroutine
+
+subroutine get_pos_ph(this,pos_out)
+    !get the real-space position of each magnetic atom in the supercell
+    class(lattice),intent(in)               :: this
+    real(8),allocatable,intent(inout)       :: pos_out(:)
+
+    integer, allocatable            :: ind(:)
+
+    Call this%cell%ind_M_all(ind)
+    Call get_pos_ind(this,ind,pos_out)
+
 end subroutine
 
 subroutine get_pos_center(this,pos_out)
