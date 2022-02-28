@@ -137,9 +137,7 @@ subroutine read_all_excitations(fname,excitations)
     enddo
     write(output_unit,'(A)') "Finished combining excitation entries."
 
-    do i=1,size(excitations%exc)
-        excitations%op_used(excitations%exc%op)=.true.
-    enddo
+    excitations%op_used(excitations%exc%op)=.true.
 
     write(output_unit,'(/A)') "Start printing found excitations."
     do i=1,number_different_order_parameters
