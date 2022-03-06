@@ -103,7 +103,7 @@ subroutine get_Forces_tensor(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
         ! get the symmetries
         call set_sym_type(my_symmetries)
-        call my_symmetries%read_sym()
+        call my_symmetries%read_sym('symmetries.out')
 
         do i_atpair=1,N_atpair
             !loop over different connected atom types

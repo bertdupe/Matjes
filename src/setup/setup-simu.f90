@@ -92,7 +92,7 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     Call print_positions(my_lattice,time)
 
     ! get the space group and the point group
-    call find_group(my_lattice%areal,my_motif,my_lattice%periodic,my_lattice%dim_lat)
+    call find_group(my_lattice,my_motif)
 
     write(output_unit,'(///)') 
     call user_info(output_unit,time,'Start setting Hamiltonians',.false.)

@@ -21,6 +21,7 @@ type,extends(symop), abstract :: pt_grp
    procedure(pt_sym)   ,deferred :: get_pt_sym
    procedure(rw_sym)   ,deferred :: write_sym
    procedure(rd_sym)   ,deferred :: read_sym
+   procedure(load_all) ,deferred :: get_all_symetries
 
    procedure,NON_OVERRIDABLE   :: init_base
    procedure,NON_OVERRIDABLE   :: load_base
@@ -60,19 +61,19 @@ abstract interface
         import pt_grp
         class(pt_grp),intent(in)       :: this
         real(8)      ,intent(in)       :: areal(3,3)
-        integer      ,intent(inout)    :: number_sym,sym_index(:)
-        integer      ,intent(in)     :: dim_lat(:)
-        logical      ,intent(in)     :: periodic(:)
+        integer      ,intent(out)      :: number_sym
+        integer      ,intent(inout)    :: sym_index(:)
+        integer      ,intent(in)       :: dim_lat(:)
+        logical      ,intent(in)       :: periodic(:)
     end subroutine
 
-    subroutine pt_sym(this,areal,number_sym,sym_index,my_motif,periodic,dim_lat)
+    subroutine pt_sym(this,my_lattice,number_sym,sym_index,my_motif)
         use m_derived_types, only : t_cell
+        use m_type_lattice , only : lattice
         import pt_grp
         class(pt_grp),intent(in)     :: this
+        type(lattice), intent(in)    :: my_lattice
         integer      , intent(inout) :: number_sym,sym_index(:)
-        real(8)      ,intent(in)     :: areal(3,3)
-        integer      ,intent(in)     :: dim_lat(:)
-        logical      ,intent(in)     :: periodic(:)
         type(t_cell) ,intent(in)     :: my_motif
     end subroutine
 
@@ -81,9 +82,17 @@ abstract interface
         class(pt_grp),intent(in)       :: this
     end subroutine
 
-    subroutine rd_sym(this)
+    subroutine rd_sym(this,fname)
         import pt_grp
         class(pt_grp),intent(inout)    :: this
+        character(len=*),intent(in)    :: fname
+    end subroutine
+
+    subroutine load_all(this,N,out)
+        import pt_grp
+        class(pt_grp),intent(in)       :: this
+        integer      ,intent(out)      :: N
+        class(pt_grp),intent(inout)    :: out
     end subroutine
 
 end interface

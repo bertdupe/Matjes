@@ -45,7 +45,6 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     use m_mc_track_val,only: track_val
     use m_fluct, only: fluct_parameters,init_fluct_parameter, print_fluct_spatial, eval_fluct_spatial
     use m_mc_therm_val
-    use m_get_table_nn,only :get_table_nn
     use m_work_ham_single, only: work_ham_single
 
     type(lattice), intent(inout)            :: lat

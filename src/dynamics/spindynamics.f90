@@ -135,11 +135,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        
         if(io_simu%calc_topo)then
-            call user_info(6,time,'topological operators',.false.)
+            if (comm%ismas) call user_info(6,time,'topological operators',.false.)
             Call neighbor_Q(mag_lattice,Q_neigh)
-            call user_info(6,time,'done',.true.)
+            if (comm%ismas) call user_info(6,time,'done',.true.)
         else
-            write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
+            if (comm%ismas) write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
         endif
         
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -219,8 +219,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             ave_torque=0.0d0
             test_torque=0.0d0
             dt=timestep_int
-!            !why is this outside of the integration order loop? time changes there
-!            call update_ext_EM_fields(real_time,check)
+
         endif
        !
        ! loop over the integration order
