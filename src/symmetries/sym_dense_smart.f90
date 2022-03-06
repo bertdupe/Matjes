@@ -96,8 +96,8 @@ type(lattice)            , intent(in)    :: my_lattice
 integer                  , intent(inout) :: number_sym,sym_index(:)
 type(t_cell)             , intent(in)    :: my_motif
 !internal
-integer :: natom,i,j,i_sim,k,nattype,size_pos,ii,npos
-integer,allocatable ::  new_index(:),mask_index(:,:),ind(:)
+integer :: natom,i,j,i_sim,k,nattype,size_pos,ii,npos,jj,max_sym,n_max_sym
+integer,allocatable ::  new_index(:),mask_index(:,:),ind(:),ind_high_sym(:)
 real(kind=8),allocatable :: high_sym_pos(:,:)
 real(kind=8) :: test_vec(3),pos(3),sym_mat(3,3),test_pos(3),translation(3),origin(3)
 logical :: found
@@ -152,7 +152,7 @@ do j=1,nattype  ! loop over the number of atom type
    do k=1,size(ind)  ! all atoms of the same type
       pos=my_motif%atomic(ind(k))%position ! take a test position
 
-      do i=1,npos+6
+      do i=1,size(high_sym_pos,2)
          origin=high_sym_pos(:,i)   ! new origin of the unit cell
          translation=origin-pos     ! coordinate of the site on the new origin
 
@@ -162,8 +162,12 @@ do j=1,nattype  ! loop over the number of atom type
             sym_mat=this%rotmat(i_sim)%mat
             test_vec=matmul(sym_mat,translation)
 
-            found=look_translation(test_vec,my_lattice%areal,(/.True.,.True.,.True./),my_lattice%dim_lat,translation)
-            if (found) mask_index(ii,i)=mask_index(ii,i)+1
+            do jj=1,size(ind)
+               test_pos=origin-my_motif%atomic(ind(jj))%position ! take a test position
+
+               found=look_translation(test_vec,my_lattice%areal,(/.True.,.True.,.True./),my_lattice%dim_lat,test_pos)
+               if (found) mask_index(ii,i)=mask_index(ii,i)+1
+            enddo
          enddo
 
       enddo
@@ -173,22 +177,60 @@ do j=1,nattype  ! loop over the number of atom type
 enddo
 
 ! treat the data
-do i=1,npos+6
-   write(*,*) count((mask_index(:,i)).eq.3)
+max_sym=0
+do i=1,size(high_sym_pos,2)
+   if(count(mask_index(:,i).eq.natom).ge.max_sym) max_sym=count((mask_index(:,i)).eq.natom)
+enddo
+write(output_unit,'(/a,I4)') 'maximum number of symmetry found: ',max_sym
+
+j=0
+do i=1,size(high_sym_pos,2)
+   if(count(mask_index(:,i).eq.natom).eq.max_sym) j=j+1
+enddo
+n_max_sym=j
+allocate(ind_high_sym(n_max_sym),source=0)
+write(output_unit,'(a,I4,a)') 'found ',n_max_sym,' high symmetry positions'
+write(output_unit,'(/a)') 'unit cell corresponding to the highest symmetries'
+j=0
+do i=1,size(high_sym_pos,2)
+   if(count(mask_index(:,i).eq.natom).eq.max_sym) then
+      j=j+1
+      ind_high_sym(j)=i
+      write(output_unit,'(/a,I4)') 'unit cell: ', j
+      write(output_unit,'(a,3(E20.12E3,2x))') 'origin: ', high_sym_pos(:,i)
+      write(output_unit,'(a)') 'atomic positions'
+      do k=1,natom
+         write(output_unit,'(a,3(E20.12E3,2x))') my_motif%atomic(k)%name,high_sym_pos(:,i)-my_motif%atomic(k)%position
+      enddo
+   endif
 enddo
 
-stop
+! check the unit cell - check of the origin should be changed
+found=.false.
+outer : do i=1,n_max_sym
+   do k=1,natom
+      if (norm(high_sym_pos(:,ind_high_sym(i))-my_motif%atomic(k)%position).lt.1.0d-8) then
+         write(output_unit,'(a)') 'unit cell should not be changed'
+         found=.true.
+         exit outer
+      endif
+   enddo
+enddo outer
 
-!sym_index=sym_index*mask_index
-!
-!j=0
-!do i=1,number_sym
-!
-!   if (sym_index(i).eq.0) cycle
-!   j=j+1
-!   new_index(j)=sym_index(i)
-!
-!enddo
+if (.not.(found)) STOP 'restart the simulation with a better unit cell'
+
+k=ind_high_sym(i)
+mask_index=mask_index/natom        ! to get a series of 0 or 1
+sym_index=sym_index*mask_index(:,k)
+
+j=0
+do i=1,number_sym
+
+   if (sym_index(i).eq.0) cycle
+   j=j+1
+   new_index(j)=sym_index(i)
+
+enddo
 
 number_sym=j
 sym_index=new_index
