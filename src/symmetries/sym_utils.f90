@@ -63,6 +63,12 @@ else
    eps=0.0d0
 endif
 
+! case of identical vectors (Identity symmetry operations)
+if (norm(areal_rot-eps).lt.1.0d-8) then
+   look_translation_vector=.true.
+   return
+endif
+
 look_translation_vector=.false.
 do u=-2,2,1
    do v=-2,2,1
