@@ -70,7 +70,7 @@ then
 mkdir -p $path/Visualization
 fi
 rm $path/Visualization/*.dat
-rm $path/Visualization/spinstructure_[[:digit:]].png # make a backup if you don't want to loose all your files!
+# rm $path/Visualization/spinstructure_*.png # make a backup if you don't want to loose all your files!
 
 ###########################
 # prepare file for povray #
@@ -127,6 +127,9 @@ povray -w1000 -h1000 povrayscript.pov Output_File_Name=spinstructure_${image_num
 let i++
 
 done
+
+rm position_magnetization_*.dat
+
 echo "Thank you very much!!!"
 echo "Your pictures are now in the directory 'Visualization'"
 # you can use the following command in order to generate a movie from these pictures:
