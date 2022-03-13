@@ -9,17 +9,6 @@ use m_exc_t
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 
-! variable that contains the the excitations form (sweep of EM field...)
-type excitations
-    real(8)           :: start_value(maxval(dim_modes_inner))
-    real(8)           :: end_value(maxval(dim_modes_inner))
-    integer           :: size_value
-    real(kind=8)      :: t_start,t_end
-! name of the order parameter to change
-    character(len=30) :: name
-    integer           :: op !order parameter as ordered by m_type_lattice
-end type excitations
-
 type excitation
     integer     :: op=0
     integer     :: int_shape_t=0
