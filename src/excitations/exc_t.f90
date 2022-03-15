@@ -80,6 +80,7 @@ subroutine shape_read_string(this,string,success)
     use m_exc_t_EMwave   ,only:     EMwave_read_string
     use m_exc_t_gauss    ,only:      gauss_read_string
     use m_exc_t_algebraic,only:  algebraic_read_string
+    use m_exc_t_phasor   ,only:     phasor_read_string
     class(excitation_t),intent(inout)   :: this
     character(len=*),intent(in)         :: string
     logical,intent(out)                 :: success
@@ -108,6 +109,8 @@ subroutine shape_read_string(this,string,success)
         Call heaviside_read_string(this,string)
     case('rampe')
         Call rampe_read_string(this,string)
+    case('phasor')
+        Call phasor_read_string(this,string)
     case default
         write(error_unit,'(A)') "Error reading excitation shape_t"
         write(error_unit,'(2A)') "Shape identifier not implemented:",trim(shape_name)

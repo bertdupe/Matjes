@@ -9,17 +9,6 @@ use m_exc_t
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 
-! variable that contains the the excitations form (sweep of EM field...)
-type excitations
-    real(8)           :: start_value(maxval(dim_modes_inner))
-    real(8)           :: end_value(maxval(dim_modes_inner))
-    integer           :: size_value
-    real(kind=8)      :: t_start,t_end
-! name of the order parameter to change
-    character(len=30) :: name
-    integer           :: op !order parameter as ordered by m_type_lattice
-end type excitations
-
 type excitation
     integer     :: op=0
     integer     :: int_shape_t=0
@@ -137,9 +126,7 @@ subroutine read_all_excitations(fname,excitations)
     enddo
     write(output_unit,'(A)') "Finished combining excitation entries."
 
-    do i=1,size(excitations%exc)
-        excitations%op_used(excitations%exc%op)=.true.
-    enddo
+    excitations%op_used(excitations%exc%op)=.true.
 
     write(output_unit,'(/A)') "Start printing found excitations."
     do i=1,number_different_order_parameters
@@ -178,7 +165,8 @@ subroutine update_exc(time,lat,dat)
     ! internal
     real(8),pointer,contiguous :: opvec(:,:)        !pointer to locally considered mode
     real(8) :: r(3)                                 !local position
-    real(8) :: shape_t(maxval(dim_modes_inner))     !prefactor defined by the time (constant in space)
+    real(8) :: shape_t(maxval(dim_modes_inner)+1)   !prefactor defined by the time (constant in space)
+    real(8) :: shape_r(2)                           !prefactor for spatial dependence
     !help indices
     integer :: op       !index for considered operator as in lattice
     integer :: dim_mode !dimension of considered mode
@@ -208,7 +196,8 @@ subroutine update_exc(time,lat,dat)
         Call lat%set_order_point_inner(op,opvec)
         do i=1,size(dat%position,2)
             r=dat%position(:,i)
-            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) * dat%shape_r(i_r)%shape_r(r)
+            shape_r(:) = dat%shape_r(i_r)%shape_r(r)
+            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) * shape_r(1) * cos(shape_t(dim_mode+1)+shape_r(2))
         enddo
     enddo
     nullify(opvec)
