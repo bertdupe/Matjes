@@ -13,6 +13,5 @@ src/initialization/punch_initialize.f90
 src/initialization/orders_initialize.f90
 src/initialization/utilities-init.f90
 src/initialization/init_hopfion.f90
-src/initialization/init_AFMskyrmion.f90
 src/initialization/init_bobber.f90
 )
