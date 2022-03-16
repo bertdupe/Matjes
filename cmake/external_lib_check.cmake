@@ -320,3 +320,11 @@ else()
     message("Skipping netCDF as USE_netCDF=FALSE.")
 endif()
 
+#check for gsl library
+message("\n\n Search for GSL")
+if(USE_GSL)
+    message("using external GSL library\n\n" )
+    add_compile_definitions(CPP_GSL)
+else()
+    message( "Skipping GSL-part of compilation\n\n" )
+endif()
