@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef CPP_GSL
 
@@ -25,13 +26,13 @@ void laguerre_scalar_(int *l, int *p, double *x, double *res)
 void laguerre_(int *l, int *p, double *x, double *res, int *size)
 {
 	printf("Laguerre requires GSL library");
-	exit();
+	exit(0);
 }
 
 void laguerre_scalar_(int *l, int *p, double *x, double *res)
 {
     printf("Laguerre requires GSL library");
-	exit();
+	exit(0);
 }
 
 #endif
