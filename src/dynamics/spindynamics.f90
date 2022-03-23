@@ -133,9 +133,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        
         if(io_simu%calc_topo)then
-            if (comm%ismas) call user_info(6,time,'topological operators',.false.)
+            if (comm%ismas) call user_info(output_unit,time,'topological operators',.false.)
             Call neighbor_Q(mag_lattice,Q_neigh)
-            if (comm%ismas) call user_info(6,time,'done',.true.)
+            if (comm%ismas) call user_info(output_unit,time,'done',.true.)
         else
             if (comm%ismas) write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
         endif
@@ -180,7 +180,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     Edy=H%energy(mag_lattice)
 
     if(comm%ismas)then
-        write(6,'(a,2x,E20.12E3)') 'Initial Total Energy (eV)',Edy/real(N_cell,8)
+        write(output_unit,'(a,2x,E20.12E3)') 'Initial Total Energy (eV/f.u.)',Edy/real(N_cell,8)
     
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! part of the excitations
