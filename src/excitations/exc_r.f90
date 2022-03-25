@@ -149,6 +149,18 @@ subroutine read_string(this,string,success)
         this%wavelength = c * period
         this%shape_r => shape_r_laguerre_gauss
         this%print_r => print_r_laguerre_gauss
+    case('laguerre-gauss-Bx')
+        Nreal=7
+        read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center, this%l, this%p, this%width_0, period
+        this%wavelength = c * period
+        this%shape_r => shape_r_laguerre_gauss_Bx
+        this%print_r => print_r_laguerre_gauss_Bx
+    case('laguerre-gauss-By')
+        Nreal=7
+        read(string,*,iostat=stat)  dummy_name, shape_r_name, this%center, this%l, this%p, this%width_0, period
+        this%wavelength = c * period
+        this%shape_r => shape_r_laguerre_gauss_By
+        this%print_r => print_r_laguerre_gauss_By
     case default
         write(error_unit,'(A)') "Error reading excitation_shape_r"
         write(error_unit,'(2A)') "shape_r identifier not implemented (second entry):", trim(shape_r_name)
@@ -255,10 +267,12 @@ subroutine print_r_gaussian(this,io)
     write(io,'(9X,A,F16.8,A)')  "width (w)      : ",this%cutoff," nm"
 end subroutine
 
+
 function shape_r_laguerre_gauss(this,R)result(shape_r)
     class(excitation_shape_r),intent(in)    :: this
     real(8), intent(in)                     :: R(3)
     real(8)                                 :: shape_r(2)
+    integer     :: l, p
     real(8)     :: tmp
     real(8)     :: radius, phi, z ! cylindrical coordinates
     real(8)     :: w_z    ! w_z: width of beam at z
@@ -269,26 +283,28 @@ function shape_r_laguerre_gauss(this,R)result(shape_r)
     real(8)     :: laguerre
     real(8)     :: magnitude, phase ! magn. and phase of shape_r
 
+    l=this%l
+    p=this%p
+    ! from cartesian to cylindrical coord
     z = R(3) - this%center(3)
     radius = norm2(R(1:2)-this%center(1:2))
     phi = datan2(R(2)-this%center(2), R(1)-this%center(1))
+
     z_R = pi * this%width_0**2 / this%wavelength
     w_z = this%width_0 * sqrt(1.0d0 + (z/z_R)**2)
     if(z /= 0.0d0) R_curv = z * (1.0d0 + (z_R/z)**2)
     psi = atan(z/z_R)
-    normalization_factor = sqrt(2**(abs(this%l)+1.0d0) * gamma(real(this%p+1.0d0)) / (pi * gamma(real(this%p+abs(this%l)+1.0d0))))
-    Call laguerre_polynomial_scalar(abs(this%l), this%p, 2.0d0*radius**2/w_z**2, laguerre)
-    ! print *, "2.0d0*radius**2/w_z**2: ", 2.0d0*radius**2/w_z**2
-    ! print *, "laguerre: ", laguerre
+    normalization_factor = sqrt(2**(abs(l)+1.0d0) * gamma(real(p+1.0d0)) / (pi * gamma(real(p+abs(l)+1.0d0))))
+    Call laguerre_polynomial_scalar(abs(l), p, 2.0d0*radius**2/w_z**2, laguerre)
+
     if(radius**2/w_z**2 >= 200.0d0) then ! to prevent from exponential underflow
         magnitude = 0
         phase = 0
     else
-        magnitude = normalization_factor/w_z * (radius*sqrt(2.0d0)/w_z)**abs(this%l) * laguerre * exp(-radius**2/w_z**2)
+        magnitude = normalization_factor/w_z * (radius*sqrt(2.0d0)/w_z)**abs(l) * laguerre * exp(-radius**2/w_z**2)
+        phase = 2*pi*z/this%wavelength + l*phi - (2*this%p+abs(l)+1)*psi
         if(z /= 0.0d0) then
-            phase = pi*radius**2/(this%wavelength*R_curv) + 2*pi*z/this%wavelength + this%l*phi - (2*this%p+abs(this%l)+1)*psi
-        else
-            phase = 2*pi*z/this%wavelength + this%l*phi - (2*this%p+abs(this%l)+1)*psi
+            phase = phase + pi*radius**2/(this%wavelength*R_curv)
         endif
     endif
     shape_r(1) = magnitude
@@ -307,5 +323,153 @@ subroutine print_r_laguerre_gauss(this,io)
     write(io,'(9X,A,F16.8,A)')  "width (w_0)           : ",this%width_0," nm"
     write(io,'(9X,A,F16.8,A)')  "Wavelength (lambda) : ",this%wavelength," nm"
 end subroutine
+
+
+function shape_r_laguerre_gauss_Bx(this,R)result(shape_r)
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r(2)
+    real(8)                                 :: tmp(6)
+
+    tmp = shape_r_laguerre_gauss_Bvec(this,R)
+    shape_r = tmp(1:2)
+    ! a modif correctemment
+    shape_r(1) = shape_r(1) * 1.0d3 ! conversion from V*fs / nm**2 to T
+end function
+
+function shape_r_laguerre_gauss_By(this,R)result(shape_r)
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r(2)
+    real(8)                                 :: tmp(6)
+
+    tmp = shape_r_laguerre_gauss_Bvec(this,R)
+    shape_r = tmp(3:4)
+    shape_r(1) = shape_r(1) * 1.0d3 ! conversion from V*fs / nm**2 to T
+end function
+
+function shape_r_laguerre_gauss_Bvec(this,R)result(shape_r)
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r(6) ! magnitude + phase (magn_x, phase_x, magn_y, phase_y,...)
+    integer     :: l, p
+    real(8)     :: tmp
+    real(8)     :: radius, phi, z ! cylindrical coordinates
+    real(8)     :: omega  ! angular frequency
+    real(8)     :: w_z    ! w_z: width of beam at z
+    real(8)     :: R_curv ! radius of curvature
+    real(8)     :: z_R    ! Rayleigh length
+    real(8)     :: psi    ! Gouy phase
+    real(8)     :: normalization_factor
+    real(8)     :: laguerre, laguerre2
+
+    real(8)     :: B_cyl(6)
+    real(8)     :: B_phi_s, B_phi_c, phase_phi ! dummy variable
+    real(8)     :: magnitude, phase ! magn. and phase of shape_r
+
+    l=this%l
+    p=this%p
+
+    ! from cartesian to cylindrical coord
+    z = R(3) - this%center(3)
+    radius = norm2(R(1:2)-this%center(1:2))
+    phi = - datan2(R(2)-this%center(2), R(1)-this%center(1))
+
+    z_R = pi * this%width_0**2 / this%wavelength
+    w_z = this%width_0 * sqrt(1.0d0 + (z/z_R)**2)
+    omega = 2*pi * c / this%wavelength
+
+    ! to prevent from exponential underflow
+    if(radius**2/w_z**2 >= 200.0d0) then
+        shape_r(:) = 0
+        return
+    endif
+
+    if(z /= 0.0d0) R_curv = z * (1.0d0 + (z_R/z)**2)
+    psi = atan(z/z_R)
+    normalization_factor = sqrt(2**(abs(l)+1.0d0) * gamma(real(p+1.0d0)) / (pi * gamma(real(this%p+abs(l)+1.0d0))))
+    Call laguerre_polynomial_scalar(abs(l), p, 2.0d0*radius**2/w_z**2, laguerre)
+    if(p >= 1) Call laguerre_polynomial_scalar(abs(l)+1, p-1, 2.0d0*radius**2/w_z**2, laguerre2)
+
+    ! same phase for both B_r and B_phi
+    phase = 2*pi*z/this%wavelength + l*phi - (2*p+abs(l)+1)*psi
+    if(z /= 0.0d0) then
+        phase = phase + pi*radius**2/(this%wavelength*R_curv)
+    endif
+
+    ! B_r
+    if(l /= 0) then
+        magnitude = 2 * l * normalization_factor/omega * radius**(abs(l)-1) *sqrt(2.0d0)**abs(l) / w_z**(abs(l)+1) * laguerre * exp(-radius**2/w_z**2)
+    else
+        magnitude = 0
+    endif
+    B_cyl(1) = magnitude
+    B_cyl(2) = phase
+
+    ! B_phi
+    ! B_phi = B_phi_s * sin(kz-wt+phi) + B_phi_c * cos(kz-wt+phi)
+    ! B_phi = B_phi_s * cos(kz-wt+phi-pi/2) + B_phi_c * cos(kz-wt+phi)
+    B_phi_s = 4/omega * normalization_factor * radius**(abs(l)+1) * sqrt(2.0d0)**abs(l) / w_z**(abs(l)+3) * laguerre * exp(-radius**2/w_z**2)
+    if(l /= 0) then
+        B_phi_s = B_phi_s + -2*abs(l)/omega * normalization_factor * radius**(abs(l)-1) * sqrt(2.0d0)**abs(l) / w_z**(abs(l)+1) * laguerre * exp(-radius**2/w_z**2)
+    endif
+    if(p /= 0) then
+        B_phi_s = B_phi_s + 8/omega * normalization_factor * radius**(abs(l)+1) * sqrt(2.0d0)**abs(l) / w_z**(abs(l)+3) * laguerre2 * exp(-radius**2/w_z**2)
+    endif
+
+    if(z /= 0) then
+        B_phi_c = -2/(R_curv*c) * normalization_factor * radius**(abs(l)+1) * sqrt(2.0d0)**abs(l) / w_z**(abs(l)+1) * laguerre * exp(-radius**2/w_z**2)
+    else
+        B_phi_c = 0
+    endif
+
+    magnitude = sqrt(B_phi_s**2 + B_phi_c**2)
+    phase_phi = - datan2(B_phi_s, B_phi_c)
+    B_cyl(3) = magnitude
+    B_cyl(4) = phase + phase_phi
+
+    ! converting B_r, B_phi to B_x, B_y
+    ! why is it so painful ?
+    B_cyl(5:6) = 0
+    shape_r = convert_cyl2cart(B_cyl, phi)
+end function
+
+subroutine print_r_laguerre_gauss_Bx(this,io)
+    class(excitation_shape_r),intent(in)    :: this
+    integer,intent(in)                      :: io
+
+    write(io,'(3X,A)') "Real-space shape: B_x of laguerre-gauss (propagating in the +z direction and electric field along z)"
+    write(io,'(6X,A)') "Equation: see doc"
+end subroutine
+
+subroutine print_r_laguerre_gauss_By(this,io)
+    class(excitation_shape_r),intent(in)    :: this
+    integer,intent(in)                      :: io
+
+    write(io,'(3X,A)') "Real-space shape: B_y of laguerre-gauss (propagating in the +z direction and electric field along z)"
+    write(io,'(6X,A)') "Equation: see doc"
+end subroutine
+
+! this function convert a complex vector from cylindrical to cartesian coordinates
+! complex vector of the form: (magn_i, phase_i, magn_j, phase_j,...)
+! v1 = (magn_r, phase_r, magn_phi, phase_phi, magn_z, phase_z)
+! v2 = (magn_x, phase_x, magn_y, phase_y, magn_z, phase_z)
+function convert_cyl2cart(v1, phi)result(v2)
+    real(8),intent(in)  :: v1(6), phi
+    real(8)             :: v2(6)
+    real(8)             :: x1, x2, y1, y2 ! dummies
+
+    x1 = v1(1)*cos(v1(2))*cos(phi) - v1(3)*cos(v1(4))*sin(phi)
+    x2 = v1(1)*sin(v1(2))*cos(phi) - v1(3)*sin(v1(4))*sin(phi)
+    v2(1) = sqrt(x1**2 + x2**2)
+    v2(2) = datan2(x2, x1)
+
+    y1 = v1(1)*cos(v1(2))*sin(phi) + v1(3)*cos(v1(4))*cos(phi)
+    y2 = v1(1)*sin(v1(2))*sin(phi) + v1(3)*sin(v1(4))*cos(phi)
+    v2(3) = sqrt(y1**2 + y2**2)
+    v2(4) = datan2(y2, y1)
+
+    v2(5:6) = v1(5:6)
+end function
 
 end module

@@ -50,15 +50,14 @@ subroutine read_all_excitations(fname,excitations)
         close(io)
         return
     endif
-    !get different excitation shape_r
 
+    !get different excitation shape_r
     Call read_excitation_shape_r(io,fname,excitations%shape_r)
 
     !get different excitation shape_t
     Call read_excitation_shape_t(io,fname,excitations%shape_t)
 
     !read excitation combinations
-
     Call read_excitation_io(io,fname,io_exc)
 
     close(io)
