@@ -66,6 +66,7 @@ camera {
 //look_at < 0, 0, 0 > 	// Position where the camera should look at in < x, y, z >
 	//sky < 0.0, 0, 0 > 	// Tilt of the camera to motify the look_at FLAG - very counter-intuitive
 	angle 0	// Viewing angel in degrees
+	right x
 }
 
 /*
