@@ -57,6 +57,7 @@ end type atom
 type symop
  real(kind=8) :: mat(3,3)
  character(len=10) :: name
+ real(kind=8) :: translation(3)=0.0d0
 end type
 
 !! type vector and vector pointers

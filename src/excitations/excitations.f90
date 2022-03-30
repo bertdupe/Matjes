@@ -192,7 +192,7 @@ subroutine update_exc(time,lat,dat)
             opvec=0.0d0
         endif
     enddo
- 
+
     do j=1,size(dat%exc)
         !set help parameters
         i_r=dat%exc(j)%int_shape_r
@@ -213,4 +213,5 @@ subroutine update_exc(time,lat,dat)
     enddo
     nullify(opvec)
 end subroutine
+
 end module m_excitations

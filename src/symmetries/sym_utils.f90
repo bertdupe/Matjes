@@ -1,5 +1,6 @@
 module m_sym_utils
 use m_rotation_matrix, only : rotate_matrix,check_rotate_matrix,rotation_matrix_real
+use m_determinant, only : determinant
 implicit none
 
 private
@@ -16,18 +17,18 @@ subroutine rotate_exchange(mat_out,mat_in,rotmat)
    real(8), intent(in)    :: mat_in(:,:)
    real(8), intent(in)    :: rotmat(:,:)
 
-   real(8)                :: mat(3,3),sym_part(3,3),antisym_part(3,3)
+   real(8)                :: mat_asym(3,3),mat_sym(3,3),sym_part(3,3),antisym_part(3,3)
 
 ! decompose in symmetric and antisymmetric part
 
    sym_part=(mat_in+transpose(mat_in))/2.0d0
    antisym_part=(mat_in-transpose(mat_in))/2.0d0
 
-! rotate only the antisymmetric part
+   call rotate_matrix(mat_sym,sym_part,rotmat)
+! rotate only the antisymmetric part. This part is DMI related so it is an axial vector symmetry which has to be multiplied by det(sym_mat)
+   call rotate_matrix(mat_asym,antisym_part,rotmat)
 
-   call rotate_matrix(mat,antisym_part,rotmat)
-
-   mat_out=sym_part+mat
+   mat_out=mat_sym+mat_asym*determinant(1.0d-8,3,rotmat)
 
 end subroutine
 
@@ -62,29 +63,23 @@ else
    eps=0.0d0
 endif
 
+! case of identical vectors (Identity symmetry operations)
+if (norm(areal_rot-eps).lt.1.0d-8) then
+   look_translation_vector=.true.
+   return
+endif
+
 look_translation_vector=.false.
 do u=-2,2,1
    do v=-2,2,1
       do w=-2,2,1
 
-         test_vec=areal_rot-eps
-         if ((periodic(1)).or.(dim_lat(1).ne.1)) then
-            test_vec=test_vec+real(u)*areal(1,:)
-         else
-            if (abs(dot_product(test_vec,areal(1,:))).gt.1.0d-6) test_vec=test_vec-areal(1,:)
-         endif
+         test_vec=areal_rot+eps
+         if ((periodic(1)).or.(dim_lat(1).ne.1)) test_vec=test_vec+real(u)*areal(1,:)
 
-         if ((periodic(2)).or.(dim_lat(2).ne.1)) then
-            test_vec=test_vec+real(v)*areal(2,:)
-         else
-            if (abs(dot_product(test_vec,areal(2,:))).gt.1.0d-6) test_vec=test_vec-areal(2,:)
-         endif
+         if ((periodic(2)).or.(dim_lat(2).ne.1)) test_vec=test_vec+real(v)*areal(2,:)
 
-         if ((periodic(3)).or.(dim_lat(3).ne.1)) then
-            test_vec=test_vec+real(w)*areal(3,:)
-         else
-            if (abs(dot_product(test_vec,areal(3,:))).gt.1.0d-6) test_vec=test_vec-areal(3,:)
-         endif
+         if ((periodic(3)).or.(dim_lat(3).ne.1)) test_vec=test_vec+real(w)*areal(3,:)
 
 !
 ! be very carefull here! If the positions are not given with enough precision, the symetries will not be found

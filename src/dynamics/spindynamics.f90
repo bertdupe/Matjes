@@ -135,11 +135,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        
         if(io_simu%calc_topo)then
-            call user_info(6,time,'topological operators',.false.)
+            if (comm%ismas) call user_info(6,time,'topological operators',.false.)
             Call neighbor_Q(mag_lattice,Q_neigh)
-            call user_info(6,time,'done',.true.)
+            if (comm%ismas) call user_info(6,time,'done',.true.)
         else
-            write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
+            if (comm%ismas) write(error_unit,'(//A)') "Warning, topological charge calculation disables, the corresponding output is meaningless"
         endif
         
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -219,8 +219,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             ave_torque=0.0d0
             test_torque=0.0d0
             dt=timestep_int
-!            !why is this outside of the integration order loop? time changes there
-!            call update_ext_EM_fields(real_time,check)
+
         endif
        !
        ! loop over the integration order
@@ -234,7 +233,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 if (l_excitation) then
                     Call update_exc(real_time+dt,mag_lattice,excitations)
                     Call update_exc(real_time+dt,lat_1      ,excitations)
-
                 endif
             endif
 
@@ -246,8 +244,8 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 !do integration
                 Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop))
                 Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
-                lat_2%M%modes_3=get_integrator_field(mag_lattice%M%modes_3,Dmag_int_3,dt)
-                !copy magnetic texture to 1 
+                lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3,dt)
+                !copy magnetic texture to 1
                 Call lat_2%M%copy_val(lat_1%M)
             endif
         enddo

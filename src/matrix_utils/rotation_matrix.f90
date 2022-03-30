@@ -1,6 +1,7 @@
 module m_rotation_matrix
 use m_vector, only : norm
 use m_constants, only : identity
+use m_invert, only : invert
 implicit none
 private
 public :: rotate_matrix,check_rotate_matrix,rotation_matrix_real
@@ -49,14 +50,16 @@ contains
    real(8), intent(inout) :: mat_in(:,:)
    real(8), intent(in)    :: sym_op(:,:)
 
-   real(8)                :: mat(3,3)
+   real(8)                :: mat(3,3),Isymop(3,3)
    integer                :: shape_mat_in(2)
 
    shape_mat_in=shape(mat_in)
    if ((shape_mat_in(1).ne.3).or.(shape_mat_in(2).ne.3)) STOP "ERROR the matrix should be 3x3"
 
-   mat=matmul(mat_in,sym_op)
-   mat_in=matmul(transpose(sym_op),mat)
+   Isymop=0.0d0
+   call invert(sym_op,Isymop,3)
+   mat=matmul(mat_in,Isymop)
+   mat_in=matmul(sym_op,mat)
 
    end subroutine
 
@@ -65,14 +68,16 @@ contains
    real(8), intent(in)    :: sym_op(:,:)
    real(8), intent(out)   :: mat_out(:,:)
 
-   real(8)                :: mat(3,3)
+   real(8)                :: mat(3,3),Isymop(3,3)
    integer                :: shape_mat_in(2)
 
    shape_mat_in=shape(mat_in)
    if ((shape_mat_in(1).ne.3).or.(shape_mat_in(2).ne.3)) STOP "ERROR the matrix should be 3x3"
 
-   mat=matmul(mat_in,sym_op)
-   mat_out=matmul(transpose(sym_op),mat)
+   Isymop=0.0d0
+   call invert(sym_op,Isymop,3)
+   mat=matmul(mat_in,Isymop)
+   mat_out=matmul(sym_op,mat)
 
    end subroutine
 
@@ -96,8 +101,8 @@ contains
    u=rotation_axis/norm(rotation_axis)
 
    call rotation_matrix_real(rot_mat,theta,u)
-   mat=matmul(mat_in,rot_mat)
-   mat_out=matmul(transpose(rot_mat),mat)
+   mat=matmul(mat_in,transpose(rot_mat))
+   mat_out=matmul(rot_mat,mat)
 
    end subroutine
 

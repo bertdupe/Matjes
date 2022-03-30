@@ -1,5 +1,6 @@
 module m_invert
-
+use m_determinant, only : determinant
+use m_constants, only : identity
 
 interface invert
   module procedure :: invert_real,invert_complex
@@ -34,12 +35,18 @@ real(kind=8) :: L(n,n), U(n,n), b(n), d(n), x(n), a(n,n)
 real(kind=8) :: coeff
 integer :: i, j, k
 
+! step -1 try the transpose as the inverse
+c=transpose(in)
+a=matmul(c,in)
+if (all(abs(a-identity(1.0d0,n)).lt.1.0d-8)) return
+
 ! step 0: initialization for matrices L and U and b
 ! Fortran 90/95 aloows such operations on matrices
 L=0.0
 U=0.0
 b=0.0
 a=in
+if (determinant(1.0d-8,n,in).lt.1.0d-8) STOP 'DET=0 matrix found and can not be inverted'
 ! step 1: forward elimination
 do k=1, n-1
    do i=k+1,n

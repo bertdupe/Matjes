@@ -1,5 +1,12 @@
 module m_constants
 implicit none
+
+interface identity
+  module procedure :: identity_3d,identity_Ndim
+end interface identity
+
+
+
 ! Boltzmannfactor in eV/K
 real(kind=8), Parameter :: k_B=0.000086173324d0
 ! magnetic constant
@@ -45,17 +52,38 @@ real(8), parameter :: kg_to_amu=6.022d26
 !!!!!!!!!!!!!!!!!!!!
 real(8), parameter :: s_to_fs=1.0d15
 
+
+
+
+
+
+
 contains
 
 ! function that spits out the unit matrix
-function identity(a)
+function identity_3d(a)
     implicit none
     real(8), intent(in) :: a
-    real(8), dimension(3,3) :: identity
+    real(8), dimension(3,3) :: identity_3d
     real(8), dimension(3,3),parameter :: iden=reshape([1.0d0,0.0d0,0.0d0,0.0d0,1.0d0,0.0d0,0.0d0,0.0d0,1.0d0],[3,3])
     
-    identity = iden * a
+    identity_3d = iden * a
 
-end function identity
+end function identity_3d
+
+function identity_Ndim(a,N)
+    implicit none
+    real(8), intent(in) :: a
+    integer, intent(in) :: N
+    real(8), dimension(N,N) :: identity_Ndim
+
+    integer :: i
+
+    identity_Ndim=0.0d0
+    do i=1,N
+       identity_Ndim(i,i)=a
+    enddo
+
+end function identity_Ndim
 
 end module m_constants
