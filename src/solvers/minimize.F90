@@ -283,6 +283,11 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
 	endif
    Edy=H%energy(lat)
    write(6,'(/a,2x,E20.12E3/)') 'Final total energy density (eV/fu)',Edy/real(N_cell,8)
+  
+  OPEN(7,FILE='Energy.dat',action='write',status='replace',form='formatted')
+  write(7,'(2(a,2x))') '# 3:E_av (eV)','max_torque (dimensionless)'
+  Write(7,'(2(E20.12E3,2x))')  Edy, max_torque                            
+             
    nullify(M3)
 end subroutine
 
