@@ -373,7 +373,7 @@ function shape_r_laguerre_gauss_Bvec(this,R)result(shape_r)
     ! from cartesian to cylindrical coord
     z = R(3) - this%center(3)
     radius = norm2(R(1:2)-this%center(1:2))
-    phi = - datan2(R(2)-this%center(2), R(1)-this%center(1))
+    phi = datan2(R(2)-this%center(2), R(1)-this%center(1))
 
     z_R = pi * this%width_0**2 / this%wavelength
     w_z = this%width_0 * sqrt(1.0d0 + (z/z_R)**2)
