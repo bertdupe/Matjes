@@ -22,7 +22,8 @@ abstract interface
         import excitation_t
         class(excitation_t),intent(in)  :: this
         real(8), intent(in)             :: time
-        real(8)                         :: val(this%dim_mode)
+        real(8)                         :: val(this%dim_mode+1)  ! val(1:dim_mode) magnitude
+                                                                 ! val(dim_mode+1) complex phase
     end function
     subroutine int_print_t(this,io)
         import excitation_t
@@ -50,7 +51,7 @@ end subroutine
 function uninit(this,time)result(val)
     class(excitation_t),intent(in)  :: this
     real(8), intent(in)                 :: time
-    real(8)                             :: val(this%dim_mode)
+    real(8)                             :: val(this%dim_mode+1)
 
     val=0.d0
     Error STOP "Tryint to use an uninitialized excitation_t"

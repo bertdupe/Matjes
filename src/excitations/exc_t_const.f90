@@ -39,13 +39,14 @@ end subroutine
 function shape_const(this,time) result(val)
     class (excitation_t),intent(in) :: this
     real(8),intent(in)                  :: time
-    real(8)                             :: val(this%dim_mode)
+    real(8)                             :: val(this%dim_mode+1)
 
-    val=const(time,&
-              this%dim_mode,&
-              this%t_start,&
-              this%t_end,&
-              this%real_var(1:this%dim_mode))
+    val(1:this%dim_mode)=const(time,&
+                               this%dim_mode,&
+                               this%t_start,&
+                               this%t_end,&
+                               this%real_var(1:this%dim_mode))
+    val(this%dim_mode+1)=0.0d0
 end function
 
 function const(time,dim_mode,t_start,t_end,val_in)result(val)

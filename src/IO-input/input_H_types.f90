@@ -80,7 +80,8 @@ type,extends(io_H_base) :: io_H_zeeman
 end type
 
 type,extends(io_H_base) :: io_H_J
-    type(Hr_pair),allocatable   :: pair(:) 
+    type(Hr_pair),allocatable   :: pair(:)
+    real(8)     :: c_H_J=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_sp4
@@ -90,6 +91,7 @@ end type
 
 type,extends(io_H_base) :: io_H_D
     type(Hr_triple),allocatable :: trip(:) 
+    real(8)     :: c_H_D=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_TJ
@@ -127,10 +129,12 @@ end type
 
 type,extends(io_H_base) :: io_H_Exchten
     type(Hr_pair_tensor),allocatable   :: pair(:)
+    real(8)     :: c_H_Exchten=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_Mag_Biq
     type(Hr_pair),allocatable   :: pair(:)
+    real(8)     :: c_H_Mbiq=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_SC_D

@@ -70,3 +70,10 @@ if(USE_netCDF)
     target_link_libraries(Matjes "${netCDF_linker}")
 
 endif()
+
+if(USE_GSL)
+    target_include_directories(Matjes PUBLIC ${GSL_include_path})
+    target_link_directories(Matjes PUBLIC ${GSL_library_path})
+    target_link_libraries(Matjes "${GSL_linker}")
+
+endif()
