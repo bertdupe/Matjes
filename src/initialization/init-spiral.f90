@@ -71,10 +71,13 @@ subroutine init_spiral(io,fname,lat,ordname,dim_mode,state,init_conf)
     size_unit_cell=size(init_conf)
 
     do i=1,size(state_3,2)
-        j=mod(i-1,size_unit_cell)+1
         state_3(:,i)=(cos(dot_product(qvec,pos_3(:,i)))*Rq+ &
                       sin(dot_product(qvec,pos_3(:,i)))*Iq)* &
-                      norm*cos(dot_product(qnorm,pos_3(:,i)))*init_conf(j)/abs(init_conf(j))
+                      norm*cos(dot_product(qnorm,pos_3(:,i)))
+        if (size_unit_cell.ne.0) then
+           j=mod(i-1,size_unit_cell)+1
+           state_3(:,i)=state_3(:,i)*init_conf(j)/abs(init_conf(j))
+        endif
     enddo
 
     nullify(pos_3,state_3)

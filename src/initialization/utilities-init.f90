@@ -48,10 +48,10 @@ subroutine get_pos_vec(lat,dim_mode,ordname,pos)
     nmag=lat%nmag
     nph=lat%nph
 
-    if(nmag.ne.0)then
+    if((nmag.ne.0).and.(ordname.eq.'magnetic'))then
         !choose position of magnetic atoms for initialization
         Call get_pos_mag(lat,pos)
-    elseif(nph.ne.0)then
+    elseif((nph.ne.0).and.(ordname.eq.'phonon'))then
         !choose position of phonon atoms for initialization
         Call get_pos_ph(lat,pos)
     elseif(dim_mode==3)then

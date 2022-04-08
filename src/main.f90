@@ -23,6 +23,7 @@ use m_GNEB, only: GNEB
 use m_write_config, only: write_config
 use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
+use m_hessian
 
 use m_mpi_start_end  !also includes mpi_basic
 use m_bcast_global, only: bcast_global_var
@@ -147,7 +148,7 @@ Implicit None
     !---------------------------------
 
     if (my_simu%name == 'test')then
-        call test_hessian(all_lattices,io_simu,ext_param,H_comb,mpi_world)
+        call hessian(all_lattices,io_simu,ext_param,H_comb,H_res)
     endif
 
     if(mpi_world%ismas)then

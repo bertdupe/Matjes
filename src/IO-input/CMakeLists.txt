@@ -15,4 +15,5 @@ src/IO-input/rw_zdir.f90
 src/IO-input/write_tableNN.f90
 src/IO-input/rw_high.f90
 src/IO-input/rw_sym.f90
+src/IO-input/hessian_io.f90
 )
