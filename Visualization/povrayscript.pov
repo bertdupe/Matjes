@@ -86,11 +86,15 @@ Sketch of the applied coordinate system for the cones
 
 #macro Spin(pos_x,pos_y,pos_z,m_x,m_y,m_z)	// definition of the Macro Spin, dependent on 3 coordinates and 3 coordinates for magnetic moment
 object{
-
+#if(m_x != 0 | m_y != 0)
+	#declare theta = atan2(m_y,m_x)/(2*pi) *360;
+#else
+	#declare theta = 0;
+#end
 cone{				// The spins will be visualized as cones
 	< 0.0, 0.0, -0.5 >, 0.3	// < Pos of Base point >, Radius Base
 	< 0.0, 0.0, +0.5 >, 0.0 // < Pos of Cap point >, Radius Cap
-rotate < 0, -(acos((m_z) / sqrt(m_x*m_x + m_y*m_y + m_z*m_z )))/(2*pi) *360 , -atan2(m_y+0.00000001,m_x)/(2*pi) *360 > // rotation around < x, y, z > axis
+rotate < 0, -(acos((m_z) / sqrt(m_x*m_x + m_y*m_y + m_z*m_z )))/(2*pi) *360 , -theta > // rotation around < x, y, z > axis
 translate < -pos_x, pos_y, pos_z > // Position of the vector
 
 /*

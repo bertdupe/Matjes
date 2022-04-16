@@ -12,6 +12,7 @@ echo ""
 # usage examples of -s|--states option:
 # ./visualizationScript.sh -s "(start 25 50 75 end)"
 # ./visualizationScript.sh -s "(start $(seq 25 25 75) end)"
+# ./visualizationScript.sh -s "(start  end)" -os
 
 xcut=false
 cutpos_y=0
