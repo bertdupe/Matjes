@@ -18,6 +18,7 @@ xcut=false
 cutpos_y=0
 s_option=false
 os=false
+resolution=1000 # default resolution
 while [ -n "$1" ]
 do
     case "$1" in
@@ -41,6 +42,10 @@ do
         ;;
     -os) # output files have the input sates as suffixes
         os=true
+        ;;
+    -r | --resolution)
+        resolution=$2
+        echo "changed default resolution (1000x1000) to ${2}x${2}"
     esac
     shift
 done
@@ -124,7 +129,7 @@ gsed -i "$ s/#include .*/#include \"position_magnetization_$state.dat\"/g" povra
 ##############
 echo "generating picture for state: " $state
 echo "image number:" ${image_num[$i]}
-povray -w1000 -h1000 povrayscript.pov Output_File_Name=spinstructure_${image_num[$i]}.png &> /dev/null
+povray -w${resolution} -h${resolution} povrayscript.pov Output_File_Name=spinstructure_${image_num[$i]}.png &> /dev/null
 let i++
 
 done
