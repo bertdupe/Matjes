@@ -60,8 +60,8 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     integer         :: atind_mag(2)     !index of considered atom in basis of magnetic atoms (1:Nmag)
     integer         :: offset_mag(2)    !offset for start in dim_mode of chosed magnetic atom
     real(8)         :: bound_input(3)         ! first vector along which the interactions are given. It MUST be x=(1.0,0.0,0.0)
-    real(8)         :: axis(3),angle,vec_tmp(3),scalaire,symop(3,3)
-    integer         :: shell,k,i_op
+    real(8)         :: axis(3),angle,vec_tmp(3),scalaire,symop(3,3),chirality,periodic(3)
+    integer         :: shell,k,i_op,i
     logical         :: found_sym
     class(pt_grp),allocatable :: my_symmetries
     character(len=30) :: name_sym
@@ -90,6 +90,12 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
           allocate(neighbor_pos_list(3,i_pair))
         endif
 
+        !convert the periodic boundary conditions into reals for the chirality check
+        periodic=0.0d0
+        do i=1,3
+           if (.not.lat%periodic(i)) periodic(i)=1.0d0
+        enddo
+
         ! get the symmetries
         call set_sym_type(my_symmetries)
         call my_symmetries%read_sym('symmetries.out')
@@ -110,7 +116,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor
-                J_init=reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/))
+                J_init=reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/))*io%c_H_Exchten
                 bound_input=io%pair(i_atpair)%bound(:,i_dist)/norm(io%pair(i_atpair)%bound(:,i_dist))
                 shell=0
 
@@ -143,9 +149,9 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                     symop=my_symmetries%rotmat(i_op)%mat
                     name_sym=my_symmetries%rotmat(i_op)%name
-                    call rotate_exchange(J,J_init,symop)
+                    chirality=dot_product(matmul(symop,periodic),periodic)
 
-                    J=io%c_H_Exchten*J
+                    call rotate_exchange(J,J_init,symop,chirality)
 
                     write(output_unit,'(A,I6,A)')   ' Applying exchange tensor along bound ',i_shell,':'
                     write(output_unit,'(2A)')       ' Applying symmetry operation ', trim(name_sym)
@@ -217,7 +223,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
     integer         :: ind3(3)          !index to calculate Karr position in each dimension
     integer         :: ind_mult(3)      !constant multiplicator to calculate ind from ind3
     integer         :: i,k,i_op,shell
-    real(8)         :: axis(3),angle,vec_tmp(3),bound_input(3),scalaire,symop(3,3)
+    real(8)         :: axis(3),angle,vec_tmp(3),bound_input(3),scalaire,symop(3,3),chirality,periodic(3)
     logical         :: found_sym
     class(pt_grp),allocatable :: my_symmetries
     character(len=30) :: name_sym
@@ -227,6 +233,12 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
         !set some initial parameters locally for convencience
         Nmag=lat%nmag
         period=lat%periodic.or.lat%dim_lat==1
+
+        !convert the periodic boundary conditions into reals for the chirality check
+        periodic=0.0d0
+        do i=1,3
+           if (.not.lat%periodic(i)) periodic(i)=1.0d0
+        enddo
 
         !set shape-dependent quantities of fft_H and get Kdb,N_rep
         Call H_fft%init_shape(3*lat%nmag,period,lat%dim_lat,Kbd,N_rep)
@@ -247,7 +259,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                J_init=-reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/)) !negative sign for compatibility with previous implementatoins
+                J_init=io%c_H_Exchten**reshape(io%pair(i_atpair)%val(:,i_dist),(/3,3/)) !negative sign for compatibility with previous implementatoins
                 bound_input=io%pair(i_atpair)%bound(:,i_dist)/norm(io%pair(i_atpair)%bound(:,i_dist))
                 shell=0
 
@@ -281,9 +293,9 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
 
                     symop=my_symmetries%rotmat(i_op)%mat
                     name_sym=my_symmetries%rotmat(i_op)%name
-                    call rotate_exchange(J,J_init,symop)
+                    chirality=dot_product(matmul(symop,periodic),periodic)
 
-                    J=io%c_H_Exchten*J
+                    call rotate_exchange(J,J_init,symop,chirality)
 
                     write(output_unit,'(A,I6,A)')   ' Applying exchange tensor along bound ',i_shell,':'
                     write(output_unit,'(2A)')       ' Applying symmetry operation ', trim(name_sym)

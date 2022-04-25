@@ -1,6 +1,7 @@
 module m_sym_utils
 use m_rotation_matrix, only : rotate_matrix,check_rotate_matrix,rotation_matrix_real
 use m_determinant, only : determinant
+use m_constants, only : identity
 implicit none
 
 private
@@ -12,10 +13,33 @@ end interface look_translation
 
 contains
 
-subroutine rotate_exchange(mat_out,mat_in,rotmat)
+!! check if the symmetry operation conserves the chirality
+!real(8) function check_chirality(rotmat,mat_in,bound_ref,bound_check)
+!   real(8)   :: mat_in(3,3)
+!   real(8)   :: rotmat(3,3)
+!   real(8)   :: bound_ref(3)
+!   real(8)   :: bound_check(3)
+!
+!   real(8)                :: mat_asym(3,3),antisym_part(3,3)
+!
+!   check_chirality=1.0d0
+!! decompose in symmetric and antisymmetric part
+!
+!   antisym_part=(mat_in-transpose(mat_in))/2.0d0
+!
+!   call rotate_matrix(mat_asym,antisym_part,rotmat)
+!
+!   write(*,*) antisym_part-matmul(rotmat,antisym_part)
+!   pause
+!
+!end function
+
+!rotate the symmetric and the antisymmetric part of the exchange
+subroutine rotate_exchange(mat_out,mat_in,rotmat,chirality)
    real(8), intent(out)   :: mat_out(:,:)
    real(8), intent(in)    :: mat_in(:,:)
    real(8), intent(in)    :: rotmat(:,:)
+   real(8), intent(in)    :: chirality
 
    real(8)                :: mat_asym(3,3),mat_sym(3,3),sym_part(3,3),antisym_part(3,3)
 
@@ -28,8 +52,8 @@ subroutine rotate_exchange(mat_out,mat_in,rotmat)
 ! rotate only the antisymmetric part. This part is DMI related so it is an axial vector symmetry which has to be multiplied by det(sym_mat)
    call rotate_matrix(mat_asym,antisym_part,rotmat)
 
-!   mat_out=mat_sym+mat_asym*determinant(1.0d-8,3,rotmat)
-   mat_out=mat_sym+mat_asym
+!   mat_out=mat_sym+mat_asym*chirality
+   mat_out=mat_sym+mat_asym*chirality
 
 end subroutine
 
