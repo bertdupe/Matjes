@@ -128,7 +128,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     if (present(neighbor_pos_list)) neighbor_pos_list(:,i_pair)=neigh%diff_vec(:,i_pair)
 
                     ! rotate the exchange matrix to align it with the neighbor direction
-                     ! rotation axis
+
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
 
                     do k=1,my_symmetries%n_sym
@@ -145,7 +145,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     name_sym=my_symmetries%rotmat(i_op)%name
                     call rotate_exchange(J,J_init,symop)
 
-                    !endif
+                    J=io%c_H_Exchten*J
 
                     write(output_unit,'(A,I6,A)')   ' Applying exchange tensor along bound ',i_shell,':'
                     write(output_unit,'(2A)')       ' Applying symmetry operation ', trim(name_sym)
@@ -156,7 +156,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                     Htmp(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3)=J
                     connect_bnd(2)=neigh%ishell(i_pair)
-                    Htmp=io%c_H_Exchten*Htmp !flip sign corresponding to previous implementation
+
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type
@@ -271,11 +271,6 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
 
                     do k=1,my_symmetries%n_sym
                        call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
-                       if (found_sym) exit
-                    enddo
-
-                    do k=1,my_symmetries%n_sym
-                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
                        if (found_sym) then
                           i_op=k
                           exit
@@ -288,7 +283,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
                     name_sym=my_symmetries%rotmat(i_op)%name
                     call rotate_exchange(J,J_init,symop)
 
-                    !endif
+                    J=io%c_H_Exchten*J
 
                     write(output_unit,'(A,I6,A)')   ' Applying exchange tensor along bound ',i_shell,':'
                     write(output_unit,'(2A)')       ' Applying symmetry operation ', trim(name_sym)
@@ -298,7 +293,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
                     write(output_unit,'(A,3E16.8/)') ' along the bound :', neigh%diff_vec(:,i_pair)
 
                     !set the contributions in the operator array
-                    Karr(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3,ind)=io%c_H_Exchten*J
+                    Karr(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3,ind)=J
                 enddo
             enddo
         enddo

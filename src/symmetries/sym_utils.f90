@@ -28,7 +28,8 @@ subroutine rotate_exchange(mat_out,mat_in,rotmat)
 ! rotate only the antisymmetric part. This part is DMI related so it is an axial vector symmetry which has to be multiplied by det(sym_mat)
    call rotate_matrix(mat_asym,antisym_part,rotmat)
 
-   mat_out=mat_sym+mat_asym*determinant(1.0d-8,3,rotmat)
+!   mat_out=mat_sym+mat_asym*determinant(1.0d-8,3,rotmat)
+   mat_out=mat_sym+mat_asym
 
 end subroutine
 
@@ -122,10 +123,7 @@ found=.false.
 
 ! when no periodicity is present, the axis along the non-periodic direction must be invariant
 do i=1,3
-  if (.not.(periodic(i)).and.(norm(areal_rot(:,i)-areal(:,i)).gt.1.0d-6)) then
-    look_translation_lattice=.false.
-    return
-  endif
+  if (.not.(periodic(i)).and.(norm(areal_rot(:,i)-areal(:,i)).gt.1.0d-6)) return
 enddo
 
 ! this will be checked only if the axis along the open boundary are invariant by the symetry operations

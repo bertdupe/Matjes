@@ -44,7 +44,6 @@ subroutine hessian(lat,io_simu,ext_param,H,H_res)
 
     allocate(Beff(dim_mode*N_cell),source=0.0d0)
     Beff_v(1:dim_mode,1:N_cell)=>Beff
-    Beff_v(1:dim_mode,1:N_cell)=>Beff
     Beff_3(1:3,1:N_cell*(dim_mode/3))=>Beff
 
     Edy=H%energy(lat)

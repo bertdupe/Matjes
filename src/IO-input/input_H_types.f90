@@ -76,22 +76,29 @@ type,extends(io_H_base) :: io_H_aniso
 end type
 
 type,extends(io_H_base) :: io_H_zeeman
-    real(8)     :: c_zeeman=-1.0d0 !constant factor to furthermore rescale zeeman energy 
+    real(8)             :: c_zeeman=-1.0d0 !constant factor to furthermore rescale zeeman energy
 end type
 
 type,extends(io_H_base) :: io_H_J
     type(Hr_pair),allocatable   :: pair(:)
-    real(8)     :: c_H_J=-1.0d0
+    real(8)                     :: c_H_J=-1.0d0
+end type
+
+type,extends(io_H_base) :: io_H_sp3
+    type(Hr_triple),allocatable   :: triplet(:)
+    integer,allocatable           :: at_type(:)
+    real(8)                       :: c_H_sp3=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_sp4
     integer,allocatable     :: at_type(:)
     real(8),allocatable     :: val(:)
+    real(8)                 :: c_H_sp4=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_D
     type(Hr_triple),allocatable :: trip(:) 
-    real(8)     :: c_H_D=-1.0d0
+    real(8)                     :: c_H_D=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_TJ
@@ -108,18 +115,18 @@ end type
 
 type,extends(io_H_base) :: io_H_Ph
     type(Hr_pair),allocatable   :: pair(:) 
-    real(8)     :: c_ph=-1.0d0
+    real(8)                     :: c_ph=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_stark
-    real(8)     :: c_stark=-1.0d0 !constant factor to furthermore rescale stark energy
+    real(8)             :: c_stark=-1.0d0 !constant factor to furthermore rescale stark energy
 end type
 
 type,extends(io_H_base) :: io_U_ASR
-    type(Hr_pair),allocatable   :: pair(:)
+    type(Hr_pair),allocatable          :: pair(:)
     type(Hr_pair_tensor),allocatable   :: pair_tensor(:)
-    integer,allocatable         ::  attype(:)
-    real(8)     :: c_ASR=1.0d0 ! to enforce the acoustic sum rule for the phonon energy
+    integer,allocatable                ::  attype(:)
+    real(8)                            :: c_ASR=1.0d0 ! to enforce the acoustic sum rule for the phonon energy
 end type
 
 type,extends(io_H_base) :: io_H_dipole
@@ -129,18 +136,18 @@ end type
 
 type,extends(io_H_base) :: io_H_Exchten
     type(Hr_pair_tensor),allocatable   :: pair(:)
-    real(8)     :: c_H_Exchten=-1.0d0
+    real(8)                            :: c_H_Exchten=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_Mag_Biq
     type(Hr_pair),allocatable   :: pair(:)
-    real(8)     :: c_H_Mbiq=-1.0d0
+    real(8)                     :: c_H_Mbiq=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_SC_D
     type(Hr_triple),allocatable   :: triplet(:)
-    integer,allocatable     :: at_type(:)
-    real(8)     :: c_SC=-1.0d0
+    integer,allocatable           :: at_type(:)
+    real(8)                       :: c_SC=-1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_Ph4
@@ -154,7 +161,7 @@ end type
 
 type,extends(io_H_base) :: io_H_Force_tensor
     type(Hr_pair_tensor),allocatable   :: pair(:)
-    real(8)     :: c_phtensor=-1.0d0
+    real(8)                            :: c_phtensor=-1.0d0
 end type
 
 type :: io_H
@@ -164,6 +171,7 @@ type :: io_H
     type(io_H_ME_D)             :: ME_D
     type(io_H_J)                :: J
     type(io_H_sp4)              :: sp4
+    type(io_H_sp3)              :: sp3
     type(io_H_TJ)               :: TJ
     type(io_H_D)                :: D
     type(io_H_Ph)               :: F
