@@ -73,6 +73,7 @@ type,extends(io_H_base) :: io_H_aniso
     !anisotropy in space of normalized real-space lattice
     integer,allocatable     ::  attype_lat(:)   !integer of atom type
     real(8),allocatable     ::  val_lat(:,:)    !(4,size(attype_lat))  (1:3) direction, (4) magnitude
+    real(8)                 :: c_H_ani=1.0d0
 end type
 
 type,extends(io_H_base) :: io_H_zeeman
