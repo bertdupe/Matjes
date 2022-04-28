@@ -60,7 +60,7 @@ do i=1,size(sym_index)
 ! I have to take the transpose of rtest to have it written in lign again
 !
 
-    found=look_translation(rtest,transpose(areal),(/.True.,.True.,.True./),dim_lat)
+    found=look_translation(rtest,transpose(areal),(/.true.,.true.,.true./),dim_lat)
 
     if (found) then
        number_sym=number_sym+1
