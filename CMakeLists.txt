@@ -11,7 +11,7 @@ endif()
 
 project(Matjes NONE)
 
-enable_language (Fortran CXX)
+enable_language (Fortran CXX C)
 
 if(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU" AND ${CMAKE_Fortran_COMPILER_VERSION} VERSION_LESS "9.0.0")
     message("\n")

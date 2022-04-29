@@ -21,6 +21,7 @@ subroutine read_anisotropy_input(io_unit,fname,io)
 
     !read parameters for anisotropy in cartesian coordinates assuming 4 entries, where 1:3 is unit vector direction and 4 is magnitude
     Call read_int_realarr(io_unit,fname,'magnetic_anisotropy',4,io%attype,io%val,success)
+    Call get_parameter(io_unit,fname,'c_H_ani',io%c_H_ani)
 
     !read parameters for anisotropy in cartesian coordinates using 3-real format where is magnitude is given by the norm of the entry with the sign of the first nonzero entry
     if(.not.success)then
@@ -179,6 +180,8 @@ subroutine get_anisotropy_H(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
         Call get_Haniso_unitcell(io,lat,Htmp)
 
+        Htmp=Htmp*io%c_H_ani
+
         if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Htmp
         if (present(neighbor_pos_list)) neighbor_pos_list(:,1)=0.0d0
 
@@ -232,7 +235,8 @@ subroutine get_anisotropy_fft(H_fft,io,lat)
 
         !set local Hamiltonian 
         allocate(Karr(3*Nmag,3*Nmag,Nk_tot),source=0.0d0)
-        Call get_Haniso_unitcell(io,lat,Karr(:,:,1))            
+        Call get_Haniso_unitcell(io,lat,Karr(:,:,1))
+        Karr(:,:,1)=Karr(:,:,1)*io%c_H_ani
         Call H_fft%init_op(3*Nmag,Karr,ham_desc)
     endif
 end subroutine

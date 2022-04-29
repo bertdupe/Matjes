@@ -37,7 +37,7 @@ subroutine CreateSpinFile_sig_orderpar(signature,ordpar)
     integer,intent(in)          :: signature
     character(len=50) :: fname
 
-    fname=convert('Spinse_',signature,'.dat')
+    fname=convert('Povspin_',signature,'.dat')
     Call CreateSpinFile_usernamed_spin(ordpar%modes_v,fname)   
 end subroutine
 

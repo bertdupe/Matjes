@@ -23,6 +23,7 @@ use m_GNEB, only: GNEB
 use m_write_config, only: write_config
 use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
+use m_hessian
 
 use m_mpi_start_end  !also includes mpi_basic
 use m_bcast_global, only: bcast_global_var
@@ -126,13 +127,28 @@ Implicit None
     if (my_simu%name == 'wavefunc_eval')then
         call wavefunc_evolution(all_lattices,mpi_world)
     endif
-        
+
+    !---------------------------------
+    !  Part which combine the dynamics (molecular dynamics + spin dynamics so far)
+    !---------------------------------
+
+!    if (my_simu%name == 'combined_dynamics')then
+!        call combined_dynamics(all_lattices,io_simu,ext_param,H_comb,mpi_world)
+!    endif
     !---------------------------------
     !  Part which does the tight-binding simulations
     !---------------------------------
     
     if (my_simu%name == 'tight-binding') then
         call tightbinding(all_lattices,mpi_world)
+    endif
+
+    !---------------------------------
+    !  Test of new functions
+    !---------------------------------
+
+    if (my_simu%name == 'test')then
+        call hessian(all_lattices,io_simu,ext_param,H_comb,H_res)
     endif
 
     if(mpi_world%ismas)then

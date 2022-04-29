@@ -138,6 +138,9 @@ subroutine set_MPI_type(blocks,bnd_real,bnd_cmplx,bnd_int,val_out)
     N_entry=size(blocks)
     test_type=MPI_REAL  !example kind=4 for comparison
     types=test_type
+!    if(all(bnd_real >0)) types(bnd_real (1):bnd_real (2))=MPI_DOUBLE_PRECISION
+!    if(all(bnd_cmplx>0)) types(bnd_cmplx(1):bnd_cmplx(2))=MPI_DOUBLE_COMPLEX
+!    if(all(bnd_int  >0)) types(bnd_int  (1):bnd_int  (2))=MPI_INT
     if(all(bnd_real >0)) types(bnd_real (1):bnd_real (2))=MPI_DOUBLE_PRECISION
     if(all(bnd_cmplx>0)) types(bnd_cmplx(1):bnd_cmplx(2))=MPI_DOUBLE_COMPLEX
     if(all(bnd_int  >0)) types(bnd_int  (1):bnd_int  (2))=MPI_INT
