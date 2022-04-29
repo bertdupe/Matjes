@@ -139,9 +139,9 @@ subroutine measure_reduce(this,com)
 !            Call MPI_Reduce(MPI_IN_PLACE,this%MipMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
 !            Call MPI_Reduce(MPI_IN_PLACE,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
 !        else
-            Call MPI_alleduce(this%E      ,this%E     ,1,MPI_DOUBLE_PRECISION,MPI_SUM,com%com,ierr)
-            Call MPI_alleduce(this%MipMim ,this%MipMip,1,MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%com,ierr)
-            Call MPI_alleduce(this%N_add  ,this%N_add ,1,MPI_Int             ,MPI_SUM,com%com,ierr)
+            Call MPI_allreduce(this%E      ,this%E     ,1,MPI_DOUBLE_PRECISION,MPI_SUM,com%com,ierr)
+            Call MPI_allreduce(this%MipMim ,this%MipMip,1,MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%com,ierr)
+            Call MPI_allreduce(this%N_add  ,this%N_add ,1,MPI_Int             ,MPI_SUM,com%com,ierr)
 !        endif
     endif
 #else
