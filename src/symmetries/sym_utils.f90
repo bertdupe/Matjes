@@ -13,27 +13,6 @@ end interface look_translation
 
 contains
 
-!! check if the symmetry operation conserves the chirality
-!real(8) function check_chirality(rotmat,mat_in,bound_ref,bound_check)
-!   real(8)   :: mat_in(3,3)
-!   real(8)   :: rotmat(3,3)
-!   real(8)   :: bound_ref(3)
-!   real(8)   :: bound_check(3)
-!
-!   real(8)                :: mat_asym(3,3),antisym_part(3,3)
-!
-!   check_chirality=1.0d0
-!! decompose in symmetric and antisymmetric part
-!
-!   antisym_part=(mat_in-transpose(mat_in))/2.0d0
-!
-!   call rotate_matrix(mat_asym,antisym_part,rotmat)
-!
-!   write(*,*) antisym_part-matmul(rotmat,antisym_part)
-!   pause
-!
-!end function
-
 !rotate the symmetric and the antisymmetric part of the exchange
 subroutine rotate_exchange(mat_out,mat_in,rotmat,chirality)
    real(8), intent(out)   :: mat_out(:,:)
