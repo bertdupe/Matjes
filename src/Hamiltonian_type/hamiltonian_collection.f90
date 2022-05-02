@@ -381,7 +381,7 @@ subroutine energy_single(this,i_m,order,lat,work,E)
     do iH=1,this%NH_local
         Call this%H(iH)%eval_single(order)%calc(this%H(iH),tmp_E(iH),i_m,lat,work)
     enddo
-    tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
+    if (this%NH_local.ne.0) tmp_E(:this%NH_local)=tmp_E(:this%NH_local)*real(this%H(:)%mult_M_single,8)
 
     ! take care of the dipole dipole Hamiltonian if necessary
     do iH=1,this%NHF_total
