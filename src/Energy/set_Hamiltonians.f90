@@ -14,7 +14,6 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     
     use m_symmetry_operators
     use m_anisotropy_heisenberg,only: get_anisotropy_H
-    !use m_exchange_heisenberg,only: get_exchange_H,exchange
     use m_zeeman,only: get_zeeman_H
     use m_exchange_heisenberg_J, only: get_exchange_J
     use m_exchange_heisenberg_D, only: get_exchange_D
@@ -31,8 +30,8 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_phonon_rank4, only : get_PH4
     use m_Ph_Biq, only : get_Ph_Biq
     use m_general_force_tensor, only : get_Forces_tensor
-    use m_dipolar_phonon, only: get_dipolar_ph
-!    use m_phonon_rank4, only : get_PH4
+    use m_dipolar_phonon, only : get_dipolar_ph
+    use m_3spin, only : get_3spin
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -40,7 +39,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(in)           :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(18)
+    logical :: use_Ham(19)
 
 
     use_ham(1)=H_io%J%is_set.and..not.H_io%J%fft
@@ -61,6 +60,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(16)=H_io%U_biq%is_set
     use_ham(17)=H_io%U_foten%is_set
     use_ham(18)=H_io%dip_ph%is_set.and..not.H_io%dip_ph%fft
+    use_ham(19)=H_io%sp3%is_set
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
@@ -155,7 +155,11 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_dipolar_ph(Ham_res(i_H),H_io%dip_ph,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
-
+    !plugin 3 spin interaction
+    if(use_ham(19))then
+        Call get_3spin(Ham_res(i_H),H_io%sp3,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
     write(output_unit,'(//A,I3,A)') "The following ",N_ham," Hamiltonians in real-space have been set:"
     do i_H=1,N_ham
         write(output_unit,'(3XA)') trim(Ham_res(i_H)%desc)

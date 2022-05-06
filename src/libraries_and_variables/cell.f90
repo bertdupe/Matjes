@@ -185,6 +185,7 @@ subroutine ind_M_all(this,ind_Nat)
     integer     ::  i
 
     ind_Nat=pack([(i,i=1,size(this%atomic))],this%atomic(:)%mass/=0.0d0)
+
 end subroutine
 
 end module

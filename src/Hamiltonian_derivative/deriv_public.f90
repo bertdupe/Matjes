@@ -31,11 +31,12 @@ subroutine set_deriv(deriv,order,op_l,op_r)
         !rank 2 Hamiltonian
         if(Nl_order>0) deriv%l=>get_l1
         if(Nr_order>0) deriv%r=>get_r1
-        if(Nl_order>0.and.Nr_order>0)then
-            !operator has to be symmetric (use only one side)
-            deriv%l=>get_l1_sym
-            deriv%r=>get_null
-        endif
+! Bertrand changed 09.04.2022
+!        if(Nl_order>0.and.Nr_order>0)then
+!            !operator has to be symmetric (use only one side)
+!            deriv%l=>get_l1_sym
+!            deriv%r=>get_null
+!        endif
     elseif(Nl>1.and.Nr>1)then
         if(Nl_order>0) deriv%l=>get_lN
         if(Nr_order>0) deriv%r=>get_rN
@@ -56,11 +57,12 @@ subroutine set_deriv(deriv,order,op_l,op_r)
         !rank 2 Hamiltonian
         if(Nl_order>0) deriv%l_single=>get_l1_single
         if(Nr_order>0) deriv%r_single=>get_r1_single
-        if(Nl_order>0.and.Nr_order>0)then
-            !operator has to be symmetric (use only one side)
-            deriv%l_single=>get_l1_sym_single
-            deriv%r_single=>get_null_single
-        endif
+! Bertrand changed 09.04.2022
+!        if(Nl_order>0.and.Nr_order>0)then
+!            !operator has to be symmetric (use only one side)
+!            deriv%l_single=>get_l1_sym_single
+!            deriv%r_single=>get_null_single
+!        endif
     elseif(Nl>1.and.Nr>1)then
         if(Nl_order>0) deriv%l_single=>get_lN_single
         if(Nr_order>0) deriv%r_single=>get_rN_single

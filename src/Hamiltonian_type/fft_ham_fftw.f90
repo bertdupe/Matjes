@@ -326,16 +326,28 @@ subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
     real(8),intent(in)          :: H(3,Nmag,N_rep(1),N_rep(2),N_rep(3))
     real(8),intent(inout)       :: H_out(3)
 
-    integer     :: div(4),modu(4)
-    integer     :: i4(4),i 
+!    integer     :: div(4),modu(4)
+    integer     :: i4(4),i
 
-    modu=[nmag,nmag*dim_lat(1),nmag*product(dim_lat(:2)),nmag*product(dim_lat)]
-    div=[(product(modu(:i-1)),i=1,4)]
-    i4=isite-1
-    i4=i4/div
-    i4=modulo(i4,modu)+1
+    ! does not work
+!    modu=[nmag,nmag*dim_lat(1),nmag*product(dim_lat(:2)),nmag*product(dim_lat)]
+!    div=[(product(modu(:i-1)),i=1,4)]
+!    i4=isite-1
+!    i4=i4/div
+!    i4=modulo(i4,modu)+1
+
+    i4(4)=(isite-1)/(nmag*product(dim_lat(:2)))+1
+
+    i=modulo((isite-1),nmag*product(dim_lat(:2)))+1
+    i4(3)=(i-1)/(nmag*dim_lat(1))+1
+
+    i=modulo(i-1,nmag*dim_lat(1))+1
+    i4(2)=(i-1)/nmag+1
+
+    i4(1)=modulo((isite-1),nmag)+1
 
     H_out=H(:,i4(1),i4(2),i4(3),i4(4))
+
 end subroutine
 
 end module

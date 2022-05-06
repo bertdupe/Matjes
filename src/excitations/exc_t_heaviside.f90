@@ -39,14 +39,15 @@ end subroutine
 function shape_heaviside(this,time) result(val)
     class (excitation_t),intent(in) :: this
     real(8),intent(in)                  :: time
-    real(8)                             :: val(this%dim_mode)
+    real(8)                             :: val(this%dim_mode+1)
 
-    val=heaviside(time,&
-                  this%dim_mode,&
-                  this%t_start,&
-                  this%t_end,&
-                  this%real_var(1              :  this%dim_mode),&
-                  this%real_var(this%dim_mode+1:2*this%dim_mode))
+    val(1:this%dim_mode)=heaviside(time,&
+                       this%dim_mode,&
+                       this%t_start,&
+                       this%t_end,&
+                       this%real_var(1              :  this%dim_mode),&
+                       this%real_var(this%dim_mode+1:2*this%dim_mode))
+    val(this%dim_mode+1)=0.0d0
 end function
 
 function heaviside(time,dim_mode,t_start,t_end,val_start,val_end)result(val)

@@ -72,8 +72,7 @@ contains
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point
     procedure :: set_order_point_inner
-!    procedure :: get_pos_mag => lattice_get_position_mag
-!    procedure :: get_pos_center
+    procedure :: set_motif_initconf !extract the inital order parmeter within the unit cell
     procedure :: pos_diff_ind => lattice_position_difference
     procedure :: pos_ind => lattice_position
     procedure :: dist_2vec  !distance between 2 vectors
@@ -512,6 +511,34 @@ subroutine set_order_point_inner(this,order,point)
     case default
         write(error_unit,*) 'order:',order
         STOP 'failed to associate pointer in set_order_point'
+    end select
+end subroutine
+
+subroutine set_motif_initconf(this,order,configuration)
+    class(lattice),intent(in)            ::  this
+    integer,intent(in)                   ::  order
+    real(8),allocatable,intent(out)      ::  configuration(:)
+
+    select case(order)
+    case(1)    ! magnetic part
+        call this%cell%get_mag_magmom(configuration)
+    case(2)    ! case electric field
+        allocate(configuration(1),source=1.0d0)
+!        point=>this%E%all_modes
+    case(3)   ! case electric field
+        allocate(configuration(1),source=1.0d0)
+!        point=>this%B%all_modes
+    case(4)   ! case magnetic field
+         allocate(configuration(1),source=1.0d0)
+!        point=>this%T%all_modes
+    case(5) ! phonon part
+        call this%cell%get_Z_phonon(configuration)
+    case(6)  ! case wave function
+        allocate(configuration(1),source=1.0d0)
+!        point=>this%w%all_modes
+    case default
+        write(error_unit,*) 'order:',order
+        STOP 'failed to associate pointer in set_motif_initconf'
     end select
 end subroutine
 

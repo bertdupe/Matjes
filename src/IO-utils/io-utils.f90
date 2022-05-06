@@ -568,7 +568,8 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     integer :: nread,i,ii,j
     integer :: stat
     character(len=100) :: str
-    
+    character(len=100) :: comment_char, dummy
+
     nread=0
     Call set_pos_entry(io,fname,var_name,success)
     read(io,'(a)',iostat=stat) str
@@ -580,6 +581,8 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
         do 
             read(io,'(a)',iostat=stat) str
             if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) comment_char, dummy
+            if (comment_char(1:1) .eq. '#') cycle
             read(str,*,iostat=stat) attype,dist,val
             if (stat /= 0) exit
             Npair=Npair+1

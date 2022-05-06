@@ -13,7 +13,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-subroutine init_2Q(io,fname,lat,ordname,dim_mode,state)
+subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
     use m_io_utils, only: get_parameter
     use m_util_init, only: get_pos_vec
     integer,intent(in)              :: io       !init-file io-unit
@@ -22,6 +22,7 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state)
     character(*),intent(in)         :: ordname  !name of the order parameter
     integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
     real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
+    real(8),intent(in)              :: init_conf(:)
 
     real(8)         :: q1(3),q2(3),qnorm
     real(8)         :: qp(3),qm(3)
@@ -32,11 +33,12 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state)
     real(8)         :: theta
     real(8)         :: phi
     integer         :: Nsite
-    integer         :: i
+    integer         :: i,j,size_unit_cell
    
     q1=0.0d0
     q2=0.0d0
     qnorm=0.0
+    size_unit_cell=size(init_conf)
 
     call get_parameter(io,fname,'Q1_'//ordname,3,q1)
     call get_parameter(io,fname,'Q2_'//ordname,3,q2)
@@ -65,6 +67,9 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state)
         state_3(1,i)=sin(phi)
         state_3(2,i)=cos(phi)*sin(theta)
         state_3(3,i)=cos(phi)*cos(theta)
+
+        j=mod(i-1,size_unit_cell)+1
+        state_3(:,i)=state_3(:,i)*init_conf(j)/abs(init_conf(j))
     enddo
 
     nullify(pos_3,state_3)

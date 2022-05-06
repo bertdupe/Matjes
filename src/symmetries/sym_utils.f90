@@ -1,6 +1,7 @@
 module m_sym_utils
 use m_rotation_matrix, only : rotate_matrix,check_rotate_matrix,rotation_matrix_real
 use m_determinant, only : determinant
+use m_constants, only : identity
 implicit none
 
 private
@@ -12,10 +13,12 @@ end interface look_translation
 
 contains
 
-subroutine rotate_exchange(mat_out,mat_in,rotmat)
+!rotate the symmetric and the antisymmetric part of the exchange
+subroutine rotate_exchange(mat_out,mat_in,rotmat,chirality)
    real(8), intent(out)   :: mat_out(:,:)
    real(8), intent(in)    :: mat_in(:,:)
    real(8), intent(in)    :: rotmat(:,:)
+   real(8), intent(in)    :: chirality
 
    real(8)                :: mat_asym(3,3),mat_sym(3,3),sym_part(3,3),antisym_part(3,3)
 
@@ -28,7 +31,8 @@ subroutine rotate_exchange(mat_out,mat_in,rotmat)
 ! rotate only the antisymmetric part. This part is DMI related so it is an axial vector symmetry which has to be multiplied by det(sym_mat)
    call rotate_matrix(mat_asym,antisym_part,rotmat)
 
-   mat_out=mat_sym+mat_asym*determinant(1.0d-8,3,rotmat)
+!   mat_out=mat_sym+mat_asym*chirality
+   mat_out=mat_sym+mat_asym*chirality
 
 end subroutine
 
@@ -122,10 +126,7 @@ found=.false.
 
 ! when no periodicity is present, the axis along the non-periodic direction must be invariant
 do i=1,3
-  if (.not.(periodic(i)).and.(norm(areal_rot(:,i)-areal(:,i)).gt.1.0d-6)) then
-    look_translation_lattice=.false.
-    return
-  endif
+  if (.not.(periodic(i)).and.(norm(areal_rot(:,i)-areal(:,i)).gt.1.0d-6)) return
 enddo
 
 ! this will be checked only if the axis along the open boundary are invariant by the symetry operations

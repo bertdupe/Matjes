@@ -8,7 +8,7 @@ contains
 ! Initialize the starting configuration as an isolated skyrmion
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
+subroutine init_Sk_lattice(io,fname,lat,ordname,dim_mode,state,init_conf)
     use m_io_utils,only: get_parameter
     use m_util_init, only: get_pos_vec, get_skyrmion
     use m_derived_types,only: lattice
@@ -18,6 +18,7 @@ subroutine init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
     character(*),intent(in)         :: ordname  !name of the order parameter
     integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
     real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
+    real(8), intent(in)             :: init_conf(:)
     ! internal variables
     real(8),allocatable,target          :: pos(:)
     real(8),pointer                     :: pos_3(:,:),state_3(:,:)
@@ -56,7 +57,7 @@ subroutine init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
     
     do i=1,NSkyAdd
         pos_sky=[tab_XSky(i),tab_YSky(i),0.0d0]
-        call get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chi,pos_3,state_3,lat)
+        call get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chi,pos_3,state_3,lat,init_conf)
     
     enddo
     

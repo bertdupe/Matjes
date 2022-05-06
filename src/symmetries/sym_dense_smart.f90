@@ -60,7 +60,7 @@ do i=1,size(sym_index)
 ! I have to take the transpose of rtest to have it written in lign again
 !
 
-    found=look_translation(rtest,transpose(areal),(/.True.,.True.,.True./),dim_lat)
+    found=look_translation(rtest,transpose(areal),periodic,dim_lat)
 
     if (found) then
        number_sym=number_sym+1
@@ -111,8 +111,8 @@ do i=2,natom,1
 enddo
 
 allocate(new_index(number_sym),source=0)
-allocate(mask_index(number_sym,npos+6),source=0)
-allocate(high_sym_pos(3,npos+6),source=0.0d0)
+allocate(mask_index(number_sym,npos+6+1),source=0)
+allocate(high_sym_pos(3,npos+6+1),source=0.0d0)
 
 write(output_unit,'(I4,a)') natom, ' atoms found in the unit cell'
 
@@ -165,7 +165,7 @@ do j=1,nattype  ! loop over the number of atom type
             do jj=1,size(ind)
                test_pos=origin-my_motif%atomic(ind(jj))%position ! take a test position
 
-               found=look_translation(test_vec,my_lattice%areal,(/.True.,.True.,.True./),my_lattice%dim_lat,test_pos)
+               found=look_translation(test_vec,my_lattice%areal,(/.true.,.true.,.true./),my_lattice%dim_lat,test_pos)
                if (found) mask_index(ii,i)=mask_index(ii,i)+1
             enddo
          enddo
