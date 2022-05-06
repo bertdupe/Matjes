@@ -89,7 +89,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     integer :: io_Eout_contrib
     integer :: dim_mode !dim_mode of the iterated order parameter
     type(excitation_combined)   :: excitations
-
+	 real(8) 	 :: max_torque
     real(8)     ::  time_init, time_final
 
 
@@ -263,7 +263,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 if(io_simu%calc_topo)then
                     if(mag_lattice%nmag>1)then
                         write(error_unit,'(2/A)') "Trying to calculate topological charge which is not implemented for nmag>1"
-                        write(error_unit,'(A)') "Try it with 'calc_topo= T'?"
+                        write(error_unit,'(A)') "Try it with 'calc_topo F'?"
                         ERROR STOP
                     endif
                     dumy=get_charge(lat_1,Q_neigh)
@@ -279,7 +279,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 Write(7,'(I12,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
                  &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
                  &   kT/k_B,(security(i),i=1,2),H_int
-                call get_Torque_measure(j,Edy,Dmag_int)
+                call get_Torque_measure(j,Edy,Dmag_int,max_torque)
                 if(io_simu%io_energy_cont)then
                     if(io_simu%io_energy_detail)then
                         Call Eout_contrib_write(H_res,j,real_time,mag_lattice,io_Eout_contrib)
@@ -347,8 +347,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             
             !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             !!!!!!!!!!!!!!! end of a timestep
-            real_time=real_time+timestep_int !increment time counter
+            real_time=real_time+timestep_int !increment time counter    
+        
         endif
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        !stop iterations if converged
+        if (max_torque.le.1.0d-12) then
+        		write(*,*) 'Maximum torque=',max_torque,' eV, simulation has converged.'
+				exit
+        endif  
     enddo 
     if(comm%ismas)then 
         !!!!!!!!!!!!!!! end of iteration
@@ -366,12 +373,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         !else
         !    write(6,'(a)') 'the temperature measurement is not possible'
         !endif
-    endif
-    if(comm%ismas)then
         Call cpu_time(time_final)
         write(output_unit,'(A,F16.8,A)') "time spend in spin-dynamics routine ",time_final-time_init, "s"
     endif
 
 end subroutine 
-
 end module

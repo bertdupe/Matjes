@@ -56,6 +56,7 @@ if(any(rot_angles/=0.d00))then
         rot_mat(2,3)= -c1 * s2
         rot_mat(3,3)=  c2
     end associate
+    write(*,*) 'rot_mat=',rot_mat(:,:)
     write(output_unit,'(A,3(/3X,3F16.8)/)') 'Initial lattice vectors:',net
     net=matmul(net,rot_mat)
     write(output_unit,'(A,3(/3X,3F16.8)/)') 'Rotated lattice vectors:',net

@@ -14,7 +14,7 @@ end subroutine
 
 
 
-subroutine get_Torque_measure(j,Edy,Torque)
+subroutine get_Torque_measure(j,Edy,Torque,max_torque)
 real(8), intent(in)                 :: Edy
 integer, intent(in)                 :: j
 real(8),dimension(:,:),intent(in)   :: Torque

@@ -232,6 +232,8 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
     	   write(6,'(/a,2x,E20.12E3/)') 'Tolerance reached, the energy is already minimized.'
     endif
     
+    open (1,file='Beff_single.dat',Access = 'append')
+
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !           Begin minimization
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -239,10 +241,23 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
 		do iter=1,io_min%N_minimization
 			max_torque=0.0d0
 
+
+	!loop to write Beff
+	if (iter.eq.1)	then 
+		do iomp=1,N_mag
+			Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
+			write(1,*) iomp, ' ',Beff(:)
+			write(*,*)'Beff=',Beff(:)
+		enddo
+	   write(*,*)'done writing Beff_single'
+	endif   
+	close(1)	   
+
 		   !Iteratively align the moments onto local normalized field. Recompute effective field at each site.
 		   do iomp=1,N_mag
 				!get local normalized field
 		      Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
+	   	
 		     	Beff_norm=norm(Beff)
 		     	if(Beff_norm.lt.1.0d-8) stop 'Beff=0, problem in the infinite damping minimization routine' !avoid dividing by 0
 		     	Beff=Beff/Beff_norm
@@ -255,7 +270,7 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
 		     	!align moment to field (unless m=0) 
 		     	if(norm(M3(:,iomp)).gt.1.0d-8)  M3(:,iomp)=Beff
 			enddo
-		     
+
 			!print max_torque every io_min%Efreq iterations
 			if (mod(iter,io_min%Efreq).eq.0) write(*,*) 'Max torque =',max_torque
 		 
@@ -264,7 +279,6 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
 				gra_int=int((iter-1)/int(gra_freq,8),4)
 				call WriteSpinAndCorrFile(gra_int,lat%M%modes_v,'spin_minimization')
 				call CreateSpinFile(gra_int,lat%M)
-				write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',iter/gra_freq
 			endif
 		     
 			!test convergence
@@ -275,6 +289,7 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
 			endif
 		enddo
 	endif
+
    if(.not.conv)then
         write(*,'(///A)') "WARNING, minimization routine did not reach minimium"
         write(*,*) 'Max_torque=            ',max_torque
