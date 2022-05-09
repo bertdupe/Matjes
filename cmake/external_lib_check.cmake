@@ -203,15 +203,15 @@ if(NOT DEFINED USE_FFTWMPI OR (DEFINED USE_FFTWMPI AND USE_FFTWMPI))
     if(DEFINED FFTWMPI_linker)
         message(" Using manually set FFTW_MPI linker: ${FFTWMPI_linker}")
     else()
-        set(FFTWMPI_linker "-lfftw3 -lfftw3_mpi -lm")
+        set(FFTWMPI_linker "-lfftw3_mpi -lm")
         message(" Using default FFTW_MPI linker: ${FFTWMPI_linker}")
     endif()
 
     try_compile(FOUND_FFTWMPI "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_mpi.f90"
        CMAKE_FLAGS
-                 "-DINCLUDE_DIRECTORIES=${FFTW_include_path}"
-                 "-DLINK_DIRECTORIES=${FFTW_library_path}"
-        LINK_LIBRARIES "${FFTW_linker}"
+       "-DINCLUDE_DIRECTORIES=${FFTWMPI_include_path}"
+       "-DLINK_DIRECTORIES=${FFTWMPI_library_path}"
+       LINK_LIBRARIES "${FFTWMPI_linker}"
         OUTPUT_VARIABLE FFTW_test_output
         )
     if(FOUND_FFTWMPI)
