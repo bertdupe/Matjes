@@ -50,7 +50,7 @@ Implicit None
     real(kind=8) :: computation_time
 
     Call init_MPI(mpi_world)
-    Call fftw_init()
+    call fftw_init()
 
     call welcome()
 

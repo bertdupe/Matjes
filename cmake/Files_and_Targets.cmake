@@ -59,9 +59,9 @@ if(USE_FFTW)
 endif()
 
 if(USE_FFTWMPI)
-    target_include_directories(Matjes PUBLIC ${FFTW_include_path})
-    target_link_directories(Matjes PUBLIC ${FFTW_library_path})
-    target_link_libraries(Matjes "${FFTW_linker}")
+	target_include_directories(Matjes PUBLIC ${FFTWMPI_include_path})
+	target_link_directories(Matjes PUBLIC ${FFTWMPI_library_path})
+	target_link_libraries(Matjes "${FFTWMPI_linker}")
 endif()
 
 if(USE_netCDF)

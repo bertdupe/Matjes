@@ -24,6 +24,7 @@ module m_rw_H
         use m_Ph_Biq, only : read_Ph_Biq_input
         use m_general_force_tensor, only : read_Ftensor_input
         use m_dipolar_phonon, only: read_dip_ph_input
+        use m_3spin, only : read_sp3_input
         
         type(io_H),intent(out)      :: H_io
         character(*),parameter      :: fname='input'
@@ -50,6 +51,7 @@ module m_rw_H
         call read_Ph_Biq_input(io_param,fname,H_io%U_biq)
         call read_Ftensor_input(io_param,fname,H_io%U_foten)
         call read_dip_ph_input(io_param,fname,H_io%dip_ph)
+        call read_sp3_input(io_param,fname,H_io%sp3)
 
         call close_file(fname,io_param)
     end subroutine

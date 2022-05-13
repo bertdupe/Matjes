@@ -90,25 +90,28 @@ if(NOT DEFINED USE_MKL OR (DEFINED USE_MKL AND USE_MKL))
     if(USE_MKL AND (NOT DEFINED USE_FFTW OR USE_FFTW))
         try_compile(FOUND_FFTW "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw.f90"
             CMAKE_FLAGS
-                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}"
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}/fftw"
                       "-DLINK_DIRECTORIES=${MKL_library_path}"
             LINK_LIBRARIES "${MKL_linker}"
             OUTPUT_VARIABLE FFTW_test_output
             )
         if(FOUND_FFTW)
-            message(" Success testing FFTW with mkl.\n Disable other search for fftw3 library implementation.\n Compiling with CPP_FFTW3")
+		message(" Success testing FFTW with mkl.\n Disable other search for fftw3 library implementation.\n Compiling with CPP_FFTW3")
+	    set(FFTW_include_path "${MKL_include_path}/fftw")
+            set(FFTW_library_path "${MKL_library_path}")
             add_compile_definitions(CPP_FFTW3)
             set(USE_FFTW FALSE)
         endif()
 
         try_compile(FFTW_threaded "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_thread.f90"
             CMAKE_FLAGS
-                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}"
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}/fftw"
                       "-DLINK_DIRECTORIES=${MKL_library_path}"
             LINK_LIBRARIES "${MKL_linker}"
             )
         if(FFTW_threaded AND FOUND_FFTW)
             message(" Success testing FFTW with threading .\n Compiling with CPP_FFTW3_THREAD")
+	    set(FFTW_include_path "${MKL_include_path}/fftw")
             add_compile_definitions(CPP_FFTW3_THREAD)
         elseif(NOT FFTW_threaded AND FOUND_FFTW)
             message(" Failure to compile FFTW with threading, but normal fftw should work")
@@ -119,7 +122,7 @@ else()
     message("Found USE_MKL = FALSE, skipping MKL (sparse) test.")
 endif()
 
-#check for FFTW3
+#check for FFTW3 not in MKL
 message("\n\n Searching for FFTW3")
 if(NOT DEFINED USE_FFTW OR (DEFINED USE_FFTW AND USE_FFTW))
 
@@ -166,12 +169,16 @@ if(NOT DEFINED USE_FFTW OR (DEFINED USE_FFTW AND USE_FFTW))
     endif()
 
     try_compile(FFTW_threaded "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_thread.f90"
-        LINK_LIBRARIES "${FFTW_linker}"
+	CMAKE_FLAGS
+	         "-DINCLUDE_DIRECTORIES=${FFTW_include_path}"
+		 "-DLINK_DIRECTORIES=${FFTW_library_path}"
+        LINK_LIBRARIES "${FFTW_linker} -lfftw3_threads -lm"
         OUTPUT_VARIABLE FFTW_test_output
         )
     if(FFTW_threaded AND USE_FFTW)
         message(" Success testing FFTW with threading .\n Compiling with CPP_FFTW3_THREAD")
         add_compile_definitions(CPP_FFTW3_THREAD)
+	set(FFTW_linker "${FFTW_linker} -lfftw3_threads -lm")
     elseif(NOT FFTW_threaded AND USE_FFTW)
         message(" Failure to compile FFTW with threading, but normal fftw should work")
     endif()
@@ -203,15 +210,15 @@ if(NOT DEFINED USE_FFTWMPI OR (DEFINED USE_FFTWMPI AND USE_FFTWMPI))
     if(DEFINED FFTWMPI_linker)
         message(" Using manually set FFTW_MPI linker: ${FFTWMPI_linker}")
     else()
-        set(FFTWMPI_linker "-lfftw3 -lfftw3_mpi -lm")
+        set(FFTWMPI_linker "-lfftw3_mpi -lm")
         message(" Using default FFTW_MPI linker: ${FFTWMPI_linker}")
     endif()
 
     try_compile(FOUND_FFTWMPI "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_mpi.f90"
        CMAKE_FLAGS
-                 "-DINCLUDE_DIRECTORIES=${FFTW_include_path}"
-                 "-DLINK_DIRECTORIES=${FFTW_library_path}"
-        LINK_LIBRARIES "${FFTW_linker}"
+       "-DINCLUDE_DIRECTORIES=${FFTWMPI_include_path}"
+       "-DLINK_DIRECTORIES=${FFTWMPI_library_path}"
+       LINK_LIBRARIES "${FFTWMPI_linker}"
         OUTPUT_VARIABLE FFTW_test_output
         )
     if(FOUND_FFTWMPI)

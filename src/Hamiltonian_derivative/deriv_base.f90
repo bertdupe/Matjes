@@ -82,8 +82,10 @@ subroutine get_deriv_single(this,H,lat,site,work,vec,tmp)
 
     Call this%l_single(H,lat,site,work,tmp)
     vec=vec+tmp
+
     Call this%r_single(H,lat,site,work,tmp)
     vec=vec+tmp
+
 end subroutine
 
 subroutine uninitialized(this,H,lat,vec,work)
