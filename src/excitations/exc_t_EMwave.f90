@@ -41,7 +41,7 @@ subroutine EMwave_read_string(this,str)
                tau    => this%real_var(1+this%dim_mode*3+1:  this%dim_mode*3+2)) 
 
         phi=phi*pi              !insert phi in units of pi
-        omega=2.0d0*pi/omega    !insert omega as wavelength in 1/fs
+       ! omega=2.0d0*pi/omega    !equation is cos(omega*t so input should have omega in 2pi/fs.... 
 
         this%t_start=max(this%t_start,t0(1)-10.0d0*tau(1))
         this%t_end  =min(this%t_end  ,t0(1)+10.0d0*tau(1))
@@ -110,7 +110,7 @@ subroutine print_t_EMwave(this,io)
     write(io,'(6X,A)') "Parameters:"
     write(io,'(9X,A,2(F14.4,A))') "time range:    : [",this%t_start,",",this%t_end," ) fs"
     write(io,'(9X,A,'//dim_mode//'(E16.8))') "amplitude (I0) : ", I0
-    write(io,'(9X,A,'//dim_mode//'(F16.8),A)') "frequency  (w) : ", omega/2.0d0/pi, " in 2pi/fs"
+    write(io,'(9X,A,'//dim_mode//'(F16.8),A)') "frequency  (w) : ", omega, " in 2pi/fs"
     write(io,'(9X,A,'//dim_mode//'(F16.4),A)') "Phase    (phi) : ", phi/pi , " in pi"
     write(io,'(9X,A,(F16.4),A)') "center    (t0) : ", t0(1) , " in fs"
     write(io,'(9X,A,(F16.4),A)') "decay    (tau) : ", tau(1) , " in fs"

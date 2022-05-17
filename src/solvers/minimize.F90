@@ -243,15 +243,15 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
 
 
 	!loop to write Beff
-	if (iter.eq.1)	then 
-		do iomp=1,N_mag
-			Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
-			write(1,*) iomp, ' ',Beff(:)
-			write(*,*)'Beff=',Beff(:)
-		enddo
-	   write(*,*)'done writing Beff_single'
-	endif   
-	close(1)	   
+	!if (iter.eq.1)	then 
+	!	do iomp=1,N_mag
+	!		Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
+	!		write(1,*) iomp, ' ',Beff(:)
+	!		write(*,*)'Beff=',Beff(:)
+	!	enddo
+	 !  write(*,*)'done writing Beff_single'
+	!endif   
+	!close(1)	   
 
 		   !Iteratively align the moments onto local normalized field. Recompute effective field at each site.
 		   do iomp=1,N_mag
