@@ -81,10 +81,12 @@ subroutine get_deriv_single(this,H,lat,site,work,vec,tmp)
     real(8),intent(inout)               :: tmp(size(vec))   !to prevent constant allocation/deallocation !also remove with beta=1 as in get_deriv-case?
 
     Call this%l_single(H,lat,site,work,tmp)
+    write(*,*) 'l_single', tmp
     vec=vec+tmp
 
     Call this%r_single(H,lat,site,work,tmp)
     vec=vec+tmp
+    write(*,*) 'r_single', tmp
 
 end subroutine
 

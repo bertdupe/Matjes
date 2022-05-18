@@ -215,6 +215,8 @@ subroutine minimize_infdamp_run(lat,io_simu,io_min,H)
         do iomp=1,N_mag
         	!get local normalized field
          	Call H%get_eff_field_single(lat,iomp,Beff,work,1,dummy)
+         	write(*,*) 'Beff', Beff
+         	pause
         	Beff_norm=norm(Beff)
         	if(Beff_norm.lt.1.0d-8) stop 'Beff=0, problem in the infinite damping minimization routine' !avoid dividing by 0
         	Beff=Beff/Beff_norm

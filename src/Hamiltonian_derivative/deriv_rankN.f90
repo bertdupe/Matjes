@@ -102,6 +102,7 @@ contains
         mv_vec=mv_vec*vec_red
         !reduce resulting vector according to rules of left mode
         Call H%mode_l%reduce_site_vec(comp,mv_vec,vec)
+        write(*,*) 'rank N left', vec
 #undef _max_
 #undef _dim_
     end subroutine
@@ -158,6 +159,7 @@ contains
         mv_vec=mv_vec*vec_red
         !reduce resulting vector according to rules of right mode
         Call H%mode_r%reduce_site_vec(comp,mv_vec,vec)
+        write(*,*) 'rank N right', vec
 #undef _max_
 #undef _dim_
     end subroutine
