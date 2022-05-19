@@ -99,10 +99,10 @@ contains
         !get left mode indices ind_out excluding mode number comp
         Call H%mode_l%get_mode_exc_disc(lat,comp,_dim_,ind_out,vec_red)
         !mutliply Hamiltonian.right_mode values with left mode exluding comp values
-        mv_vec=mv_vec*vec_red
+        !and multiply by the order to have the correct ratio between the rank 2 and rank 4 Hamiltonian
+        mv_vec=mv_vec*vec_red*this%l_factor
         !reduce resulting vector according to rules of left mode
         Call H%mode_l%reduce_site_vec(comp,mv_vec,vec)
-        write(*,*) 'rank N left', vec
 #undef _max_
 #undef _dim_
     end subroutine
@@ -156,10 +156,10 @@ contains
         !get right mode indices ind_out excluding mode number comp
         Call H%mode_r%get_mode_exc_disc(lat,comp,_dim_,ind_out,vec_red)
         !mutliply left_mode.Hamiltonian values with right mode exluding comp values
-        mv_vec=mv_vec*vec_red
+        !and multiply by the order to have the correct ratio between the rank 2 and rank 4 Hamiltonian
+        mv_vec=mv_vec*vec_red*this%r_factor
         !reduce resulting vector according to rules of right mode
         Call H%mode_r%reduce_site_vec(comp,mv_vec,vec)
-        write(*,*) 'rank N right', vec
 #undef _max_
 #undef _dim_
     end subroutine

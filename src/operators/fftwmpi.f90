@@ -4,10 +4,6 @@ use m_fftw3
     integer, protected, public :: N_kpoint(3)
     real(kind=8), protected, public, allocatable :: kmesh(:,:)
 
-!    ! FFTMPI of the dipolar martix D(r)
-!    complex(kind=8), allocatable, protected, public :: FFT_pos_D(:,:,:)
-!
-
     private
     contains
 #if 0
@@ -22,24 +18,39 @@ use m_fftw3
             real(kind=8), intent(in) :: rmat(:,:,:,:)
             complex, intent(out) :: cmat(:,:,:,:)
             type(C_PTR), intent(in) :: plan
-            real(c_double), intent(inout) :: rtrans(:,:,:)
-            complex(c_double_complex), intent(inout) :: ctrans(:,:,:)
+            real(c_double), intent(inout), pointer :: rtrans(:,:,:)
+            complex(c_double_complex), intent(inout), pointer :: ctrans(:,:,:)
 
             ! Internal variables
             integer :: i,j,k,l
             integer :: N
+            integer(C_INTPTR_T) :: i, j, alloc_local, local_Nz, local_Nz_offset
 
             N=size(rmat,1)
 
-            ctrans=dcmplx(0.d0,0.d0)
-            rtrans=0.0d0
+            !   get local data size and allocate (note dimension reversal)
+            alloc_local = fftw_mpi_local_size_3d(Nz, Ny, Nx/2+1, MPI_COMM_WORLD,local_Nz, local_Nz_offset)
+
+            ctrans=fftw_alloc_complex(alloc_local)
+            call c_f_pointer(cdata, data, [Nx/2,Ny,local_Nz])
+
+            ! split the real space in data
+            rtrans = fftw_alloc_real(2*alloc_local)
+            call c_f_pointer(rdata, in, [2*(Nx/2+1),Ny,local_Nz])
+
+            ! create the plan for the FFTW_MPI
+            plan = fftw_mpi_plan_dft_r2c_3d(Nz, Ny, Nx, rtrans, ctrans, MPI_COMM_WORLD,FFTW_MEASURE)
 
             do i=1,N
                 rtrans(1:Nx,1:Ny,1:Nz)=rmat(i,1:Nx,1:Ny,1:Nz)
-                call fftw_mpi_execute_dft_r2c(plan,rtrans,ctrans)
+                call fftw_mpi_execute_dft_r2c_3d(plan,rtrans,ctrans)
                 cmat(i,1:Nx,1:Ny,1:Nz)=ctrans(1:Nx,1:Ny,1:Nz)
             enddo
-        end subroutine fft_depol_r2c
+
+            call fftw_destroy_plan(plan)
+            call fftw_free(cdata)
+
+        end subroutine fft_mpi_depol_r2c
 
 
 
@@ -72,7 +83,7 @@ use m_fftw3
                 rmat(i,1:Nx,1:Ny,1:Nz)=rtrans(1:Nx,1:Ny,1:Nz)/dble(Nx*Ny*Nz)
             enddo
             !      call fftw_destroy_plan(plan)
-        end subroutine fft_depol_c2r
+        end subroutine fft_mpi_depol_c2r
 #endif
 
 
@@ -118,7 +129,7 @@ use m_fftw3
             do i=1,N_k
                 FFT(:,i)=get_FFT(field,sense,kmesh(:,i),pos,N(1))
             enddo
-        end subroutine calculate_fft_matrix
+        end subroutine calculate_fft_mpi_matrix
 
 
 
@@ -153,7 +164,7 @@ use m_fftw3
             do i=1,Nksize
                 FFT_pos_D(:,:,i)=get_FFT(pos_D,sense,kmesh(:,i),pos,Nsize)
             enddo
-        end subroutine calculate_FFT_Dr
+        end subroutine calculate_FFT_mpi_Dr
 
 
 
@@ -180,7 +191,7 @@ use m_fftw3
                 enddo
             enddo
             get_FFT_vec_point=get_FFT_vec_point/sqrt(real(Nsize,8))
-        end function get_FFT_vec_point
+        end function get_FFT_mpi_vec_point
 
 
 
@@ -207,7 +218,7 @@ use m_fftw3
                 enddo
             enddo
             get_FFT_Dr_matrix=get_FFT_Dr_matrix/real(Nsize,8)
-        end function get_FFT_Dr_matrix
+        end function get_FFT_mpi_Dr_matrix
 
 
 
@@ -234,7 +245,7 @@ use m_fftw3
                 enddo
             enddo
             get_FFT_matrix=get_FFT_matrix/real(shape_pos(2),8)
-        end function get_FFT_matrix
+        end function get_FFT_mpi_matrix
 
 
         !Function computing the product X*e^{ikr}*H(r-r')*X*e^{ikr'} for a given r and kvec

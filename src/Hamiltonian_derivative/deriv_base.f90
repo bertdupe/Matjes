@@ -8,6 +8,8 @@ public t_deriv
 
 type    :: t_deriv
     integer :: order=0
+    real(8) :: l_factor=1.0d0       ! factor that multiplies the output vector field when the single routines are called
+    real(8) :: r_factor=1.0d0
     procedure(int_deriv_get),pointer        :: l=>uninitialized
     procedure(int_deriv_get),pointer        :: r=>uninitialized
     procedure(int_deriv_get_single),pointer :: l_single=>uninitialized_single
@@ -81,12 +83,10 @@ subroutine get_deriv_single(this,H,lat,site,work,vec,tmp)
     real(8),intent(inout)               :: tmp(size(vec))   !to prevent constant allocation/deallocation !also remove with beta=1 as in get_deriv-case?
 
     Call this%l_single(H,lat,site,work,tmp)
-    write(*,*) 'l_single', tmp
     vec=vec+tmp
 
     Call this%r_single(H,lat,site,work,tmp)
     vec=vec+tmp
-    write(*,*) 'r_single', tmp
 
 end subroutine
 

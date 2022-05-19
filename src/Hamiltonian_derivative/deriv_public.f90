@@ -24,6 +24,10 @@ subroutine set_deriv(deriv,order,op_l,op_r)
     Nl=size(op_l); Nr=size(op_r)
     Nl_order=count(op_l==order); Nr_order=count(op_r==order)
 
+    ! the factor depends on the order
+    deriv%l_factor=real(Nl_order,8)
+    deriv%r_factor=real(Nr_order,8)
+
     !set global derivatives
     deriv%l=>get_null
     deriv%r=>get_null

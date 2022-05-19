@@ -151,16 +151,14 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
 
 #ifdef CPP_FFTWMPI
     integer              :: Nk_tot           !number of state considered in FT (product of N_rep)
-    integer(C_INT)       :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
-    integer(C_int)       :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
+    integer(C_INTPTR_T)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
+    integer(C_intPTR_T)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
     type(c_ptr)          :: plan_K_F         !plan for fourier transformation of K
     type(c_ptr)          :: local_data=c_null_ptr  ! local data to transform
-    integer(C_INTPTR_T)  :: local_mag_F,local_H_I,local_j_offset,alloc_local,local_K
+    integer(C_INTPTR_T)  :: local_Nz_offset,alloc_local,local_Nz
     type(c_ptr)          :: rdata,cdata
     complex(C_DOUBLE_COMPLEX), pointer :: out(:,:)
     real(C_DOUBLE), pointer :: in(:,:)
-    complex(C_DOUBLE_COMPLEX),allocatable :: toto_c(:,:)
-    real(C_DOUBLE),allocatable            :: toto_r(:,:)
 
     Call this%fft_H%init_op(dim_mode,K_n,desc_in)
 
@@ -189,47 +187,32 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     endif
 
     !calculate fourier transform of K and save it in dipole-type
-!    howmany=int(dim_mode**2,C_int)
-!    Nk_tot=product(this%N_rep)
-!    N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
-!    allocate(this%K_F(dim_mode,dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
+    N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
+    write(*,*) N_rep_rev
 
     !   get local data size and allocate (note dimension reversal)
-!    alloc_local = fftw_mpi_local_size_3d(int(Nk_tot,C_INTPTR_T), int(dim_mode,C_INTPTR_T), int(dim_mode,C_INTPTR_T), MPI_COMM_WORLD, &
-!                                       local_K, local_j_offset)
-!    alloc_local = fftw_mpi_local_size_many(3, int(N_rep_rev,C_INTPTR_T), int(howmany,C_INTPTR_T), int(1,C_INTPTR_T), MPI_COMM_WORLD, &
-!                                       local_K, local_j_offset)
 
+    Howmany=N_rep_rev(1)*N_rep_rev(2)
+    alloc_local = fftw_mpi_local_size_2d(Howmany, N_rep_rev(3)/2+1, MPI_COMM_WORLD,local_Nz, local_Nz_offset)
 
+! allocate the real space in rdata
+    rdata = fftw_alloc_real(2*alloc_local)
+    call c_f_pointer(rdata, in, [2*(N_rep_rev(3)/2+1),Howmany])
 
-! test part
-    allocate(toto_c(2,10),source=cmplx(0.0d0,0.0d0,8))
-    allocate(toto_r(2,10),source=0.0d0)
-    toto_r=1.0d0
-
-    alloc_local = fftw_mpi_local_size_many(2, int((/10,2/),C_INTPTR_T), int(2,C_INTPTR_T), int(0,C_INTPTR_T), MPI_COMM_WORLD, &
-                                       local_K, local_j_offset)
-    pause 'Bertrand 1'
-! split the real space in data
-    rdata = fftw_alloc_real(alloc_local)
-    call c_f_pointer(rdata, in, [2,10])
-
+! allocate the complex space in cdata
     cdata = fftw_alloc_complex(alloc_local)
-    call c_f_pointer(cdata, out, [2,10])
-    pause 'Bertrand 2'
+    call c_f_pointer(cdata, out, [N_rep_rev(3)/2+1,Howmany])
 
-    in=toto_r
+    in=reshape(K_n,(/Howmany,N_rep_rev(3)/))
 
-    ! create plan
-!    plan_K_F= fftw_mpi_plan_dft_r2c_3d(int(Nk_tot,C_INTPTR_T), int(dim_mode,C_INTPTR_T), int(dim_mode,C_INTPTR_T),&
-!                                    in, out, &
-!                                    MPI_COMM_WORLD,FFTW_FORWARD+FFTW_ESTIMATE)
-    plan_K_F= fftw_mpi_plan_many_dft_r2c(2,int((/10,2/),C_INTPTR_T),int(2,C_INTPTR_T),int(0,C_INTPTR_T),int(0,C_INTPTR_T),&
-                                    in, out, &
-                                    MPI_COMM_WORLD,FFTW_FORWARD+FFTW_ESTIMATE)
+!     create plan
 
-    pause 'Bertrand 3'
+    plan_K_F= fftw_mpi_plan_dft_r2c_2d(N_rep_rev(3), Howmany, in, out, &
+                                    & MPI_COMM_WORLD,FFTW_FORWARD+FFTW_ESTIMATE)
+
     Call fftw_mpi_execute_dft_r2c(plan_K_F, in, out)
+
+    this%K_F=reshape(K_n,(/N_rep_rev(1),N_rep_rev(2),N_rep_rev(3)/))
 
     this%K_F=this%K_F/real(product(N_rep_rev),8)
 
