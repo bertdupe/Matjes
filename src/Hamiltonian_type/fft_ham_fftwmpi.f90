@@ -19,6 +19,7 @@ type,extends(fft_H) ::  fft_H_fftwmpi
     private
     type(c_ptr)     :: plan_mag_F=c_null_ptr   !FFTW plan M_n -> M_F
     type(c_ptr)     :: plan_H_I=c_null_ptr     !FFTW plan H_F -> H_n
+    type(c_ptr)     :: rdata,cdata
 
     !fourier transformated arrays
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
@@ -150,15 +151,16 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     character(len=*),intent(in),optional       :: desc_in
 
 #ifdef CPP_FFTWMPI
-    integer              :: Nk_tot           !number of state considered in FT (product of N_rep)
+    integer(C_INTPTR_T)  :: Nk_tot           !number of state considered in FT (product of N_rep)
     integer(C_INTPTR_T)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
-    integer(C_intPTR_T)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
+    integer(C_INTPTR_T)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
     type(c_ptr)          :: plan_K_F         !plan for fourier transformation of K
     type(c_ptr)          :: local_data=c_null_ptr  ! local data to transform
-    integer(C_INTPTR_T)  :: local_Nz_offset,alloc_local,local_Nz
+    integer(C_INTPTR_T)  :: M_offset,alloc_local,local_M  ! offset and size of the data to be passed
     type(c_ptr)          :: rdata,cdata
-    complex(C_DOUBLE_COMPLEX), pointer :: out(:,:)
-    real(C_DOUBLE), pointer :: in(:,:)
+    complex(C_DOUBLE_COMPLEX), pointer :: out(:,:,:)
+    real(C_DOUBLE), pointer :: in(:,:,:)
+    integer :: i,j,k
 
     Call this%fft_H%init_op(dim_mode,K_n,desc_in)
 
@@ -189,38 +191,40 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     !calculate fourier transform of K and save it in dipole-type
     N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
     write(*,*) N_rep_rev
+    stop
+    Nk_tot=int(product(this%N_rep),C_INTPTR_T)
+    Howmany=int(dim_mode**2,C_intPTR_T)
+    allocate(this%K_F(dim_mode,dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
 
     !   get local data size and allocate (note dimension reversal)
-
-    Howmany=N_rep_rev(1)*N_rep_rev(2)
-    alloc_local = fftw_mpi_local_size_2d(Howmany, N_rep_rev(3)/2+1, MPI_COMM_WORLD,local_Nz, local_Nz_offset)
+    alloc_local = fftw_mpi_local_size_many(3, N_rep_rev, Howmany, &
+                                & FFTW_MPI_DEFAULT_BLOCK,MPI_COMM_WORLD,local_M,M_offset)
 
 ! allocate the real space in rdata
-    rdata = fftw_alloc_real(2*alloc_local)
-    call c_f_pointer(rdata, in, [2*(N_rep_rev(3)/2+1),Howmany])
+    rdata = fftw_alloc_real(2*Howmany*alloc_local)
+    call c_f_pointer(rdata, in, N_rep_rev)
 
 ! allocate the complex space in cdata
-    cdata = fftw_alloc_complex(alloc_local)
-    call c_f_pointer(cdata, out, [N_rep_rev(3)/2+1,Howmany])
-
-    in=reshape(K_n,(/Howmany,N_rep_rev(3)/))
+    cdata = fftw_alloc_complex(Howmany*alloc_local)
+    call c_f_pointer(cdata, out, N_rep_rev)
 
 !     create plan
+    plan_K_F= fftw_mpi_plan_many_dft_r2c(3, N_rep_rev, Howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
+                                 & in, out, MPI_COMM_WORLD,FFTW_FORWARD+FFTW_ESTIMATE)
 
-    plan_K_F= fftw_mpi_plan_dft_r2c_2d(N_rep_rev(3), Howmany, in, out, &
-                                    & MPI_COMM_WORLD,FFTW_FORWARD+FFTW_ESTIMATE)
+!     copy the data
 
-    Call fftw_mpi_execute_dft_r2c(plan_K_F, in, out)
+    Call fftw_mpi_execute_dft_r2c(plan_K_F, K_n, this%K_F)
 
-    this%K_F=reshape(K_n,(/N_rep_rev(1),N_rep_rev(2),N_rep_rev(3)/))
-
-    this%K_F=this%K_F/real(product(N_rep_rev),8)
-
+    this%K_F=this%K_F/real(product(N_rep_rev))
+    write(*,*) 'toto_1'
+    call fftw_free(cdata)
+    write(*,*) 'toto_2'
+!  creates a segmentation fault for whatever reason
     Call fftw_destroy_plan(plan_K_F)
     this%set=.true.
     !deallocate K_n, since at some point one might want to keep it in here
     deallocate(K_n)
-    stop 'Bertrand'
 #else
         ERROR STOP "CANNOT USE FFTW-MPI Hamiltonian without FFTW-MPI (CPP_FFTWMPI)"
 #endif
@@ -333,8 +337,12 @@ end subroutine
 subroutine set_plans(this)
     class(fft_H_fftwmpi),intent(inout)  :: this
 
-    integer(C_INT)  :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
-    integer(C_int)  :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
+    integer(C_INTPTR_T) :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
+    integer(C_INTPTR_T) :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
+    integer(C_INTPTR_T) :: alloc_local
+    type(C_PTR)         :: cdata, rdata
+    complex(C_DOUBLE_COMPLEX), pointer :: data(:,:,:)
+    real(C_DOUBLE), pointer :: in(:,:,:)
 
 #ifdef CPP_FFTWMPI
 
@@ -345,19 +353,21 @@ subroutine set_plans(this)
 
     N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
     howmany=int(size(this%M_n,1),C_int)
-!    this%plan_mag_F= fftw_mpi_plan_many_dft_r2c(int(3,C_INT), N_rep_rev, howmany,&
-!                                           this%M_n,     N_rep_rev,&
-!                                           howmany,      int(1,C_int), &
-!                                           this%M_F,     N_rep_rev,&
-!                                           howmany,      int(1,C_int), &
-!                                           MPI_COMM_WORLD, FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
-!
-!    this%plan_H_I= fftw_mpi_plan_many_dft_c2r(int(3,C_INT), N_rep_rev, howmany,&
-!                                         this%H_F,     N_rep_rev,&
-!                                         howmany,      int(1,C_int), &
-!                                         this%H_n,     N_rep_rev,&
-!                                         howmany,      int(1,C_int), &
-!                                         MPI_COMM_WORLD, FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+
+! allocate the real space in rdata
+    rdata = fftw_alloc_real(2*howmany*alloc_local)
+    call c_f_pointer(rdata, in, N_rep_rev)
+
+! allocate the complex space in cdata
+    cdata = fftw_alloc_complex(howmany*alloc_local)
+    call c_f_pointer(cdata, data, N_rep_rev)
+
+    this%plan_mag_F= fftw_mpi_plan_many_dft_r2c(3, N_rep_rev, howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
+                                 & in, data, MPI_COMM_WORLD,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
+
+    this%plan_H_I= fftw_mpi_plan_many_dft_c2r(3, N_rep_rev, howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
+                                 & data, in, MPI_COMM_WORLD,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+
 #else
     ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTWMPI)"
 #endif
