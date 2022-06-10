@@ -50,16 +50,17 @@ end subroutine
 !
 ! find the R(3) lattice vectors so that P.R-R=0
 !
-function look_translation_vector(areal_rot,areal,periodic,dim_lat,translation)
+function look_translation_vector(areal_rot,areal,periodic,dim_lat,translation,tol_sym)
 use m_vector, only : norm
 implicit none
 real(kind=8), intent(in) :: areal_rot(3),areal(3,3)
-real(kind=8), intent(in), optional :: translation(3)
+real(kind=8), intent(in), optional :: translation(:)
+real(kind=8), intent(in), optional :: tol_sym
 integer, intent(in) :: dim_lat(:)
 logical :: look_translation_vector,periodic(:)
 !internal
 integer :: u,v,w
-real(kind=8) :: test_vec(3),eps(3)
+real(kind=8) :: test_vec(3),eps(3),tolerance
 
 if (present(translation)) then
    eps=translation
@@ -67,8 +68,14 @@ else
    eps=0.0d0
 endif
 
+if (present(tol_sym)) then
+   tolerance=tol_sym
+else
+   tolerance=1.0d-6
+endif
+
 ! case of identical vectors (Identity symmetry operations)
-if (norm(areal_rot-eps).lt.1.0d-8) then
+if (norm(areal_rot-eps).lt.tolerance) then
    look_translation_vector=.true.
    return
 endif
@@ -78,7 +85,8 @@ do u=-2,2,1
    do v=-2,2,1
       do w=-2,2,1
 
-         test_vec=areal_rot+eps
+         test_vec=areal_rot-eps
+
          if ((periodic(1)).or.(dim_lat(1).ne.1)) test_vec=test_vec+real(u)*areal(1,:)
 
          if ((periodic(2)).or.(dim_lat(2).ne.1)) test_vec=test_vec+real(v)*areal(2,:)
@@ -87,9 +95,10 @@ do u=-2,2,1
 
 !
 ! be very carefull here! If the positions are not given with enough precision, the symetries will not be found
+! the user can now change the tolerance
 !
 
-         if (norm(test_vec).lt.1.0d-6) then
+         if (norm(test_vec).lt.tolerance) then
             look_translation_vector=.true.
             return
          endif
@@ -102,17 +111,18 @@ end function look_translation_vector
 
 
 
-function look_translation_lattice(areal_rot,areal,periodic,dim_lat,translation)
+function look_translation_lattice(areal_rot,areal,periodic,dim_lat,translation,tol_sym)
 use m_vector, only : norm
 implicit none
 real(kind=8), intent(in) :: areal_rot(3,3),areal(3,3)
-real(kind=8), intent(in), optional :: translation(3)
+real(kind=8), intent(in), optional :: translation(:)
+real(kind=8), intent(in), optional :: tol_sym
 integer, intent(in) :: dim_lat(:)
 logical, intent(in) :: periodic(:)
 logical :: look_translation_lattice
 !internal
 integer :: u,v,w,i,j
-real(kind=8) :: test_vec(3),eps(3)
+real(kind=8) :: test_vec(3),eps(3),tolerance
 logical :: found(3)
 
 if (present(translation)) then
@@ -121,12 +131,18 @@ else
    eps=0.0d0
 endif
 
+if (present(tol_sym)) then
+   tolerance=tol_sym
+else
+   tolerance=1.0d-6
+endif
+
 look_translation_lattice=.false.
 found=.false.
 
 ! when no periodicity is present, the axis along the non-periodic direction must be invariant
 do i=1,3
-  if (.not.(periodic(i)).and.(norm(areal_rot(:,i)-areal(:,i)).gt.1.0d-6)) return
+  if (.not.(periodic(i)).and.(norm(areal_rot(:,i)-areal(:,i)).gt.tolerance)) return
 enddo
 
 ! this will be checked only if the axis along the open boundary are invariant by the symetry operations
@@ -139,7 +155,7 @@ do u=-2,2,1
          test_vec=matmul(areal,test_vec)-eps
 
          do i=1,3
-            if (norm(areal_rot(:,i)-test_vec).lt.1.0d-6) found(i)=.true.
+            if (norm(areal_rot(:,i)-test_vec).lt.tolerance) found(i)=.true.
          enddo
 
       enddo

@@ -89,6 +89,7 @@ subroutine set_relax(this,lat,state_prop,Q_neigh,Nstep)
         dumy=get_charge(lat,Q_neigh)
     endif
     this%q=dumy(1:2)
+
     this%rate=state_prop%rate
     this%cone=state_prop%cone
     if(present(Nstep)) this%Nstep = Nstep

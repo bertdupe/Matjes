@@ -139,7 +139,7 @@ subroutine get_Forces_tensor(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
 
                     do k=1,my_symmetries%n_sym
-                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
                        if (found_sym) exit
                     enddo
 

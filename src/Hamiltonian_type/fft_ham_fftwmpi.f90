@@ -137,12 +137,6 @@ subroutine destroy(this)
 end subroutine
 
 
-
-
-
-
-
-
 subroutine init_op(this,dim_mode,K_n,desc_in)
     !subroutine which initializes the fourier-transformed operator of K, while deallocating K_N
     class(fft_H_fftwmpi),intent(inout)         :: this
@@ -160,7 +154,8 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     type(c_ptr)          :: rdata,cdata
     complex(C_DOUBLE_COMPLEX), pointer :: out(:,:,:)
     real(C_DOUBLE), pointer :: in(:,:,:)
-    integer :: i,j,k
+    integer :: i,j,k,dim_fft
+    integer :: errcode,ierror
 
     Call this%fft_H%init_op(dim_mode,K_n,desc_in)
 
@@ -190,54 +185,55 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
 
     !calculate fourier transform of K and save it in dipole-type
     N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
-    write(*,*) N_rep_rev
-    stop
-    Nk_tot=int(product(this%N_rep),C_INTPTR_T)
+
+    ! first check the dimension
+    if (N_rep_rev(1)*N_rep_rev(2).eq.1) then     ! the supercell is dimension, parallelization can not be performed
+       write(6,'(a)') 'cannot perfomr FFT for a one dimensional supercell'
+       call mpi_abort(this%fft_mpi_comm%com,errcode,ierror)
+    elseif(N_rep_rev(1).eq.1)  then                   ! redimension for a 2D MPI FFT
+       dim_fft=2
+    else                         ! redimension for a 3D MPI FFT
+       dim_fft=3
+    endif
+
+    Nk_tot=int(product(this%N_rep(:dim_fft)),C_INTPTR_T)
     Howmany=int(dim_mode**2,C_intPTR_T)
+
     allocate(this%K_F(dim_mode,dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
 
     !   get local data size and allocate (note dimension reversal)
-    alloc_local = fftw_mpi_local_size_many(3, N_rep_rev, Howmany, &
-                                & FFTW_MPI_DEFAULT_BLOCK,MPI_COMM_WORLD,local_M,M_offset)
+    alloc_local = fftw_mpi_local_size_many(dim_fft, N_rep_rev(:dim_fft), Howmany, &
+                                & FFTW_MPI_DEFAULT_BLOCK,this%fft_mpi_comm%com,local_M,M_offset)
 
 ! allocate the real space in rdata
     rdata = fftw_alloc_real(2*Howmany*alloc_local)
-    call c_f_pointer(rdata, in, N_rep_rev)
+    call c_f_pointer(rdata, in, N_rep_rev(:dim_fft))
 
 ! allocate the complex space in cdata
     cdata = fftw_alloc_complex(Howmany*alloc_local)
-    call c_f_pointer(cdata, out, N_rep_rev)
+    call c_f_pointer(cdata, out, N_rep_rev(:dim_fft))
 
 !     create plan
-    plan_K_F= fftw_mpi_plan_many_dft_r2c(3, N_rep_rev, Howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & in, out, MPI_COMM_WORLD,FFTW_FORWARD+FFTW_ESTIMATE)
+    plan_K_F= fftw_mpi_plan_many_dft_r2c(dim_fft, N_rep_rev(:dim_fft), Howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
+                                 & K_n, this%K_F, this%fft_mpi_comm%com,FFTW_FORWARD+FFTW_ESTIMATE)
 
 !     copy the data
 
     Call fftw_mpi_execute_dft_r2c(plan_K_F, K_n, this%K_F)
 
     this%K_F=this%K_F/real(product(N_rep_rev))
-    write(*,*) 'toto_1'
+
     call fftw_free(cdata)
-    write(*,*) 'toto_2'
 !  creates a segmentation fault for whatever reason
-    Call fftw_destroy_plan(plan_K_F)
+!    Call fftw_destroy_plan(plan_K_F)
     this%set=.true.
     !deallocate K_n, since at some point one might want to keep it in here
     deallocate(K_n)
+
 #else
         ERROR STOP "CANNOT USE FFTW-MPI Hamiltonian without FFTW-MPI (CPP_FFTWMPI)"
 #endif
 end subroutine
-
-
-
-
-
-
-
-
-
 
 
 subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
@@ -339,10 +335,11 @@ subroutine set_plans(this)
 
     integer(C_INTPTR_T) :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_INTPTR_T) :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
-    integer(C_INTPTR_T) :: alloc_local
+    integer(C_INTPTR_T) :: M_offset,alloc_local,local_M
     type(C_PTR)         :: cdata, rdata
     complex(C_DOUBLE_COMPLEX), pointer :: data(:,:,:)
     real(C_DOUBLE), pointer :: in(:,:,:)
+    integer :: dim_fft,errcode,ierror
 
 #ifdef CPP_FFTWMPI
 
@@ -354,6 +351,19 @@ subroutine set_plans(this)
     N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
     howmany=int(size(this%M_n,1),C_int)
 
+    ! first check the dimension
+    if (N_rep_rev(1)*N_rep_rev(2).eq.1) then     ! the supercell is dimension, parallelization can not be performed
+       write(6,'(a)') 'cannot perfomr FFT for a one dimensional supercell'
+       call mpi_abort(this%fft_mpi_comm%com,errcode,ierror)
+    elseif(N_rep_rev(1).eq.1)  then                   ! redimension for a 2D MPI FFT
+       dim_fft=2
+    else                         ! redimension for a 3D MPI FFT
+       dim_fft=3
+    endif
+
+    !   get local data size and allocate (note dimension reversal)
+    alloc_local = fftw_mpi_local_size_many(dim_fft, N_rep_rev(:dim_fft), Howmany, &
+                                & FFTW_MPI_DEFAULT_BLOCK,this%fft_mpi_comm%com,local_M,M_offset)
 ! allocate the real space in rdata
     rdata = fftw_alloc_real(2*howmany*alloc_local)
     call c_f_pointer(rdata, in, N_rep_rev)
@@ -362,11 +372,11 @@ subroutine set_plans(this)
     cdata = fftw_alloc_complex(howmany*alloc_local)
     call c_f_pointer(cdata, data, N_rep_rev)
 
-    this%plan_mag_F= fftw_mpi_plan_many_dft_r2c(3, N_rep_rev, howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & in, data, MPI_COMM_WORLD,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
+    this%plan_mag_F= fftw_mpi_plan_many_dft_r2c(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
+                                 & in, data, this%fft_mpi_comm%com,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
 
-    this%plan_H_I= fftw_mpi_plan_many_dft_c2r(3, N_rep_rev, howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & data, in, MPI_COMM_WORLD,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+    this%plan_H_I= fftw_mpi_plan_many_dft_c2r(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
+                                 & data, in, this%fft_mpi_comm%com,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
 
 #else
     ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTWMPI)"
@@ -381,14 +391,25 @@ subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
     real(8),intent(in)          :: H(3,Nmag,N_rep(1),N_rep(2),N_rep(3))
     real(8),intent(inout)       :: H_out(3)
 
-    integer     :: div(4),modu(4)
+!    integer     :: div(4),modu(4)
     integer     :: i4(4),i
 
-    modu=[nmag,nmag*dim_lat(1),nmag*product(dim_lat(:2)),nmag*product(dim_lat)]
-    div=[(product(modu(:i-1)),i=1,4)]
-    i4=isite-1
-    i4=i4/div
-    i4=modulo(i4,modu)+1
+    ! does not work
+!    modu=[nmag,nmag*dim_lat(1),nmag*product(dim_lat(:2)),nmag*product(dim_lat)]
+!    div=[(product(modu(:i-1)),i=1,4)]
+!    i4=isite-1
+!    i4=i4/div
+!    i4=modulo(i4,modu)+1
+
+    i4(4)=(isite-1)/(nmag*product(dim_lat(:2)))+1
+
+    i=modulo((isite-1),nmag*product(dim_lat(:2)))+1
+    i4(3)=(i-1)/(nmag*dim_lat(1))+1
+
+    i=modulo(i-1,nmag*dim_lat(1))+1
+    i4(2)=(i-1)/nmag+1
+
+    i4(1)=modulo((isite-1),nmag)+1
 
     H_out=H(:,i4(1),i4(2),i4(3),i4(4))
 end subroutine
