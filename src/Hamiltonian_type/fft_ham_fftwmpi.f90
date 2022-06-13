@@ -19,7 +19,6 @@ type,extends(fft_H) ::  fft_H_fftwmpi
     private
     type(c_ptr)     :: plan_mag_F=c_null_ptr   !FFTW plan M_n -> M_F
     type(c_ptr)     :: plan_H_I=c_null_ptr     !FFTW plan H_F -> H_n
-    type(c_ptr)     :: rdata,cdata
 
     !fourier transformated arrays
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
@@ -34,6 +33,8 @@ contains
     procedure,public    :: get_H_single     !get effective field for a single site
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
+    procedure,private   :: init_mpi         ! get a dummy mpi_comm to do the first FFT that should be done on master only
+    procedure,public    :: get_mpi          ! initialize the mpi comm for each Hamiltonian
 
     !utility functions
     procedure,public    :: destroy          !destroys all data of this type
@@ -196,26 +197,27 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
        dim_fft=3
     endif
 
-    Nk_tot=int(product(this%N_rep(:dim_fft)),C_INTPTR_T)
+    write(6,'(a,I2)') 'dimension of the FFTW ', dim_fft
+    Nk_tot=int(product(this%N_rep(3-dim_fft+1:3)),C_INTPTR_T)
     Howmany=int(dim_mode**2,C_intPTR_T)
 
     allocate(this%K_F(dim_mode,dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
 
     !   get local data size and allocate (note dimension reversal)
     alloc_local = fftw_mpi_local_size_many(dim_fft, N_rep_rev(:dim_fft), Howmany, &
-                                & FFTW_MPI_DEFAULT_BLOCK,this%fft_mpi_comm%com,local_M,M_offset)
+                                & FFTW_MPI_DEFAULT_BLOCK,1,local_M,M_offset)
 
 ! allocate the real space in rdata
     rdata = fftw_alloc_real(2*Howmany*alloc_local)
-    call c_f_pointer(rdata, in, N_rep_rev(:dim_fft))
+    call c_f_pointer(rdata, in, N_rep_rev(3-dim_fft+1:3))
 
 ! allocate the complex space in cdata
     cdata = fftw_alloc_complex(Howmany*alloc_local)
-    call c_f_pointer(cdata, out, N_rep_rev(:dim_fft))
+    call c_f_pointer(cdata, out, N_rep_rev(3-dim_fft+1:3))
 
 !     create plan
-    plan_K_F= fftw_mpi_plan_many_dft_r2c(dim_fft, N_rep_rev(:dim_fft), Howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & K_n, this%K_F, this%fft_mpi_comm%com,FFTW_FORWARD+FFTW_ESTIMATE)
+    plan_K_F= fftw_mpi_plan_many_dft_r2c(dim_fft, N_rep_rev(3-dim_fft+1:3), Howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
+                                 & K_n, this%K_F,1,FFTW_FORWARD+FFTW_ESTIMATE)
 
 !     copy the data
 
@@ -225,7 +227,7 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
 
     call fftw_free(cdata)
 !  creates a segmentation fault for whatever reason
-!    Call fftw_destroy_plan(plan_K_F)
+    Call fftw_destroy_plan(plan_K_F)
     this%set=.true.
     !deallocate K_n, since at some point one might want to keep it in here
     deallocate(K_n)
@@ -413,5 +415,16 @@ subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
 
     H_out=H(:,i4(1),i4(2),i4(3),i4(4))
 end subroutine
+
+subroutine init_mpi(mpi_single)
+type(mpi_type),intent(out)  :: mpi_single
+
+end
+
+subroutine get_mpi(this,mpi_in)
+class(fft_H_fftwmpi),intent(inout)  :: this
+type(mpi_type),intent(in)           :: mpi_in
+
+end
 
 end module

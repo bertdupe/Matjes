@@ -1,8 +1,7 @@
 module mpi_distrib_v
 use mpi_basic
-!use m_mc_exp_val, only: exp_val,measure_scatterv
-!use m_mc_exp_val, only: measure_gatherv
-!use m_mc_therm_val, only: thermo_gatherv
+use m_parallelization_io
+
 implicit none
 
 interface gatherv
@@ -29,6 +28,7 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     integer     :: mpi_comm_tmp !temporary MPI_comm
     integer     :: ierr,i
 
+    write(*,*) N,com_in%NP
     if(N.ge.com_in%NP)then
         Call com_outer%init(com_in)
         com_outer%cnt=N/com_in%NP
