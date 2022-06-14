@@ -29,6 +29,7 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     integer     :: ierr,i
 
     write(*,*) N,com_in%NP
+
     if(N.ge.com_in%NP)then
         Call com_outer%init(com_in)
         com_outer%cnt=N/com_in%NP
@@ -58,7 +59,9 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     Call com_outer%init(com_in)
     com_outer%cnt=N
 #endif
-
+    write(*,*) 'inner comm',com_inner%Np,com_inner%id
+    write(*,*) 'inner outer',com_outer%Np,com_outer%id
+    stop
 end subroutine
 
 
