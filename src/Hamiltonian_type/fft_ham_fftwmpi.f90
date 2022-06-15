@@ -10,7 +10,7 @@ use mpi_util
 use m_fft_H_base, only: fft_H
 use m_type_lattice,only: lattice
 use m_H_type, only: len_desc
-use mpi_basic, only : mpi_type
+use mpi_basic
 
 private
 public fft_H_fftwmpi
@@ -24,7 +24,7 @@ type,extends(fft_H) ::  fft_H_fftwmpi
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  K_F(:,:,:)  !demagnetization tensor in fourier-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  H_F(:,:)    !effective field fourier-space
-    type(mpi_type)                          ::  fft_mpi_comm
+    type(mpi_type)                          ::  com_fftw
     !data stored in base class
 !    real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
 !    real(C_DOUBLE),allocatable              ::  H_n(:,:)    !effective field normal-space
@@ -33,7 +33,6 @@ contains
     procedure,public    :: get_H_single     !get effective field for a single site
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
-    procedure,public    :: get_mpi          ! initialize the mpi comm for each Hamiltonian
 
     !utility functions
     procedure,public    :: destroy          !destroys all data of this type
@@ -84,7 +83,9 @@ subroutine bcast_fft(this,comm)
         allocate(this%H_F(shp(1),shp(2)))
     endif
     Call bcast_alloc(this%K_F,comm)
-    if(.not.comm%ismas) Call set_plans(this)
+!    if(.not.comm%ismas) Call set_plans(this)
+    call this%com_fftw%copy_base(comm)
+    Call set_plans(this)
 end subroutine
 
 subroutine mv(this,H_out)
@@ -300,6 +301,7 @@ end subroutine
 subroutine set_plans(this)
     class(fft_H_fftwmpi),intent(inout)  :: this
 
+
     integer(C_INTPTR_T) :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_INTPTR_T) :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
     integer(C_INTPTR_T) :: M_offset,alloc_local,local_M
@@ -320,8 +322,8 @@ subroutine set_plans(this)
 
     ! first check the dimension
     if (N_rep_rev(1)*N_rep_rev(2).eq.1) then     ! the supercell is dimension, parallelization can not be performed
-       write(6,'(a)') 'cannot perfomr FFT for a one dimensional supercell'
-       call mpi_abort(this%fft_mpi_comm%com,errcode,ierror)
+       write(6,'(a)') 'cannot perform FFT for a one dimensional supercell'
+       call mpi_abort(this%com_fftw%com,errcode,ierror)
     elseif(N_rep_rev(1).eq.1)  then                   ! redimension for a 2D MPI FFT
        dim_fft=2
     else                         ! redimension for a 3D MPI FFT
@@ -330,7 +332,7 @@ subroutine set_plans(this)
 
     !   get local data size and allocate (note dimension reversal)
     alloc_local = fftw_mpi_local_size_many(dim_fft, N_rep_rev(:dim_fft), Howmany, &
-                                & FFTW_MPI_DEFAULT_BLOCK,this%fft_mpi_comm%com,local_M,M_offset)
+                                & FFTW_MPI_DEFAULT_BLOCK,this%com_fftw%com,local_M,M_offset)
 ! allocate the real space in rdata
     rdata = fftw_alloc_real(2*howmany*alloc_local)
     call c_f_pointer(rdata, in, N_rep_rev)
@@ -340,10 +342,10 @@ subroutine set_plans(this)
     call c_f_pointer(cdata, data, N_rep_rev)
 
     this%plan_mag_F= fftw_mpi_plan_many_dft_r2c(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & in, data, this%fft_mpi_comm%com,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
+                                 & in, data,this%com_fftw%com,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
 
     this%plan_H_I= fftw_mpi_plan_many_dft_c2r(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & data, in, this%fft_mpi_comm%com,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+                                 & data, in,this%com_fftw%com,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
 
 #else
     ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTWMPI)"
@@ -380,11 +382,5 @@ subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
 
     H_out=H(:,i4(1),i4(2),i4(3),i4(4))
 end subroutine
-
-subroutine get_mpi(this,mpi_in)
-class(fft_H_fftwmpi),intent(inout)  :: this
-type(mpi_type),intent(in)           :: mpi_in
-
-end
 
 end module

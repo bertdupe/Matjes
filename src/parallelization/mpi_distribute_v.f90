@@ -27,41 +27,60 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     integer     :: div,color
     integer     :: mpi_comm_tmp !temporary MPI_comm
     integer     :: ierr,i
+    logical     :: user_def=.false.
 
-    write(*,*) N,com_in%NP
+    call rw_param_paral(com_outer,com_inner,user_def,com_in)
 
-    if(N.ge.com_in%NP)then
-        Call com_outer%init(com_in)
-        com_outer%cnt=N/com_in%NP
-        com_outer%cnt(1:modulo(N,com_in%NP))=com_outer%cnt(1:modulo(N,com_in%NP))+1
-        com_outer%displ=0
-        do i=2,com_in%NP
-            com_outer%displ(i)=sum(com_outer%cnt(1:i-1))
-        enddo
-        Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
-        Call com_inner%set(mpi_comm_tmp)
-    else
-        div=(com_in%Np-1)/N+1
-        color=com_in%id/div
+    if (user_def) then
+        ! user-defined parallelization
+        if (com_outer%Np*com_inner%Np.gt.com_in%Np) Stop 'wrong number of processors required'
+
+        div=(com_in%Np-1)/com_outer%Np+1        ! group de procs base on the value of div
+        color=com_in%id/div                     ! give the good color to each group
         Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
         Call com_inner%set(mpi_comm_tmp)
         color=1
-        if(com_inner%ismas) color=0
-        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+        if(com_inner%ismas) color=0             ! give all the masters the color 0
+        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)    ! create a temporary communicator of the masters
         Call com_outer%set(mpi_comm_tmp)
         allocate(com_outer%cnt(com_outer%Np),source=0)
         allocate(com_outer%displ(com_outer%Np),source=0)
         com_outer%cnt=[(1,i=1,com_outer%Np)]
         com_outer%displ=[(i-1,i=1,com_outer%Np)]
+    else
+
+        ! automatic parallelization
+        if(N.ge.com_in%NP)then
+            Call com_outer%init(com_in)
+            com_outer%cnt=N/com_in%NP
+            com_outer%cnt(1:modulo(N,com_in%NP))=com_outer%cnt(1:modulo(N,com_in%NP))+1
+            com_outer%displ=0
+            do i=2,com_in%NP
+               com_outer%displ(i)=sum(com_outer%cnt(1:i-1))
+            enddo
+            Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
+            Call com_inner%set(mpi_comm_tmp)
+        else
+            div=(com_in%Np-1)/N+1
+            color=com_in%id/div
+            Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+            Call com_inner%set(mpi_comm_tmp)
+            color=1
+            if(com_inner%ismas) color=0
+            Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+            Call com_outer%set(mpi_comm_tmp)
+            allocate(com_outer%cnt(com_outer%Np),source=0)
+            allocate(com_outer%displ(com_outer%Np),source=0)
+            com_outer%cnt=[(1,i=1,com_outer%Np)]
+            com_outer%displ=[(i-1,i=1,com_outer%Np)]
+        endif
     endif
 #else
     com_inner=com_in
     Call com_outer%init(com_in)
     com_outer%cnt=N
 #endif
-    write(*,*) 'inner comm',com_inner%Np,com_inner%id
-    write(*,*) 'inner outer',com_outer%Np,com_outer%id
-    stop
+
 end subroutine
 
 
