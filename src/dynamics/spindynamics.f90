@@ -49,6 +49,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_solver_order,only : get_Dmode_int
     use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
     use m_torque_measurements
+    use m_eval_BTeff
 !$  use omp_lib
     
     ! input

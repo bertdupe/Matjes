@@ -1,6 +1,5 @@
 module m_eval_BTeff
-use m_randist
-use m_random_number_library
+use m_random_public
 
 private
 public :: langevin_bath,wiener_bath
