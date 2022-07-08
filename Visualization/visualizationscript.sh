@@ -112,6 +112,7 @@ gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_
 else
 gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $loc_y, 0 > /}" povrayscript.pov
 fi
+gsed -i "/light_source {/{n;s/.*/        <$loc_x, $loc_y, 25>  \/\/ Location of the source in < x, y, z > /}" povrayscript.pov
 
 if [ $os == true ]
 then
