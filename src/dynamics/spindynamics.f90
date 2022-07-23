@@ -38,18 +38,18 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_createspinfile, only: CreateSpinFile
     use m_user_info, only: user_info
     use m_excitations
-    use m_solver_commun, only: get_integrator_field, get_propagator_field,select_propagator
+    use m_solver_commun, only: get_integrator_field, get_propagator_field,select_propagator,get_temperature_field
     use m_topo_sd, only: get_charge_map
-    use m_solver_order,only: get_dt_mode
+    use m_solver_order,only: get_dt_mode,get_Dmode_int
     use m_tracker, only: init_tracking,plot_tracking
     use m_print_Beff, only: print_Beff
     use m_precision, only: truncate
     use m_write_config, only: write_config
     use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
-    use m_solver_order,only : get_Dmode_int
     use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
     use m_torque_measurements
     use m_eval_BTeff
+    use m_random_public
 !$  use omp_lib
     
     ! input
@@ -66,12 +66,16 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     type(lattice)                         :: lat_1,lat_2
     
     !intermediate values for dynamics
-    real(8),allocatable,target              :: Dmag(:,:,:),Dmag_int(:,:)
-    real(8),allocatable,dimension(:),target :: Beff(:)
-    real(8),pointer,contiguous              :: Beff_v(:,:)
-    real(8),pointer,contiguous              :: Beff_3(:,:)
-    real(8),pointer,contiguous              :: Dmag_3(:,:,:),Dmag_int_3(:,:)
+    real(8),allocatable,target     :: Dmag(:,:,:),Dmag_int(:,:),Dmag_T(:,:)
+    real(8),allocatable,target     :: Beff(:)
+    real(8),pointer,contiguous     :: Beff_v(:,:)
+    real(8),pointer,contiguous     :: Beff_3(:,:)
+    real(8),pointer,contiguous     :: Dmag_3(:,:,:),Dmag_int_3(:,:),Dmag_T_3(:,:)
+    real(8),pointer,contiguous     :: rand_num_3(:,:)=>null()
     
+    ! random number
+    class(ranbase),allocatable,target   :: random_numbers
+
     ! dummys
     real(8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
     real(8) :: Einitial
@@ -148,9 +152,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         Call mag_lattice%copy(lat_2) 
 
         allocate(Dmag(mag_lattice%M%dim_mode,N_cell,N_loop),source=0.0d0) 
-        allocate(Dmag_int(mag_lattice%M%dim_mode,N_cell),source=0.0d0) 
+        allocate(Dmag_int(mag_lattice%M%dim_mode,N_cell),source=0.0d0)
+        allocate(Dmag_T(mag_lattice%M%dim_mode,N_cell),source=0.0d0)
         Dmag_3(1:3,1:N_cell*(dim_mode/3),1:N_loop)=>Dmag
         Dmag_int_3(1:3,1:N_cell*(dim_mode/3))=>Dmag_int
+        Dmag_T_3(1:3,1:N_cell*(dim_mode/3))=>Dmag_T
 
         Beff_v(1:dim_mode,1:N_cell)=>Beff
         Beff_3(1:3,1:N_cell*(dim_mode/3))=>Beff
@@ -204,6 +210,13 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         ! check if a magnetic texture should be tracked
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if (io_simu%io_tracker) call init_tracking(mag_lattice)
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! Get the series of random numbers
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        call get_ran_type(random_numbers)
+        call random_numbers%init_base(dim_mode*N_cell)
+        rand_num_3(1:3,1:N_cell*(dim_mode/3))=>random_numbers%x
     endif
     
     
@@ -217,7 +230,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             Edy=0.0d0
             dt=timestep_int
 
+            call random_numbers%get_list(mean=kt)
+            call get_temperature_field(random_numbers%is_set,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3)
         endif
+
        !
        ! loop over the integration order
        !
@@ -241,7 +257,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 !do integration
                 Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop))
                 Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
-                lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3,dt)
+                lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3+Dmag_T_3,dt)
                 !copy magnetic texture to 1
                 Call lat_2%M%copy_val(lat_1%M)
             endif
@@ -336,6 +352,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
        
                 if(io_simu%io_fft_Xstruct) &!call plot_fft(mag_lattice%ordpar%all_l_modes,-1.0d0,mag_lattice%areal,mag_lattice%dim_lat,mag_lattice%periodic,mag_lattice%dim_mode,tag)
                     & ERROR STOP "PLOT FFT HAS TO BE REIMPLEMENTED"
+
+                if (random_numbers%print) call random_numbers%print_base(tag)
+
             endif
         endif
              

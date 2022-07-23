@@ -1,7 +1,8 @@
 module m_random_public
 use m_random_number_library
 use m_random_mkl
-use m_randist
+use m_random_gnu
+use m_random_prng
 use m_random_base
 use m_derived_types
 use m_io_utils
@@ -21,8 +22,9 @@ subroutine get_ran_type(ran_out)
 
     select case(mode)
         case(1)
-           write(output_unit,'(a/)') " Using the internal random number generator"
-           allocate(ranint::ran_out)
+           write(output_unit,'(a/)') " Using the GNU random number generator"
+           allocate(rangnu::ran_out)
+           call ran_out%read_option()
 
         case(2)
 #if defined CPP_MKL
@@ -32,7 +34,12 @@ subroutine get_ran_type(ran_out)
 #else
            ERROR STOP "CANNOT USE mkl random number generator: compilation without mkl (CPP_MKL)"
 #endif
-!        case(3)
+        case(3)
+           write(output_unit,'(a/)') " Using the MTPRNG random number generator"
+           allocate(ranprng::ran_out)
+           call ran_out%read_option()
+
+!        case(4)
 !           write(output_unit,'(a/)') " Using the Julia random number generator"
 !           allocate(julia_ran::ran_out)
 !           call ran_out%read_option()

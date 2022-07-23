@@ -31,6 +31,7 @@ type,extends(ranbase) :: ranmkl
     procedure  :: get_list
     procedure  :: destroy
     procedure  :: read_option
+    procedure  :: rand_get
 end type
 
 contains
@@ -59,6 +60,9 @@ subroutine read_option(this)
     call get_parameter(io_in,'input','vsl_method',this%method)
     call get_parameter(io_in,'input','vsl_brng',this%brng)
     call get_parameter(io_in,'input','print_rnd',this%print)
+    call get_parameter(io_in,'input','rnd_noise',this%is_set)
+    call get_parameter(io_in,'input','mean',this%mean)
+    call get_parameter(io_in,'input','sigma',this%sigma)
 
     call close_file('input',io_in)
 
@@ -66,9 +70,9 @@ end subroutine
 
 !!!! initialize the random number generator of MKL
 subroutine init_seed(this)
-    class(ranmkl),intent(in)   :: this
+    class(ranmkl),intent(inout)   :: this
 
-    integer(4)                 :: stat
+    integer(4)                    :: stat
 
     ! initialization
     stat=vslnewstream( this%stream, this%brng,  this%seed )
@@ -87,26 +91,46 @@ subroutine destroy(this)
 end subroutine
 
 !!!! Gaussian random number generator of MKL
-subroutine get_list(this,a,b)
+subroutine get_list(this,mean)
     class(ranmkl),intent(inout)  :: this
-    real(8), intent(in)          :: a,b ! a=mean  ;  b=sigma
-
+    real(8),intent(in)           :: mean
 
     integer(4)  :: stat
 
-    stat=vdrnggaussian(this%method,this%stream,this%N,this%x,a,b)
+    if (mean.gt.1.0d-8) then
+       this%mean=mean
+       this%is_set=.true.
+    endif
+
+    if (.not.this%is_set) return
+
+    stat=vdrnggaussian(this%method,this%stream,this%N,this%x,this%mean,this%sigma)
+
+end subroutine
+
+subroutine rand_get(this,r)
+    class(ranmkl),intent(inout)   :: this
+    real(8), intent(out)          :: r
+
+    integer(4)  :: stat
+    real(8)     :: resu(1)
+
+    stat=vdrnggaussian(this%method,this%stream,1,resu,0.0d0,1.0d0)
+
+    r=resu(1)
 
 end subroutine
 
 !!!! Gaussian random number generator of MKL
-subroutine get_extract_list(this,a,b,resu)
-    class(ranmkl),intent(inout)  :: this
-    real(8), intent(in)          :: a,b ! a=kt  ;  b=sigma
-    real(8), intent(inout)       :: resu(:)
+subroutine get_extract_list(this,resu)
+    class(ranmkl),intent(inout)         :: this
+    real(8), intent(inout),allocatable  :: resu(:)
 
-    resu=0.0d0
+    if (size(resu).ne.this%N) stop 'size of the result does not match the number of randome numbers'
+    if (allocated(resu)) stop 'resu matrix already allocated'
+    allocate(resu(this%N),source=0.0d0)
 
-    call this%get_list(a,b)
+    call this%get_list(this%mean)
 
     call this%extract_list(resu)
 
