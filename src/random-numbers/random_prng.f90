@@ -94,18 +94,14 @@ subroutine destroy(this)
 
 end subroutine
 
-subroutine get_list(this,mean)
+subroutine get_list(this,kt)
     class(ranprng),intent(inout)  :: this
-    real(8),intent(in)            :: mean
+    real(8),intent(in)            :: kt
 
     integer :: i
     real(8) :: res
 
-    if (mean.gt.1.0d-8) then
-       this%mean=mean
-       this%is_set=.true.
-    endif
-
+    if (kt.gt.1.0d-8) this%is_set=.true.
     if (.not.this%is_set) return
 
     do i=1,this%N

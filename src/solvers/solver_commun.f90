@@ -22,9 +22,9 @@ abstract interface
     end function
 
 
-    subroutine temperature_field(is_set,damping,mode,DT,random_numbers)
+    subroutine temperature_field(is_set,kt,damping,mode,DT,random_numbers,time_step)
       logical, intent(in) :: is_set
-      real(kind=8), intent(in) :: mode(:,:),damping,random_numbers(:,:)
+      real(kind=8), intent(in) :: mode(:,:),damping,random_numbers(:,:),kt,time_step
       real(kind=8), intent(inout) :: DT(:,:)
     end subroutine temperature_field
 

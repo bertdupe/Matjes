@@ -26,6 +26,7 @@ implicit none
    interface norm_cross
        module procedure norm_cross_real
        module procedure norm_cross_int
+       module procedure norm_cross_real_simple
    end interface norm_cross
 
    interface distance
@@ -392,6 +393,17 @@ enddo
 norm_cross_real=sqrt(norm_cross_real)
 
 END FUNCTION norm_cross_real
+
+real(kind=8) FUNCTION norm_cross_real_simple(a, b)
+implicit none
+real(kind=8), INTENT(IN) :: a(:), b(:)
+! internal
+real(kind=8) :: u(3)
+
+u=cross(a,b)
+norm_cross_real_simple=norm2(u)
+
+END FUNCTION norm_cross_real_simple
 
 real(kind=8) FUNCTION norm_cross_int(a, b,P,N)
 implicit none

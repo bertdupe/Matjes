@@ -55,8 +55,8 @@ subroutine read_option(this)
 
     io_in=open_file_read('input')
 
-    call get_parameter(io_in,'input','vsl_method',this%method)
-    call get_parameter(io_in,'input','vsl_brng',this%brng)
+!    call get_parameter(io_in,'input','vsl_method',this%method)
+!    call get_parameter(io_in,'input','vsl_brng',this%brng)
     call get_parameter(io_in,'input','print_rnd',this%print)
     call get_parameter(io_in,'input','rnd_noise',this%is_set)
     call get_parameter(io_in,'input','mean',this%mean)
@@ -93,15 +93,11 @@ subroutine destroy(this)
 end subroutine
 
 !!!! Gaussian random number generator of MKL
-subroutine get_list(this,mean)
+subroutine get_list(this,kt)
     class(ranmkl),intent(inout)  :: this
-    real(8),intent(in)           :: mean
+    real(8),intent(in)           :: kt
 
-    if (mean.gt.1.0d-8) then
-       this%mean=mean
-       this%is_set=.true.
-    endif
-
+    if (kt.gt.1.0d-8) this%is_set=.true.
     if (.not.this%is_set) return
 
     call this%rnd_distrib()

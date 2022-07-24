@@ -83,18 +83,14 @@ end subroutine
 
 
 !!!! Gaussian random number generator of GNU
-subroutine get_list(this,mean)
+subroutine get_list(this,kt)
     class(rangnu),intent(inout)  :: this
-    real(8),intent(in)           :: mean
+    real(8),intent(in)           :: kt
 
     integer :: i
     real(8) :: res
 
-    if (mean.gt.1.0d-8) then
-       this%mean=mean
-       this%is_set=.true.
-    endif
-
+    if (kt.gt.1.0d-8) this%is_set=.true.
     if (.not.this%is_set) return
 
     do i=1,this%N
@@ -150,7 +146,6 @@ subroutine read_option(this)
     call close_file('input',io_in)
 
     call select_rnd_in_lib(this%name,this%rnd_distrib)
-
 
 end subroutine
 

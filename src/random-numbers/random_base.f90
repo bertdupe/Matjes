@@ -49,10 +49,10 @@ abstract interface
        class(ranbase), intent(inout)     :: this
     end subroutine
 
-    subroutine int_getx(this,mean)
+    subroutine int_getx(this,kt)
        import ranbase
        class(ranbase), intent(inout)  :: this
-       real(8), intent(in)            :: mean
+       real(8), intent(in)            :: kt
     end subroutine
 
     subroutine int_destroy(this)

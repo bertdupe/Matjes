@@ -50,6 +50,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_torque_measurements
     use m_eval_BTeff
     use m_random_public
+    use m_measure_temp
 !$  use omp_lib
     
     ! input
@@ -217,6 +218,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         call get_ran_type(random_numbers)
         call random_numbers%init_base(dim_mode*N_cell)
         rand_num_3(1:3,1:N_cell*(dim_mode/3))=>random_numbers%x
+
     endif
     
     
@@ -224,14 +226,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     ! beginning of the simulation
     do j=1,io_dyn%duration
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       !   call init_temp_measure(check,check1,check2,check3)
+
         if(comm%ismas)then
             call truncate(lat_1,used)
             Edy=0.0d0
             dt=timestep_int
 
-            call random_numbers%get_list(mean=kt)
-            call get_temperature_field(random_numbers%is_set,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3)
+            call random_numbers%get_list(kt)
+            call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3,dt)
+
         endif
 
        !
@@ -355,6 +358,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
                 if (random_numbers%print) call random_numbers%print_base(tag)
 
+                if (kt.gt.1.0d-8) call get_temp_measure(lat_2%M%modes_3,Beff_3,kt)
+
+
             endif
         endif
              
@@ -379,13 +385,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         if(io_simu%io_energy_cont) close(io_Eout_contrib)
 
         write(6,'(a,2x,E20.12E3)') 'Final Total Energy (eV)',Edy
-        ! TEMPERATURE MEASUREMENT HAS TO BE REIMPLAMENTED
-        !if ((dabs(check(2)).gt.1.0d-8).and.(kt/k_B.gt.1.0d-5)) then
-        !    write(6,'(a,2x,f16.6)') 'Final Temp (K)', check(1)/check(2)/2.0d0/k_B
-        !    write(6,'(a,2x,f14.7)') 'Kinetic energy (meV)', (check(1)/check(2)/2.0d0-kT)/k_B*1000.0d0
-        !else
-        !    write(6,'(a)') 'the temperature measurement is not possible'
-        !endif
     endif
     if(comm%ismas)then
         Call cpu_time(time_final)
