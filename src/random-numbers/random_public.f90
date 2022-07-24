@@ -39,11 +39,6 @@ subroutine get_ran_type(ran_out)
            allocate(ranprng::ran_out)
            call ran_out%read_option()
 
-!        case(4)
-!           write(output_unit,'(a/)') " Using the Julia random number generator"
-!           allocate(julia_ran::ran_out)
-!           call ran_out%read_option()
-
         case(-1)
             ERROR STOP "cannot find the chosen random number generator"
 

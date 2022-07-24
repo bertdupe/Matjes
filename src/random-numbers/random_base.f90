@@ -11,14 +11,12 @@ type, abstract :: ranbase
     real(8),allocatable          :: x(:)      ! variable containing all the random numbers
     integer                      :: N         ! number of random numbers to be generated
     logical                      :: print = .false.   ! print out the numbers
-    character(len=30)            :: name='normal'
+    character(len=30)            :: name='uniform'
     real(8)                      :: mean=0.0d0        ! random numbers are generated with a mean value (by default 0,5 so mean*[0,1])
     real(8)                      :: sigma=1.0d0       ! spread of generated numbers
     real(8)                      :: max_rnd_val=1.0d0
     real(8)                      :: min_rnd_val=0.0d0
     logical                      :: is_set = .false.
-
-!    procedure(int_rnd),pointer,nopass       :: rnd => rand_get_base
 
 contains
     ! defered type
@@ -39,10 +37,6 @@ end type
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 abstract interface
-
-!    subroutine int_rnd(r)
-!       real(kind=8),intent(out)      :: r
-!    end subroutine
 
     subroutine int_rand_get(this,r)
        import ranbase
