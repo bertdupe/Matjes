@@ -8,16 +8,25 @@ private
 public :: ranbase
 
 type, abstract :: ranbase
-    real(8),allocatable   :: x(:)      ! variable containing all the random numbers
-    integer               :: N         ! number of random numbers to be generated
-    logical               :: print = .false.   ! print out the numbers
+    real(8),allocatable          :: x(:)      ! variable containing all the random numbers
+    integer                      :: N         ! number of random numbers to be generated
+    logical                      :: print = .false.   ! print out the numbers
+    character(len=30)            :: name='uniform'
+    real(8)                      :: mean=0.0d0        ! random numbers are generated with a mean value (by default 0,5 so mean*[0,1])
+    real(8)                      :: sigma=1.0d0       ! spread of generated numbers
+    real(8)                      :: max_rnd_val=1.0d0
+    real(8)                      :: min_rnd_val=0.0d0
+    logical                      :: is_set = .false.
+
 contains
     ! defered type
-    procedure(int_seed),deferred          :: init_seed
-    procedure(int_getx),deferred          :: get_list
-    procedure(int_destroy),deferred       :: destroy
-    procedure(int_gextra_list),deferred   :: get_extract_list
-    procedure(int_rw_option),deferred     :: read_option
+    procedure(int_seed),deferred                   :: init_seed
+    procedure(int_getx),deferred                   :: get_list
+    procedure(int_destroy),deferred                :: destroy
+    procedure(int_gextra_list),deferred            :: get_extract_list
+    procedure(int_rw_option),deferred              :: read_option
+    procedure(int_rand_get),deferred               :: rand_get
+
     ! base function
     procedure, NON_OVERRIDABLE     :: init_base
     procedure, NON_OVERRIDABLE     :: print_base
@@ -29,15 +38,21 @@ end type
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 abstract interface
 
-    subroutine int_seed(this)
+    subroutine int_rand_get(this,r)
        import ranbase
-       class(ranbase), intent(in)     :: this
+       class(ranbase), intent(inout)   :: this
+       real(kind=8)  , intent(out)     :: r
     end subroutine
 
-    subroutine int_getx(this,a,b)
+    subroutine int_seed(this)
+       import ranbase
+       class(ranbase), intent(inout)     :: this
+    end subroutine
+
+    subroutine int_getx(this,kt)
        import ranbase
        class(ranbase), intent(inout)  :: this
-       real(8),intent(in)             :: a,b
+       real(8), intent(in)            :: kt
     end subroutine
 
     subroutine int_destroy(this)
@@ -45,11 +60,10 @@ abstract interface
        class(ranbase), intent(in)     :: this
     end subroutine
 
-    subroutine int_gextra_list(this,a,b,resu)
+    subroutine int_gextra_list(this,resu)
        import ranbase
-       class(ranbase), intent(inout)  :: this
-       real(8),intent(in)             :: a,b
-       real(8),intent(inout)          :: resu(:)
+       class(ranbase), intent(inout)      :: this
+       real(8),intent(inout),allocatable  :: resu(:)
     end subroutine
 
     subroutine int_rw_option(this)

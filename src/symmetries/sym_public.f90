@@ -7,6 +7,7 @@ use m_sym_dense_smart
 implicit none
 
 integer :: mode
+real(8) :: tolerance
 
 private
 public :: set_sym_type,set_mode
@@ -32,13 +33,17 @@ subroutine set_sym_type(my_pt_grp)
        stop 'Symmetry mode not implemented'
    end select
 
+   my_pt_grp%tol_sym=tolerance
 
 end subroutine
 
-subroutine set_mode(mode_in)
+subroutine set_mode(mode_in,tolerance_in)
 integer, intent(in) :: mode_in
+real(8), intent(in) :: tolerance_in
+
 
 mode=mode_in
+tolerance=tolerance_in
 
 end subroutine
 

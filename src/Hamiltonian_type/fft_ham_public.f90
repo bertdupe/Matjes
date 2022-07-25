@@ -8,7 +8,7 @@ use m_fft_H_cufft, only: fft_H_cufft
 implicit none
 public
 
-integer,private ::  mode=-1 !stores which implementation is used (1:FFTW3, 2: cuFFT, 0: none, -1: not initialized)
+integer,private ::  mode=-1 !stores which implementation is used (1:FFTW3, 2: cuFFT, 1:FFTWMPI 0: none, -1: not initialized)
 
 interface  get_fft_H
     module procedure get_fft_H_single

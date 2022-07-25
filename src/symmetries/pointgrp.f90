@@ -22,22 +22,35 @@ type(t_cell), intent(in)  :: my_motif
 ! internal variables
 integer :: number_sym,number_sym_lat,mode
 integer, allocatable :: sym_index(:)
-real(kind=8) :: time
+real(8), allocatable :: translation(:,:)
+real(kind=8) :: time,tol_sym
 class(pt_grp),allocatable :: base_symmetries,all_symmetries,my_symmetries
-logical :: cal_sym
+logical :: cal_sym,read_sym
 ! first step determine the lattice symmetries
 
 time=0.0d0
 mode=1
+tol_sym=1.0d-6
 cal_sym=.false.
-call rw_sym(mode,cal_sym)
+
+call rw_sym(mode,cal_sym,tol_sym)
 if (.not.cal_sym) return
 
-call set_mode(mode)
+call set_mode(mode,tol_sym)
 call user_info(output_unit,time,'calculating the symmetry operations',.false.)
 
-call set_sym_type(base_symmetries)
+!
+! first check if symmetries.in is present
+!
 call set_sym_type(my_symmetries)
+call my_symmetries%read_test(read_sym)
+
+if (read_sym) then
+   call user_info(output_unit,time,'done',.true.)
+   return
+endif
+
+call set_sym_type(base_symmetries)
 call set_sym_type(all_symmetries)
 
 call base_symmetries%init_base()
@@ -50,10 +63,10 @@ call all_symmetries%get_latt_sym(my_lattice%areal,number_sym_lat,sym_index,my_la
 
 write(output_unit,'(/,a,I2,a,/)') 'The lattice has  ',number_sym_lat,'  symmetrie operations'
 
-call all_symmetries%get_pt_sym(my_lattice,number_sym,sym_index,my_motif)
+call all_symmetries%get_pt_sym(my_lattice,number_sym,sym_index,my_motif,translation)
 
 call my_symmetries%init(number_sym)
-call my_symmetries%load(sym_index,all_symmetries)
+call my_symmetries%load(sym_index,all_symmetries,translation)
 
 call my_symmetries%write_sym()
 

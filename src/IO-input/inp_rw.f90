@@ -17,11 +17,6 @@ integer  :: io_input
 
 io_input=open_file_read('input')
 
-! mpi variables
-!call get_parameter(io_input,'input','ghost',i_ghost)
-!call get_parameter(io_input,'input','algo_mpi',i_ghost)
-!call get_parameter(io_input,'input','nRepProc',nRepProc)
-
 ! io variables
 call get_parameter(io_input,'input','gra_fft',io_simu%io_fft_Xstruct)
 call get_parameter(io_input,'input','gra_ft_Ham',io_simu%io_fft_Ham)

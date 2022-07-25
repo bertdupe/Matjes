@@ -104,7 +104,7 @@ subroutine get_dipolar_fft(dip,io,lat)
     integer         :: i_add(3) !position in N_rep(:) array for considered entry
 
     if(io%is_set)then
-        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
+        write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         !set some initial parameters locally for convencience
         Nmag=lat%nmag
         period=lat%periodic.or.lat%dim_lat==1
@@ -213,7 +213,7 @@ subroutine get_dipolar(Ham,io,lat)
 
 
     if(io%is_set)then
-        write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Nmag=lat%nmag
         N=Nmag*lat%Ncell
 
@@ -232,6 +232,7 @@ subroutine get_dipolar(Ham,io,lat)
         nnz=N*N*9
         allocate(val(nnz),source=0.0d0)
         allocate(rowind(nnz),colind(nnz),source=0)
+
 
         !fill all Hamiltonian entries
         ii=1

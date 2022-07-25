@@ -8,6 +8,8 @@ public t_deriv
 
 type    :: t_deriv
     integer :: order=0
+    real(8) :: l_factor=1.0d0       ! factor that multiplies the output vector field when the single routines are called
+    real(8) :: r_factor=1.0d0
     procedure(int_deriv_get),pointer        :: l=>uninitialized
     procedure(int_deriv_get),pointer        :: r=>uninitialized
     procedure(int_deriv_get_single),pointer :: l_single=>uninitialized_single

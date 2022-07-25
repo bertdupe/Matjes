@@ -1,54 +1,42 @@
 module m_measure_temp
+use m_constants, only : k_B
+use m_vector, only : cross,norm_cross
+use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
+
+implicit none
+
+private
+public  :: get_temp_measure
 
 contains
 !
-! modulke that allows the temperature measurements in spin dynamics
+! module that allows the temperature measurements in spin dynamics
 !
-
-! initialization of the temperature measurements
-!
-subroutine init_temp_measure(check,check1,check2,check3)
-implicit none
-real(kind=8), intent(out) :: check(2),check1,check2,check3
-
-check=0.0d0
-check1=0.0d0
-check2=0.0d0
-check3=0.0d0
-
-end subroutine init_temp_measure
 
 
 !
 ! update the temperature
 !
 
-subroutine update_temp_measure(check1,check2,spin,Beff)
-use m_vector, only : cross
-implicit none
-real(kind=8), intent(inout) :: check1,check2
-real(kind=8), intent(in) ::  spin(3),Beff(3)
+subroutine get_temp_measure(spin,Beff,kt)
+real(kind=8), intent(in) ::  spin(:,:),Beff(:,:),kt
 
-check1=check1+sum(cross(spin,Beff,1,3)**2)
-check2=check2+dot_product(spin,Beff)
+integer :: i,Nspin
+real(8) :: check1,check2
 
-end subroutine update_temp_measure
+Nspin=size(Beff,2)
+check1=0.0d0
+check2=0.0d0
 
-!
-! get the temperature
-!
+if (Nspin.ne.size(spin,2)) STOP "Beff and spin do not have the same size"
 
-subroutine get_temp(security,check,kt)
-use m_constants, only : k_B
-implicit none
-real(kind=8), intent(out) :: security(2)
-real(kind=8), intent(in) ::  kt,check(2)
+do i=1,Nspin
+   check1=check1+norm_cross(spin(:,i),Beff(:,i))**2
+   check2=check2+dot_product(spin(:,i),Beff(:,i))
+enddo
 
-security=0.0d0
+write(output_unit,'(a,2x,f16.6)') 'Temperature (K)', check1/check2/2.0d0/k_B
 
-security(1)=check(1)/check(2)/2.0d0/k_B
-security(2)=(check(1)/check(2)/2.0d0-kT)/k_B*1000.0d0
-
-end subroutine get_temp
+end subroutine get_temp_measure
 
 end module m_measure_temp

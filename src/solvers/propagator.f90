@@ -4,38 +4,9 @@ use m_vector, only : cross,norm
 implicit none
 
 private
-public :: LLG!, LLG_B,LLG_old
+public :: LLG
 
 contains
-
-! ----------------------------------------------
-! ----------------------------------------------
-! LLG equation of motion that returns the D_M
-!function LLG_old(B,damping,spini,size_B) result(llg)
-!use m_torques, only : update_DS
-!implicit none
-!integer, intent(in) :: size_B
-!real(kind=8), intent(in) :: spini(:),damping,B(:)   !,stm_field_torque
-!real(kind=8) :: LLG(size_B)
-!!dummy
-!real(kind=8) :: stepdamp(size_B),norm_S,S_norm(size_B)
-!real(kind=8) :: LLG_int(size_B)
-!
-!LLG=0.0d0
-!LLG_int=0.0d0
-!
-!norm_S=norm(spini)
-!S_norm=spini/norm_S
-!
-!stepdamp=cross(S_norm,B,1,size_b)
-!
-!LLG_int=-B-damping*stepdamp
-!
-!call update_DS(S_norm,damping,LLG_int)
-!
-!LLG=cross(S_norm,LLG_int,1,size_b)/(1+damping**2)
-!
-!end function 
 
 
 subroutine LLG(B,damping,M,Mout)
