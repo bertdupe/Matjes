@@ -61,14 +61,16 @@ posz_max=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail 
 
 if [ $xcut == true ]
 then
-loc_x=$(echo "$posx_min  $posx_max" | gawk '{print -($2-$1)/2}')
+loc_x=$(echo "$posx_min  $posx_max" | gawk '{print -($2+$1)/2}')
 loc_y=$(echo "$loc_x  $cutpos_y" | gawk '{print -1.5*sqrt(2*$1*$1)+$2}')
 loc_z=0
 else
-loc_x=$(echo "$posx_min $posx_max" | gawk '{print -($2-$1)/2}')
-loc_y=$(echo "$posy_min $posy_max" | gawk '{print ($2-$1)/2}')
+loc_x=$(echo "$posx_min $posx_max" | gawk '{print -($2+$1)/2}')
+loc_y=$(echo "$posy_min $posy_max" | gawk '{print ($2+$1)/2}')
+width=$(echo "$posx_min $posx_max" | gawk '{print ($2-$1)/2}')
+height=$(echo "$posy_min $posy_max" | gawk '{print ($2-$1)/2}')
 totalheight=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1)
-loc_z=$(echo "$loc_x  $loc_y  $totalheight" | gawk '{print 1.5*sqrt($1*$1+$2*$2+$3*$3)}')
+loc_z=$(echo "$width  $height  $totalheight" | gawk '{print 1.5*sqrt($1*$1+$2*$2+$3*$3)}')
 fi
 
 if [ ! -d "Visualization" ]
