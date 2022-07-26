@@ -25,7 +25,7 @@ abstract interface
     subroutine temperature_field(is_set,kt,damping,mode,DT,random_numbers,time_step)
       logical, intent(in) :: is_set
       real(kind=8), intent(in) :: mode(:,:),damping,random_numbers(:,:),kt,time_step
-      real(kind=8), intent(inout) :: DT(:,:)
+      real(kind=8), intent(out) :: DT(:,:)
     end subroutine temperature_field
 
 end interface
@@ -68,7 +68,7 @@ select case (integtype)
 
     N_loop=1
 
-    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
+    get_temperature_field => langevin_bath
 
     call get_butcher_explicit(N_loop)
 
@@ -83,7 +83,7 @@ select case (integtype)
 
     N_loop=2
 
-    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
+    get_temperature_field => langevin_bath
 
     call get_butcher_explicit(N_loop)
 
@@ -108,9 +108,7 @@ select case (integtype)
 !-----------------------------------------------
   case (4)
     get_propagator_field => LLG
-!    get_propagator_field_old => LLG_old
     get_integrator_field => euler
-!    get_integrator_field_old => euler_old
 
     N_loop=4
     call get_parameter(io,'input','N_order',N_loop)

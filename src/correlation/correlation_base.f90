@@ -5,7 +5,7 @@ use, intrinsic :: iso_fortran_env, only : error_unit,output_unit
 implicit none
 
 private
-public :: correlation
+public :: corre_base
 
 type, abstract :: corre_base
     real(8),dimension(:),allocatable :: data                ! data to be correlated
@@ -70,7 +70,7 @@ subroutine print_base(this,tag)
 
     io_out=open_file_write(trim(fname))
 
-    do i=1,shape_data(2),offset
+    do i=1,this%shape_data(2),offset
        write(io_out,form) this%correlation(i:i+offset)
     enddo
 

@@ -1,6 +1,6 @@
 module m_propagator
 use m_constants, only : hbar
-use m_vector, only : cross,norm
+use m_vector, only : cross,norm,cross_NM
 implicit none
 
 private
@@ -24,27 +24,12 @@ subroutine LLG(B,damping,M,Mout)
 
     M_norm=M
     Call normalize(M_norm)
-    Call cross_new(M_norm,B,LLG_int)
+    Call cross_NM(M_norm,B,LLG_int)
     LLG_int=-B-damping*LLG_int
-    Call cross_new(M_norm,LLG_int,Mout)
+    Call cross_NM(M_norm,LLG_int,Mout)
     Mout=Mout/(1.0+damping*damping)
 
     !ADD EXTERNAL TORQUES IF NECESSARY
-end subroutine
-
-!help routine for LLG_new
-pure subroutine cross_new(vec1,vec2,vec_out)
-    real(8),intent(in)      ::  vec1(:,:)
-    real(8),intent(in)      ::  vec2(:,:)
-    real(8),intent(out)     ::  vec_out(size(vec1,1),size(vec1,2))
-
-    integer                 ::  i,Nvec
-    Nvec=size(vec1,2)
-    do i=1,Nvec
-        vec_out(1,i)=vec1(2,i)*vec2(3,i)-vec1(3,i)*vec2(2,i)
-        vec_out(2,i)=vec1(3,i)*vec2(1,i)-vec1(1,i)*vec2(3,i)
-        vec_out(3,i)=vec1(1,i)*vec2(2,i)-vec1(2,i)*vec2(1,i)
-    enddo
 end subroutine
 
 end module m_propagator
