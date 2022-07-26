@@ -17,6 +17,7 @@ type, abstract :: corre_base
     contains
 
     ! defered type
+    procedure(int_get_cor), deferred    :: get_correlation
 
     ! unchanged stuff
     procedure, NON_OVERRIDABLE     :: init_base
@@ -26,11 +27,17 @@ type, abstract :: corre_base
 end type
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!abstract interface
+abstract interface
+
+   subroutine int_get_cor(this,t,r)
+      import corre_base
+      class(corre_base),intent(in) :: this
+      integer,intent(in)           :: t
+      real(8),intent(out)          :: r
+   end subroutine
 
 
-
-!end interface
+end interface
 
 contains
 

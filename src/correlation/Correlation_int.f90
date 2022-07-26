@@ -1,4 +1,20 @@
 module m_Corre
+use m_correlation_base
+implicit none
+
+private
+public :: corre_int,Correlation
+
+type,extends(corre_base) :: corre_int
+
+    contains
+    procedure :: get_correlation
+
+end type
+
+
+
+
 
 interface Correlation
    module procedure Correlations
@@ -7,6 +23,49 @@ interface Correlation
 end interface Correlation
 
 contains
+
+subroutine get_correlation(this,t,tprime,r)
+   class(corre_int),intent(in)   :: this
+   integer,intent(in)            :: t,tprime
+   real(8),intent(out)           :: r
+
+
+   integer :: i,N_data
+   real(8) :: ave,norm
+
+   r=0.0d0
+
+   N_data=size(this%data)
+   if (N_data.lt.t+tprime) stop "dimensions problem with the correlation"
+
+   ave=sum(this%data(1:tprime))/tprime
+   norm=sum((this%data(1:tprime)-ave)**2)
+
+   if (norm.lt.1.0d-8) return
+
+
+   do i=1,tprime
+      r=r+(this%data(i)-ave)*(this%data(i-t)-ave)
+   enddo
+   r=r/norm
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ! ===============================================================
 ! calculate the correlation length
 ! written by Lukas Deuchler
