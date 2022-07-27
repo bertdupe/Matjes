@@ -1,4 +1,4 @@
-module m_Corre
+module m_correlation_int
 use m_correlation_base
 implicit none
 
@@ -187,4 +187,4 @@ end subroutine
 
        end function autocorre_2d
 
-        end module m_Corre
+end module m_correlation_int

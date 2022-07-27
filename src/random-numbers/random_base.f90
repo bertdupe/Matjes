@@ -2,6 +2,10 @@ module m_random_base
 use m_io_files_utils
 use m_convert
 use, intrinsic :: iso_fortran_env, only : error_unit,output_unit
+use mpi_basic
+#ifdef CPP_MPI
+use mpi
+#endif
 implicit none
 
 private
@@ -32,6 +36,7 @@ contains
     procedure, NON_OVERRIDABLE     :: print_base
     procedure, NON_OVERRIDABLE     :: extract_list
     procedure, NON_OVERRIDABLE     :: extract_size
+    procedure, NON_OVERRIDABLE     :: bcast_val
 end type
 
 
@@ -63,7 +68,7 @@ abstract interface
     subroutine int_gextra_list(this,resu)
        import ranbase
        class(ranbase), intent(inout)      :: this
-       real(8),intent(inout),allocatable  :: resu(:)
+       real(8),intent(inout)              :: resu(:)
     end subroutine
 
     subroutine int_rw_option(this)
@@ -123,6 +128,22 @@ subroutine print_base(this,tag)
     enddo
     call close_file(fname,io_out)
 
+end subroutine
+
+
+subroutine bcast_val(this,comm)
+    class(ranbase),intent(inout)    ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    integer     ::  ierr
+
+#ifdef CPP_MPI
+
+Call MPI_Bcast(this%x , this%N , MPI_REAL8 , comm%mas , comm%com ,ierr)
+
+#else
+    continue
+#endif
 end subroutine
 
 end module

@@ -29,10 +29,10 @@ end type
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 abstract interface
 
-   subroutine int_get_cor(this,t,r)
+   subroutine int_get_cor(this,t,tprime,r)
       import corre_base
       class(corre_base),intent(in) :: this
-      integer,intent(in)           :: t
+      integer,intent(in)           :: t,tprime
       real(8),intent(out)          :: r
    end subroutine
 

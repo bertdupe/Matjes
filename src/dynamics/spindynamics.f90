@@ -236,6 +236,8 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
         endif
 
+        if(comm%Np>1) Call random_numbers%bcast_val(comm)
+
        !
        ! loop over the integration order
        !
