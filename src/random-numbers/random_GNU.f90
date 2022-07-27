@@ -103,13 +103,11 @@ end subroutine
 !!!! Gaussian random number generator of GNU
 subroutine get_extract_list(this,resu)
     class(rangnu),intent(inout)          :: this
-    real(8), intent(inout),allocatable   :: resu(:)
+    real(8), intent(inout)               :: resu(:)
 
     if (size(resu).ne.this%N) stop 'size of the result does not match the number of randome numbers'
-    if (allocated(resu)) stop 'resu matrix already allocated'
-    allocate(resu(this%N),source=0.0d0)
 
-    call this%get_list(this%mean)
+    call this%get_list(1.0d0)
 
     call this%extract_list(resu)
 

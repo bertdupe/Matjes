@@ -19,9 +19,12 @@ implicit none
    interface cross
        module procedure cross_real_simple
        module procedure cross_real
-!       module procedure cross_realp
        module procedure cross_int
    end interface cross
+
+   interface cross_NM
+       module procedure cross_real_3N,cross_real_PN
+   end interface
 
    interface norm_cross
        module procedure norm_cross_real
@@ -445,13 +448,36 @@ cross_real_simple(3) = a(1) * b(2) - a(2) * b(1)
 
 END FUNCTION cross_real_simple
 
-!FUNCTION cross_realp(a, b, P, N)result(res)
-!    integer, intent(in) :: N,P
-!    real(8),pointer, INTENT(IN) :: a(:), b(:)
-!    real(8) :: res(P:N)
-!
-!    res=cross_real(a,b,P,N)
-!end function
+pure subroutine cross_real_3N(vec1,vec2,vec_out)
+    implicit none
+    real(8),intent(in)      ::  vec1(:,:)
+    real(8),intent(in)      ::  vec2(:,:)
+    real(8),intent(out)     ::  vec_out(size(vec1,1),size(vec1,2))
+
+    integer                 ::  i,Nvec
+    Nvec=size(vec1,2)
+    do i=1,Nvec
+        vec_out(1,i)=vec1(2,i)*vec2(3,i)-vec1(3,i)*vec2(2,i)
+        vec_out(2,i)=vec1(3,i)*vec2(1,i)-vec1(1,i)*vec2(3,i)
+        vec_out(3,i)=vec1(1,i)*vec2(2,i)-vec1(2,i)*vec2(1,i)
+    enddo
+end subroutine
+
+pure subroutine cross_real_PN(vec1,vec2,P,N,vec_out)
+    implicit none
+    real(8),intent(in)      ::  vec1(:)
+    real(8),intent(in)      ::  vec2(:)
+    integer,intent(in)      ::  P,N
+    real(8),intent(out)     ::  vec_out(N)
+
+    integer                 ::  i
+
+    do i=1,N,P
+        vec_out(i)=vec1(i+1)*vec2(i+2)-vec1(i+2)*vec2(i+1)
+        vec_out(i+1)=vec1(i+2)*vec2(i)-vec1(i)*vec2(i+2)
+        vec_out(i+2)=vec1(i)*vec2(i+1)-vec1(i+1)*vec2(i)
+    enddo
+end subroutine
 
 FUNCTION cross_real(a, b, P, N)
 implicit none

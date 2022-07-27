@@ -72,7 +72,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     real(8),pointer,contiguous     :: Beff_v(:,:)
     real(8),pointer,contiguous     :: Beff_3(:,:)
     real(8),pointer,contiguous     :: Dmag_3(:,:,:),Dmag_int_3(:,:),Dmag_T_3(:,:)
-    real(8),pointer,contiguous     :: rand_num_3(:,:)=>null()
+    real(8),pointer,contiguous     :: rand_num_3(:,:)
     
     ! random number
     class(ranbase),allocatable,target   :: random_numbers
@@ -218,7 +218,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         call get_ran_type(random_numbers)
         call random_numbers%init_base(dim_mode*N_cell)
         rand_num_3(1:3,1:N_cell*(dim_mode/3))=>random_numbers%x
-
     endif
     
     
@@ -236,6 +235,8 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3,dt)
 
         endif
+
+        if(comm%Np>1) Call random_numbers%bcast_val(comm)
 
        !
        ! loop over the integration order
