@@ -45,7 +45,7 @@ subroutine get_correlation(this,t,tprime,r)
 
 
    do i=1,tprime
-      r=r+(this%data(i)-ave)*(this%data(i-t)-ave)
+      r=r+(this%data(i)-ave)*(this%data(i+t)-ave)
    enddo
    r=r/norm
 

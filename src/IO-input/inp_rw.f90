@@ -34,6 +34,7 @@ call get_parameter(io_input,'input','Field_Distrib',io_simu%io_Field_Distrib)
 call get_parameter(io_input,'input','Forces',io_simu%io_Force)
 call get_parameter(io_input,'input','tracker',io_simu%io_tracker)
 call get_parameter(io_input,'input','calc_topo',io_simu%calc_topo)
+call get_parameter(io_input,'input','calc_correlations',io_simu%calc_correlations)
 
 call close_file('input',io_input)
 

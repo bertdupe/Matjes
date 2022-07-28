@@ -51,6 +51,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_eval_BTeff
     use m_random_public
     use m_measure_temp
+    use m_correlation_public
 !$  use omp_lib
     
     ! input
@@ -76,6 +77,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     
     ! random number
     class(ranbase),allocatable,target   :: random_numbers
+
+    ! correlation
+    class(corre_base),allocatable,target   :: correlations
 
     ! dummys
     real(8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
@@ -218,6 +222,14 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         call get_ran_type(random_numbers)
         call random_numbers%init_base(dim_mode*N_cell)
         rand_num_3(1:3,1:N_cell*(dim_mode/3))=>random_numbers%x
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! prepare for the calculation of the correlations
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if (io_simu%calc_correlations) then
+            call get_correlation_type(correlations)
+            call correlations%init_base((/100/))
+        endif
     endif
     
     
