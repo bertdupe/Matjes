@@ -79,7 +79,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     class(ranbase),allocatable,target   :: random_numbers
 
     ! correlation
-    class(corre_base),allocatable,target   :: correlations
+    class(corre_base),allocatable   :: correlations
 
     ! dummys
     real(8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
