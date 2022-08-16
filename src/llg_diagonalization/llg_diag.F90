@@ -138,7 +138,6 @@ subroutine build_transmat(lat,io_simu,H)
 		rewind 1
 		write(1,*) M0(:,:)
 		close(1)
-		write(*,*) "M0=",M0(:,:)
 	end if
 
     
@@ -198,7 +197,8 @@ use m_derived_types, only : io_parameter,lattice
         
     E0=H%energy(lat)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',E0/real(N_cell,8)
-    if(any(abs(sin(M0(1,:))).lt.1.0d-8)) stop 'This routine cannot be used if a spin lies at a pole.' !that's a problem
+   ! if(any(abs(sin(M0(1,:))).lt.1.0d-8)) stop 'This routine cannot be used if a spin lies at a pole.' !condition too loose?
+    if(any(1.0d0-abs(M3(3,:)).le.1.0d-5)) stop 'This routine cannot be used if a spin lies at a pole.' !that's a problem
     
 	Mp(:,:)=M0(:,:)
 	Mm(:,:)=M0(:,:)

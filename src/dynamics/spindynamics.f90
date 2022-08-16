@@ -352,7 +352,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         endif
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !stop iterations if converged
-        if (max_torque.le.1.0d-12) then
+        if (max_torque.le.1.0d-13) then
         		write(*,*) 'Maximum torque=',max_torque,' eV, simulation has converged.'
 				exit
         endif  
