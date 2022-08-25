@@ -229,7 +229,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         if(comm%ismas)then
             call truncate(lat_1,used)
             Edy=0.0d0
-            dt=timestep_int
+            dt=timestep_int/real(N_loop)
 
             call random_numbers%get_list(kt)
             call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3,dt)
@@ -244,7 +244,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
        do i_loop=1,N_loop
            !get actual dt from butchers table
             if(comm%ismas)then
-                dt=get_dt_mode(timestep_int,i_loop)
+                dt=get_dt_mode(dt,i_loop)
                 
                 ! loop that get all the fields
                 if (l_excitation) then
