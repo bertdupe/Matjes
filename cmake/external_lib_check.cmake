@@ -109,6 +109,21 @@ if(NOT DEFINED USE_MKL OR (DEFINED USE_MKL AND USE_MKL))
                       "-DLINK_DIRECTORIES=${MKL_library_path}"
             LINK_LIBRARIES "${MKL_linker}"
             )
+	
+	    try_compile(FOUND_FFTWMPI "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_mpi.f90"
+            CMAKE_FLAGS
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}/fftw"
+                      "-DLINK_DIRECTORIES=${MKL_library_path}"
+            LINK_LIBRARIES "${MKL_linker}"
+            )
+	if(FOUND_FFTWMPI)
+	          message(" Success testing FFTW_MPI with mkl.\n Disable other search for fftw3 library implementation.\n Compiling with CPP_FFTWMPI")
+	    set(FFTWMPI_include_path "${MKL_include_path}/fftw")
+	    set(FFTWMPI_library_path "${MKL_library_path}")
+	    add_compile_definitions(CPP_FFTWMPI)
+            set(USE_FFTWMPI FALSE)
+        endif()
+
         if(FFTW_threaded AND FOUND_FFTW)
             message(" Success testing FFTW with threading .\n Compiling with CPP_FFTW3_THREAD")
 	    set(FFTW_include_path "${MKL_include_path}/fftw")

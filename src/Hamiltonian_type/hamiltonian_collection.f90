@@ -1,6 +1,7 @@
 module m_hamiltonian_collection
+use m_fft_H_base,only: fft_H
 use m_H_public, only: t_H, get_Htype_N
-use m_fft_H_public, only: fft_H, get_fft_H
+use m_fft_H_public
 use m_work_ham_single, only: work_ham_single, work_mode
 
 use m_H_type,only : len_desc
@@ -65,7 +66,6 @@ subroutine distribute(this,com_in)
     use mpi_distrib_v
     !subroutine which distributes the H-Hamiltonians from the master of comm to have as few as possible H per thread
     !expects the hamiltonian of the comm-master to be initialized correctly
-    !does not do anything with the H_fft yet
     class(hamiltonian),intent(inout)    :: this
     type(mpi_type),intent(in)           :: com_in
 #ifdef CPP_MPI
@@ -79,34 +79,46 @@ subroutine distribute(this,com_in)
     type(mpi_type)              :: com_inner
 
     class(t_H),allocatable      :: H_tmp(:)
+    class(fft_H),allocatable    :: H_fft_tmp
 
     if(com_in%ismas)then
         if(.not.this%is_set) ERROR STOP "Cannot distribute hamiltonian that as not been initialized"
         if(allocated(this%H_fft))then
-            write(error_unit,*) "WARNING, MPI-distributions for H_fft is not checked"
+            write(error_unit,*) "WARNING, MPI-distributions for H_fft works only with FFTW_MPI"
         endif
     endif
+
     Call bcast(this%N_total,com_in)
     Call bcast(this%NH_total,com_in)
+    Call bcast(this%NHF_total,com_in)
     this%NH_local=this%NH_total
+    this%NHF_local=this%NHF_total
+
     if(com_in%Np.eq.1) return
     !decide how to parallelize Hamiltonian
-    Call get_two_level_comm(com_in,this%NH_total,com_outer,com_inner)
+    ! parallelized non-FFT Hamiltonian
+    if (this%NH_total.eq.0) then
+         Call get_two_level_comm(com_in,this%NHF_total,com_outer,com_inner)
+    else
+         Call get_two_level_comm(com_in,this%NH_total,com_outer,com_inner)
+    endif
 
     if(com_outer%Np>1.and.com_inner%ismas) this%is_para(1)=.true.
     Call reduce_lor(this%is_para(1),com_in)
 
     !distribute the Hamiltonian to the masters of the inner parallelization
-    if(com_inner%ismas)then
-        if(com_outer%ismas)then
-            !save descriptions for later easier io-access
-            allocate(this%desc_master(this%N_total))
-            this%desc_master(1:this%NH_total)=this%H(:)%desc
-            do i=1,this%NHF_total
-                Call this%H_fft(i)%get_desc(this%desc_master(this%NH_total+i))
-            enddo
+    ! the Hamiltonian are sent as a whole on each of the proc
+    if (this%NH_total.ne.0) then
+      if (com_inner%ismas)then
+         if(com_outer%ismas)then
+!            !save descriptions for later easier io-access
+!            allocate(this%desc_master(this%N_total))
+!            this%desc_master(1:this%NH_total)=this%H(:)%desc
+!            do i=1,this%NHF_total
+!                Call this%H_fft(i)%get_desc(this%desc_master(this%NH_total+i))
+!            enddo
 
-            !send Hamiltonians
+            !send Hamiltonians normal Hamiltonians 
             do ithread=2,com_outer%Np
                 do i=1,com_outer%cnt(ithread)
                     iH=com_outer%displ(ithread)+i
@@ -124,17 +136,17 @@ subroutine distribute(this,com_in)
             enddo
             deallocate(this%H)
             Call move_alloc(H_tmp,this%H)
-        else
+         else
             this%NH_local=com_outer%cnt(com_outer%id+1)
             Call get_Htype_N(this%H,this%NH_local)
             do i=1,this%NH_local
                 Call this%H(i)%recv(0,i,com_outer%com)
             enddo
-        endif
-        this%is_set=.true.
-    endif
+         endif
+         this%is_set=.true.
+      endif
 
-    if(com_inner%Np>1)then
+      if(com_inner%Np>1)then
         this%is_para(2)=.true.
         Call bcast(this%NH_local,com_inner)
         if(.not.com_inner%ismas) Call get_Htype_N(this%H,this%NH_local)
@@ -142,14 +154,35 @@ subroutine distribute(this,com_in)
             Call this%H(i)%distribute(com_inner)
         enddo
         this%is_set=.true.
-    endif
+      endif
+    endif   ! end if (this%NH_total.ge.1)
 
+    ! parallalize the FFT Hamiltonian: distribute the FFT_Ham on comm_inner and parallalize then on comm_outer
+    ! only FFT Hamiltonians are present
+    if (this%NHF_total.ne.0) then
+
+      ! send the FFT Ham on all proc of the inner comms = contains all the masters of the outer comms
+      ! first try, parallelize on the inner comm
+      if (com_inner%Np.gt.1) then
+         this%is_para(2)=.true.
+
+         if (.not.com_inner%ismas) Call get_fft_H_N(this%H_fft,this%NHF_local)
+         do i=1,this%NHF_local
+             call this%H_fft(i)%bcast(com_inner)
+         enddo
+
+      endif
+
+      this%is_set=.true.
+    endif     ! end if (this%NHF_total.ge.1)
+
+
+! get the global communicator for the Hamiltonians without FFT
     this%com_outer=com_outer
     this%com_inner=com_inner
     this%com_global=com_in
 
     Call set_work_mode(this)
-
 #else
     continue
 #endif
@@ -181,7 +214,7 @@ subroutine bcast_hamil(this,comm)
         enddo
     endif
     if(this%NHF_total>1)then
-        if(.not.comm%ismas) Call get_fft_H(this%H_fft,this%NHF_total)
+        if(.not.comm%ismas) Call get_fft_H_N(this%H_fft,this%NHF_total)
         do i=1,this%NHF_total
             Call this%H_fft(i)%bcast(comm)
         enddo
@@ -341,12 +374,14 @@ subroutine energy_resolved(this,lat,E)
     do iH=1,this%NH_local
         Call this%H(iH)%eval_all(E(iH),lat,this%work)
     enddo
+
     if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
     if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
 
     do iH=1,this%NHF_total
         Call this%H_fft(ih)%get_E(lat,this%H_fft_tmparr,E(this%NH_total+iH))
     enddo
+    stop 'toto'
 end subroutine
 
 function energy(this,lat)result(E)

@@ -24,7 +24,6 @@ type,extends(fft_H) ::  fft_H_fftwmpi
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  K_F(:,:,:)  !demagnetization tensor in fourier-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  H_F(:,:)    !effective field fourier-space
-    type(mpi_type)                          ::  com_fftw
     !data stored in base class
 !    real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
 !    real(C_DOUBLE),allocatable              ::  H_n(:,:)    !effective field normal-space
@@ -33,6 +32,9 @@ contains
     procedure,public    :: get_H_single     !get effective field for a single site
     procedure,public    :: init_shape       !initializes the shape and the H and M operators, arrays
     procedure,public    :: init_op          !initializes the K_F array
+    !specific functions for FFTW_MPI
+    procedure,public    :: init_op_MPI      !initializes the K_F array with MPI
+    procedure,public    :: set_plans_COMM   !initializes the K_F array with specific MPI COMMS
 
     !utility functions
     procedure,public    :: destroy          !destroys all data of this type
@@ -40,7 +42,7 @@ contains
     procedure,public    :: mv               !mv this to new instance
     procedure,public    :: add              !adds two fft_H in same space by adding their K_F
     procedure,public    :: bcast=>bcast_fft !mv this to new instance
-
+!    procedure,public    :: bcast_outer
 
     !internal procedures
     procedure           :: set_M                !set internal magnetization in normal-space from lattice
@@ -83,10 +85,25 @@ subroutine bcast_fft(this,comm)
         allocate(this%H_F(shp(1),shp(2)))
     endif
     Call bcast_alloc(this%K_F,comm)
-!    if(.not.comm%ismas) Call set_plans(this)
-    call this%com_fftw%copy_base(comm)
-    Call set_plans(this)
+    Call set_plans_COMM(this,comm%com)
 end subroutine
+
+!subroutine bcast_outer(this,comm_outer)
+!    class(fft_H_fftwmpi),intent(inout)  ::  this
+!    type(mpi_distv),intent(in)          ::  comm_outer
+!    integer ::  shp(2)
+!
+!!    Call this%fft_H%bcast(comm_outer)
+!    if(comm_outer%ismas) shp=shape(this%M_F)
+!    Call bcast(shp,comm_outer)
+!    if(.not.comm_outer%ismas)then
+!        allocate(this%M_F(shp(1),shp(2)))
+!        allocate(this%H_F(shp(1),shp(2)))
+!    endif
+!    Call bcast_alloc(this%K_F,comm_outer)
+!!    if(.not.comm%ismas) Call set_plans(this)
+!    Call set_plans_COMM(this,comm_outer)
+!end subroutine
 
 subroutine mv(this,H_out)
     class(fft_H_fftwmpi),intent(inout)  :: this
@@ -138,7 +155,10 @@ subroutine destroy(this)
     if(allocated(this%H_F)) deallocate(this%H_F)
 end subroutine
 
-
+!
+! routine that does the first FFT of the Hamiltonians. This is done during the setup so it MUST be serial is not parallelized
+! otherwise all the setup must be change and it is super annoying.
+!
 subroutine init_op(this,dim_mode,K_n,desc_in)
     !subroutine which initializes the fourier-transformed operator of K, while deallocating K_N
     class(fft_H_fftwmpi),intent(inout)         :: this
@@ -179,6 +199,70 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
         ERROR STOP
     endif
 
+    !calculate fourier transform of K and save it in dipole-type
+    howmany=int(dim_mode**2,C_int)
+    Nk_tot=product(this%N_rep)
+    N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
+    allocate(this%K_F(dim_mode,dim_mode,Nk_tot),source=cmplx(0.0d0,0.0d0,8))
+    plan_K_F= fftw_plan_many_dft_r2c(int(3,C_INT), N_rep_rev,  howmany,&
+                                    &K_n,          N_rep_rev,&
+                                    &howmany,      int(1,C_int),&
+                                    &this%K_F,     N_rep_rev,&
+                                    &howmany,      int(1,C_int),&
+                                    &FFTW_FORWARD+FFTW_ESTIMATE)
+    Call fftw_execute_dft_r2c(plan_K_F, K_n, this%K_F)
+    this%K_F=this%K_F/real(product(N_rep_rev),8)
+    Call fftw_destroy_plan(plan_K_F)
+    this%set=.true.
+    !deallocate K_n, since at some point one might want to keep it in here
+    deallocate(K_n)
+
+#else
+        ERROR STOP "CANNOT USE FFTW-MPI Hamiltonian without FFTW-MPI (CPP_FFTWMPI)"
+#endif
+end subroutine
+
+
+subroutine init_op_MPI(this,dim_mode,K_n,com_outer,desc_in)
+    !subroutine which initializes the fourier-transformed operator of K, while deallocating K_N
+    class(fft_H_fftwmpi),intent(inout)         :: this
+    integer,intent(in)                         :: dim_mode
+    real(8),intent(inout),allocatable          :: K_n(:,:,:)
+    type(mpi_distv),intent(in)                 :: com_outer
+    character(len=*),intent(in),optional       :: desc_in
+
+#ifdef CPP_FFTWMPI
+    integer              :: Nk_tot           !number of state considered in FT (product of N_rep)
+    integer(C_INT)       :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
+    integer(C_INT)       :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
+    type(c_ptr)          :: plan_K_F         !plan for fourier transformation of K
+    integer :: i,j,k
+
+    Call this%fft_H%init_op(dim_mode,K_n,desc_in)
+
+    !check shapes etc.
+    if(.not.allocated(this%M_n))then
+        write(error_unit,'(///A)') "Magnetic order parameter not set when tying to initialize operator in fft_H-type"
+        write(error_unit,'(A)') "This is most probably the case because init_shape has not been called previously"
+        ERROR STOP
+    endif
+    if(allocated(this%K_F))then
+        write(error_unit,'(///A)') "Trying to initialize operator of fft_H, but the fourier-transform has already been set"
+        write(error_unit,'(A)') "init_op shall only be called once"
+        ERROR STOP
+    endif
+    if(size(K_N,3)/=product(this%N_rep))then
+        write(error_unit,'(///A)') "Failed to set the fft-operator since the number of repetition shape does not fit"
+        write(error_unit,'(A,I12,A,3I8)') "fft_H Nk_total",product(this%N_rep)," coming from this%N_rep:",this%N_rep
+        write(error_unit,'(A,I12)')       "input Nk_total",size(K_n,2)
+        ERROR STOP
+    endif
+    if(size(K_N,1)/=size(this%M_n,1).or.size(K_N,2)/=size(this%M_n,1))then
+        write(error_unit,'(///A)') "Failed to set the fft-operator since the mode dimension does not fit"
+        write(error_unit,'(A,I6)')       "fft_H dim_mode:     ",size(this%M_n,1)
+        write(error_unit,'(A,2I6)')      "K_n input dim_modes:",size(K_n,1),size(K_n,2)
+        ERROR STOP
+    endif
 
     !calculate fourier transform of K and save it in dipole-type
     howmany=int(dim_mode**2,C_int)
@@ -302,6 +386,48 @@ subroutine set_plans(this)
     class(fft_H_fftwmpi),intent(inout)  :: this
 
 
+    integer(C_INT)      :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
+    integer(C_INT)      :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
+    integer(C_INT)      :: M_offset,alloc_local,local_M
+    type(C_PTR)         :: cdata, rdata
+    complex(C_DOUBLE_COMPLEX), pointer :: data(:,:,:)
+    real(C_DOUBLE), pointer :: in(:,:,:)
+    integer :: dim_fft,errcode,ierror
+
+#ifdef CPP_FFTWMPI
+
+    if(.not.allocated(this%M_n)) ERROR STOP "cannot set fftw_mpi_plans as M_n not allocated"
+    if(.not.allocated(this%M_F)) ERROR STOP "cannot set fftw_mpi_plans as M_F not allocated"
+    if(.not.allocated(this%H_n)) ERROR STOP "cannot set fftw_mpi_plans as H_n not allocated"
+    if(.not.allocated(this%H_F)) ERROR STOP "cannot set fftw_mpi_plans as H_F not allocated"
+
+    N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
+    howmany=int(size(this%M_n,1),C_int)
+
+    this%plan_mag_F= fftw_plan_many_dft_r2c(int(3,C_INT), N_rep_rev, howmany,&
+                                           &this%M_n,     N_rep_rev,&
+                                           &howmany,      int(1,C_int), &
+                                           &this%M_F,     N_rep_rev,&
+                                           &howmany,      int(1,C_int), &
+                                           &FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
+
+    this%plan_H_I= fftw_plan_many_dft_c2r(int(3,C_INT), N_rep_rev, howmany,&
+                                         &this%H_F,     N_rep_rev,&
+                                         &howmany,      int(1,C_int), &
+                                         &this%H_n,     N_rep_rev,&
+                                         &howmany,      int(1,C_int), &
+                                         &FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+
+#else
+    ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTWMPI)"
+#endif
+end subroutine
+
+subroutine set_plans_COMM(this,COMM)
+    class(fft_H_fftwmpi),intent(inout)  :: this
+    integer,intent(in)                  :: COMM
+
+
     integer(C_INTPTR_T) :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_INTPTR_T) :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
     integer(C_INTPTR_T) :: M_offset,alloc_local,local_M
@@ -312,10 +438,10 @@ subroutine set_plans(this)
 
 #ifdef CPP_FFTWMPI
 
-    if(.not.allocated(this%M_n)) ERROR STOP "cannot set fftw_plans as M_n not allocated"
-    if(.not.allocated(this%M_F)) ERROR STOP "cannot set fftw_plans as M_F not allocated"
-    if(.not.allocated(this%H_n)) ERROR STOP "cannot set fftw_plans as H_n not allocated"
-    if(.not.allocated(this%H_F)) ERROR STOP "cannot set fftw_plans as H_F not allocated"
+    if(.not.allocated(this%M_n)) ERROR STOP "cannot set fftw_mpi_plans as M_n not allocated"
+    if(.not.allocated(this%M_F)) ERROR STOP "cannot set fftw_mpi_plans as M_F not allocated"
+    if(.not.allocated(this%H_n)) ERROR STOP "cannot set fftw_mpi_plans as H_n not allocated"
+    if(.not.allocated(this%H_F)) ERROR STOP "cannot set fftw_mpi_plans as H_F not allocated"
 
     N_rep_rev=this%N_rep(size(this%N_rep):1:-1)
     howmany=int(size(this%M_n,1),C_int)
@@ -323,7 +449,7 @@ subroutine set_plans(this)
     ! first check the dimension
     if (N_rep_rev(1)*N_rep_rev(2).eq.1) then     ! the supercell is dimension, parallelization can not be performed
        write(6,'(a)') 'cannot perform FFT for a one dimensional supercell'
-       call mpi_abort(this%com_fftw%com,errcode,ierror)
+       call mpi_abort(COMM,errcode,ierror)
     elseif(N_rep_rev(1).eq.1)  then                   ! redimension for a 2D MPI FFT
        dim_fft=2
     else                         ! redimension for a 3D MPI FFT
@@ -332,7 +458,7 @@ subroutine set_plans(this)
 
     !   get local data size and allocate (note dimension reversal)
     alloc_local = fftw_mpi_local_size_many(dim_fft, N_rep_rev(:dim_fft), Howmany, &
-                                & FFTW_MPI_DEFAULT_BLOCK,this%com_fftw%com,local_M,M_offset)
+                                & FFTW_MPI_DEFAULT_BLOCK,COMM,local_M,M_offset)
 ! allocate the real space in rdata
     rdata = fftw_alloc_real(2*howmany*alloc_local)
     call c_f_pointer(rdata, in, N_rep_rev)
@@ -342,15 +468,16 @@ subroutine set_plans(this)
     call c_f_pointer(cdata, data, N_rep_rev)
 
     this%plan_mag_F= fftw_mpi_plan_many_dft_r2c(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & in, data,this%com_fftw%com,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
+                                 & this%M_n, this%M_F,COMM,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
 
     this%plan_H_I= fftw_mpi_plan_many_dft_c2r(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & data, in,this%com_fftw%com,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+                                 & this%H_F, this%H_n,COMM,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
 
 #else
     ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTWMPI)"
 #endif
 end subroutine
+
 
 subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
     integer,intent(in)          :: isite
@@ -362,13 +489,6 @@ subroutine H_internal_single(H,H_out,isite,dim_lat,N_rep,nmag)
 
 !    integer     :: div(4),modu(4)
     integer     :: i4(4),i
-
-    ! does not work
-!    modu=[nmag,nmag*dim_lat(1),nmag*product(dim_lat(:2)),nmag*product(dim_lat)]
-!    div=[(product(modu(:i-1)),i=1,4)]
-!    i4=isite-1
-!    i4=i4/div
-!    i4=modulo(i4,modu)+1
 
     i4(4)=(isite-1)/(nmag*product(dim_lat(:2)))+1
 
