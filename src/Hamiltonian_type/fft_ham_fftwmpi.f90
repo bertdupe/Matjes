@@ -283,6 +283,7 @@ subroutine get_H_single(this,lat,site,Hout)
     integer ::  i,j,l
 
     Call this%set_M(lat)
+    stop 'toto'
     Call fftw_mpi_execute_dft_r2c(this%plan_mag_F, this%M_n, this%M_F)
 
     this%H_F=cmplx(0.0d0,0.0d0,8)
