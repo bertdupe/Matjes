@@ -137,11 +137,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             endif
         endif
         
-        
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!! Prepare Q_neigh for topological neighbor calculation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       
+
         if(io_simu%calc_topo)then
             if (comm%ismas) call user_info(output_unit,time,'topological operators',.false.)
             Call neighbor_Q(mag_lattice,Q_neigh)
@@ -187,9 +186,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         timestep_int=io_dyn%timestep
 
         Call mag_lattice%copy_val_to(lat_1) !necessary due to loop structure
-    endif
-    
+    endif ! endif if comm%ismas
+
+    write(*,*) 'calculate energy'
     Edy=H%energy(mag_lattice)
+    write(*,*) 'toto'
 
     if(comm%ismas)then
         write(output_unit,'(a,2x,E20.12E3)') 'Initial Total Energy (eV/f.u.)',Edy/real(N_cell,8)
