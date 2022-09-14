@@ -1,12 +1,8 @@
 module m_fftwmpi
-
+use m_fftw3
 !    ! kmesh in internal units
     integer, protected, public :: N_kpoint(3)
     real(kind=8), protected, public, allocatable :: kmesh(:,:)
-
-!    ! FFTMPI of the dipolar martix D(r)
-!    complex(kind=8), allocatable, protected, public :: FFT_pos_D(:,:,:)
-!
 
     private
     contains
@@ -15,40 +11,53 @@ module m_fftwmpi
         !!!!!!!!!!!!!!!!!!!!!!
         ! FFT dipole
         !!!!!!!!!!!!!!!!!!!!!!
-        subroutine fft_depol_r2c(Nx,Ny,Nz,rmat,cmat,rtrans,ctrans,plan)
+        subroutine fft_mpi_depol_r2c(Nx,Ny,Nz,rmat,cmat,rtrans,ctrans,plan)
             use, intrinsic :: iso_c_binding
             implicit none
             integer, intent(in) :: Nx,Ny,Nz
             real(kind=8), intent(in) :: rmat(:,:,:,:)
             complex, intent(out) :: cmat(:,:,:,:)
             type(C_PTR), intent(in) :: plan
-            real(c_double), intent(inout) :: rtrans(:,:,:)
-            complex(c_double_complex), intent(inout) :: ctrans(:,:,:)
+            real(c_double), intent(inout), pointer :: rtrans(:,:,:)
+            complex(c_double_complex), intent(inout), pointer :: ctrans(:,:,:)
 
             ! Internal variables
             integer :: i,j,k,l
             integer :: N
-
-            include 'fftw3-mpi.f03'
+            integer(C_INTPTR_T) :: i, j, alloc_local, local_Nz, local_Nz_offset
 
             N=size(rmat,1)
 
-            ctrans=dcmplx(0.d0,0.d0)
-            rtrans=0.0d0
+            !   get local data size and allocate (note dimension reversal)
+            alloc_local = fftw_mpi_local_size_3d(Nz, Ny, Nx/2+1, MPI_COMM_WORLD,local_Nz, local_Nz_offset)
+
+            ctrans=fftw_alloc_complex(alloc_local)
+            call c_f_pointer(cdata, data, [Nx/2,Ny,local_Nz])
+
+            ! split the real space in data
+            rtrans = fftw_alloc_real(2*alloc_local)
+            call c_f_pointer(rdata, in, [2*(Nx/2+1),Ny,local_Nz])
+
+            ! create the plan for the FFTW_MPI
+            plan = fftw_mpi_plan_dft_r2c_3d(Nz, Ny, Nx, rtrans, ctrans, MPI_COMM_WORLD,FFTW_MEASURE)
 
             do i=1,N
                 rtrans(1:Nx,1:Ny,1:Nz)=rmat(i,1:Nx,1:Ny,1:Nz)
-                call fftw_mpi_execute_dft_r2c(plan,rtrans,ctrans)
+                call fftw_mpi_execute_dft_r2c_3d(plan,rtrans,ctrans)
                 cmat(i,1:Nx,1:Ny,1:Nz)=ctrans(1:Nx,1:Ny,1:Nz)
             enddo
-        end subroutine fft_depol_r2c
+
+            call fftw_destroy_plan(plan)
+            call fftw_free(cdata)
+
+        end subroutine fft_mpi_depol_r2c
 
 
 
         !!!!!!!!!!!!!!!!!!!!!!
         ! FFT dipole
         !!!!!!!!!!!!!!!!!!!!!!
-        subroutine fft_depol_c2r(Nx,Ny,Nz,cmat,rmat,alpha,rtrans,ctrans,plan)
+        subroutine fft_mpi_depol_c2r(Nx,Ny,Nz,cmat,rmat,alpha,rtrans,ctrans,plan)
             use, intrinsic :: iso_c_binding
             implicit none
             integer, intent(in) :: Nx,Ny,Nz
@@ -63,8 +72,6 @@ module m_fftwmpi
             integer :: i,j,k,l
             integer :: N
 
-            include 'fftw3-mpi.f03'
-
             ctrans=dcmplx(0.d0,0.d0)
             rtrans=0.0d0
 
@@ -76,13 +83,13 @@ module m_fftwmpi
                 rmat(i,1:Nx,1:Ny,1:Nz)=rtrans(1:Nx,1:Ny,1:Nz)/dble(Nx*Ny*Nz)
             enddo
             !      call fftw_destroy_plan(plan)
-        end subroutine fft_depol_c2r
+        end subroutine fft_mpi_depol_c2r
 #endif
 
 
 
         ! Calculate the Fourrier transform of a field of pointers
-        subroutine calculate_fft_vec_point(field,pos,sense,dim_mode,FFT)
+        subroutine calculate_fft_mpi_vec_point(field,pos,sense,dim_mode,FFT)
             use m_derived_types, only : vec_point
             implicit none
             complex(kind=8), intent(inout) :: FFT(:,:)
@@ -106,7 +113,7 @@ module m_fftwmpi
 
 
         ! Calculate the Fourrier transform of a field of reals
-        subroutine calculate_fft_matrix(field,pos,sense,FFT)
+        subroutine calculate_fft_mpi_matrix(field,pos,sense,FFT)
             use m_get_position
             implicit none
             real(kind=8), intent(in) :: field(:,:),pos(:,:)
@@ -122,12 +129,12 @@ module m_fftwmpi
             do i=1,N_k
                 FFT(:,i)=get_FFT(field,sense,kmesh(:,i),pos,N(1))
             enddo
-        end subroutine calculate_fft_matrix
+        end subroutine calculate_fft_mpi_matrix
 
 
 
         ! Calculate the Fourrier transform of the D(r) matrix
-        subroutine calculate_FFT_Dr(pos,sense,dim_lat)
+        subroutine calculate_FFT_mpi_Dr(pos,sense,dim_lat)
             use m_vector, only : norm
             implicit none
             real(kind=8), intent(in) :: sense       ! should be + or - one
@@ -157,12 +164,12 @@ module m_fftwmpi
             do i=1,Nksize
                 FFT_pos_D(:,:,i)=get_FFT(pos_D,sense,kmesh(:,i),pos,Nsize)
             enddo
-        end subroutine calculate_FFT_Dr
+        end subroutine calculate_FFT_mpi_Dr
 
 
 
         ! Function that calculate the FFT of a matrix of vec_point for one component
-        function get_FFT_vec_point(kvec,sense,pos,field,Nsize,dim_mode)
+        function get_FFT_mpi_vec_point(kvec,sense,pos,field,Nsize,dim_mode)
             use m_derived_types, only : vec_point
             implicit none
             integer, intent(in) :: Nsize,dim_mode
@@ -184,12 +191,12 @@ module m_fftwmpi
                 enddo
             enddo
             get_FFT_vec_point=get_FFT_vec_point/sqrt(real(Nsize,8))
-        end function get_FFT_vec_point
+        end function get_FFT_mpi_vec_point
 
 
 
         ! Function that calculate the FFT of the D(r) matrix of real for one component
-        function get_FFT_Dr_matrix(pos_D,sense,kvec,real_dist,Nsize)
+        function get_FFT_mpi_Dr_matrix(pos_D,sense,kvec,real_dist,Nsize)
             implicit none
             integer, intent(in) :: Nsize
             real(kind=8), intent(in) :: pos_D(:,:,:),sense,kvec(:),real_dist(:,:)
@@ -211,12 +218,12 @@ module m_fftwmpi
                 enddo
             enddo
             get_FFT_Dr_matrix=get_FFT_Dr_matrix/real(Nsize,8)
-        end function get_FFT_Dr_matrix
+        end function get_FFT_mpi_Dr_matrix
 
 
 
         ! Function that calculate the FFT of a matrix of real for one component
-        function get_FFT_matrix(field,sense,kvec,real_dist,dim_mode)
+        function get_FFT_mpi_matrix(field,sense,kvec,real_dist,dim_mode)
             implicit none
             real(kind=8), intent(in) :: field(:,:),sense,kvec(:),real_dist(:,:)
             integer, intent(in) :: dim_mode
@@ -238,7 +245,7 @@ module m_fftwmpi
                 enddo
             enddo
             get_FFT_matrix=get_FFT_matrix/real(shape_pos(2),8)
-        end function get_FFT_matrix
+        end function get_FFT_mpi_matrix
 
 
         !Function computing the product X*e^{ikr}*H(r-r')*X*e^{ikr'} for a given r and kvec

@@ -103,8 +103,8 @@ subroutine diagonalize_Ham_FT(H_io,lat)
          shape_vec=shape(eigenvectors)
          io_evec=open_file_write('eigenvectors.dat')
          write(output_unit,'(/a)') "search for eigenvectors"
-         write(output_unit,'(a/)') "list of eigenvectors - format (Real,Cmplx):"
-         write(form_vec,'( "(",I10,"(E20.12E3,x))")') 2*shape_vec(1)*shape_vec(2)
+         write(output_unit,'(a/)') "list of eigenvectors - format kpts, (Real,Cmplx):"
+         write(form_vec,'( "(3(E20.12E3,x),5x,",I10,"(E20.12E3,x))")') 2*shape_vec(1)*shape_vec(2)
     endif
 
     n_kpts=size(kpts,2)
@@ -116,7 +116,7 @@ subroutine diagonalize_Ham_FT(H_io,lat)
         else
            call Hk%calc_eval(size(eigenvalues),eigenvalues,n_eigen)
        endif
-       write(io_input,form_eig) kpts(:,i),real(eigenvalues),aimag(eigenvalues)
+       write(io_input,form_eig) kpts(:,i),eigenvalues
     enddo
 
     call close_file('dispersion.dat',io_input)

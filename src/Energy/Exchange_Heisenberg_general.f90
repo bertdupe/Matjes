@@ -138,7 +138,7 @@ subroutine get_exchange_ExchG(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
 
                     do k=1,my_symmetries%n_sym
-                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
                        if (found_sym) then
                           i_op=k
                           exit
@@ -282,7 +282,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
                     vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
 
                     do k=1,my_symmetries%n_sym
-                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                       call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
                        if (found_sym) then
                           i_op=k
                           exit

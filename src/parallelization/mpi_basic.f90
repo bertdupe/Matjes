@@ -17,6 +17,7 @@ contains
     procedure   :: set_from_distv   !constructor for the basic mpi_type from the more specific mpi_distv type
     procedure   :: get_loop_bnd
     procedure   :: barrier
+    procedure   :: copy_base
 end type
 
 type,extends(mpi_type)  :: mpi_distv
@@ -114,6 +115,28 @@ end subroutine
 subroutine set(this) !no mpi
     class(mpi_type),intent(out)     :: this
     
+    continue
+    !without mpi just use default values
+
+end subroutine
+#endif
+
+#ifdef CPP_MPI
+subroutine copy_base(this,com_in)
+    class(mpi_type),intent(out)     :: this
+    type(mpi_type) ,intent(in)      :: com_in
+
+    this%com=com_in%com
+    this%id=com_in%id
+    this%Np=com_in%Np
+    this%ismas=com_in%ismas
+    this%mas=com_in%mas
+
+end subroutine
+#else
+subroutine copy_base(this) !no mpi
+    class(mpi_type),intent(out)     :: this
+
     continue
     !without mpi just use default values
 

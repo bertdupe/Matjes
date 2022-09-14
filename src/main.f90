@@ -21,7 +21,6 @@ use m_entropic
 use m_wavefunc_evol
 use m_GNEB, only: GNEB
 use m_write_config, only: write_config
-use m_random_init, only: random_init
 use m_hamiltonian_collection, only: hamiltonian
 use m_hessian
 
@@ -50,12 +49,9 @@ Implicit None
     real(kind=8) :: computation_time
 
     Call init_MPI(mpi_world)
-    Call fftw_init()
+    call fftw_init()
 
     call welcome()
-
-! initialize the random number generator
-    Call random_init()
 
     if(mpi_world%ismas)then
         ! get the simulation type
