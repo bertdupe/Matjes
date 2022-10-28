@@ -13,27 +13,30 @@ type, abstract :: corre_base
     logical :: is_set=.false.                               ! do you calculate the correlations
     logical :: is_print=.false.                             ! print data
     integer,dimension(:),allocatable :: shape_data
+    character(len=100)               :: name=""             ! name of the correlation. for example M(t,t') or M(t)*g(t-t')*M(t')
+
+
+    ! defered type
+    procedure(int_get_cor),pointer,nopass,public    :: get_correlation => null()
 
     contains
 
-    ! defered type
-    procedure(int_get_cor), deferred    :: get_correlation
-
     ! unchanged stuff
     procedure, NON_OVERRIDABLE     :: init_base
+    procedure, NON_OVERRIDABLE     :: copy
     procedure, NON_OVERRIDABLE     :: print_base
     procedure, NON_OVERRIDABLE     :: destroy_base
     procedure, NON_OVERRIDABLE     :: overwrite_base
+
 end type
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 abstract interface
 
-   subroutine int_get_cor(this,t,tprime,r)
-      import corre_base
-      class(corre_base),intent(in) :: this
-      integer,intent(in)           :: t,tprime
-      real(8),intent(out)          :: r
+   pure subroutine int_get_cor(data,t,tprime,chunk,r)
+      real(8),intent(in)    :: data(:)
+      integer,intent(in)    :: t,tprime,chunk(:)
+      real(8),intent(out)   :: r(:)
    end subroutine
 
 
@@ -60,6 +63,28 @@ subroutine init_base(this,shape_data)
 
 end subroutine
 
+subroutine copy(this,out)
+    class(corre_base),intent(in)  :: this
+    class(corre_base),intent(out) :: out
+
+    integer :: N
+
+    if (this%is_set) stop "correlations are already set and cannot be copied"
+
+    N=size(this%data)
+    allocate(out%data(N),source=this%data)
+    allocate(out%correlation(N),source=this%correlation)
+
+    N=size(this%shape_data)
+    allocate(out%shape_data(N),source=this%shape_data)
+
+    out%name=this%name
+    if (.not.associated(this%get_correlation)) stop "get_correlation is not associated and cannot be copied"
+    out%get_correlation => this%get_correlation
+
+    out%is_set=.true.
+
+end subroutine
 
 
 subroutine print_base(this,tag)

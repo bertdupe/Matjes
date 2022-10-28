@@ -90,7 +90,12 @@ subroutine get_list(this,kt)
     integer :: i
     real(8) :: res
 
-    if (kt.gt.1.0d-8) this%is_set=.true.
+    if (kt.gt.1.0d-8) then
+       this%is_set=.true.
+    else
+       return
+    endif
+
     if (.not.this%is_set) return
 
     do i=1,this%N

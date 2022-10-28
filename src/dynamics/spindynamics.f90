@@ -33,7 +33,7 @@ end subroutine
 subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_topo_commons, only: get_charge, neighbor_Q
     use m_update_time, only: update_time,init_update_time
-    use m_constants, only : pi,k_b
+    use m_constants, only : pi,k_b,hbar
     use m_energyfield, only : write_energy_field 
     use m_createspinfile, only: CreateSpinFile
     use m_user_info, only: user_info
@@ -51,6 +51,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_eval_BTeff
     use m_random_public
     use m_measure_temp
+    use m_correlation_public
 !$  use omp_lib
     
     ! input
@@ -77,10 +78,13 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     ! random number
     class(ranbase),allocatable,target   :: random_numbers
 
+    ! correlation
+    class(corre_base),allocatable   :: correlations
+
     ! dummys
     real(8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
     real(8) :: Einitial
-    real(8) :: dumy(5),security(2)
+    real(8) :: dumy(5),T_measured
     real(8) :: timestep_int,real_time,h_int(3),E_int(3)
     real(8) :: kt,ktini,ktfin
     real(8) :: time
@@ -97,7 +101,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     type(excitation_combined)   :: excitations
 
     real(8)     ::  time_init, time_final
-
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!! Initialize all data necessary on all threads
@@ -120,10 +123,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         if(modulo(dim_mode,3)/=0) STOP "dynamics will only work if the considered order-parameter can be described as 3-vector"
         
         OPEN(7,FILE='EM.dat',action='write',status='replace',form='formatted')
-              Write(7,'(20(a,2x))') '# 1:step','2:real_time (fs)','3:E_av (eV)','4:M', &
+              Write(7,'(19(a,2x))') '# 1:step','2:real_time (fs)','3:E_av (eV)','4:M', &
              &  '5:Mx','6:My','7:Mz','8:vorticity','9:vx', &
              &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T= (K)', &
-             &  '16:Tfin=','17:Ek=','18:Hx (T)','19:H (T)y=','20:H (T)z='
+             &  '16:Tfin=','17:Hx (T)','18:H (T)y=','19:H (T)z='
 
         if(io_simu%io_energy_cont)then
             if(io_simu%io_energy_detail)then
@@ -133,11 +136,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             endif
         endif
         
-        
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!! Prepare Q_neigh for topological neighbor calculation
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       
+
         if(io_simu%calc_topo)then
             if (comm%ismas) call user_info(output_unit,time,'topological operators',.false.)
             Call neighbor_Q(mag_lattice,Q_neigh)
@@ -179,13 +181,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         h_int=ext_param%H_ext
         E_int=ext_param%E_ext
         said_it_once=.False.
-        security=0.0d0
+        T_measured=0.0d0
         timestep_int=io_dyn%timestep
 
         Call mag_lattice%copy_val_to(lat_1) !necessary due to loop structure
-    endif
-    
+    endif ! endif if comm%ismas
+
+!   write(*,*) 'calculate energy',comm%id
     Edy=H%energy(mag_lattice)
+!    write(*,*) 'toto'
 
     if(comm%ismas)then
         write(output_unit,'(a,2x,E20.12E3)') 'Initial Total Energy (eV/f.u.)',Edy/real(N_cell,8)
@@ -218,8 +222,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         call get_ran_type(random_numbers)
         call random_numbers%init_base(dim_mode*N_cell)
         rand_num_3(1:3,1:N_cell*(dim_mode/3))=>random_numbers%x
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! prepare for the calculation of the correlations
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if (io_simu%calc_correlations) then
+            call get_correlation_type(correlations)
+            call correlations%init_base((/100/))
+        endif
     endif
-    
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! beginning of the simulation
@@ -231,8 +242,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             Edy=0.0d0
             dt=timestep_int/real(N_loop)
 
+            call random_numbers%set(sigma=sqrt(io_dyn%damping*kT*dt*hbar))
             call random_numbers%get_list(kt)
-            call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3,dt)
+            call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3)
 
         endif
 
@@ -241,8 +253,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
        !
        ! loop over the integration order
        !
+
        do i_loop=1,N_loop
            !get actual dt from butchers table
+!           write(*,*) 'toto',comm%id
             if(comm%ismas)then
                 dt=get_dt_mode(dt,i_loop)
                 
@@ -252,16 +266,18 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                     Call update_exc(real_time+dt,lat_1      ,excitations)
                 endif
             endif
+!            write(*,*) 'toto',comm%id
 
             !get effective field on magnetic lattice
             if(comm%Np>1) Call lat_1%bcast_val(comm)
+!            write(*,*) 'toto',comm%id
             Call H%get_eff_field(lat_1,Beff,1)
-
+!       stop 'Bertrand'
             if(comm%ismas)then
                 !do integration
-                Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop))
+                Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop),io_dyn%SOT)
                 Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
-                lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3+Dmag_T_3,dt)
+                lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3,Dmag_T_3,dt)
                 !copy magnetic texture to 1
                 Call lat_2%M%copy_val(lat_1%M)
             endif
@@ -296,11 +312,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 q_moins=dumy(2)/pi/4.0d0
                 vortex =dumy(3:5)/3.0d0/sqrt(3.0d0)
 
+                if (kt.gt.1.0d-8) call get_temp_measure(mag_lattice%M%modes_3,Beff_3,T_measured)
+
                 !write data files
-                Write(7,'(I12,18(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
+                Write(7,'(I12,17(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
                  &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
-                 &   kT/k_B,(security(i),i=1,2),H_int
+                 &   kT/k_B,T_measured,H_int
                 call get_Torque_measure(j,Edy,Dmag_int)
+
+
                 if(io_simu%io_energy_cont)then
                     if(io_simu%io_energy_detail)then
                         Call Eout_contrib_write(H_res,j,real_time,mag_lattice,io_Eout_contrib)
@@ -358,8 +378,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                     & ERROR STOP "PLOT FFT HAS TO BE REIMPLEMENTED"
 
                 if (random_numbers%print) call random_numbers%print_base(tag)
-
-                if (kt.gt.1.0d-8) call get_temp_measure(lat_2%M%modes_3,Beff_3,kt)
 
 
             endif

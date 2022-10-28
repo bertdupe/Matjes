@@ -6,15 +6,9 @@ use m_fft_H_fftwmpi,  only: fft_H_fftwmpi
 use m_fft_H_cufft, only: fft_H_cufft
 #endif
 implicit none
-public
 
 integer,private ::  mode=-1 !stores which implementation is used (1:FFTW3, 2: cuFFT, 1:FFTWMPI 0: none, -1: not initialized)
-
-interface  get_fft_H
-    module procedure get_fft_H_single
-    module procedure get_fft_H_N
-end interface
-private :: get_fft_H_single, get_fft_H_N
+public
 
 contains
 
@@ -94,7 +88,7 @@ contains
     end subroutine
     
     subroutine get_fft_H_N(H_out,N)
-        class(fft_H),intent(out),allocatable    :: H_out (:)
+        class(fft_H),intent(out),allocatable    :: H_out(:)
         integer,intent(in)                      :: N
 
         select case(mode)

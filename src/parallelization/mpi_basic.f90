@@ -110,6 +110,7 @@ subroutine set(this,com_in)
     if(ierr/=0) STOP "MPI_COMM_size failed"
     this%mas=0
     this%ismas=this%id==this%mas
+
 end subroutine
 #else
 subroutine set(this) !no mpi
