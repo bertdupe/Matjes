@@ -18,8 +18,9 @@ contains
 ! update the temperature
 !
 
-subroutine get_temp_measure(spin,Beff,kt)
-real(kind=8), intent(in) ::  spin(:,:),Beff(:,:),kt
+subroutine get_temp_measure(spin,Beff,T_measured)
+real(kind=8), intent(in)  :: spin(:,:),Beff(:,:)
+real(kind=8), intent(out) :: T_measured
 
 integer :: i,Nspin
 real(8) :: check1,check2
@@ -35,7 +36,9 @@ do i=1,Nspin
    check2=check2+dot_product(spin(:,i),Beff(:,i))
 enddo
 
-write(output_unit,'(a,2x,f16.6)') 'Temperature (K)', check1/check2/2.0d0/k_B
+T_measured=check1/check2/2.0d0/k_B
+
+write(output_unit,'(a,2x,f16.6)') 'Temperature (K)', T_measured
 
 end subroutine get_temp_measure
 

@@ -5,26 +5,29 @@ use m_propagator
 use m_eval_BTeff
 use m_update_time
 use m_solver_order
+use m_basic_types, only : torque
 
 abstract interface
 
-    subroutine propagator(B,damping,M,Mout)
+    subroutine propagator(B,damping,M,Mout,SOT)
+        import torque
         real(8),intent(in)                  ::  damping
+        type(torque),intent(in)             ::  SOT
         real(8),intent(in),contiguous       ::  M(:,:),B(:,:)
         real(8),intent(inout),contiguous    ::  Mout(:,:)
     end subroutine
 
 
-    function integrator(m,Dmag_int,dt)result(Mout)
-        real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:)
+    function integrator(m,Dmag_int,DTmag_int,dt)result(Mout)
+        real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:),DTmag_int(:,:)
         real(8),intent(in)              ::  dt
         real(8),allocatable             ::  Mout(:,:)
     end function
 
 
-    subroutine temperature_field(is_set,kt,damping,mode,DT,random_numbers,time_step)
+    subroutine temperature_field(is_set,kt,damping,mode,DT,random_numbers)
       logical, intent(in) :: is_set
-      real(kind=8), intent(in) :: mode(:,:),damping,random_numbers(:,:),kt,time_step
+      real(kind=8), intent(in) :: mode(:,:),damping,random_numbers(:,:),kt
       real(kind=8), intent(out) :: DT(:,:)
     end subroutine temperature_field
 

@@ -24,6 +24,8 @@ type,extends(fft_H) ::  fft_H_fftwmpi
     complex(C_DOUBLE_COMPLEX),allocatable   ::  M_F(:,:)    !magnetization in fourier-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  K_F(:,:,:)  !demagnetization tensor in fourier-space
     complex(C_DOUBLE_COMPLEX),allocatable   ::  H_F(:,:)    !effective field fourier-space
+    integer(C_INTPTR_T)                     ::  local_M=-1     !local size of the table on which the FFT applies
+    integer(C_INTPTR_T)                     ::  M_offset=-1    !offset of the table in the FFT
     !data stored in base class
 !    real(C_DOUBLE),allocatable              ::  M_n(:,:)    !magnetization in normal-space
 !    real(C_DOUBLE),allocatable              ::  H_n(:,:)    !effective field normal-space
@@ -341,6 +343,7 @@ subroutine get_H(this,lat,Hout)
     integer ::  i,j,l
 
     Call this%set_M(lat)
+    write(*,*) 'in get_H',this%local_M,this%M_offset
     Call fftw_mpi_execute_dft_r2c(this%plan_mag_F, this%M_n, this%M_F)
 
     this%H_F=cmplx(0.0d0,0.0d0,8)
@@ -389,7 +392,7 @@ subroutine set_plans(this)
 
     integer(C_INT)      :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_INT)      :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
-    integer(C_INT)      :: M_offset,alloc_local,local_M
+    integer(C_INT)      :: alloc_local
     type(C_PTR)         :: cdata, rdata
     complex(C_DOUBLE_COMPLEX), pointer :: data(:,:,:)
     real(C_DOUBLE), pointer :: in(:,:,:)
@@ -431,10 +434,10 @@ subroutine set_plans_COMM(this,COMM)
 
     integer(C_INTPTR_T) :: N_rep_rev(3)     !reversed N_rep necessary for fftw3 (col-major -> row-major)
     integer(C_INTPTR_T) :: howmany          !dimension of quantitiy which is fourier-transformed (see FFTW3)
-    integer(C_INTPTR_T) :: M_offset,alloc_local,local_M
+    integer(C_INTPTR_T) :: alloc_local
     type(C_PTR)         :: cdata, rdata
-    complex(C_DOUBLE_COMPLEX), pointer :: data(:,:,:)
-    real(C_DOUBLE), pointer :: in(:,:,:)
+    complex(C_DOUBLE_COMPLEX), pointer :: complex_in(:,:,:)
+    real(C_DOUBLE), pointer :: real_in(:,:,:)
     integer :: dim_fft,errcode,ierror
 
 #ifdef CPP_FFTWMPI
@@ -459,20 +462,20 @@ subroutine set_plans_COMM(this,COMM)
 
     !   get local data size and allocate (note dimension reversal)
     alloc_local = fftw_mpi_local_size_many(dim_fft, N_rep_rev(:dim_fft), Howmany, &
-                                & FFTW_MPI_DEFAULT_BLOCK,COMM,local_M,M_offset)
+                                & FFTW_MPI_DEFAULT_BLOCK,COMM,this%local_M,this%M_offset)
 ! allocate the real space in rdata
     rdata = fftw_alloc_real(2*howmany*alloc_local)
-    call c_f_pointer(rdata, in, N_rep_rev)
+    call c_f_pointer(rdata, real_in, N_rep_rev)
 
 ! allocate the complex space in cdata
     cdata = fftw_alloc_complex(howmany*alloc_local)
-    call c_f_pointer(cdata, data, N_rep_rev)
+    call c_f_pointer(cdata, complex_in, N_rep_rev)
 
     this%plan_mag_F= fftw_mpi_plan_many_dft_r2c(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & this%M_n, this%M_F,COMM,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
+                                 & real_in  , complex_in,COMM,FFTW_FORWARD+FFTW_MEASURE+FFTW_PATIENT)
 
     this%plan_H_I= fftw_mpi_plan_many_dft_c2r(dim_fft, N_rep_rev(:dim_fft), howmany, FFTW_MPI_DEFAULT_BLOCK, FFTW_MPI_DEFAULT_BLOCK, &
-                                 & this%H_F, this%H_n,COMM,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
+                                 & complex_in, real_in  ,COMM,FFTW_BACKWARD+FFTW_MEASURE+FFTW_PATIENT)
 
 #else
     ERROR STOP "CANNOT USE FFT_H without FFTW (CPP_FFTWMPI)"

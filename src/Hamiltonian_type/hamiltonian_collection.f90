@@ -164,6 +164,7 @@ subroutine distribute(this,com_in)
       ! send the FFT Ham on all proc of the inner comms = contains all the masters of the outer comms
       ! first try, parallelize on the inner comm
       if (com_inner%Np.gt.1) then
+
          this%is_para(2)=.true.
 
          if (.not.com_inner%ismas) Call get_fft_H_N(this%H_fft,this%NHF_local)
@@ -174,6 +175,7 @@ subroutine distribute(this,com_in)
       endif
 
       this%is_set=.true.
+
     endif     ! end if (this%NHF_total.ge.1)
 
 
@@ -375,13 +377,14 @@ subroutine energy_resolved(this,lat,E)
         Call this%H(iH)%eval_all(E(iH),lat,this%work)
     enddo
 
-    if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
-    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
-
     do iH=1,this%NHF_total
         Call this%H_fft(ih)%get_E(lat,this%H_fft_tmparr,E(this%NH_total+iH))
     enddo
-    stop 'toto'
+
+    if(this%is_para(2)) Call reduce_sum(E,this%com_inner)
+    if(this%is_para(1).and.this%com_inner%ismas) Call gatherv(E,this%com_outer)
+
+!    stop 'toto'
 end subroutine
 
 function energy(this,lat)result(E)
@@ -517,7 +520,7 @@ subroutine set_work_mode(this)
     do iH=1,this%NH_local
         Call this%H(iH)%set_work_mode(work_arr(iH))
     enddo
-    Call this%work%set_max(work_arr)
+    if (this%NH_local.ne.0) Call this%work%set_max(work_arr)
     do iH=1,this%NH_local
         Call work_arr(iH)%destroy()
     enddo

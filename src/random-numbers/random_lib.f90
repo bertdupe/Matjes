@@ -152,6 +152,7 @@ FUNCTION rand_normal_int(mean,stdev,this) RESULT(c)
 class(ranbase) :: this
 real(kind=8) :: mean,stdev,c,temp(2),r,theta
 c=0.0d0
+
 IF(stdev <= 0.0d0) THEN
 
   WRITE(output_unit,'(a)') "Standard Deviation must be +ve"

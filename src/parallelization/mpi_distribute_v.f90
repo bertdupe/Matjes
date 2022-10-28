@@ -83,6 +83,10 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
         endif
     endif
 
+    write(output_unit,'(/a,I4)') 'Number of entries to parallelize ',N
+    if (com_inner%ismas) write(output_unit,'(a,I4)') 'number of processor on the inner communicator ',com_inner%Np
+    write(output_unit,'(a,I4)') 'MPI ranks ', com_inner%Id
+
 #else
     com_inner=com_in
     Call com_outer%init(com_in)
