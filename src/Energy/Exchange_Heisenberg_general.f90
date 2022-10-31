@@ -240,6 +240,10 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
            if (.not.lat%periodic(i)) periodic(i)=1.0d0
         enddo
 
+        ! get the symmetries
+        call set_sym_type(my_symmetries)
+        call my_symmetries%read_sym('symmetries.out')
+
         !set shape-dependent quantities of fft_H and get Kdb,N_rep
         Call H_fft%init_shape(3*lat%nmag,period,lat%dim_lat,Kbd,N_rep)
         Nk_tot=product(N_rep)
@@ -303,6 +307,8 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
                     write(output_unit,'(A,2I6)')    '  distance  :', io%pair(i_atpair)%dist(i_dist)
                     write(output_unit,'(A,9E16.8)') '  energy    :', J
                     write(output_unit,'(A,3E16.8/)') ' along the bound :', neigh%diff_vec(:,i_pair)
+
+
 
                     !set the contributions in the operator array
                     Karr(offset_mag(1)+1:offset_mag(1)+3,offset_mag(2)+1:offset_mag(2)+3,ind)=J

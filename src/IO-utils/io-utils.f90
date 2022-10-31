@@ -1533,17 +1533,17 @@ end function get_NB_lines
 ! get the number of columns in a ASCII file
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-function get_NB_columns(fname) result(N)
+function get_NB_columns(fname) result(ncol)
 implicit none
 character(len=*), intent(in) :: fname
-integer :: N
+integer :: ncol
 ! internal
-integer :: ncol,io,i
+integer :: npoint,io,i,nspace,fin
 character(len=400) :: str
 logical :: test
+real(8),allocatable :: dumy(:)
 
 ncol=0
-N=0
 inquire(FILE=fname,EXIST=test)
 if (.not.test) then
   write(6,'(a,2x,a,2x,a)') 'file',fname,'not found'
@@ -1557,13 +1557,30 @@ rewind(io)
 read (io,'(a)') str
 str= trim(adjustl(str))
 
-close(io)
-ncol=0
-do i=1,len(str)
-if (str(i:i) == '.') ncol=ncol+1
-enddo
+  npoint=0
+  do i=1,len(str)
+    if (str(i:i) == '.') npoint=npoint+1
+  enddo
 
-N=ncol
+  nspace=0
+  do i=1,len(str)
+    if (str(i:i) == ' ') nspace=nspace+1
+  enddo
+
+  ncol=npoint
+  if (mod(nspace,npoint-1).eq.0) ncol=npoint
+
+allocate(dumy(ncol),source=0.0d0)
+
+rewind(io)
+do
+  read (io,*,iostat=fin) dumy
+  if (fin .gt. 0) STOP 'ERROR in reading file in get_NB_columns'
+  if (fin .lt. 0) exit
+enddo
+close(io)
+
+write(output_unit,'(/a,I4,a/)') 'the file has ',ncol,' columns'
 
 end function get_NB_columns
 

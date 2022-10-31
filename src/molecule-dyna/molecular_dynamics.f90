@@ -102,7 +102,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    integer,allocatable ::  Q_neigh(:,:)
    real(8) :: time = 0.0d0
    real(8) :: ldc(3)  !Langevin dynamics coefficients
-	class(ranbase), allocatable :: thermal_noise
+class(ranbase), allocatable :: thermal_noise
 
    ! prepare the matrices for integration
 

@@ -3,6 +3,7 @@ module m_convert
 interface convert
  module procedure convert_int_to_string
  module procedure string_plus_string_to_string
+ module procedure string_plus_2string_to_string
  module procedure string_plus_int_to_string
  module procedure string_plus_int_plus_string_to_string
  module procedure string_plus_real_plus_string_to_string
@@ -45,6 +46,30 @@ endif
 
 write(form,'(a,I4,a)') '(',l_tot,'a)'
 write(string_plus_string_to_string,form) str1(1:l1),str2(1:l2)
+
+end function
+
+! merge 2 strings of different length into a string
+function string_plus_2string_to_string(str1,str2,str3)
+implicit none
+character(len=*), intent(in) :: str1,str2,str3
+character(len=len_trim(str1)+len_trim(str2)+len_trim(str3)) :: string_plus_2string_to_string
+! internal
+integer :: l1,l2,l3,l_tot
+character(len=30) :: form
+
+l1=len_trim(str1)
+l2=len_trim(str2)
+l3=len_trim(str3)
+l_tot=l1+l2+l3
+
+if (l_tot.gt.120) then
+   write(6,'(a)') 'error in the string_plus_string_to_string subroutine'
+   stop
+endif
+
+write(form,'(a,I4,a)') '(',l_tot,'a)'
+write(string_plus_2string_to_string,form) str1(1:l1),str2(1:l2),str3(1:l3)
 
 end function
 

@@ -456,6 +456,7 @@ pure subroutine cross_real_3N(vec1,vec2,vec_out)
 
     integer                 ::  i,Nvec
     Nvec=size(vec1,2)
+
     do i=1,Nvec
         vec_out(1,i)=vec1(2,i)*vec2(3,i)-vec1(3,i)*vec2(2,i)
         vec_out(2,i)=vec1(3,i)*vec2(1,i)-vec1(1,i)*vec2(3,i)
