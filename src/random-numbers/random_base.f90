@@ -92,8 +92,8 @@ subroutine set(this,mean,sigma,max_rnd_val,min_rnd_val)
     if (present(max_rnd_val)) this%sigma=max_rnd_val
     if (present(min_rnd_val)) this%sigma=min_rnd_val
 
-    write(output_unit,'(/a,2x,10a)') "parameter for random number generator:",this%name
-    write(output_unit,'(4(a,x,f10.8,x)/)') "mean", this%mean, "sigma", this%sigma, "max_rnd_val", this%max_rnd_val, "min_rnd_val", this%min_rnd_val
+   ! write(output_unit,'(/a,2x,10a)') "parameter for random number generator:",this%name
+  !  write(output_unit,'(4(a,x,f10.8,x)/)') "mean", this%mean, "sigma", this%sigma, "max_rnd_val", this%max_rnd_val, "min_rnd_val", this%min_rnd_val
 
 end subroutine
 
