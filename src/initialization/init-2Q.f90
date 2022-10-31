@@ -60,12 +60,12 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
     Nsite=size(pos)/3
     pos_3(1:3,1:Nsite)=>pos
     state_3(1:3,1:Nsite)=>state
-
+write(*,*)'Warning: mx and my have been swapped'
     do i=1,Nsite
         phi  =dot_product(qp,pos_3(:,i))
         theta=dot_product(qm,pos_3(:,i))
-        state_3(1,i)=sin(phi)
-        state_3(2,i)=cos(phi)*sin(theta)
+        state_3(1,i)= cos(phi)*sin(theta) !sin(phi)
+        state_3(2,i)=sin(phi) ! cos(phi)*sin(theta)
         state_3(3,i)=cos(phi)*cos(theta)
 
         j=mod(i-1,size_unit_cell)+1
