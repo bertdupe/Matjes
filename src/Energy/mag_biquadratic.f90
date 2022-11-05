@@ -109,15 +109,15 @@ subroutine get_Mag_Biq(Ham,io,lat)
         ii=0
         do i=0,lat%ncell-1
             do j=0,Nmag-1
-                col(i*Nmag*9+j*3+1)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+2)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+3)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+4)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+5)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+6)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+7)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+8)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+9)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+1)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+2)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+3)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+4)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+5)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+6)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+7)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+8)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+9)=i*Nmag*3+j*3+3
                 ii=ii+9
             enddo
         enddo
@@ -125,15 +125,15 @@ subroutine get_Mag_Biq(Ham,io,lat)
         ii=0
         do i=0,lat%ncell-1
             do j=0,Nmag-1
-                col(i*Nmag*9+j*3+1)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+2)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+3)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+4)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+5)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+6)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+7)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+8)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+9)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+1)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+2)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+3)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+4)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+5)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+6)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+7)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+8)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+9)=i*Nmag*3+j*3+3
                 ii=ii+9
             enddo
         enddo
