@@ -56,6 +56,7 @@ subroutine get_Mag_Biq(Ham,io,lat)
     integer         :: i,j,ii
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
         Nmag=lat%nmag
@@ -121,6 +122,7 @@ subroutine get_Mag_Biq(Ham,io,lat)
                 ii=ii+9
             enddo
         enddo
+
         Call mat(1)%init(dim_mat,nnz,row,col,val)
         ii=0
         do i=0,lat%ncell-1
