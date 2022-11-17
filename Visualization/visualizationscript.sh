@@ -12,11 +12,13 @@ echo ""
 # usage examples of -s|--states option:
 # ./visualizationScript.sh -s "(start 25 50 75 end)"
 # ./visualizationScript.sh -s "(start $(seq 25 25 75) end)"
+# ./visualizationScript.sh -s "(start  end)" -os
 
 xcut=false
 cutpos_y=0
 s_option=false
 os=false
+resolution=1000 # default resolution
 while [ -n "$1" ]
 do
     case "$1" in
@@ -40,6 +42,10 @@ do
         ;;
     -os) # output files have the input sates as suffixes
         os=true
+        ;;
+    -r | --resolution)
+        resolution=$2
+        echo "changed default resolution (1000x1000) to ${2}x${2}"
     esac
     shift
 done
@@ -55,14 +61,16 @@ posz_max=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail 
 
 if [ $xcut == true ]
 then
-loc_x=$(echo "$posx_min  $posx_max" | gawk '{print -($2-$1)/2}')
+loc_x=$(echo "$posx_min  $posx_max" | gawk '{print -($2+$1)/2}')
 loc_y=$(echo "$loc_x  $cutpos_y" | gawk '{print -1.5*sqrt(2*$1*$1)+$2}')
 loc_z=0
 else
-loc_x=$(echo "$posx_min $posx_max" | gawk '{print -($2-$1)/2}')
-loc_y=$(echo "$posy_min $posy_max" | gawk '{print ($2-$1)/2}')
+loc_x=$(echo "$posx_min $posx_max" | gawk '{print -($2+$1)/2}')
+loc_y=$(echo "$posy_min $posy_max" | gawk '{print ($2+$1)/2}')
+width=$(echo "$posx_min $posx_max" | gawk '{print ($2-$1)/2}')
+height=$(echo "$posy_min $posy_max" | gawk '{print ($2-$1)/2}')
 totalheight=$(cat positions.dat | gawk '{print $3}' | LC_ALL=C sort -k 1 -g | tail -n 1)
-loc_z=$(echo "$loc_x  $loc_y  $totalheight" | gawk '{print 1.5*sqrt($1*$1+$2*$2+$3*$3)}')
+loc_z=$(echo "$width  $height  $totalheight" | gawk '{print 1.5*sqrt($1*$1+$2*$2+$3*$3)}')
 fi
 
 if [ ! -d "Visualization" ]
@@ -106,6 +114,7 @@ gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_
 else
 gsed -i "/camera {/{n;s/.*/location < $loc_x, $loc_y, $loc_z >\nlook_at  < $loc_x, $loc_y, 0 > /}" povrayscript.pov
 fi
+gsed -i "/light_source {/{n;s/.*/        <$loc_x, $loc_y, 25>  \/\/ Location of the source in < x, y, z > /}" povrayscript.pov
 
 if [ $os == true ]
 then
@@ -123,7 +132,7 @@ gsed -i "$ s/#include .*/#include \"position_magnetization_$state.dat\"/g" povra
 ##############
 echo "generating picture for state: " $state
 echo "image number:" ${image_num[$i]}
-povray -w1000 -h1000 povrayscript.pov Output_File_Name=spinstructure_${image_num[$i]}.png &> /dev/null
+povray -w${resolution} -h${resolution} povrayscript.pov Output_File_Name=spinstructure_${image_num[$i]}.png &> /dev/null
 let i++
 
 done
