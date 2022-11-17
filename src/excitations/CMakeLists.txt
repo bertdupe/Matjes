@@ -11,4 +11,5 @@ src/excitations/exc_t_heaviside.f90
 src/excitations/exc_t_rampe.f90
 src/excitations/exc_t_algebraic.f90
 src/excitations/exc_t_phasor.f90
+src/excitations/excitation_from_file.f90
 )

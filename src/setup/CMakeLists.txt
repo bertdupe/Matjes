@@ -7,6 +7,7 @@ src/setup/order_lattice.f90
 src/setup/setup_DM.f90
 src/setup/setup-simu.f90
 src/setup/setup_4spin.f90
+src/setup/setup_3spin.f90
 src/setup/setup_neighbor_pair.f90
 src/setup/neighbor_type.f90
 src/setup/Table_dist.f90

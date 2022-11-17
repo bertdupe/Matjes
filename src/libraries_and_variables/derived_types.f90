@@ -43,6 +43,8 @@ type io_parameter
      integer :: io_frequency=100
 ! calculate topological charged
     logical :: calc_topo=.true.
+! calculate correlations
+    logical :: calc_correlations=.true.
 contains
     procedure :: bcast => io_parameter_bcast
 end type io_parameter

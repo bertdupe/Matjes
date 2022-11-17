@@ -60,7 +60,7 @@ do i=1,size(sym_index)
 ! I have to take the transpose of rtest to have it written in lign again
 !
 
-    found=look_translation(rtest,transpose(areal),(/.True.,.True.,.True./),dim_lat)
+    found=look_translation(rtest,transpose(areal),(/.true.,.true.,.true./),dim_lat,tol_sym=this%tol_sym)
 
     if (found) then
        number_sym=number_sym+1
@@ -89,54 +89,69 @@ end subroutine get_latt_sym
 ! find the linear combination so that (P.(R.rho)-R) must be 0
 ! Continue until there are no symmetry operation left
 !
-subroutine get_pt_sym(this,my_lattice,number_sym,sym_index,my_motif)
+subroutine get_pt_sym(this,my_lattice,number_sym,sym_index,my_motif,sym_translation)
 use m_vector, only : norm
-class(pt_grp_dense), intent(in) :: this
-type(lattice), intent(in)       :: my_lattice
-integer      , intent(inout)    :: number_sym,sym_index(:)
-type(t_cell) , intent(in)       :: my_motif
+class(pt_grp_dense), intent(in)   :: this
+type(lattice), intent(in)         :: my_lattice
+integer      , intent(inout)      :: number_sym
+integer,intent(inout),allocatable :: sym_index(:)
+type(t_cell) , intent(in)         :: my_motif
+real(8),intent(inout),allocatable :: sym_translation(:,:)
 !internal
-integer :: natom,i,j,i_sim,k,nattype,size_pos,ii
+integer :: natom,i,j,i_sim,k,nattype,size_pos,ii,n_at_under_type,j_atom
 integer,allocatable ::  new_index(:),mask_index(:),ind(:)
-real(kind=8) :: test_vec(3),pos(3),sym_mat(3,3),test_pos(3),translation(3)
+real(8) :: test_vec(3),pos(3),sym_mat(3,3),test_pos(3)
+integer,allocatable :: table_of_equivalence(:,:,:)
 logical :: found
 
 sym_mat=0.0d0
 natom=size(my_motif%atomic)
 allocate(new_index(number_sym),source=0)
 allocate(mask_index(number_sym),source=0)
+allocate(table_of_equivalence(3,natom,number_sym),source=0)
 
 write(output_unit,'(I4,a)') natom, ' atoms found in the unit cell'
 
-nattype=my_motif%n_attype
+nattype=my_motif%n_attype    ! number of atom type
 
+j_atom=0
 do i=1,nattype  ! loop over the number of atom type
 
    pos=my_motif%atomic(i)%position
    call my_motif%ind_attype(i,ind)
-   nattype=size(ind)
-   if ((norm(pos).lt.1.0d-8).and.(nattype.eq.1)) cycle    !the atom is at the origin so the symmetries are the symmetries of the lattice
+   n_at_under_type=size(ind)
 
-   do ii=1,size(ind)
+   if ((norm(pos).lt.this%tol_sym).and.(n_at_under_type.eq.1)) cycle    !the atom is at the origin so the symmetries are the symmetries of the lattice
+
+   do ii=1,n_at_under_type  ! loop over all the atoms of the same nature
 
       pos=my_motif%atomic(ind(ii))%position ! take a test position
+      j_atom=j_atom+1
 
-      ! loop over all the symmetries
-      do j=1,number_sym
+      do j=1,number_sym    ! loop over all the symmetries
          i_sim=sym_index(j)
          if (i_sim.eq.0) cycle  ! if the symmetry does not apply to the lattice cycle
+         table_of_equivalence(1,j_atom,i_sim)=i
+         table_of_equivalence(2,j_atom,i_sim)=ii
 
          sym_mat=this%rotmat(i_sim)%mat
          test_vec=matmul(sym_mat,pos)    ! image of the test position by the symmetry operations
 
-         do k=1,size(ind)
+         do k=1,n_at_under_type    ! check if all atoms of the same type can be found within the symmetry operation
             test_pos=my_motif%atomic(ind(k))%position
-            found=look_translation(test_vec,my_lattice%areal,my_lattice%periodic,my_lattice%dim_lat,test_pos)
-            if (found) mask_index(j)=1
+
+            found=look_translation(test_vec,my_lattice%areal,my_lattice%periodic,my_lattice%dim_lat,test_pos,tol_sym=this%tol_sym)
+
+            if (found) then
+               mask_index(j)=mask_index(j)+1
+               table_of_equivalence(3,j_atom,i_sim)=k
+               exit
+            endif
          enddo
 
       enddo
    enddo
+   mask_index=mask_index/n_at_under_type
 enddo
 
 sym_index=sym_index*mask_index
@@ -151,9 +166,23 @@ do i=1,number_sym
 enddo
 
 number_sym=j
+allocate(sym_translation(3,number_sym),source=0.0d0)
 sym_index=new_index
 write(6,'(a,I3,a)') 'space group has ',number_sym,'  symmetry operations'
 write(6,*) (this%rotmat(sym_index(j))%name,j=1,number_sym)
+
+! print the table of equivalence
+do i=1,number_sym
+   i_sim=sym_index(i)
+   if (i_sim.eq.0) cycle
+   write(6,'(/a)') '------------------------'
+   write(6,'(2a)')'symmetry operation ',this%rotmat(i_sim)%name
+   write(6,'(a)') '------------------------'
+   do j=1,natom
+      write(6,'(a,2I3,a,I3)')'atom type ',table_of_equivalence(1,j,i_sim), table_of_equivalence(2,j,i_sim), ' -> ', table_of_equivalence(3,j,i_sim)
+   enddo
+   write(6,'(a/)') '------------------------'
+enddo
 
 end subroutine get_pt_sym
 
@@ -175,10 +204,11 @@ subroutine init(this,N_sym)
 
 end subroutine
 
-subroutine load(this,index_sym,all_sym)
+subroutine load(this,index_sym,all_sym,sym_translation)
  class(pt_grp_dense), intent(inout) :: this
  class(pt_grp)      , intent(in)    :: all_sym
  integer            , intent(in)    :: index_sym(:)
+ real(8)            , intent(in)    :: sym_translation(:,:)
 
  integer :: i,j
  logical :: if_file
@@ -239,6 +269,7 @@ integer :: i,j
         do j=1,3
             write(io_sym,'(3(f14.10,3x))') this%rotmat(i)%mat(j,:)
         enddo
+        write(io_sym,'(3(f14.10,3x))') this%rotmat(i)%translation
     enddo
 
     call close_file('symmetries.out',io_sym)
@@ -265,6 +296,7 @@ subroutine read_sym(this,fname)
         do j=1,3
             read(io_sym,*) this%rotmat(i)%mat(j,:)
         enddo
+        read(io_sym,*) this%rotmat(i)%translation
     enddo
 
     call close_file(fname,io_sym)
@@ -296,7 +328,7 @@ subroutine get_all_symetries(this,N,out)
 
           found=.false.
           do k=1,fin
-             if (all(abs(tmp_mat-tmp_op%rotmat(k)%mat).lt.1.0d-6)) then
+             if (all(abs(tmp_mat-tmp_op%rotmat(k)%mat).lt.this%tol_sym)) then
                 found=.true.
                 exit
              endif

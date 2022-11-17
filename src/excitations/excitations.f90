@@ -43,6 +43,7 @@ subroutine read_all_excitations(fname,excitations)
     logical             :: has_exc
 
     write(output_unit,'(//A)') "Start excitation setup routine."
+    Nexc=-1
 
     open(newunit=io,file=fname)
     Call check_excitation_io(io,fname,has_exc)
@@ -61,7 +62,7 @@ subroutine read_all_excitations(fname,excitations)
     Call read_excitation_io(io,fname,io_exc)
 
     close(io)
-    Nexc=0
+
     if(allocated(io_exc)) Nexc=size(io_exc) 
     if(Nexc==0)then
         !no excitations inserted
@@ -157,7 +158,7 @@ subroutine read_all_excitations(fname,excitations)
 end subroutine 
 
 subroutine update_exc(time,lat,dat)
-    !routine which updated all order-parameters for which an exciatation in dat is specified
+    !routine which updated all order-parameters for which an excitation in dat is specified
     real(8), intent(in)                     :: time
     type(lattice), intent(inout)            :: lat
     type(excitation_combined),intent(in)    :: dat
@@ -166,6 +167,7 @@ subroutine update_exc(time,lat,dat)
     real(8) :: r(3)                                 !local position
     real(8) :: shape_t(maxval(dim_modes_inner)+1)   !prefactor defined by the time (constant in space)
     real(8) :: shape_r(2)                           !prefactor for spatial dependence
+    real(8),allocatable ::offset_int(:,:),offset(:)
     !help indices
     integer :: op       !index for considered operator as in lattice
     integer :: dim_mode !dimension of considered mode
@@ -186,6 +188,9 @@ subroutine update_exc(time,lat,dat)
         i_t=dat%exc(j)%int_shape_t
         op=dat%exc(j)%op
         dim_mode=dim_modes_inner(op)
+        allocate(offset_int(dim_mode,size(dat%position,2)),source=0.0d0)
+        allocate(offset(dim_mode),source=0.0d0)
+        if (allocated(dat%shape_r(i_r)%offset)) offset_int=dat%shape_r(i_r)%offset
         
         !get time-shape 
         shape_t(1:dim_mode)=dat%shape_t(i_t)%get_shape(time)
@@ -196,8 +201,11 @@ subroutine update_exc(time,lat,dat)
         do i=1,size(dat%position,2)
             r=dat%position(:,i)
             shape_r(:) = dat%shape_r(i_r)%shape_r(r)
-            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) * shape_r(1) * cos(shape_t(dim_mode+1)+shape_r(2))
+            offset     = offset_int(:,i)
+            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) *( shape_r(1) * cos(shape_t(dim_mode+1)+shape_r(2)) + offset(:))
         enddo
+
+        deallocate(offset_int,offset)
     enddo
     nullify(opvec)
 end subroutine

@@ -2,7 +2,9 @@ module m_exc_r
 use m_type_lattice, only: dim_modes_inner,op_name_to_int
 use m_constants
 use m_laguerre_interface
+use m_excitation_from_file
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
+use m_convert
 
 private
 public  ::  read_excitation_shape_r, excitation_shape_r
@@ -14,6 +16,7 @@ type excitation_shape_r
     integer                              :: l=0, p=0 ! for Laguerre-Gauss
     ! integer                              :: m=0, n=0 ! for Hermite-Gauss
     real(8)                              :: width_0, wavelength ! for Laguerre-Gauss, width of the beam at its waist and wavelength
+    real(8),allocatable                  :: offset(:,:)
     procedure(int_shape_r), pointer,pass :: shape_r=>shape_r_plane
     procedure(int_print_r), pointer,pass :: print_r=>print_r_plane
 contains
@@ -48,10 +51,11 @@ subroutine read_excitation_shape_r(io,fname,shape_r)
     logical                     :: success
     integer                     :: nread
     integer                     :: stat
-    type(excitation_shape_r)       :: io_exc
-    integer                     :: i
+    type(excitation_shape_r)    :: io_exc
+    integer                     :: i,N_exc,j
 
 
+    N_exc=-1
     inquire(io,opened=success)
     if(.not.success)then
         write(error_unit,'(A)') "Error reading the excitation shape_r"
@@ -89,11 +93,12 @@ subroutine read_excitation_shape_r(io,fname,shape_r)
         do i=1,Nread+1
             backspace(io)
         enddo
+
         allocate(shape_r(nread))
         do i=1,Nread
-            read(io,'(a)',iostat=stat) str
-            Call shape_r(i)%read_string(str,success)
-            if(.not.success) ERROR STOP "PROGRAMMING MISTAKE, THIS SHOULD ALWAYS WORK"
+           read(io,'(a)',iostat=stat) str
+           Call shape_r(i)%read_string(str,success)
+           if(.not.success) ERROR STOP "PROGRAMMING MISTAKE, THIS SHOULD ALWAYS WORK"
         enddo
     else
         write(error_unit,'(2/A/A/)') "WARNING, specified excitation_shape_r, but no excitation_shape_r are found", "CHECK INPUT"
@@ -110,6 +115,7 @@ subroutine read_string(this,string,success)
 
     character(len=100)                      :: dummy_name
     character(len=100)                      :: shape_r_name
+    character(len=100)                      :: file_name
     integer                                 :: size_value
     integer                                 :: pos
     integer                                 :: Nreal
@@ -121,6 +127,8 @@ subroutine read_string(this,string,success)
     if(stat/=0) return
 
     this%name=trim(dummy_name)
+
+    write(*,*) dummy_name, shape_r_name
 
     select case(trim(shape_r_name))
     case('plane')
@@ -161,6 +169,12 @@ subroutine read_string(this,string,success)
         this%wavelength = c * period
         this%shape_r => shape_r_laguerre_gauss_By
         this%print_r => print_r_laguerre_gauss_By
+    case('file')
+        Nreal=0
+        file_name=convert(trim(dummy_name),'_',trim(shape_r_name))
+        call read_excitation_from_file(file_name,this%offset)
+        this%shape_r => shape_r_file
+        this%print_r => print_r_file
     case default
         write(error_unit,'(A)') "Error reading excitation_shape_r"
         write(error_unit,'(2A)') "shape_r identifier not implemented (second entry):", trim(shape_r_name)
@@ -324,7 +338,6 @@ subroutine print_r_laguerre_gauss(this,io)
     write(io,'(9X,A,F16.8,A)')  "Wavelength (lambda) : ",this%wavelength," nm"
 end subroutine
 
-
 function shape_r_laguerre_gauss_Bx(this,R)result(shape_r)
     class(excitation_shape_r),intent(in)    :: this
     real(8), intent(in)                     :: R(3)
@@ -471,5 +484,29 @@ function convert_cyl2cart(v1, phi)result(v2)
 
     v2(5:6) = v1(5:6)
 end function
+
+function shape_r_file(this,R) result(shape_r)
+    class(excitation_shape_r),intent(in)    :: this
+    real(8), intent(in)                     :: R(3)
+    real(8)                                 :: shape_r(2)
+
+    shape_r=0.0d0
+
+end function
+
+subroutine print_r_file(this,io)
+    class(excitation_shape_r),intent(in)    :: this
+    integer,intent(in)                      :: io
+
+    integer :: N,i
+    character(len=30) :: form
+
+    N=size(this%offset,2)
+    form=convert('(',3,'(f12.8,2X))')
+    do i=1,N
+       write(io,form) this%offset(:,i)
+    enddo
+
+end subroutine
 
 end module

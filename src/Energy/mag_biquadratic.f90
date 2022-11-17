@@ -14,6 +14,7 @@ subroutine read_Mag_Biq_input(io_param,fname,io)
     type(io_H_Mag_Biq),intent(out)  :: io
 
     Call get_parameter(io_param,fname,'M_biq',io%pair,io%is_set)
+    Call get_parameter(io_param,fname,'c_H_Mbiq',io%c_H_Mbiq)
 end subroutine
 
 subroutine get_Mag_Biq(Ham,io,lat)
@@ -55,6 +56,7 @@ subroutine get_Mag_Biq(Ham,io,lat)
     integer         :: i,j,ii
 
     if(io%is_set)then
+        write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N_atpair=size(io%pair)
         Nmag=lat%nmag
@@ -70,7 +72,7 @@ subroutine get_Mag_Biq(Ham,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                Biq=-io%pair(i_atpair)%val(i_dist)
+                Biq=io%pair(i_atpair)%val(i_dist)
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_pair=i_pair+1
@@ -84,6 +86,7 @@ subroutine get_Mag_Biq(Ham,io,lat)
                     do i=1,9
                         Htmp(ind_ham(i,1),ind_ham(i,2))=Biq
                     end do
+                    Htmp=io%c_H_Mbiq*Htmp
                     connect_bnd(2)=neigh%ishell(i_pair)
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
@@ -107,31 +110,32 @@ subroutine get_Mag_Biq(Ham,io,lat)
         ii=0
         do i=0,lat%ncell-1
             do j=0,Nmag-1
-                col(i*Nmag*9+j*3+1)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+2)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+3)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+4)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+5)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+6)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+7)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+8)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+9)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+1)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+2)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+3)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+4)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+5)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+6)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+7)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+8)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+9)=i*Nmag*3+j*3+3
                 ii=ii+9
             enddo
         enddo
+
         Call mat(1)%init(dim_mat,nnz,row,col,val)
         ii=0
         do i=0,lat%ncell-1
             do j=0,Nmag-1
-                col(i*Nmag*9+j*3+1)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+2)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+3)=i*Nmag*3+j*3+1
-                col(i*Nmag*9+j*3+4)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+5)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+6)=i*Nmag*3+j*3+2
-                col(i*Nmag*9+j*3+7)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+8)=i*Nmag*3+j*3+3
-                col(i*Nmag*9+j*3+9)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+1)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+2)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+3)=i*Nmag*3+j*3+1
+                col(i*Nmag*9+j*9+4)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+5)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+6)=i*Nmag*3+j*3+2
+                col(i*Nmag*9+j*9+7)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+8)=i*Nmag*3+j*3+3
+                col(i*Nmag*9+j*9+9)=i*Nmag*3+j*3+3
                 ii=ii+9
             enddo
         enddo

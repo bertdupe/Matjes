@@ -17,11 +17,6 @@ integer  :: io_input
 
 io_input=open_file_read('input')
 
-! mpi variables
-!call get_parameter(io_input,'input','ghost',i_ghost)
-!call get_parameter(io_input,'input','algo_mpi',i_ghost)
-!call get_parameter(io_input,'input','nRepProc',nRepProc)
-
 ! io variables
 call get_parameter(io_input,'input','gra_fft',io_simu%io_fft_Xstruct)
 call get_parameter(io_input,'input','gra_ft_Ham',io_simu%io_fft_Ham)
@@ -39,6 +34,7 @@ call get_parameter(io_input,'input','Field_Distrib',io_simu%io_Field_Distrib)
 call get_parameter(io_input,'input','Forces',io_simu%io_Force)
 call get_parameter(io_input,'input','tracker',io_simu%io_tracker)
 call get_parameter(io_input,'input','calc_topo',io_simu%calc_topo)
+call get_parameter(io_input,'input','calc_correlations',io_simu%calc_correlations)
 
 call close_file('input',io_input)
 

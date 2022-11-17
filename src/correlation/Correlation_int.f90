@@ -1,4 +1,24 @@
-module m_Corre
+module m_correlation_int
+use m_correlation_base
+use m_io_files_utils
+use m_io_utils
+use iso_fortran_env, only: int64,output_unit
+implicit none
+
+private
+public :: corre_int,Correlation
+
+type,extends(corre_base) :: corre_int
+
+    contains
+
+    procedure :: read_options
+
+end type
+
+
+
+
 
 interface Correlation
    module procedure Correlations
@@ -7,6 +27,72 @@ interface Correlation
 end interface Correlation
 
 contains
+
+
+subroutine read_options(this)
+   class(corre_int), intent(inout)  :: this
+
+   integer :: io_in,correlation_number
+   character(len=100) :: correlation_descriptor
+
+   io_in=open_file_read('input')
+   call get_parameter(io_in,'input','correlation_number',correlation_number)
+   call get_parameter(io_in,'input','correlation_descriptor',correlation_descriptor)
+   call close_file('input',io_in)
+
+   this%get_correlation => auto_correlation
+
+   write(*,*) correlation_number,trim(correlation_descriptor)
+
+   stop
+
+
+
+end subroutine read_options
+
+
+
+pure subroutine auto_correlation(data,t,tprime,chunk,r)
+   real(8),intent(in)            :: data(:)
+   integer,intent(in)            :: t,tprime,chunk(:)
+   real(8),intent(out)           :: r(:)
+
+
+   integer :: i,N_data
+   real(8) :: ave,norm
+
+   r=0.0d0
+
+   N_data=size(data)
+
+   ave=sum(data(1:tprime))/tprime
+   norm=sum((data(1:tprime)-ave)**2)
+
+   if (norm.lt.1.0d-8) return
+
+
+   do i=1,tprime
+      r=r+(data(i)-ave)*(data(i+t)-ave)
+   enddo
+   r=r/norm
+
+
+end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ! ===============================================================
 ! calculate the correlation length
 ! written by Lukas Deuchler
@@ -128,4 +214,4 @@ contains
 
        end function autocorre_2d
 
-        end module m_Corre
+end module m_correlation_int

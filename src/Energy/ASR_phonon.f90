@@ -173,14 +173,14 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                        vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
                        do k=1,my_symmetries%n_sym
-                          call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                          call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
                           if (found_sym) exit
                        enddo
 
                        symop=my_symmetries%rotmat(k)%mat
                        name_sym=my_symmetries%rotmat(k)%name
 
-                       call rotate_exchange(F_rot,F_tens,symop)
+                       call rotate_force(F_rot,F_tens,symop)
 
                        Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=io%c_ASR*F_rot
                     endif
@@ -215,14 +215,14 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     if (allocated(io%pair_tensor)) then
                        vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
                        do k=1,my_symmetries%n_sym
-                          call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym)
+                          call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
                           if (found_sym) exit
                        enddo
 
                        symop=my_symmetries%rotmat(k)%mat
                        name_sym=my_symmetries%rotmat(k)%name
 
-                       call rotate_exchange(F_rot,F_tens,symop)
+                       call rotate_force(F_rot,F_tens,symop)
 
                        Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=io%c_ASR*F_rot
                     endif

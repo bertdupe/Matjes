@@ -2,42 +2,63 @@ module m_random_base
 use m_io_files_utils
 use m_convert
 use, intrinsic :: iso_fortran_env, only : error_unit,output_unit
+use mpi_basic
+#ifdef CPP_MPI
+use mpi
+#endif
 implicit none
 
 private
 public :: ranbase
 
 type, abstract :: ranbase
-    real(8),allocatable   :: x(:)      ! variable containing all the random numbers
-    integer               :: N         ! number of random numbers to be generated
-    logical               :: print = .false.   ! print out the numbers
+    real(8),allocatable          :: x(:)      ! variable containing all the random numbers
+    integer                      :: N         ! number of random numbers to be generated
+    logical                      :: print = .false.   ! print out the numbers
+    character(len=30)            :: name='uniform'
+    real(8)                      :: mean=0.0d0        ! random numbers are generated with a mean value (by default 0,5 so mean*[0,1])
+    real(8)                      :: sigma=1.0d0       ! spread of generated numbers
+    real(8)                      :: max_rnd_val=1.0d0
+    real(8)                      :: min_rnd_val=0.0d0
+    logical                      :: is_set = .false.
+
 contains
     ! defered type
-    procedure(int_seed),deferred          :: init_seed
-    procedure(int_getx),deferred          :: get_list
-    procedure(int_destroy),deferred       :: destroy
-    procedure(int_gextra_list),deferred   :: get_extract_list
-    procedure(int_rw_option),deferred     :: read_option
+    procedure(int_seed),deferred                   :: init_seed
+    procedure(int_getx),deferred                   :: get_list
+    procedure(int_destroy),deferred                :: destroy
+    procedure(int_gextra_list),deferred            :: get_extract_list
+    procedure(int_rw_option),deferred              :: read_option
+    procedure(int_rand_get),deferred               :: rand_get
+
     ! base function
     procedure, NON_OVERRIDABLE     :: init_base
     procedure, NON_OVERRIDABLE     :: print_base
     procedure, NON_OVERRIDABLE     :: extract_list
     procedure, NON_OVERRIDABLE     :: extract_size
+    procedure, NON_OVERRIDABLE     :: bcast_val
+    procedure, NON_OVERRIDABLE     :: set
 end type
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 abstract interface
 
-    subroutine int_seed(this)
+    subroutine int_rand_get(this,r)
        import ranbase
-       class(ranbase), intent(in)     :: this
+       class(ranbase), intent(inout)   :: this
+       real(kind=8)  , intent(out)     :: r
     end subroutine
 
-    subroutine int_getx(this,a,b)
+    subroutine int_seed(this)
+       import ranbase
+       class(ranbase), intent(inout)     :: this
+    end subroutine
+
+    subroutine int_getx(this,kt)
        import ranbase
        class(ranbase), intent(inout)  :: this
-       real(8),intent(in)             :: a,b
+       real(8), intent(in)            :: kt
     end subroutine
 
     subroutine int_destroy(this)
@@ -45,11 +66,10 @@ abstract interface
        class(ranbase), intent(in)     :: this
     end subroutine
 
-    subroutine int_gextra_list(this,a,b,resu)
+    subroutine int_gextra_list(this,resu)
        import ranbase
-       class(ranbase), intent(inout)  :: this
-       real(8),intent(in)             :: a,b
-       real(8),intent(inout)          :: resu(:)
+       class(ranbase), intent(inout)      :: this
+       real(8),intent(inout)              :: resu(:)
     end subroutine
 
     subroutine int_rw_option(this)
@@ -61,6 +81,21 @@ end interface
 
 
 contains
+
+subroutine set(this,mean,sigma,max_rnd_val,min_rnd_val)
+    class(ranbase),intent(inout) :: this
+    real(8), intent(in),optional :: mean,sigma,max_rnd_val,min_rnd_val
+
+
+    if (present(mean)) this%mean=mean
+    if (present(sigma)) this%sigma=sigma
+    if (present(max_rnd_val)) this%sigma=max_rnd_val
+    if (present(min_rnd_val)) this%sigma=min_rnd_val
+
+    write(output_unit,'(/a,2x,10a)') "parameter for random number generator:",this%name
+    write(output_unit,'(4(a,x,f10.8,x)/)') "mean", this%mean, "sigma", this%sigma, "max_rnd_val", this%max_rnd_val, "min_rnd_val", this%min_rnd_val
+
+end subroutine
 
 subroutine extract_list(this,x)
     class(ranbase),intent(in)    :: this
@@ -109,6 +144,22 @@ subroutine print_base(this,tag)
     enddo
     call close_file(fname,io_out)
 
+end subroutine
+
+
+subroutine bcast_val(this,comm)
+    class(ranbase),intent(inout)    ::  this
+    type(mpi_type),intent(in)       ::  comm
+
+    integer     ::  ierr
+
+#ifdef CPP_MPI
+
+Call MPI_Bcast(this%x , this%N , MPI_REAL8 , comm%mas , comm%com ,ierr)
+
+#else
+    continue
+#endif
 end subroutine
 
 end module

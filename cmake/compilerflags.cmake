@@ -1,3 +1,16 @@
+#check the different include directories
+message("Search for include directory")
+if (DEFINED ENV{LD_LIBRARY_PATH})
+      message("LD_LIBRARY_PATH environment variable found and compiling with it.")
+      set(LD_LIB $ENV{LD_LIBRARY_PATH})
+      string(REPLACE ":" " -I" LD_LIBRARY_PATH ${LD_LIB})
+   elseif(DEFINED $LD_LIBRARY_PATH)
+      message("LD_LIBRARY_PATH environment variable set by use to: ${LD_LIBRARY_PATH} ")
+   else()
+      message("default LD_LIBRARY_PATH selected: /usr/local/include")
+      set(LD_LIBRARY_PATH "/usr/local/include")
+endif()
+ 
 #cmake file to set compiler flags for some of the known compilers
 if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
     message("Intel Fortran detected")
@@ -55,7 +68,7 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
    message("g++ detected")
    set(CMAKE_CXX_FLAGS "-fopenmp ${CMAKE_CXX_FLAGS}")   #add here general lines
    set(CMAKE_CXX_FLAGS_RELEASE "-O3 ${CMAKE_CXX_FLAGS_RELEASE}")
-   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -I/usr/local/include -L/usr/local/lib -lgsl -lgslcblas")
+   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -I${LD_LIBRARY_PATH}")
 
     if(USE_OPENMP)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
@@ -73,7 +86,7 @@ endif()
 if(${CMAKE_C_COMPILER_ID} MATCHES "GNU")
    message("gcc detected")
    set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS_RELEASE}")
-   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -I/usr/local/include -L/usr/local/lib -lgsl -lgslcblas")
+   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -I${LD_LIBRARY_PATH}")
 
     if(${COMPOP} STREQUAL "check")
         set(CMAKE_C_FLAGS_DEBUG "-O0 -g -Wall ${CMAKE_C_FLAGS_DEBUG}")

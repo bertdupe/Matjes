@@ -15,7 +15,8 @@ subroutine read_D_input(io_param,fname,io)
     type(io_H_D),intent(out)        :: io
 
     Call get_parameter(io_param,fname,'magnetic_D',io%trip,io%is_set) 
-    Call get_parameter(io_param,fname,'magnetic_D_fft',io%fft) 
+    Call get_parameter(io_param,fname,'magnetic_D_fft',io%fft)
+    Call get_parameter(io_param,fname,'c_H_D',io%c_H_D)
 end subroutine
 
 
@@ -86,7 +87,7 @@ subroutine get_exchange_D(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                Hmag=-io%trip(i_attrip)%val(i_dist)  !flip sign corresponding to previous implementation
+                Hmag=io%trip(i_attrip)%val(i_dist)
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1
@@ -109,6 +110,8 @@ subroutine get_exchange_D(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                         Htmp(offset_mag(1)+2,offset_mag(2)+1)=-DMI(3) * Hmag
                         Htmp(offset_mag(1)+1,offset_mag(2)+3)=-DMI(2) * Hmag
                         Htmp(offset_mag(1)+3,offset_mag(2)+2)=-DMI(1) * Hmag
+
+                        Htmp=io%c_H_D*Htmp
 
                         Call get_coo(Htmp,val_tmp,ind_tmp)
 

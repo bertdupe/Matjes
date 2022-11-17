@@ -5,52 +5,40 @@ use m_propagator
 use m_eval_BTeff
 use m_update_time
 use m_solver_order
+use m_basic_types, only : torque
 
 abstract interface
 
-!    function propagator_old(B,damping,mode,size_B)result(propagator)
-!      integer, intent(in) :: size_B
-!      real(kind=8), intent(in) :: B(:),damping,mode(:)
-!      real(kind=8) :: propagator(size_B)
-!    end function 
-
-    subroutine propagator(B,damping,M,Mout)
+    subroutine propagator(B,damping,M,Mout,SOT)
+        import torque
         real(8),intent(in)                  ::  damping
+        type(torque),intent(in)             ::  SOT
         real(8),intent(in),contiguous       ::  M(:,:),B(:,:)
         real(8),intent(inout),contiguous    ::  Mout(:,:)
     end subroutine
 
-!    function integrator_old(Mode_t,D_Mode,BT,dt,size_mode) result(integrator)
-!      integer, intent(in) :: size_mode
-!      real(kind=8), intent(in) :: Mode_t(:),D_Mode(:),BT(:),dt
-!      real(kind=8) :: integrator(size_mode)
-!    end function 
 
-    function integrator(m,Dmag_int,dt)result(Mout)
-        real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:)
+    function integrator(m,Dmag_int,DTmag_int,dt)result(Mout)
+        real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:),DTmag_int(:,:)
         real(8),intent(in)              ::  dt
         real(8),allocatable             ::  Mout(:,:)
     end function
 
 
-    subroutine temperature_field(kt,damping,mode,BT,DT,size_BT)
-      integer, intent(in) :: size_BT
-      real(kind=8), intent(in) :: kt,mode(:),damping
-      real(kind=8), intent(inout) :: BT(:)
-      real(kind=8), intent(inout) :: DT(:)
+    subroutine temperature_field(is_set,kt,damping,mode,DT,random_numbers)
+      logical, intent(in) :: is_set
+      real(kind=8), intent(in) :: mode(:,:),damping,random_numbers(:,:),kt
+      real(kind=8), intent(out) :: DT(:,:)
     end subroutine temperature_field
 
 end interface
 
-!procedure (propagator_old), pointer, protected :: get_propagator_field_old=>null()
 procedure (propagator), pointer, protected :: get_propagator_field=>null()
 procedure (integrator), pointer, protected :: get_integrator_field=>null()
-!procedure (integrator_old), pointer, protected :: get_integrator_field_old=>null()
 procedure (temperature_field), pointer, protected :: get_temperature_field=>null()
 
 private
 public :: select_propagator,get_propagator_field,get_integrator_field,get_temperature_field
-!public :: get_propagator_field_old,get_integrator_field_old
 
 contains
 
@@ -79,13 +67,11 @@ select case (integtype)
   case (1)
 
     get_propagator_field => LLG
-!    get_propagator_field_old => LLG_old
     get_integrator_field => euler
-!    get_integrator_field_old => euler_old
 
     N_loop=1
 
-    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
+    get_temperature_field => langevin_bath
 
     call get_butcher_explicit(N_loop)
 
@@ -96,13 +82,11 @@ select case (integtype)
   case (2)
 
     get_propagator_field => LLG
-!    get_propagator_field_old => LLG_old
     get_integrator_field => euler
-!    get_integrator_field_old => euler_old
 
     N_loop=2
 
-    if (kt.gt.1.0d-7) get_temperature_field => langevin_bath
+    get_temperature_field => langevin_bath
 
     call get_butcher_explicit(N_loop)
 
@@ -127,9 +111,7 @@ select case (integtype)
 !-----------------------------------------------
   case (4)
     get_propagator_field => LLG
-!    get_propagator_field_old => LLG_old
     get_integrator_field => euler
-!    get_integrator_field_old => euler_old
 
     N_loop=4
     call get_parameter(io,'input','N_order',N_loop)

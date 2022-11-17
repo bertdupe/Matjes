@@ -16,9 +16,9 @@ end interface check_rotate_matrix
 
 contains
 
-   subroutine check_RM_angaxisin(theta,rotation_axis,bound_input,vec)
+   subroutine check_RM_angaxisin(theta,rotation_axis,bound_input,vec,tol_sym)
    real(8), intent(inout) :: theta
-   real(8), intent(in)    :: rotation_axis(3),bound_input(3),vec(3)
+   real(8), intent(in)    :: rotation_axis(3),bound_input(3),vec(3),tol_sym
 
    real(8) :: u(3),rot_mat(3,3),vec_tmp(3)
 
@@ -28,13 +28,13 @@ contains
 
    vec_tmp=matmul(rot_mat,bound_input)
 
-   if (norm(vec_tmp-vec).gt.1.0d-5) STOP 'angle not correct in check_rotate_matrix'
+   if (norm(vec_tmp-vec).gt.tol_sym) STOP 'angle not correct in check_rotate_matrix'
 
    end subroutine
 
-   subroutine check_RM_matin_boolout(rotmat,bound_input,vec,found)
+   subroutine check_RM_matin_boolout(rotmat,bound_input,vec,found,tol_sym)
    logical, intent(out)   :: found
-   real(8), intent(in)    :: rotmat(3,3),bound_input(3),vec(3)
+   real(8), intent(in)    :: rotmat(3,3),bound_input(3),vec(3),tol_sym
 
    real(8) :: vec_tmp(3)
 
@@ -42,7 +42,7 @@ contains
 
    vec_tmp=matmul(rotmat,bound_input)
 
-   if (norm(vec_tmp-vec).lt.1.0d-5) found=.true.
+   if (norm(vec_tmp-vec).lt.tol_sym) found=.true.
 
    end subroutine
 

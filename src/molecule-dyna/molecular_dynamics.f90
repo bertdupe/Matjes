@@ -24,7 +24,7 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,H,comm)
        write(output_unit,'(a)') 'entering into the molecular dynamics routines'
        if(comm%Np>1)then
           write(error_unit,'(//A)') "WARNING, running Molecular dynamics with MPI parallelization which is not implemented."
-          write(error_unit,'(A)')   "         Only one thead will to anything."
+          write(error_unit,'(A)')   "         Only one thread will to anything."
        endif
        Call molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    endif
@@ -102,7 +102,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    integer,allocatable ::  Q_neigh(:,:)
    real(8) :: time = 0.0d0
    real(8) :: ldc(3)  !Langevin dynamics coefficients
-	class(ranbase), allocatable :: thermal_noise
+class(ranbase), allocatable :: thermal_noise
 
    ! prepare the matrices for integration
 
@@ -204,9 +204,9 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
     !!!! Prepare Q_neigh for topological neighbor calculation
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call user_info(6,time,'topological operators',.false.)
+    call user_info(output_unit,time,'topological operators',.false.)
     Call neighbor_Q(my_lattice,Q_neigh)
-    call user_info(6,time,'done',.true.)
+    call user_info(output_unit,time,'done',.true.)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! initialize the random number in case of thermal noise
@@ -225,7 +225,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
     E_kinetic=0.5d0*sum(masses_3*V_1**2)/real(N_cell,8)/convf_v**2 !convert to eV
     Eold=E_potential+E_kinetic
 
-    write(6,'(a,3(2x,E20.12E3))') 'Initial potential, kinetic and Total Energy (eV)',E_potential,E_kinetic,Eold
+    write(output_unit,'(a,3(2x,E20.12E3))') 'Initial potential, kinetic and Total Energy (eV)',E_potential,E_kinetic,Eold
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! do we use the update timestep
@@ -307,8 +307,8 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
                 Call write_config(tag,lat_1)
 
 !                call write_netcdf('test',lat_1,real_time)
-                write(6,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
-                write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
+                write(output_unit,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
+                write(output_unit,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
             endif
 
             Write(io_results,'(I6,21(E20.12E3,2x),E20.12E3)') j,real_time,E_total, &
@@ -318,8 +318,8 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
             if (io_simu%io_Force)& !call forces(tag,lat_1%ordpar%all_l_modes,my_lattice%dim_mode,my_lattice%areal)
                 & ERROR STOP "FORCES HAVE TO BE REIMPLEMENTED"
 
-            write(6,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
-            write(6,'(a,2x,I8,2x,E20.12E3,/)') 'step and time (in fs)',j,real_time+timestep_int
+            write(output_unit,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
+            write(output_unit,'(a,2x,I8,2x,E20.12E3,/)') 'step and time (in fs)',j,real_time+timestep_int
         endif
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!

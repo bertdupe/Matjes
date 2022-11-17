@@ -310,8 +310,10 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
         pair_ind(5,i)=ind3(pair_ind(5,i))
     enddo
 
-    if(present(diff_vec))then
-        if(allocated(diff_vec)) deallocate(diff_vec)
+! TODO
+! this part creates a bug with compiled with debugging flags - no idea why
+    if (present(diff_vec)) then
+        if (allocated(diff_vec)) deallocate(diff_vec)
         allocate(diff_vec(3,Npair))
         do i=1,Npair
             diff_vec(:,i)=atpos2(:,pair_ind(2,i))-atpos1(:,pair_ind(1,i))+matmul(pair_ind(3:5,i),lat%areal)

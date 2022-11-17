@@ -1,107 +1,60 @@
 module m_propagator
 use m_constants, only : hbar
-use m_vector, only : cross,norm
+use m_vector, only : cross,norm,cross_NM
+use m_basic_types, only : torque
 implicit none
 
 private
-public :: LLG!, LLG_B,LLG_old
+public :: LLG
 
 contains
 
-! ----------------------------------------------
-! ----------------------------------------------
-! LLG equation of motion that returns the D_M
-!function LLG_old(B,damping,spini,size_B) result(llg)
-!use m_torques, only : update_DS
-!implicit none
-!integer, intent(in) :: size_B
-!real(kind=8), intent(in) :: spini(:),damping,B(:)   !,stm_field_torque
-!real(kind=8) :: LLG(size_B)
-!!dummy
-!real(kind=8) :: stepdamp(size_B),norm_S,S_norm(size_B)
-!real(kind=8) :: LLG_int(size_B)
-!
-!LLG=0.0d0
-!LLG_int=0.0d0
-!
-!norm_S=norm(spini)
-!S_norm=spini/norm_S
-!
-!stepdamp=cross(S_norm,B,1,size_b)
-!
-!LLG_int=-B-damping*stepdamp
-!
-!call update_DS(S_norm,damping,LLG_int)
-!
-!LLG=cross(S_norm,LLG_int,1,size_b)/(1+damping**2)
-!
-!end function 
 
-
-subroutine LLG(B,damping,M,Mout)
+subroutine LLG(B,damping,M,Mout,SOT)
     use m_vector, only: normalize
     !do the LLG step from data provided in large contiguous array (reshaping to (3,Nsite*Nmag))
     real(8),intent(in)                  ::  damping
+!    real(8),intent(in)                  ::  P_current(:,:),FL_SOT,DL_SOT
+    type(torque),intent(in)             ::  SOT
     real(8),intent(in),contiguous       ::  M(:,:),B(:,:)
     real(8),intent(inout),contiguous    ::  Mout(:,:)
 
     !local data
     real(8)     ::  M_norm(size(M,1),size(M,2))
     real(8)     ::  LLG_int(size(M,1),size(M,2))
+    real(8)     ::  SOT_int(size(M,1),size(M,2)),STT_int(size(M,1),size(M,2))
+    real(8)     ::  P_current(size(M,1),size(M,2))
+    integer     ::  i
+
 
     if(size(M,1)/=3.or.size(B,1)/=3.or.size(mout,1)/=3) ERROR STOP "LLG INPUT NEEDS TO BE 3-vector"
 
     M_norm=M
     Call normalize(M_norm)
-    Call cross_new(M_norm,B,LLG_int)
+
+    ! normal equation of motion
+    Call cross_NM(M_norm,B,LLG_int)
     LLG_int=-B-damping*LLG_int
-    Call cross_new(M_norm,LLG_int,Mout)
-    Mout=Mout/(1.0+damping*damping)
+    Call cross_NM(M_norm,LLG_int,Mout)
 
-    !ADD EXTERNAL TORQUES IF NECESSARY
+    Mout=Mout/(1.0d0+damping*damping)
+
+    !part that gets the Torques
+    !Spin Orbit torques (depends on the polarization of the injected current)
+    if (SOT%is_set) then
+       do i=1,size(M,2)
+          P_current(:,i)=SOT%polarization
+       enddo
+       Call cross_NM(M_norm,P_current,LLG_int)
+       LLG_int=-SOT%FL_damp*P_current-SOT%DL_damp*LLG_int
+       Call cross_NM(M_norm,LLG_int,SOT_int)
+       Mout=Mout+SOT_int
+    endif
+
+
+    ! Spin transfer torque (depends on the gradient of M)
+
+
 end subroutine
-
-!help routine for LLG_new
-pure subroutine cross_new(vec1,vec2,vec_out)
-    real(8),intent(in)      ::  vec1(:,:)
-    real(8),intent(in)      ::  vec2(:,:)
-    real(8),intent(out)     ::  vec_out(size(vec1,1),size(vec1,2))
-
-    integer                 ::  i,Nvec
-    Nvec=size(vec1,2)
-    do i=1,Nvec
-        vec_out(1,i)=vec1(2,i)*vec2(3,i)-vec1(3,i)*vec2(2,i)
-        vec_out(2,i)=vec1(3,i)*vec2(1,i)-vec1(1,i)*vec2(3,i)
-        vec_out(3,i)=vec1(1,i)*vec2(2,i)-vec1(2,i)*vec2(1,i)
-    enddo
-end subroutine
-
-
-!! ----------------------------------------------
-!! ----------------------------------------------
-!! LLG equation of motion that returns the B used in MxB
-!function LLG_B(B,damping,spini,size_B)
-!use m_torques, only : update_B
-!implicit none
-!integer, intent(in) :: size_B
-!real(kind=8), intent(in) :: spini(:),damping,B(:)   !,stm_field_torque
-!real(kind=8) :: LLG_B(size_B)
-!!dummy
-!real(kind=8) :: stepdamp(size_B),norm_S,S_norm(size_B)
-!
-!LLG_B=0.0d0
-!
-!norm_S=norm(spini)
-!S_norm=spini/norm_S
-!
-!stepdamp=cross(S_norm,B,1,size_b)
-!
-!LLG_B=-B-damping*stepdamp
-!
-!call update_B(S_norm,damping,LLG_B)
-!
-!LLG_B=LLG_B/(1+damping**2)
-!
-!end function LLG_B
 
 end module m_propagator

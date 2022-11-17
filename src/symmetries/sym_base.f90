@@ -11,6 +11,7 @@ public :: pt_grp
 type,extends(symop), abstract :: pt_grp
    type(symop),allocatable :: rotmat(:)
    integer                 :: n_sym=0
+   real(8)                 :: tol_sym=1.0d-6
 
  contains
    procedure(init_init),deferred :: init
@@ -25,6 +26,7 @@ type,extends(symop), abstract :: pt_grp
 
    procedure,NON_OVERRIDABLE   :: init_base
    procedure,NON_OVERRIDABLE   :: load_base
+   procedure,NON_OVERRIDABLE   :: read_test
 end type
 
 
@@ -36,11 +38,12 @@ abstract interface
         integer      ,intent(in)        :: N_sym
     end subroutine
 
-   subroutine init_load(this,index_sym,all_sym)
+   subroutine init_load(this,index_sym,all_sym,sym_translation)
         import pt_grp
         class(pt_grp),intent(inout)     :: this
         class(pt_grp),intent(in)        :: all_sym
         integer      ,intent(in)        :: index_sym(:)
+        real(8)      ,intent(in)        :: sym_translation(:,:)
     end subroutine
 
    function apply(this,i,u) result(v)
@@ -67,14 +70,16 @@ abstract interface
         logical      ,intent(in)       :: periodic(:)
     end subroutine
 
-    subroutine pt_sym(this,my_lattice,number_sym,sym_index,my_motif)
+    subroutine pt_sym(this,my_lattice,number_sym,sym_index,my_motif,sym_translation)
         use m_derived_types, only : t_cell
         use m_type_lattice , only : lattice
         import pt_grp
-        class(pt_grp),intent(in)     :: this
-        type(lattice), intent(in)    :: my_lattice
-        integer      , intent(inout) :: number_sym,sym_index(:)
-        type(t_cell) ,intent(in)     :: my_motif
+        class(pt_grp),intent(in)          :: this
+        type(lattice), intent(in)         :: my_lattice
+        integer      , intent(inout)      :: number_sym
+        integer,intent(inout),allocatable :: sym_index(:)
+        type(t_cell) ,intent(in)          :: my_motif
+        real(8),intent(inout),allocatable :: sym_translation(:,:)
     end subroutine
 
     subroutine rw_sym(this)
@@ -87,6 +92,12 @@ abstract interface
         class(pt_grp),intent(inout)    :: this
         character(len=*),intent(in)    :: fname
     end subroutine
+
+!    subroutine rd_test(this,test)
+!        import pt_grp
+!        class(pt_grp),intent(inout)    :: this
+!        logical      ,intent(out)      :: test
+!    end subroutine
 
     subroutine load_all(this,N,out)
         import pt_grp
@@ -105,7 +116,21 @@ end interface
 contains
 
 
+subroutine read_test(this,test)
+    use m_io_files_utils
+    class(pt_grp)     , intent(inout) :: this
+    logical           , intent(out)   :: test
 
+    inquire(file='symmetries.in',exist=test)
+    if (test) then
+       write(6,'(a)') 'getting symmetries from file'
+       call this%read_sym('symmetries.in')
+       call this%write_sym()
+    else
+       write(6,'(a)') 'symmetries.in not found - calculating symmetries'
+    endif
+
+end subroutine
 
 subroutine init_base(this)
 class(pt_grp),intent(out) :: this
