@@ -37,6 +37,7 @@ contains
     procedure, NON_OVERRIDABLE     :: extract_list
     procedure, NON_OVERRIDABLE     :: extract_size
     procedure, NON_OVERRIDABLE     :: bcast_val
+    procedure, NON_OVERRIDABLE     :: set
 end type
 
 
@@ -80,6 +81,21 @@ end interface
 
 
 contains
+
+subroutine set(this,mean,sigma,max_rnd_val,min_rnd_val)
+    class(ranbase),intent(inout) :: this
+    real(8), intent(in),optional :: mean,sigma,max_rnd_val,min_rnd_val
+
+
+    if (present(mean)) this%mean=mean
+    if (present(sigma)) this%sigma=sigma
+    if (present(max_rnd_val)) this%sigma=max_rnd_val
+    if (present(min_rnd_val)) this%sigma=min_rnd_val
+
+   ! write(output_unit,'(/a,2x,10a)') "parameter for random number generator:",this%name
+  !  write(output_unit,'(4(a,x,f10.8,x)/)') "mean", this%mean, "sigma", this%sigma, "max_rnd_val", this%max_rnd_val, "min_rnd_val", this%min_rnd_val
+
+end subroutine
 
 subroutine extract_list(this,x)
     class(ranbase),intent(in)    :: this

@@ -1,5 +1,8 @@
 module m_correlation_int
 use m_correlation_base
+use m_io_files_utils
+use m_io_utils
+use iso_fortran_env, only: int64,output_unit
 implicit none
 
 private
@@ -8,7 +11,8 @@ public :: corre_int,Correlation
 type,extends(corre_base) :: corre_int
 
     contains
-    procedure :: get_correlation
+
+    procedure :: read_options
 
 end type
 
@@ -24,10 +28,34 @@ end interface Correlation
 
 contains
 
-subroutine get_correlation(this,t,tprime,r)
-   class(corre_int),intent(in)   :: this
-   integer,intent(in)            :: t,tprime
-   real(8),intent(out)           :: r
+
+subroutine read_options(this)
+   class(corre_int), intent(inout)  :: this
+
+   integer :: io_in,correlation_number
+   character(len=100) :: correlation_descriptor
+
+   io_in=open_file_read('input')
+   call get_parameter(io_in,'input','correlation_number',correlation_number)
+   call get_parameter(io_in,'input','correlation_descriptor',correlation_descriptor)
+   call close_file('input',io_in)
+
+   this%get_correlation => auto_correlation
+
+   write(*,*) correlation_number,trim(correlation_descriptor)
+
+   stop
+
+
+
+end subroutine read_options
+
+
+
+pure subroutine auto_correlation(data,t,tprime,chunk,r)
+   real(8),intent(in)            :: data(:)
+   integer,intent(in)            :: t,tprime,chunk(:)
+   real(8),intent(out)           :: r(:)
 
 
    integer :: i,N_data
@@ -35,17 +63,16 @@ subroutine get_correlation(this,t,tprime,r)
 
    r=0.0d0
 
-   N_data=size(this%data)
-   if (N_data.lt.t+tprime) stop "dimensions problem with the correlation"
+   N_data=size(data)
 
-   ave=sum(this%data(1:tprime))/tprime
-   norm=sum((this%data(1:tprime)-ave)**2)
+   ave=sum(data(1:tprime))/tprime
+   norm=sum((data(1:tprime)-ave)**2)
 
    if (norm.lt.1.0d-8) return
 
 
    do i=1,tprime
-      r=r+(this%data(i)-ave)*(this%data(i-t)-ave)
+      r=r+(data(i)-ave)*(data(i+t)-ave)
    enddo
    r=r/norm
 

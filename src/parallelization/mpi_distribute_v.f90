@@ -1,6 +1,7 @@
 module mpi_distrib_v
 use mpi_basic
 use m_parallelization_io
+use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 
 implicit none
 
@@ -31,6 +32,9 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
 
     call rw_param_paral(com_outer,com_inner,user_def,com_in)
 
+    ! in case there is nothing to parallelize
+    if ((.not.user_def).and.(N.eq.0)) return
+
     if (user_def) then
         ! user-defined parallelization
         if (com_outer%Np*com_inner%Np.gt.com_in%Np) Stop 'wrong number of processors required'
@@ -50,7 +54,9 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     else
 
         ! automatic parallelization
+        ! if the number of entries are greater than the number of processors
         if(N.ge.com_in%NP)then
+            ! two level parallelization between inner and outer
             Call com_outer%init(com_in)
             com_outer%cnt=N/com_in%NP
             com_outer%cnt(1:modulo(N,com_in%NP))=com_outer%cnt(1:modulo(N,com_in%NP))+1
@@ -61,6 +67,7 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
             Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
             Call com_inner%set(mpi_comm_tmp)
         else
+            ! non-uniform distribution of the entries on all the procs
             div=(com_in%Np-1)/N+1
             color=com_in%id/div
             Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
@@ -75,6 +82,11 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
             com_outer%displ=[(i-1,i=1,com_outer%Np)]
         endif
     endif
+
+    write(output_unit,'(/a,I4)') 'Number of entries to parallelize ',N
+    if (com_inner%ismas) write(output_unit,'(a,I4)') 'number of processor on the inner communicator ',com_inner%Np
+    write(output_unit,'(a,I4)') 'MPI ranks ', com_inner%Id
+
 #else
     com_inner=com_in
     Call com_outer%init(com_in)
