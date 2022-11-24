@@ -109,7 +109,6 @@ subroutine get_neighbors(neigh,atid,neighval_in,lat,success)
         atpos2(:,i)=lat%cell%atomic(id2(i))%position
     enddo
     !get all neighbor connections(pair_ind,Nshell) and the distances
-
     Call get_neigh_distances(atpos1, atpos2, neighval, lat, pairs, Nshell, distance, neigh%diff_vec,success_int)
     if(present(success)) success=success_int
     if(.not.success_int)then
@@ -211,6 +210,7 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
     integer                 :: orig_ind !original index of considerer connection
     integer                 :: multi(5) !size of each index part
     integer                 :: prod_multi(5) !size of each index part
+    real(8),allocatable     ::  diff_vec_int(:,:)
 
     if(present(success)) success=.true.
     ii=0
@@ -313,11 +313,12 @@ subroutine get_neigh_distances(atpos1,atpos2,neighval,lat,pair_ind,N_shell,dist_
 ! TODO
 ! this part creates a bug with compiled with debugging flags - no idea why
     if (present(diff_vec)) then
-        if (allocated(diff_vec)) deallocate(diff_vec)
-        allocate(diff_vec(3,Npair))
+        allocate(diff_vec_int(3,Npair),source=0.0d0)
         do i=1,Npair
-            diff_vec(:,i)=atpos2(:,pair_ind(2,i))-atpos1(:,pair_ind(1,i))+matmul(pair_ind(3:5,i),lat%areal)
+            diff_vec_int(:,i)=atpos2(:,pair_ind(2,i))-atpos1(:,pair_ind(1,i))+matmul(pair_ind(3:5,i),lat%areal)
         enddo
+        if (allocated(diff_vec)) deallocate(diff_vec)
+        allocate(diff_vec(3,Npair),source=diff_vec_int)
     endif
 
 end subroutine

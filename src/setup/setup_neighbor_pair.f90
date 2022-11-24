@@ -41,7 +41,7 @@ subroutine get_pair_dat_M(lat,at_type,neigh_in,pair_dat)
     integer     :: bnd(2)
 
     !neighbor parameters
-    real(8)                 :: distance(1)
+    real(8),allocatable     :: distance(:)
     integer,allocatable     :: pairs(:,:)
     integer,allocatable     :: Nshell(:)
     real(8),allocatable     :: diff_vec(:,:) !difference vector between each shell (3,1:number shells) 
@@ -49,6 +49,7 @@ subroutine get_pair_dat_M(lat,at_type,neigh_in,pair_dat)
     N_attype=size(at_type)
     N_neigh=size(neigh_in)
     neigh=neigh_in+1    !plus 1 to take care for onsite term
+    allocate(distance(size(neigh)),source=0.0d0)
 
     !initial checks
     if(any(at_type>lat%cell%N_attype))then
@@ -71,14 +72,17 @@ subroutine get_pair_dat_M(lat,at_type,neigh_in,pair_dat)
     allocate(pair_dat(N_attype))
     do i_attype=1,N_attype
         Nat=Nat_type(i_attype)
+
         allocate(atid_local,source=atid(sum(Nat_type(:i_attype-1))+1:sum(Nat_type(:i_attype))))
         allocate(atpos1(3,Nat),atpos2(3,Nat),source=0.0d0)
+
         do iat=1,Nat
             atpos1(:,iat)=lat%cell%atomic(atid_local(iat))%position
         enddo
         atpos2=atpos1
         !get all neighbor connections(pair_ind,Nshell) and the distances
         Call get_neigh_distances(atpos1, atpos2, neigh, lat, pairs, Nshell, distance, diff_vec) ![2] because onsite would be [1]
+
         !sort the pairs to be in order of atom types and diff_vec angle
         allocate(pair_dat(i_attype)%Npair_at(N_neigh*Nat),source=0)
         do i_neigh=1,N_neigh
@@ -122,7 +126,7 @@ subroutine get_pair_dat_U(lat,at_type,neigh_in,pair_dat)
     integer     :: bnd(2)
 
     !neighbor parameters
-    real(8)                 :: distance(1)
+    real(8),allocatable     :: distance(:)
     integer,allocatable     :: pairs(:,:)
     integer,allocatable     :: Nshell(:)
     real(8),allocatable     :: diff_vec(:,:) !difference vector between each shell (3,1:number shells)
@@ -130,6 +134,7 @@ subroutine get_pair_dat_U(lat,at_type,neigh_in,pair_dat)
     N_attype=size(at_type)
     N_neigh=size(neigh_in)
     neigh=neigh_in+1    !plus 1 to take care for onsite term
+    allocate(distance(size(neigh)),source=0.0d0)
 
     !initial checks
     if(any(at_type>lat%cell%N_attype))then
