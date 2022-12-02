@@ -146,7 +146,14 @@ subroutine print_positions(lat,time)
     !print position of all magnetic atoms
     if(lat%nmag>0)then
         Call lat%cell%ind_mag_all(ind)
-        Call print_pos_ind (lat, ind, 'positions.dat')
+        Call print_pos_ind (lat, ind, 'positions_magnetic.dat')
+        deallocate(ind)
+    endif
+
+    !print position of all phonons
+    if(lat%nph>0)then
+        Call lat%cell%ind_Z_all(ind)
+        Call print_pos_ind (lat, ind, 'positions_phonons.dat')
         deallocate(ind)
     endif
     call user_info(output_unit,time,'Finished printing atomic positions',.false.)

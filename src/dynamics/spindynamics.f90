@@ -359,7 +359,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 if (io_simu%io_Beff) call print_Beff(tag,Beff_v)
 
                 if (io_simu%io_tracker)then
-                    ERROR STOP "plot_tracking is not implemented with the new lattce and Hamiltonian"
+                    ERROR STOP "plot_tracking is not implemented with the new lattice and Hamiltonian"
                     !call plot_tracking(j/io_simu%io_frequency,lat_1,Hams)
                 endif
 

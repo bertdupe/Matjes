@@ -25,7 +25,7 @@ subroutine get_pair_dat_M(lat,at_type,neigh_in,pair_dat)
     type(lattice),intent(in)                    :: lat
     integer,intent(in)                          :: neigh_in(:)  !wanted neighbors (1=nearest, 2=next nearest,etc...)
     integer,intent(in)                          :: at_type(:)   !atom type indices for which the same-type interaction is to be found
-    type(pair_dat_t),allocatable,intent(inout)  :: pair_dat(:)  !output information
+    type(pair_dat_t),allocatable,intent(inout)  :: pair_dat(:)  !output information position of neighbours in internal coord (1: at_type 2:at_type 3:i 4:j 5:k)
 
     real(8),allocatable     :: atpos1(:,:),atpos2(:,:)
 
@@ -79,6 +79,7 @@ subroutine get_pair_dat_M(lat,at_type,neigh_in,pair_dat)
         do iat=1,Nat
             atpos1(:,iat)=lat%cell%atomic(atid_local(iat))%position
         enddo
+
         atpos2=atpos1
         !get all neighbor connections(pair_ind,Nshell) and the distances
         Call get_neigh_distances(atpos1, atpos2, neigh, lat, pairs, Nshell, distance, diff_vec) ![2] because onsite would be [1]

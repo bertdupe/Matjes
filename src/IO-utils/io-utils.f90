@@ -253,7 +253,7 @@ character(len=100) :: rw_format
 
 N(1:3)=lat%dim_lat
 
-write(rw_format,'( "(", I4, "E24.16,2x)" )') lat%M%dim_mode
+write(rw_format,'( "(", I4, "E24.16,2x)" )') lat%M%dim_mode ! have all the modes of the unit cell on one line
 
 do i_z=1,N(3)
   do i_y=1,N(2)
@@ -280,7 +280,9 @@ type(order_par), intent(in) :: order
 !#Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
 character(len=100) :: rw_format
 
-write(rw_format,'( "(", I4, "f14.8,2x)" )') order%dim_mode
+write(rw_format,'( "(", I4, "f14.8,2x)" )') order%dim_mode ! this is to have the all the order parameter of a unit cell on a line
+!write(rw_format,'( "(", I4, "f14.8,2x)" )') 3   ! one order parameter per line.
+
 write(io,rw_format) order%all_modes
 
 end subroutine
