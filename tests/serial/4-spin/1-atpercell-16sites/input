@@ -1,0 +1,95 @@
+# FeIr111
+simulation magnet-dynamics # metropolis minimize_infdamp #
+H_ext 0.0 0.0 0.0d-3
+E_ext 0.0 0.0 0.0 # V/nm
+
+#mag_dip_use .T.
+#mag_dip_fft .T.
+#mag_dip_period_cut 5 5  1
+
+#Hamiltonian_fft_mode 3
+
+#M_biq
+#1 1 1 -0.2d-3 #between atoms 1 and 1, shell 1, amplitude in eV
+
+M_4spin
+1 -1.0d-3 #atom type 1, amplitude in eV
+
+magnetic_J
+1 1 1 1.0d-7
+
+#magnetic_J
+#1 1 1 5.7d-3     #between atoms 1 and 1, shell 1, amplitude in eV
+#1 1 2 -0.84d-3    
+#1 1 3 -1.45d-3    
+#1 1 4 -0.06d-3     
+#1 1 5 0.20d-3     
+#1 1 6 0.20d-3    
+#1 1 7 -0.20d-3     
+#1 1 8 0.50d-3 
+
+#magnetic_anisotropy
+#1  0.0  0.0  -0.8d-3 #atom type 1, eanx,eany,eanz in eV
+
+#magnetic_D #between atoms 1 and 1, mediated by 2, shell 1, amplitude in eV
+#1 1 2 1 1.8d-3
+
+atomtypes 2
+Fe  2.7 0.0 0.0 F #mu_s in mu_B, z*, m, phonons T/F
+Ir  0.0 0.0 0.0 F
+
+atoms 2
+Fe 0.0  0.0   0.0 #element, x y z in lattice vectors
+Ir 0.5 0.5 -0.7
+
+#writting deleting
+
+CalTheta .F.
+Energy_Distrib .F.
+gra_fft .F.
+gra_log .T.
+gra_Beff .F.
+gra_freq 1000
+gra_topo .T.
+print_Econt T
+energy_detail T
+
+# parameters of the lattice
+Periodic_log .T. .T. .F.
+Nsize 4 4 1
+alat 1.0 1.0 1.0
+lattice
+0.5 -0.86602540378 0.0
+0.5 0.86602540378 0.0
+0.0 0.0 1.0
+
+#input for the dynamic
+integration 2  (1: simple integration 2:Heun  3: SIB ) 
+timestep 0.00000001 (fs)
+duration 1 (in units of dt)
+damping 0.00
+
+#------------------------------#
+#              MC              #
+#------------------------------#
+#Tini 1.0d0 !loop on T: start with Tini, finish with Tfin and do n_Tsteps
+#Tfin 30.0d0
+n_Tsteps 1 !number of MC simulations at different T, uses Tini and Tfin
+Total_MC_Steps 100
+T_relax 10 !number of thermalization steps (will be T_relax*N)
+T_auto 5 !measure steps occur every T_auto autocorrelation steps
+tracker .F. !tracks skyrmions
+ising .F. !Ising model: only up and down orientations
+do_fluct .T. !for fluctuations
+fluct_direction 0.0 1.0 0.0
+cone 3.1415926535897931     
+restart .F.
+underrelaxation .F.
+overrelaxation .F.
+sphere_samp .T.
+equi_samp  .F.
+print_relax .F.
+Cor_log  .F.
+n_sizerelax  1
+n_relaxation 100
+#restart_MC_steps  0
