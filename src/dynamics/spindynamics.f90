@@ -242,9 +242,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             Edy=0.0d0
             dt=timestep_int/real(N_loop)
 
-            call random_numbers%set(sigma=sqrt(io_dyn%damping*kT*dt*hbar))
-            call random_numbers%get_list(kt)
-            call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3)
+            if (kt*io_dyn%damping.gt.1.0d-6) then
+                call random_numbers%set(sigma=sqrt(io_dyn%damping*kT*dt*hbar))
+                call random_numbers%get_list(kt)
+                call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3)
+            endif
 
         endif
 
