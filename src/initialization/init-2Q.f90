@@ -61,21 +61,21 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
 
 
 	
-    qp=(q1+q2)/sqrt(3.0d0)*0.5d0
+    qp=(q1+q2)*0.5d0
     qm=(q1-q2)*0.5d0
 	write(*,*)'Q1=',q1,' Q2=',q2,' QM=',qp,' QK=', qm
     Call get_pos_vec(lat,dim_mode,ordname,pos)
     Nsite=size(pos)/3
     pos_3(1:3,1:Nsite)=>pos
     state_3(1:3,1:Nsite)=>state
-	write(*,*)'Warning: mx and my have been swapped in 2Q state formula.'
+	!write(*,*)'Warning: mx and my have been swapped in 2Q state formula.'
     do i=1,Nsite
 
         phi  =dot_product(qp,pos_3(:,i))
         theta=dot_product(qm,pos_3(:,i))
 
-        state_3(1,i)= cos(phi)*sin(theta) !sin(phi)
-        state_3(2,i)=sin(phi) ! cos(phi)*sin(theta)
+        state_3(1,i)= sin(phi)
+        state_3(2,i)=cos(phi)*sin(theta)
         state_3(3,i)=cos(phi)*cos(theta)
                  ! write(*,*)'pos_3(:,i)=',pos_3(:,i)
             	!	write(*,*)'phi=',phi

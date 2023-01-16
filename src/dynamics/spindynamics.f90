@@ -318,7 +318,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 Write(7,'(I12,17(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
                  &   norm2(Mdy),Mdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
                  &   kT/k_B,T_measured,H_int
-                call get_Torque_measure(j,Edy,Dmag_int)
+                call get_Torque_measure(j,Edy,Dmag_int,max_torque)
 
 
                 if(io_simu%io_energy_cont)then
