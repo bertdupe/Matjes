@@ -56,13 +56,13 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
     !write(*,*)'lat%astar=',lat%astar
     q1=matmul(q1,lat%astar)
     q2=matmul(q2,lat%astar)
- 	 q1=q1*qnorm
-    q2=q2*qnorm
+ 	 !q1=q1*qnorm
+    !q2=q2*qnorm
 
 
 	
-    qp=(q1+q2)*0.5d0
-    qm=(q1-q2)*0.5d0
+    qp=q1 !(q1+q2)*0.5d0
+    qm=q2 !(q1-q2)*0.5d0
 	write(*,*)'Q1=',q1,' Q2=',q2,' QM=',qp,' QK=', qm
     Call get_pos_vec(lat,dim_mode,ordname,pos)
     Nsite=size(pos)/3
@@ -74,7 +74,7 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
         phi  =dot_product(qp,pos_3(:,i))
         theta=dot_product(qm,pos_3(:,i))
 
-        state_3(1,i)= sin(phi)
+        state_3(1,i)=sin(phi)
         state_3(2,i)=cos(phi)*sin(theta)
         state_3(3,i)=cos(phi)*cos(theta)
                  ! write(*,*)'pos_3(:,i)=',pos_3(:,i)
