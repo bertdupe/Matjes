@@ -25,7 +25,7 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
     real(8),intent(in)              :: init_conf(:)
 
     real(8)         :: q1(3),q2(3),qnorm
-    real(8)         :: qp(3),qm(3)
+    real(8)         :: qk(3),qm(3)
 !    real(8)         :: qvec(3),Rq(3),Iq(3),norm,qnorm(3)
     real(8),allocatable,target :: pos(:)
 !    real(8),allocatable ::  position(:)
@@ -61,9 +61,9 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
 
 
 	
-    qp=q1 !(q1+q2)*0.5d0
+    qk=q1 !(q1+q2)*0.5d0
     qm=q2 !(q1-q2)*0.5d0
-	write(*,*)'Q1=',q1,' Q2=',q2,' QM=',qp,' QK=', qm
+	write(*,*)'Q1=',q1,' Q2=',q2,' QM=',qm,' QK=', qk
     Call get_pos_vec(lat,dim_mode,ordname,pos)
     Nsite=size(pos)/3
     pos_3(1:3,1:Nsite)=>pos
@@ -71,8 +71,8 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
 	!write(*,*)'Warning: mx and my have been swapped in 2Q state formula.'
     do i=1,Nsite
 
-        phi  =dot_product(qp,pos_3(:,i))
-        theta=dot_product(qm,pos_3(:,i))
+        phi  =dot_product(qm,pos_3(:,i))
+        theta=dot_product(qk,pos_3(:,i))
 
         state_3(1,i)=sin(phi)
         state_3(2,i)=cos(phi)*sin(theta)
