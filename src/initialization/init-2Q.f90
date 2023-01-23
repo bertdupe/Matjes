@@ -43,8 +43,8 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
     call get_parameter(io,fname,'Q1_'//ordname,3,q1)
     call get_parameter(io,fname,'Q2_'//ordname,3,q2)
     call get_parameter(io,fname,'Qnorm_'//ordname,qnorm)
-    if(norm2(q1)==0.0d0) ERROR STOP "Q1 has to differ from 0"
-    if(norm2(q2)==0.0d0) ERROR STOP "Q2 has to differ from 0"
+    !if(norm2(q1)==0.0d0) ERROR STOP "Q1 has to differ from 0"
+    !if(norm2(q2)==0.0d0) ERROR STOP "Q2 has to differ from 0"
     !write(*,*)'Warning: Q1 and Q2 should be normalized by the user for Qnorm to be their actual norm.'
     !if(qnorm>0.0d0)then
   
@@ -68,14 +68,15 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
     Nsite=size(pos)/3
     pos_3(1:3,1:Nsite)=>pos
     state_3(1:3,1:Nsite)=>state
-	!write(*,*)'Warning: mx and my have been swapped in 2Q state formula.'
+    
+	 write(*,*)'Warning: mx and my have been swapped in 2Q state formula. my=sin(phi)'
     do i=1,Nsite
 
         phi  =dot_product(qm,pos_3(:,i))
         theta=dot_product(qk,pos_3(:,i))
 
-        state_3(1,i)=sin(phi)
-        state_3(2,i)=cos(phi)*sin(theta)
+        state_3(1,i)=cos(phi)*sin(theta)
+        state_3(2,i)=sin(phi)
         state_3(3,i)=cos(phi)*cos(theta)
                  ! write(*,*)'pos_3(:,i)=',pos_3(:,i)
             	!	write(*,*)'phi=',phi
