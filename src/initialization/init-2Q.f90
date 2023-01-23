@@ -45,7 +45,7 @@ subroutine init_2Q(io,fname,lat,ordname,dim_mode,state,init_conf)
     call get_parameter(io,fname,'Qnorm_'//ordname,qnorm)
     if(norm2(q1)==0.0d0) ERROR STOP "Q1 has to differ from 0"
     if(norm2(q2)==0.0d0) ERROR STOP "Q2 has to differ from 0"
-    write(*,*)'Warning: Q1 and Q2 should be normalized by the user for Qnorm to be their actual norm.'
+    !write(*,*)'Warning: Q1 and Q2 should be normalized by the user for Qnorm to be their actual norm.'
     !if(qnorm>0.0d0)then
   
     !else
