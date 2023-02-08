@@ -141,9 +141,10 @@ END FUNCTION
 !
 FUNCTION rand_normal(this) RESULT(c)
 class(ranbase) :: this
-real(kind=8) :: mean,stdev,c,temp(2),r,theta
+real(kind=8) :: mean,stdev,c
 mean=this%mean
 stdev=this%sigma
+
 c=rand_normal_int(mean,stdev,this)
 
 END FUNCTION

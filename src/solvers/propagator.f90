@@ -34,22 +34,22 @@ subroutine LLG(B,damping,M,Mout,SOT)
 
     ! normal equation of motion
     Call cross_NM(M_norm,B,LLG_int)
-    LLG_int=-B-damping*LLG_int
+    LLG_int=B+damping*LLG_int
     Call cross_NM(M_norm,LLG_int,Mout)
 
-    Mout=Mout/(1.0d0+damping*damping)
+    Mout=-Mout/(1.0d0+damping*damping)
 
     !part that gets the Torques
     !Spin Orbit torques (depends on the polarization of the injected current)
-    if (SOT%is_set) then
-       do i=1,size(M,2)
-          P_current(:,i)=SOT%polarization
-       enddo
-       Call cross_NM(M_norm,P_current,LLG_int)
-       LLG_int=-SOT%FL_damp*P_current-SOT%DL_damp*LLG_int
-       Call cross_NM(M_norm,LLG_int,SOT_int)
-       Mout=Mout+SOT_int
-    endif
+!    if (SOT%is_set) then
+!       do i=1,size(M,2)
+!          P_current(:,i)=SOT%polarization
+!       enddo
+!       Call cross_NM(M_norm,P_current,LLG_int)
+!       LLG_int=-SOT%FL_damp*P_current-SOT%DL_damp*LLG_int
+!       Call cross_NM(M_norm,LLG_int,SOT_int)
+!       Mout=Mout+SOT_int
+!    endif
 
 
     ! Spin transfer torque (depends on the gradient of M)

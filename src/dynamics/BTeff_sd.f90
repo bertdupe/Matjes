@@ -37,10 +37,10 @@ integer :: i,Nspin
    M_norm=mode
    Call normalize(M_norm)
    call cross_NM(M_norm,BT,step_FL)
-   step_DL=-BT-damping*step_FL
+   step_DL=BT+damping*step_FL
    call cross_NM(M_norm,step_DL,DT)
 
-   DT=DT/(1.0d0+damping*damping)
+   DT=-DT/(1.0d0+damping*damping)
 
 end subroutine langevin_bath
 
