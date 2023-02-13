@@ -14,8 +14,9 @@ interface get_cols
 end interface get_cols
 
 interface dump_spinse
- module procedure dump_config_spinse
  module procedure dump_config_spinse_spin
+ module procedure dump_config_spinse_3D
+ module procedure dump_config_spinse_1D
 end interface dump_spinse
 
 interface dump_config
@@ -137,7 +138,7 @@ end subroutine dump_config_spinse_spin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local spinse files
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse(io,lat,position)
+subroutine dump_config_spinse_3D(io,lat,position)
 !    use m_derived_types
     use m_derived_types, only: lattice
     use m_constants, only : pi
@@ -166,7 +167,35 @@ subroutine dump_config_spinse(io,lat,position)
        enddo
     enddo
 
-end subroutine dump_config_spinse
+end subroutine dump_config_spinse_3D
+
+subroutine dump_config_spinse_1D(io,spin,position)
+!    use m_derived_types
+    use m_constants, only : pi
+    implicit none
+    integer, intent(in) :: io
+    real(8), intent(in) :: spin(:,:)
+    real(kind=8), intent(in)  :: position(:)
+    ! internale variables
+    Integer :: i,N,j
+    real(kind=8) :: Rc,Gc,Bc,theta,phi
+
+    N=size(spin,2)
+
+    do i=1,N
+
+        j=(i-1)*3
+
+!       call get_colors(Rc,Gc,Bc,theta,phi,lat%M%modes((i_m-1)*3+1:i_m*3,i))
+       call get_colors(Rc,Gc,Bc,theta,phi,spin(:,i))
+
+       write(io,'(8(a,f16.8),a)') 'Spin(', &
+         & theta,',',phi,',',position(j+1),',',position(j+2),',',position(j+3),',', &
+         & Rc,',',Bc,',',Gc,')'
+
+    enddo
+
+end subroutine dump_config_spinse_1D
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that dumps a 5D matrix of real numbers

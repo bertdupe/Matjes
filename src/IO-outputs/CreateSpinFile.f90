@@ -18,6 +18,7 @@ implicit none
        module procedure CreateSpinFile_usernamed_spin
        module procedure CreateSpinFile_orderpar_name
        module procedure CreateSpinFile_sig_orderpar
+       module procedure CreateSpinFile_orderpar_pos_name
   end interface
 
 private
@@ -173,6 +174,35 @@ deallocate(position)
 
 END subroutine CreateSpinFile_end
 ! ===============================================================
+
+
+
+!
+! put the position into a povray file otherwise it is really annoying
+!
+subroutine CreateSpinFile_orderpar_pos_name(my_lattice,signature)
+    use m_type_lattice, only : lattice
+    use m_lattice_position
+    implicit none
+    type(lattice), intent(in)   :: my_lattice
+    integer,intent(in)          :: signature
+
+    character(len=50) :: fname
+    real(8),allocatable ::  pos(:)
+    integer :: io
+
+    Call get_pos_mag(my_lattice,pos)
+
+    fname=convert('Povspin_pos_',signature,'.dat')
+    io=open_file_write(fname)
+    Call dump_spinse(io,my_lattice%M%modes_3,pos)
+    call close_file(fname,io)
+
+    deallocate(pos)
+
+end subroutine
+
+
 
 ! ===============================================================
       subroutine CreateSpinFile_simple_4d(name_in,spin,shape_spin)

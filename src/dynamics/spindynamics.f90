@@ -397,10 +397,13 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 endif
 
                 if(gra_log) then
+
+                    if (io_simu%io_Xstruct_pos) call CreateSpinFile(mag_lattice,tag)
                     call CreateSpinFile(tag,mag_lattice%M)
                     Call write_config(tag,mag_lattice) 
                     write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',tag
                     write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
+
                 endif
                 if(gra_topo) Call get_charge_map(tag,mag_lattice,Q_neigh)
        

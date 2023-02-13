@@ -17,7 +17,8 @@ subroutine choose_spin_serial(iomp,N_spin)
     real(8) :: Choice
     !     Choose a random spin place
     choice=get_rand_classic()
-    iomp = 1 + NINT(Choice*Dble(N_spin)-0.5d0)
+!    iomp = 1 + NINT(Choice*Dble(N_spin)-0.5d0)
+    iomp = 1 + NINT(Choice*Dble(N_spin-1))
 end subroutine choose_spin_serial
 
 end module m_choose_spin
