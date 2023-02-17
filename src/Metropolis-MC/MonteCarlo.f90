@@ -95,9 +95,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     size_collect=NT_local
     if(com_all%isMas) size_collect=NT_global
     allocate(measure(size_collect))
-    if(com_inner%ismas)then
-        allocate(thermo(size_collect))
-    endif
+    if(com_inner%ismas) allocate(thermo(size_collect))
 
     !initialize necessary things on the master thread (temperatures,Q_neighbors)
     if(com_all%ismas)then
@@ -121,12 +119,13 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     if(com_inner%ismas)  Call measure_scatterv(measure,com_outer)
 
     !intialize tracking variables (total energy, magnetization sum)
-    Call state_prop%init(lat,H,io_MC) 
+    Call state_prop%init(lat,H,io_MC)
 
     Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
     if(io_MC%do_fluct_spatial) allocate(fluct_spatial(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
 
     Do i_kT=1,NT_local
+
         Call measure_bcast(measure(i_kt),com_inner)
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
 
@@ -155,6 +154,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
         endif
 
         if(io_MC%do_fluct_spatial) call print_fluct_spatial(measure(i_kt)%N_add,measure(i_kt)%kT/k_B,fluct_spatial,com_inner) !write spatial distribution of fluctuations
+
     end do !over i_kT
 
     if(com_inner%ismas)then
