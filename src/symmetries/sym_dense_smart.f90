@@ -93,7 +93,7 @@ end subroutine get_latt_sym
 !
 subroutine get_pt_sym(this,my_lattice,number_sym,sym_index,my_motif,sym_translation)
 use m_vector, only : norm
-class(pt_grp_dense_smart), intent(in)    :: this
+class(pt_grp_dense_smart), intent(inout) :: this
 type(lattice)            , intent(in)    :: my_lattice
 integer                  , intent(inout) :: number_sym
 integer,intent(inout),allocatable        :: sym_index(:)

@@ -46,6 +46,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     use m_fluct, only: fluct_parameters,init_fluct_parameter, print_fluct_spatial, eval_fluct_spatial
     use m_mc_therm_val
     use m_work_ham_single, only: work_ham_single
+    use m_createspinfile
 
     type(lattice), intent(inout)            :: lat
     type(MC_input), intent(in)              :: io_MC        !input parameters for MonteCarlo calculation
@@ -147,6 +148,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
         if(com_inner%ismas)then
             Call therm_set(thermo(i_kt),measure(i_kt),io_MC%Cor_log,N_spin)
             if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)
+            if (io_simu%io_Xstruct_pos) call CreateSpinFile(lat,measure(i_kt)%kt/k_b)
             Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', NT_local,' local steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
 #ifdef CPP_DEBUG
             write(*,*) 'energy internal:', state_prop%E_total,' energy total:', H%energy(lat)

@@ -3,6 +3,7 @@ use m_symmetry_base
 use m_sym_dense
 use m_sym_symlib_ccp4
 use m_sym_dense_smart
+use m_spglib
 !use mpi_util ,only : mpi_type, bcast
 implicit none
 
@@ -28,6 +29,15 @@ subroutine set_sym_type(my_pt_grp)
      case(2)
        allocate(pt_grp_dense_smart::my_pt_grp)
        write(output_unit,'(//A/)') "Using the internal symmetry routines; method Melanie (smart method)"
+
+     case(3)
+       allocate(sym_spglib::my_pt_grp)
+       write(output_unit,'(//A/)') "Using the spglib symmetry libraries"
+
+     case(4)
+  !     allocate(sym_spglib::my_pt_grp)
+  !     write(output_unit,'(//A/)') "Using the spglib symmetry libraries"
+  stop "not coded yet"
 
      case default
        stop 'Symmetry mode not implemented'

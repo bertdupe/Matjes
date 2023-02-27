@@ -19,6 +19,7 @@ implicit none
        module procedure CreateSpinFile_orderpar_name
        module procedure CreateSpinFile_sig_orderpar
        module procedure CreateSpinFile_orderpar_pos_name
+       module procedure CreateSpinFile_orderpar_pos_name_int
   end interface
 
 private
@@ -180,12 +181,22 @@ END subroutine CreateSpinFile_end
 !
 ! put the position into a povray file otherwise it is really annoying
 !
+subroutine CreateSpinFile_orderpar_pos_name_int(my_lattice,signature)
+    use m_type_lattice, only : lattice
+    implicit none
+    type(lattice), intent(in)   :: my_lattice
+    integer,intent(in)          :: signature
+
+    call CreateSpinFile_orderpar_pos_name(my_lattice,real(signature,8))
+
+end subroutine
+
 subroutine CreateSpinFile_orderpar_pos_name(my_lattice,signature)
     use m_type_lattice, only : lattice
     use m_lattice_position
     implicit none
     type(lattice), intent(in)   :: my_lattice
-    integer,intent(in)          :: signature
+    real(8),intent(in)          :: signature
 
     character(len=50) :: fname
     real(8),allocatable ::  pos(:)
