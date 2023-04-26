@@ -54,6 +54,8 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_correlation_public
     use m_proba_commun
     use m_proba_base
+    use m_fit
+    use m_lattice_position
 !$  use omp_lib
     
     ! input
@@ -88,7 +90,6 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
     ! probability distribution
     type(proba_data) :: probability_distrib
-
     ! dummys
     real(8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
     real(8) :: Einitial
@@ -107,6 +108,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     integer :: io_Eout_contrib
     integer :: dim_mode !dim_mode of the iterated order parameter
     type(excitation_combined)   :: excitations
+    real(8),allocatable :: pos(:)
 
     real(8)     ::  time_init, time_final
 
@@ -197,6 +199,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
         !!! check if one needs the probability routine
         call select_sampling(probability_distrib)
+
     endif ! endif if comm%ismas
 
     Edy=H%energy(mag_lattice)
@@ -245,6 +248,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 
         !!!! take care of the probability distribution
         if (probability_distrib%is_set) call alloc_P_distrib(size(E_dist_i,1),probability_distrib%Energy,probability_distrib%Pdistrib)
+
+        !! check is something must be fitted
+
+        call get_pos_mag(mag_lattice,pos)
+        call execute_fit(pos,mag_lattice)
     endif
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -1142,7 +1142,7 @@ enddo
 
 check=check_read(nread,vname,fname)
 
-if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', string
+if (check.eq.0) write(output_unit,'(4a)') 'default value for variable ', trim(adjustl(vname)), ' is ', trim(adjustl(string))
 
 end subroutine get_character
 
