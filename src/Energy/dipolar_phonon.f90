@@ -26,6 +26,7 @@ use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_dipole
 use m_derived_types, only: lattice
 use m_lattice_position, only: get_pos_ph
+use m_constants, only : epsilon_0,qel
 implicit none
 private
 public read_dip_ph_input, get_dipolar_ph, get_dipolar_ph_fft
@@ -37,6 +38,8 @@ character(len=*),parameter  :: ham_desc="phonon dipolar"
 !epsilon_0=1.25663706212d-6  kg*m/s^2/A^2
 ! dielectric permeability of vacuum, units C**2.nm**2/eV/nm**3
 ! epsilon_0=1.41848571175905158603d-39
+
+real(8),parameter   ::  dip_pref=qel**2/epsilon_0 !we use qel^2/epsilon_0 as a prefactor in nm.eV. Then the born effective charge is the input in units of qel.
 
 contains
 
@@ -55,7 +58,7 @@ end subroutine
 
 subroutine get_dipolar_ph_fft(dip,io,lat)
     !main routine to describe the dipolar interaction using the discrete fourier transformation
-    use m_constants, only : pi,epsilon_0
+    use m_constants, only : pi
     use m_fft_H_base, only : fft_H
 !$  use omp_lib
     class(fft_H),intent(inout)              :: dip
@@ -169,7 +172,7 @@ subroutine get_dipolar_ph_fft(dip,io,lat)
             Karr(:,:,i_k)=Karr(:,:,i_k)*Zborn_prod
         enddo
         !get correct prefractor for K
-        Karr=-Karr/epsilon_0*0.5d0*0.25d0/pi
+        Karr=-Karr*dip_pref*0.5d0*0.25d0/pi
         Call dip%init_op(3*Nph,Karr,ham_desc)
     endif
 end subroutine
@@ -184,7 +187,7 @@ subroutine get_dipolar_ph(Ham,io,lat)
     use m_mode_public
     use m_setH_util, only: get_coo
     use m_neighbor_type, only: neighbors
-    use m_constants, only : pi,epsilon_0
+    use m_constants, only : pi
 
     class(t_H),intent(inout)            :: Ham  !Hamiltonian in which all contributions are added up
     type(io_H_dipole),intent(in)        :: io   !input parameters
@@ -258,7 +261,7 @@ subroutine get_dipolar_ph(Ham,io,lat)
                 ii=ii+9
             enddo
         enddo
-        val=-val/epsilon_0*0.5d0*0.25d0/pi
+        val=-val*dip_pref*0.5d0*0.25d0/pi
 
         !initialize Hamiltonian array with calculated parameters
         Call Ham%init_coo(rowind,colind,val,[Nph*3,Nph*3],"U","U",lat,2)
