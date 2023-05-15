@@ -15,6 +15,7 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_exchange_heisenberg_D, only: get_exchange_D_fft
     use m_anisotropy_heisenberg, only: get_anisotropy_fft
     use m_dipolar_magnetic, only: get_dipolar_fft
+    use m_dipolar_phonon, only: get_dipolar_ph_fft
     use m_exchange_heisenberg_general, only : get_exchange_ExchG_fft
 
     class(fft_H),allocatable,intent(out)    :: Ham_res(:)
@@ -24,7 +25,7 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(in)               :: lat
     character(len=len_desc)     :: desc=""
     integer                     :: i_H,N_ham
-    logical                     :: use_Ham(6)
+    logical                     :: use_Ham(7)
 
     use_ham(1)=H_io%J%is_set.and.H_io%J%fft
     use_ham(2)=H_io%D%is_set.and.H_io%D%fft
@@ -32,6 +33,7 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(4)=H_io%dip%is_set.and.H_io%dip%fft
     use_ham(5)=H_io%Exchten%is_set.and.H_io%Exchten%fft
     use_ham(6)=H_io%SC%is_set.and.H_io%SC%fft
+    use_ham(7)=H_io%dip_ph%is_set.and.H_io%dip_ph%fft
 
     N_ham=count(use_ham)
     if(N_ham<1) return  !nothing to do here
@@ -52,7 +54,7 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_anisotropy_fft(Ham_res(i_H),H_io%aniso,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
-    !dipolar interaction
+    !magnetic dipolar interaction
     if(use_ham(4))then
         Call get_dipolar_fft(Ham_res(i_H),H_io%dip,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
@@ -62,6 +64,13 @@ subroutine set_fft_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_exchange_ExchG_fft(Ham_res(i_H),H_io%Exchten,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
+    
+    !electric dipolar interaction
+    if(use_ham(7))then
+        Call get_dipolar_ph_fft(Ham_res(i_H),H_io%dip_ph,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    
     !spin current DMI
 !    if(use_ham(6))then
 !        Call get_coupling_SC_fft(Ham_res(i_H),H_io%SC,lat)

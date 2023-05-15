@@ -8,7 +8,7 @@ module m_dipolar_phonon
 
 !In case of periodic boundary conditions that is relatively straight-forwards, only the contributions of the periodic images of K have to be summed up to a certain cutoff.
 
-!In the case with open boundaries the case is a bit more difficult and the dimensions of M and K have to be doubled to cover all interactions by the discrete convolution.
+!In the case with open boundaries the case is a bit more difficult and the dimensions of M and K have to be doubled to cover apll interactions by the discrete convolution.
 !However, I seemingly failed to understand how exactly the enlarged K has to be constructed and implemented something of which I am not sure if it is what is described in the paper, however it seems to work and makes sense to me.
 !if K(i) corresponds to the interaction between the M at the 0-site and at the -i-site ((-N+1,...,-1,0,1,...N-1)-sites), then I implemented the K-array as
 ![K(0),K(1),...,K(N-1),0,K(-N+1),...,K(-1)], instead of what is in the paper which I am not sure I correctly understand
@@ -262,7 +262,7 @@ subroutine get_dipolar_ph(Ham,io,lat)
             enddo
         enddo
         val=-val*dip_pref*0.5d0*0.25d0/pi
-
+write(*,*)'dip_pref=',dip_pref
         !initialize Hamiltonian array with calculated parameters
         Call Ham%init_coo(rowind,colind,val,[Nph*3,Nph*3],"U","U",lat,2)
         Ham%desc=ham_desc

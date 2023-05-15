@@ -250,9 +250,13 @@ class(ranbase), allocatable :: thermal_noise
 		else
 			Call Eout_contrib_init(H,io_Eout_contrib)
 		endif
-        endif
-
-
+		!write initial energy
+		if(io_simu%io_energy_detail)then
+        	       Call Eout_contrib_write(H_res,0,real_time,my_lattice,io_Eout_contrib)
+                else
+         	       Call Eout_contrib_write(H,0,real_time,my_lattice,io_Eout_contrib)
+                endif
+        endif 
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	! initialize acceleration
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -293,6 +297,14 @@ class(ranbase), allocatable :: thermal_noise
 
       Call lat_2%u%copy_val(lat_1%u)
       call truncate(lat_1,used)
+      
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! update timestep
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!        call update_time(timestep_int,Feff_v,damping)tail 
+
+      real_time=real_time+timestep_int !increment time counter before writing real time value
 		
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !!!!!!!!!!!!!!! plotting with graphical frequency
@@ -332,25 +344,20 @@ class(ranbase), allocatable :: thermal_noise
             write(output_unit,'(a,2x,I8,2x,E20.12E3,/)') 'step and time (in fs)',j,real_time+timestep_int
             
             
-            if(io_simu%io_energy_cont)then
-                    if(io_simu%io_energy_detail)then
+        if(io_simu%io_energy_cont)then
+        	if(io_simu%io_energy_detail)then
                         Call Eout_contrib_write(H_res,j,real_time,my_lattice,io_Eout_contrib)
                     else
                         Call Eout_contrib_write(H,j,real_time,my_lattice,io_Eout_contrib)
                     endif
-
                 endif
         endif
 
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! update timestep
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!        call update_time(timestep_int,Feff_v,damping)tail 
-
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!!!!!!!!!!!!! end of a timestep
-        real_time=real_time+timestep_int !increment time counter
+
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
    enddo

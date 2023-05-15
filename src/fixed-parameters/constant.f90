@@ -18,7 +18,7 @@ real(kind=8), Parameter :: mu_B=0.0000578838180661d0
 ! dielectric permeability of vacuum, units C**2.nm**2/eV/nm**3
 ! dielectric permeability of vacuum, units C**2.m**2/J/m**3=1.0d18*C**2.nm**2/6.242d18/eV/1.0d27*nm**3
 ! dielectric permeability of vacuum, units C**2.nm**2/eV/nm**3
-real(kind=8), Parameter :: epsilon_0=1.41848571175905158603d-39
+real(kind=8), Parameter :: epsilon_0=  1.418597282673602d-39 !1.41848571175905158603d-39
 ! speed of light, units nm/fs
 real(kind=8), Parameter :: c=299.792458d0
 !      real(kind=8), Parameter :: mu_B=1.0d0
@@ -28,7 +28,7 @@ real(kind=8), Parameter :: c=299.792458d0
 real(kind=8), parameter :: hbar=6.58211928d-1
 !      real(kind=8), parameter :: hbar=1.0d0
 !electron charge in Coulomb
-real(8), parameter :: qel =1.60217657d-19
+real(8), parameter :: qel = 1.60217663d-19 !1.60217657d-19
 real(8),parameter       :: pi= 3.14159265358979323846264338327950288d0
 
 ! basic unit convert
