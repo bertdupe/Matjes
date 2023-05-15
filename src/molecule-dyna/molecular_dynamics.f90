@@ -12,11 +12,11 @@ use,intrinsic :: iso_fortran_env, only : error_unit, output_unit
 implicit none
 contains
 
-subroutine molecular_dynamics(my_lattice,io_simu,ext_param,H,comm)
+subroutine molecular_dynamics(my_lattice,io_simu,ext_param,H,H_res,comm)
    type(lattice), intent(inout)                 :: my_lattice
    type(io_parameter), intent(inout)            :: io_simu
    type(simulation_parameters), intent(inout)   :: ext_param
-   type(hamiltonian),intent(inout)              :: H
+   type(hamiltonian),intent(inout)              :: H,H_res
    type(mpi_type),intent(in)                    :: comm
 
    !molecular dynamics so far only implemented without mpi_parallelization
@@ -26,12 +26,12 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,H,comm)
           write(error_unit,'(//A)') "WARNING, running Molecular dynamics with MPI parallelization which is not implemented."
           write(error_unit,'(A)')   "         Only one thread will to anything."
        endif
-       Call molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
+       Call molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res)
    endif
 end subroutine
 
 
-subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
+subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res)
    use m_derived_types, only : lattice,io_parameter,number_different_order_parameters,simulation_parameters
    use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
    use m_constants, only : k_b,pi
@@ -59,7 +59,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    type(lattice), intent(inout)             :: my_lattice
    type(io_parameter), intent(in)           :: io_simu
    type(simulation_parameters), intent(in)  :: ext_param
-   type(hamiltonian),intent(inout)          :: H
+   type(hamiltonian),intent(inout)          :: H,H_res
    ! lattices that are used during the calculations
    type(lattice)    :: lat_1,lat_2
 
@@ -89,7 +89,8 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
 
    ! IOs
    integer :: io_results
-
+   integer :: io_Eout_contrib
+    
    ! dummys
    integer :: N_cell,duration,N_loop,Efreq,gra_freq,j,tag,i,ensemble
    real(8) :: timestep_int,h_int(3),E_int(3),dt
@@ -102,6 +103,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H)
    integer,allocatable ::  Q_neigh(:,:)
    real(8) :: time = 0.0d0
    real(8) :: ldc(3)  !Langevin dynamics coefficients
+  
 class(ranbase), allocatable :: thermal_noise
 
    ! prepare the matrices for integration
@@ -241,6 +243,14 @@ class(ranbase), allocatable :: thermal_noise
          &  '5:Ux','6:Uy','7:Uz','8:vorticity','9:vx', &
          &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T=', &
          &  '16:Epot=','17:Ek=','18:Ex','19:Ey=','20:Ez=','21:Hx','22:Hy=','23:Hz='
+         
+	if(io_simu%io_energy_cont)then
+	     	if(io_simu%io_energy_detail)then
+	     		Call Eout_contrib_init(H_res,io_Eout_contrib)
+		else
+			Call Eout_contrib_init(H,io_Eout_contrib)
+		endif
+        endif
 
 
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -320,6 +330,16 @@ class(ranbase), allocatable :: thermal_noise
 
             write(output_unit,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
             write(output_unit,'(a,2x,I8,2x,E20.12E3,/)') 'step and time (in fs)',j,real_time+timestep_int
+            
+            
+            if(io_simu%io_energy_cont)then
+                    if(io_simu%io_energy_detail)then
+                        Call Eout_contrib_write(H_res,j,real_time,my_lattice,io_Eout_contrib)
+                    else
+                        Call Eout_contrib_write(H,j,real_time,my_lattice,io_Eout_contrib)
+                    endif
+
+                endif
         endif
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -338,6 +358,7 @@ class(ranbase), allocatable :: thermal_noise
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call close_file('EM.dat',io_results)
+if(io_simu%io_energy_cont) close(io_Eout_contrib)
 
 Call lat_1%copy_val_to(my_lattice)
 

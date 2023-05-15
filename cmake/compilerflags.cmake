@@ -36,7 +36,6 @@ if (${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
 elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
     message("gfortran detected")
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-form -fimplicit-none -ffree-line-length-none -x f95-cpp-input")
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -I${LD_LIBRARY_PATH}")
     set(CMAKE_Fortran_FLAGS_RELEASE "-O3 ${CMAKE_Fortran_FLAGS_RELEASE}")
 
     if(USE_OPENMP)

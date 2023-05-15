@@ -117,7 +117,7 @@ Implicit None
     !---------------------------------
     
     if (my_simu%name == 'molecular_dynamics')then
-        call molecular_dynamics(all_lattices,io_simu,ext_param,H_comb,mpi_world)
+        call molecular_dynamics(all_lattices,io_simu,ext_param,H_comb,H_res,mpi_world)
     endif
 
     if (my_simu%name == 'wavefunc_eval')then
