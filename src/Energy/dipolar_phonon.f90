@@ -244,9 +244,11 @@ subroutine get_dipolar_ph(Ham,io,lat)
                 colind(ii:ii+8)=(j-1)*3+[1,2,3,1,2,3,1,2,3]
                 do l=1,size(supercell_vec,2)    !loop over different supercells
                     if(j==i.and.l==ind_zero) cycle  !no entry for really same site
-                    diff=pos3(:,j)-pos3(:,i)+supercell_vec(:,l)
+
+                    diff=pos3(:,j)-pos3(:,i)   +supercell_vec(:,l)  
                     diffnorm=norm2(diff)
                     diffunit=diff/diffnorm
+                    !write(*,*)'in get_dipolar_ph, for i,j=',i,',',j,' diff=',diff(:),' |Rij|=',diffunit(:), ' Rijnorm^3=',diffnorm**3 
                     tmp_val(1)=3.0d0*diffunit(1)*diffunit(1)-1.0d0     !xx
                     tmp_val(2)=3.0d0*diffunit(2)*diffunit(1)           !yx
                     tmp_val(3)=3.0d0*diffunit(3)*diffunit(1)           !zx
@@ -257,12 +259,13 @@ subroutine get_dipolar_ph(Ham,io,lat)
                     tmp_val(8)=3.0d0*diffunit(2)*diffunit(3)           !yz
                     tmp_val(9)=3.0d0*diffunit(3)*diffunit(3)-1.0d0     !zz
                     val(ii:ii+8)=val(ii:ii+8)+tmp_val/(diffnorm**3)*u_j*u_i
+                    !write(*,*)'val=',val,' tmp_val=',tmp_val
                 enddo
                 ii=ii+9
             enddo
         enddo
         val=-val*dip_pref*0.5d0*0.25d0/pi
-write(*,*)'dip_pref=',dip_pref
+	write(*,*)'l268 val=',val
         !initialize Hamiltonian array with calculated parameters
         Call Ham%init_coo(rowind,colind,val,[Nph*3,Nph*3],"U","U",lat,2)
         Ham%desc=ham_desc

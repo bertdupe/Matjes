@@ -25,7 +25,7 @@ character(len=1) :: do_norm_rx                               !< Normalize reacti
 character(len=1) :: en_zero                                  !< Level of zero energy. 'I' - initial state; 'F' - final state; 'N' - 0.0
 integer :: sample_num                                         !< Number of samples in the interpolated curve
 integer :: nim
-
+integer :: io_frequency					!<output frequency
 public
 
 contains
@@ -66,6 +66,7 @@ call get_parameter(io,fname,'vpo_dt',vpodt)
 call get_parameter(io,fname,'vpo_mass',vpomass)
 call get_parameter(io,fname,'sample_num',sample_num)
 call get_parameter(io,fname,'nim',nim)
+call get_parameter(io,fname,'gra_freq',io_frequency)
 
 call close_file(fname,io)
 

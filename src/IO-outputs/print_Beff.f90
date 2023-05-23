@@ -3,7 +3,7 @@ use m_io_files_utils
 use m_convert
 
 private
-public :: print_Beff
+public :: print_Beff, print_Feff
 
 contains
 
@@ -27,5 +27,29 @@ enddo
 call close_file(file_name,io_file)
 
 end subroutine print_Beff
+
+
+
+subroutine print_Feff(tag,B)
+implicit none
+integer, intent(in) :: tag
+real(kind=8) , intent(in) :: B(:,:)
+! internal
+integer :: shape_B(2),io_file,iomp
+character(len=50) :: file_name,form
+
+shape_B=shape(B)
+form=convert('(',shape_B(1),'(E20.12E3,2x))')
+file_name=convert('Feff_',tag,'.dat')
+io_file=open_file_write(file_name)
+
+do iomp=1,shape_B(2)
+   write(io_file,form) B(:,iomp)
+enddo
+
+call close_file(file_name,io_file)
+
+end subroutine print_Feff
+
 
 end module

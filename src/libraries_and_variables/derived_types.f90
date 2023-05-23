@@ -11,6 +11,8 @@ type io_parameter
      logical :: io_Xstruct=.false.
 ! plot the effective neighbouring field
      logical :: io_Beff=.false.
+! plot the forces
+     logical :: io_Feff=.false.
 ! plot the stochastic field
      logical :: io_Tfield=.false.
 ! plot the fourrier tranform of the spin structure (or the order parameter structure)

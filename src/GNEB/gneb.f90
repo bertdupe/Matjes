@@ -42,7 +42,7 @@ subroutine GNEB_run(my_lattice,io_simu,H)
     real(8) :: rx0(1),drx0,ene0(1),dene0(1)
     integer :: imax,i,ci,size_order,N_cell
     logical :: gra_log
-    integer :: nim
+    integer :: nim,io_frequency
     
     N_cell=my_lattice%ncell
     size_order=my_lattice%M%dim_mode

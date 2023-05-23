@@ -51,7 +51,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res)
    use m_user_info, only: user_info
    use m_FTeff_MD
    use m_vector
-
+   use m_print_Beff, only: print_Feff
    !!!!!!!!!!!!!!!!!!!!!!!
    ! arguments
    !!!!!!!!!!!!!!!!!!!!!!!
@@ -225,9 +225,9 @@ class(ranbase), allocatable :: thermal_noise
 
     E_potential=H%energy(my_lattice)/real(N_cell,8)
     E_kinetic=0.5d0*sum(masses_3*V_1**2)/real(N_cell,8)/convf_v**2 !convert to eV
-    Eold=E_potential+E_kinetic
+    Eold=E_potential+E_kinetic !energy per uc
 
-    write(output_unit,'(a,3(2x,E20.12E3))') 'Initial potential, kinetic and Total Energy (eV)',E_potential,E_kinetic,Eold
+    write(output_unit,'(a,3(2x,E20.12E3))') 'Initial potential, kinetic and Total Energy (eV/uc)',E_potential,E_kinetic,Eold
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! do we use the update timestep
@@ -255,6 +255,11 @@ class(ranbase), allocatable :: thermal_noise
         	       Call Eout_contrib_write(H_res,0,real_time,my_lattice,io_Eout_contrib)
                 else
          	       Call Eout_contrib_write(H,0,real_time,my_lattice,io_Eout_contrib)
+                endif
+                !write initial forces
+                if (io_simu%io_Feff) then
+                	Call H%get_eff_field(lat_2,Feff,5)
+                	call print_Feff(0,Feff_v)
                 endif
         endif 
 	!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -327,6 +332,10 @@ class(ranbase), allocatable :: thermal_noise
             if(gra_log) then
                 call CreateSpinFile(tag,lat_1%u)
                 Call write_config(tag,lat_1)
+            
+            !write forces
+            if (io_simu%io_Feff) call print_Feff(tag,Feff_v)
+
 
 !                call write_netcdf('test',lat_1,real_time)
                 write(output_unit,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
@@ -340,7 +349,7 @@ class(ranbase), allocatable :: thermal_noise
             if (io_simu%io_Force)& !call forces(tag,lat_1%ordpar%all_l_modes,my_lattice%dim_mode,my_lattice%areal)
                 & ERROR STOP "FORCES HAVE TO BE REIMPLEMENTED"
 
-            write(output_unit,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV) and T (K)',E_potential,E_kinetic,E_total,temperature
+            write(output_unit,'(a,4(2x,E20.12E3))') 'E_pot, E_k, E_tot (eV/uc) and T (K)',E_potential,E_kinetic,E_total,temperature
             write(output_unit,'(a,2x,I8,2x,E20.12E3,/)') 'step and time (in fs)',j,real_time+timestep_int
             
             

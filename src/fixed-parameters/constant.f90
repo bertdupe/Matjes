@@ -13,7 +13,7 @@ real(kind=8), Parameter :: k_B=0.000086173324d0
 real(kind=8), Parameter :: mu_0=1.0d0
 ! bohr magneton, units eV/T
 real(kind=8), Parameter :: mu_B=0.0000578838180661d0
-! dielectric permeability of vacuum, units C**2.s**2/kg/m**3=C**2.m**2/J/m**3 <-missing s
+! dielectric permeability of vacuum, units C**2.s**2/kg/m**3=C**2.m**2/J/m**3 
 ! real(kind=8), Parameter :: epsilon_0=8.8541878128d-12
 ! dielectric permeability of vacuum, units C**2.nm**2/eV/nm**3
 ! dielectric permeability of vacuum, units C**2.m**2/J/m**3=1.0d18*C**2.nm**2/6.242d18/eV/1.0d27*nm**3

@@ -211,11 +211,13 @@ subroutine find_path(nim,N_cell,ftol,rx,ene,dene,images,io_gneb,H,ci_out)
             force1_mode(1:dim_mode_mag,1:N_cell)=>force1(:,nim)
             fpp(nim)=sum(force1_mode*tau_i)
 
-            if(present(ci_out))then
-                call prn_gneb_progress(itr, io_gneb%itrmax, fchk, imax,'Y',ci)
-            else
-                call prn_gneb_progress(itr, io_gneb%itrmax, fchk, imax,'N',0)
-            endif
+            !if(mod(itr-1,io_gneb%io_frequency)==0)then
+		    if(present(ci_out))then
+		        call prn_gneb_progress(itr, io_gneb%itrmax, fchk, imax,'Y',ci)
+		    else
+		        call prn_gneb_progress(itr, io_gneb%itrmax, fchk, imax,'N',0)
+		    endif
+            !endif
             
             open(99,file = 'force_mep.txt', access = 'sequential', action = 'write',status = 'old',position = 'append')
             if(present(ci_out))then
