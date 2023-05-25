@@ -244,6 +244,23 @@ class(ranbase), allocatable :: thermal_noise
          &  '10:vy','11:vz','12:qeuler','13:q+','14:q-','15:T=', &
          &  '16:Epot=','17:Ek=','18:Ex','19:Ey=','20:Ez=','21:Hx','22:Hy=','23:Hz='
          
+    E_potential=H%energy(lat_1)/real(N_cell,8)
+    E_kinetic=0.5d0*sum(masses_3*V_1**2)/real(N_cell,8)/convf_v**2 !convert to eV
+    E_total=E_potential+E_kinetic
+    temperature=2.0d0*E_kinetic/3.0d0/k_b
+
+    Pdy=sum(lat_1%u%modes_3,2)/real(N_cell,8) !sums of the displacements over all atoms in unit cell
+
+    dumy=get_charge(lat_1,Q_neigh)
+    q_plus=dumy(1)/pi/4.0d0
+    q_moins=dumy(2)/pi/4.0d0
+    vortex=dumy(3:5)/3.0d0/sqrt(3.0d0)
+
+
+     Write(io_results,'(I6,21(E20.12E3,2x),E20.12E3)') 0,real_time,E_total, &
+         &   norm2(Pdy),Pdy,norm2(vortex),vortex,q_plus+q_moins,q_plus,q_moins, &
+         &   temperature,E_potential,E_kinetic,E_int,H_int
+         
 	if(io_simu%io_energy_cont)then
 	     	if(io_simu%io_energy_detail)then
 	     		Call Eout_contrib_init(H_res,io_Eout_contrib)
@@ -333,11 +350,11 @@ class(ranbase), allocatable :: thermal_noise
                 call CreateSpinFile(tag,lat_1%u)
                 Call write_config(tag,lat_1)
             
-            !write forces
-            if (io_simu%io_Feff) call print_Feff(tag,Feff_v)
+            	!write forces
+            	if (io_simu%io_Feff) call print_Feff(tag,Feff_v)
 
 
-!                call write_netcdf('test',lat_1,real_time)
+!               call write_netcdf('test',lat_1,real_time)
                 write(output_unit,'(a,3x,I10)') 'wrote phonon configuration and povray file number',tag
                 write(output_unit,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
             endif
@@ -353,14 +370,15 @@ class(ranbase), allocatable :: thermal_noise
             write(output_unit,'(a,2x,I8,2x,E20.12E3,/)') 'step and time (in fs)',j,real_time+timestep_int
             
             
-        if(io_simu%io_energy_cont)then
-        	if(io_simu%io_energy_detail)then
-                        Call Eout_contrib_write(H_res,j,real_time,my_lattice,io_Eout_contrib)
-                    else
-                        Call Eout_contrib_write(H,j,real_time,my_lattice,io_Eout_contrib)
-                    endif
-                endif
-        endif
+        	if(io_simu%io_energy_cont)then
+			if(io_simu%io_energy_detail)then
+		                Call Eout_contrib_write(H_res,j,real_time,my_lattice,io_Eout_contrib)
+		       else
+		                Call Eout_contrib_write(H,j,real_time,my_lattice,io_Eout_contrib)
+		       endif
+               
+       	 endif
+	endif
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !!!!!!!!!!!!!!! end of a timestep
