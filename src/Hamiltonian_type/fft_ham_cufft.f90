@@ -47,9 +47,10 @@ end type
 contains 
 
 
-subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
+subroutine init_shape(this,abbrev,dim_mode,periodic,dim_lat,Kbd,N_rep)
     !initializes the arrays with whose the work will be done, sets the shapes, and returns shape data necessary for construction of the operator tensor
     class(fft_H_cufft),intent(inout)  :: this
+    character(1),intent(in)     :: abbrev       !Abbreviation for order parameter (M,E,U,...) according to order_parameter_abbrev 
     integer,intent(in)          :: dim_mode
     logical,intent(in)          :: periodic(3)  !T: periodic boundary, F: open boundary
     integer,intent(in)          :: dim_lat(3)
@@ -63,7 +64,7 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
         ERROR STOP
     endif
 
-    Call this%fft_H%init_shape(dim_mode,periodic,dim_lat,Kbd,N_rep)
+    Call this%fft_H%init_shape(abbrev,dim_mode,periodic,dim_lat,Kbd,N_rep)
 
     !set order work arrays and fourier transform
     Call cuda_fft_init(this%dim_mode,this%N_rep,this%M,this%M_F,this%H,this%H_F)
@@ -240,11 +241,14 @@ subroutine set_M(this,lat)
     class(fft_H_cufft),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
 #ifdef CPP_CUDA
+    real(8),pointer,contiguous  :: M(:)
+    
 
     integer(C_int)  ::  length
 
     length=int(size(this%m_n),C_int)
-    Call this%M_internal(this%M_n,lat%M%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
+    Call lat%set_order_point(this%order,M)
+    Call this%M_internal(this%M_n,M,lat%dim_lat,this%N_rep,size(this%M_n,1))
     Call cuda_fft_set_real(length,this%M_n,this%m)
 #else
     ERROR STOP "fft_H_cufft%set_M requires CPP_CUDA"

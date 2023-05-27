@@ -283,7 +283,7 @@ subroutine init_H_mv(this,lat,Harr,H_fft)
     if(present(H_fft))then
         if(allocated(H_fft))then
             Call move_alloc(H_fft,this%H_fft)
-            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
+            Call allocate_H_fft_tmparr(this%H_fft_tmparr,H_fft,lat)
             this%NHF_total=size(this%H_fft)
             this%NHF_local=this%NHF_total
         endif
@@ -318,7 +318,7 @@ subroutine init_H_cp(this,lat,Harr,H_fft)
             do i=1,size(H_fft)
                 Call H_fft(i)%copy(this%H_fft(i))
             enddo
-            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
+            Call allocate_H_fft_tmparr(this%H_fft_tmparr,H_fft,lat)
             this%NHF_total=size(this%H_fft)
             this%NHF_local=this%NHF_total
         endif
@@ -526,5 +526,22 @@ subroutine set_work_mode(this)
     enddo
 end subroutine
 
+subroutine allocate_H_fft_tmparr(H_fft_tmparr,H_fft,lat)
+    ! Helper-routine to allocate the h_fft_tmparr with the correct maximal size 
+    use m_type_lattice, only: number_different_order_parameters
+    real(8),intent(inout),allocatable   :: H_fft_tmparr(:,:)   !temporary array for effective field from fft
+    type(lattice),intent(in)            :: lat
+    class(fft_H),intent(in)             :: H_fft(:)
+
+    logical                     :: order_mask(size(lat%dim_modes))
+    integer                     :: size1,i
+
+    do i=1,size(H_fft)
+        order_mask(H_fft(i)%order) = .true.
+    enddo
+
+    size1 = maxval(lat%dim_modes,order_mask)
+    allocate(H_fft_tmparr(size1,lat%ncell))
+end subroutine
 
 end module

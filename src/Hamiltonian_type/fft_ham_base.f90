@@ -14,17 +14,21 @@ public fft_H
 type            ::  fft_H
     private
     logical,public          :: set=.false.  !all parameters have been initialized
+    integer(C_int),public   :: order=0      !lattice order parameter index (1=M,2=E etc.)
     integer(C_int),public   :: N_rep(3)=0   !size in each dimension of each considered field
     integer(C_int),public   :: dim_mode=0   !dimension of considered operator field
     logical,public          :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
                                             ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
     character(len=len_desc)     :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
 
+
     real(C_DOUBLE),allocatable,public  ::  M_n(:,:)    !magnetization in normal-space, set by M_internal
     real(C_DOUBLE),allocatable,public  ::  H_n(:,:)    !effective field normal-space, extract by H_internal
 
     procedure(int_set_M), pointer,nopass,public    ::  M_internal => null()    !function to set internal magnetization depending on periodic/open boundaries
     procedure(int_get_H), pointer,nopass,public    ::  H_internal => null()    !function to get effective field depending on periodic/open boundaries
+
+
 contains
     !evaluation routines
     procedure,public    :: get_H            !get effective field
@@ -95,6 +99,7 @@ subroutine bcast_fft(this,comm)
     integer ::  shp(2)
 
     Call bcast(this%N_rep,comm)
+    Call bcast(this%order,comm)
     Call bcast(this%periodic,comm)
     Call bcast(this%dim_mode,comm)
     Call bcast(this%desc,comm)
@@ -121,6 +126,7 @@ subroutine mv(this,H_out)
     endif
 
     H_out%N_rep=this%N_rep
+    H_out%order=this%order
     H_out%periodic=this%periodic
     H_out%dim_mode=this%dim_mode
     H_out%desc=this%desc
@@ -142,6 +148,7 @@ subroutine copy(this,H_out)
         ERROR STOP "CANNOT COPY UNINITIALIZED FFT_H"
     endif
     H_out%N_rep=this%N_rep
+    H_out%order=this%order
     H_out%periodic=this%periodic
     H_out%dim_mode=this%dim_mode
     H_out%desc=this%desc
@@ -159,6 +166,7 @@ subroutine destroy(this)
     class(fft_H),intent(inout)     :: this
 
     this%N_rep=0
+    this%order=0
     this%set=.false.
     this%periodic=.true.
     this%dim_mode=0
@@ -188,10 +196,12 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
     endif
 end subroutine
 
-subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
+subroutine init_shape(this,abbrev,dim_mode,periodic,dim_lat,Kbd,N_rep)
     !initializes the arrays with whose the work will be done, sets the shapes, and returns shape data necessary for construction of the operator tensor
 !$  use omp_lib    
+    use m_type_lattice,only: op_abbrev_to_int
     class(fft_H),intent(inout)  :: this
+    character(1),intent(in)     :: abbrev       !Abbreviation for order parameter (M,E,U,...) according to order_parameter_abbrev 
     integer,intent(in)          :: dim_mode
     logical,intent(in)          :: periodic(3)  !T: periodic boundary, F: open boundary
     integer,intent(in)          :: dim_lat(3)
@@ -200,8 +210,11 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
 
     integer         :: i
     integer(C_int)  :: Nk_tot           !number of state considered in FT (product of N_rep)
+    integer(4)      :: tmp_order(1)
 
     N_rep=dim_lat
+    tmp_order = op_abbrev_to_int(abbrev)
+    this%order = tmp_order(1)
     !set K-boundaries for periodic boundaries
     Kbd(1,:)=[0,0,0]
     Kbd(2,:)=dim_lat-1
@@ -250,8 +263,16 @@ subroutine get_E_distrib(this,lat,Htmp,E)
     real(8),intent(inout)         ::  Htmp(:,:)
     real(8),intent(out)           ::  E(:)
 
+    !ugly implementation so that this works with all order parameters
+    !(this should be cleaned up)
+    real(8),pointer,contiguous    ::  M(:)
+    real(8),pointer,contiguous    ::  M_v(:,:)
+    
+    Call lat%set_order_point(this%order,M)
+    M_v(1:size(Htmp,1),1:size(Htmp,2)) => M
+
     Call this%get_H(lat,Htmp)
-    Htmp=Htmp*lat%M%modes_v
+    Htmp=Htmp*M_v
     E=sum(reshape(Htmp,[3,lat%Nmag*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
 end subroutine
 
@@ -261,8 +282,16 @@ subroutine get_E(this,lat,Htmp,E)
     real(8),intent(inout)         ::  Htmp(:,:)
     real(8),intent(out)           ::  E
 
+    !ugly implementation so that this works with all order parameters
+    !(this should be cleaned up)
+    real(8),pointer,contiguous    ::  M(:)
+    real(8),pointer,contiguous    ::  M_v(:,:)
+    
+    Call lat%set_order_point(this%order,M)
+    M_v(1:size(Htmp,1),1:size(Htmp,2)) => M
+
     Call this%get_H(lat,Htmp)
-    Htmp=Htmp*lat%M%modes_v
+    Htmp=Htmp*M_v
     E=sum(Htmp)
 end subroutine
 
@@ -276,8 +305,16 @@ subroutine get_E_single(this,lat,site,E)
 
     real(8)                     :: Htmp(3)
 
+    !ugly implementation so that this works with all order parameters
+    !(this should be cleaned up)
+    real(8),pointer,contiguous    ::  M(:)
+    real(8),pointer,contiguous    ::  M_3(:,:)
+    
+    Call lat%set_order_point(this%order,M)
+    M_3(1:3,1:size(M)/3) => M
+
     Call this%get_H_single(lat,site,Htmp)
-    Htmp=Htmp*lat%M%modes_3(:,site)
+    Htmp=Htmp*M_3(:,site)
     E=sum(Htmp)*2.0d0
 end subroutine
 

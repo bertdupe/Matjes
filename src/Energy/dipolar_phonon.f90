@@ -112,7 +112,7 @@ subroutine get_dipolar_ph_fft(dip,io,lat)
         alat=transpose(lat%areal)
 
         !set shape-dependent quantities of fft_H and get Kdb,N_rep
-        Call dip%init_shape(3*lat%nph,period,lat%dim_lat,Kbd,N_rep)
+        Call dip%init_shape("U",3*lat%nph,period,lat%dim_lat,Kbd,N_rep)
         Nk_tot=product(N_rep)
 
         !get positions of magnetic atoms in unit_cell
