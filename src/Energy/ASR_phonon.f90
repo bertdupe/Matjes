@@ -232,7 +232,6 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Ham_shell_pos(:,:,1)+Htmp
 
                     Call get_coo(Htmp,val_tmp,ind_tmp)
-
                     !fill Hamiltonian type
                     Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,1)
                     deallocate(val_tmp,ind_tmp)

@@ -265,7 +265,7 @@ subroutine get_dipolar_ph(Ham,io,lat)
             enddo
         enddo
         val=-val*dip_pref*0.5d0*0.25d0/pi
-	write(*,*)'l268 val=',val
+	!write(*,*)'l268 val=',val
         !initialize Hamiltonian array with calculated parameters
         Call Ham%init_coo(rowind,colind,val,[Nph*3,Nph*3],"U","U",lat,2)
         Ham%desc=ham_desc

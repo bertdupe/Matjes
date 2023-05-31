@@ -26,12 +26,12 @@ subroutine molecular_dynamics(my_lattice,io_simu,ext_param,H,H_res,comm)
           write(error_unit,'(//A)') "WARNING, running Molecular dynamics with MPI parallelization which is not implemented."
           write(error_unit,'(A)')   "         Only one thread will to anything."
        endif
-       Call molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res)
+       Call molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res,comm)
    endif
 end subroutine
 
 
-subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res)
+subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res,comm)
    use m_derived_types, only : lattice,io_parameter,number_different_order_parameters,simulation_parameters
    use m_energy_output_contribution, only:Eout_contrib_init, Eout_contrib_write
    use m_constants, only : k_b,pi
@@ -60,6 +60,7 @@ subroutine molecular_dynamics_run(my_lattice,io_simu,ext_param,H,H_res)
    type(io_parameter), intent(in)           :: io_simu
    type(simulation_parameters), intent(in)  :: ext_param
    type(hamiltonian),intent(inout)          :: H,H_res
+   type(mpi_type),intent(in)       :: comm
    ! lattices that are used during the calculations
    type(lattice)    :: lat_1,lat_2
 
@@ -378,6 +379,15 @@ class(ranbase), allocatable :: thermal_noise
 		       endif
                
        	 endif
+       	 
+       	 if (io_simu%io_Energy_Distrib)then
+                	!if(comm%Np>1) Call mag_lattice%bcast_val(comm)
+               	 if(io_simu%io_Energy_detail)then
+                    		Call write_energy_field(tag,H_res,my_lattice,1,comm%ismas) !1 for magnetic field,there is no other choice afaik?
+                	else
+                    		Call write_energy_field(tag,H    ,my_lattice,1,comm%ismas) !1 for magnetic field, 
+                	endif
+            	endif
 	endif
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
