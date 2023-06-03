@@ -440,355 +440,405 @@ end subroutine get_coeff
 
 subroutine get_H_triple(io,fname,var_name,Htriples,success)
     use m_input_H_types, only: Hr_triple,reduce_Hr_triple,Hr_triple_single
-    !always uses the same variable name, hence kept as parameter
 
-    integer, intent(in)                         :: io
-    character(len=*), intent(in)                :: fname,var_name
-    type(Hr_triple), intent(out), allocatable   :: Htriples(:)
-    logical,intent(out)                         :: success
+    integer, intent(in)                         :: io               !IO-lun of input-file
+    character(len=*), intent(in)                :: fname            !Name of input-file
+    character(len=*), intent(in)                :: var_name         !Keyword of input
+    type(Hr_triple), intent(out), allocatable   :: Htriples(:)      !Decoded input information
+    logical, intent(out)                        :: success          !Input of keyword read in and Hpairs if filled
+
     ! internal variable
     type(Hr_triple_single),allocatable   :: Htriple_tmp(:)
     type(Hr_triple), allocatable         :: Htriples_tmp(:)
     integer :: attype(3),dist
     real(8) :: val
 
-    integer :: Ntriple,Nnonzero
-    integer :: nread,i,ii,j
+    integer :: Nentry               !Number of found valid input entries
+    integer :: Nnonzero             !Number of found valid, non-zero input entries
+    integer :: Ncycle               !Number of times the read-in was cycled
+    integer :: i,ii,j
     integer :: stat
     character(len=100) :: str
 
-    nread=0
+    !Check if var_name keyword is set and set IO-unit to that line 
     Call set_pos_entry(io,fname,var_name,success)
-    if(success)then
-        success=.false.
+
+    if (.not. success ) return      !Directly return, if keyword is not found
+    success=.false.                 !No actual input read yet, reset success to false
+
+    read(io,'(a)',iostat=stat) str  !read var_name key to advance one line 
+
+    Nentry=0; Nnonzero=0; Ncycle=0
+    do 
         read(io,'(a)',iostat=stat) str
-        Ntriple=0; Nnonzero=0
-        nread=nread+1
-        do 
-            read(io,'(a)',iostat=stat) str
-            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-            read(str,*,iostat=stat) attype,dist,val
-            if (stat /= 0) exit
-            Ntriple=Ntriple+1
-            if(val/=0.0d0) Nnonzero=Nnonzero+1
-        enddo
-        if(Ntriple<1)then
-            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-#ifndef CPP_SCRIPT            
-            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
-#endif
-            return
+        if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+
+        if (is_comment(str)) then
+            Ncycle = Ncycle + 1
+            cycle
         endif
-        if(Nnonzero<1)then
-            write(error_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
-#ifndef CPP_SCRIPT            
-            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
-#endif
-            return
+
+        read(str,*,iostat=stat) attype,dist,val
+        if (stat /= 0) exit
+        Nentry=Nentry+1
+        if(val/=0.0d0) Nnonzero=Nnonzero+1
+    enddo
+
+    !Information about number of entries found to output (with crashing sanity check unless CPP_SCRIPT)
+    call infoH_N_found(Nentry,Nnonzero,var_name)
+
+    !No input entries found -> return
+    if (Nnonzero < 1 .or. Nentry < 1) return
+
+    !allocate correct size of entries and move IO to beginning of data
+    allocate(Htriple_tmp(Nnonzero))
+
+    !Set IO-unit back to first line
+    do i=1,Nentry+Ncycle+1
+        backspace(io)
+    enddo
+
+    ii=1
+    do i=1,Nentry+Ncycle
+        read(io,'(a)',iostat=stat) str              !Read full line
+        if (is_comment(str)) cycle                  !Cycle comment lines
+        read(str,*,iostat=stat) attype,dist,val     !Decode info from line
+        if(val==0.0d0) cycle                        !Cycle zero-value lines
+
+        !Order atom types (attype(1)<= attype(2))
+        if(attype(2)<attype(1))then
+            j        =attype(2)
+            attype(2)=attype(1)
+            attype(1)=j
         endif
-        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
-        success=.true.
-        allocate(Htriple_tmp(Nnonzero))
-        do i=1,Ntriple+1
-            backspace(io)
-        enddo
-        ii=1
-        do i=1,Ntriple
-            read(io,*,iostat=stat) attype,dist,val
-            if(val==0.0d0) cycle
-            if(attype(2)<attype(1))then
-                j        =attype(2)
-                attype(2)=attype(1)
-                attype(1)=j
+
+        !save input and log
+        Htriple_tmp(ii)%attype=attype
+        Htriple_tmp(ii)%dist=dist
+        Htriple_tmp(ii)%val=val
+        write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+        write(output_unit,'(A,3I6)')    '  atom types:', Htriple_tmp(ii)%attype
+        write(output_unit,'(A,2I6)')    '  distance  :', Htriple_tmp(ii)%dist
+        write(output_unit,'(A,E16.8/)') '  energy    :', Htriple_tmp(ii)%val
+        ii=ii+1
+    enddo 
+
+    !combines single entries into arrays with same atom types
+    Call reduce_Hr_triple(Htriple_tmp,Htriples) 
+
+    !check if any entry appears more than once
+    do i=1,size(Htriples)
+        do j=2,size(Htriples(i)%dist)
+            if(any(Htriples(i)%dist(j)==Htriples(i)%dist(:j-1)))then
+                write(output_unit,*) "ERROR, found the same distance twice for for Hamiltonian ",var_name
+                write(output_unit,*) "       at atom indices  :",Htriples(i)%attype
+                write(output_unit,*) "       with the distance:",Htriples(i)%dist(j)
+                ERROR STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
             endif
-            Htriple_tmp(ii)%attype=attype
-            Htriple_tmp(ii)%dist=dist
-            Htriple_tmp(ii)%val=val
-            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
-            write(output_unit,'(A,3I6)')    '  atom types:', Htriple_tmp(ii)%attype
-            write(output_unit,'(A,2I6)')    '  distance  :', Htriple_tmp(ii)%dist
-            write(output_unit,'(A,E16.8/)') '  energy    :', Htriple_tmp(ii)%val
-            ii=ii+1
-        enddo 
-
-        !combines single entries into arrays with same atom types
-        Call reduce_Hr_triple(Htriple_tmp,Htriples) 
-        !check if any entry appears more than once
-        do i=1,size(Htriples)
-            do j=2,size(Htriples(i)%dist)
-                if(any(Htriples(i)%dist(j)==Htriples(i)%dist(:j-1)))then
-                    write(output_unit,*) "ERROR, found the same distance twice for for Hamiltonian ",var_name
-                    write(output_unit,*) "       at atom indices  :",Htriples(i)%attype
-                    write(output_unit,*) "       with the distance:",Htriples(i)%dist(j)
-                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
-                endif
-            enddo
         enddo
+    enddo
 
-        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
-        if(any(Htriples%attype(1)/=Htriples%attype(2)))then
-            Call move_alloc(Htriples,Htriples_tmp)
-            allocate(Htriples(size(Htriples_tmp)+count(Htriples_tmp%attype(1)/=Htriples_tmp%attype(2))))
-            ii=0
-            do i=1,size(Htriples_tmp)
+    !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are duplicated with [2 1]
+    if(any(Htriples%attype(1)/=Htriples%attype(2)))then
+        Call move_alloc(Htriples,Htriples_tmp)
+        allocate(Htriples(size(Htriples_tmp)+count(Htriples_tmp%attype(1)/=Htriples_tmp%attype(2))))
+        ii=0
+        do i=1,size(Htriples_tmp)
+            ii=ii+1
+            Htriples(ii)=Htriples_tmp(i)
+            if(Htriples_tmp(i)%attype(1)/=Htriples_tmp(i)%attype(2))then
                 ii=ii+1
                 Htriples(ii)=Htriples_tmp(i)
-                if(Htriples_tmp(i)%attype(1)/=Htriples_tmp(i)%attype(2))then
-                    ii=ii+1
-                    Htriples(ii)=Htriples_tmp(i)
-                    Htriples(ii)%attype(1:2)=[Htriples_tmp(i)%attype(2),Htriples_tmp(i)%attype(1)]
-                endif
-            enddo
-            deallocate(Htriples_tmp)
-        endif
-
-        success=.true.
+                Htriples(ii)%attype(1:2)=[Htriples_tmp(i)%attype(2),Htriples_tmp(i)%attype(1)]
+            endif
+        enddo
+        deallocate(Htriples_tmp)
     endif
 
-    Call check_further_entry(io,fname,var_name)
+    success=.true.  !Input-Information read in successfully
+
+    Call check_further_entry(io,fname,var_name)     !Crash, if keyword var_name appears another time
 end subroutine 
 
 
 
 subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     use m_input_H_types, only: Hr_pair,reduce_Hr_pair,Hr_pair_single
-    !always uses the same variable name, hence kept as parameter
 
-    integer, intent(in)                         :: io
-    character(len=*), intent(in)                :: fname,var_name
-    type(Hr_pair), intent(out), allocatable     :: Hpairs(:)
-    logical,intent(out)                         :: success
+    integer, intent(in)                         :: io               !IO-lun of input-file
+    character(len=*), intent(in)                :: fname            !Name of input-file
+    character(len=*), intent(in)                :: var_name         !Keyword of input
+    type(Hr_pair), intent(out), allocatable     :: Hpairs(:)        !Decoded input information
+    logical, intent(out)                        :: success          !Input of keyword read in and Hpairs if filled
     ! internal variable
     type(Hr_pair_single),allocatable            :: Hpair_tmp(:)
     type(Hr_pair), allocatable                  :: Hpairs_tmp(:)
     integer :: attype(2),dist
     real(8) :: val
 
-    integer :: Npair,Nnonzero
-    integer :: nread,i,ii,j
+    integer :: Nentry               !Number of found valid input entries
+    integer :: Nnonzero             !Number of found valid, non-zero input entries
+    integer :: Ncycle               !Number of times the read-in was cycled
+    integer :: i,ii,j
     integer :: stat
     character(len=100) :: str
-    character(len=100) :: comment_char, dummy
 
-    nread=0
+    !Check if var_name keyword is set and set IO-unit to that line 
     Call set_pos_entry(io,fname,var_name,success)
-    read(io,'(a)',iostat=stat) str
-    if(success)then
-        !find out how many entries there are
-        success=.false.
-        Npair=0; Nnonzero=0
-        nread=nread+1
-        do 
-            read(io,'(a)',iostat=stat) str
-            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-            read(str,*,iostat=stat) comment_char, dummy
-            if (comment_char(1:1) .eq. '#') cycle
-            read(str,*,iostat=stat) attype,dist,val
-            if (stat /= 0) exit
-            Npair=Npair+1
-            if(val/=0.0d0) Nnonzero=Nnonzero+1
-        enddo
-        if(Npair<1)then
-            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-#ifndef CPP_SCRIPT            
-            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
-#endif
-            return
+
+    if (.not. success ) return      !Directly return, if keyword is not found
+    success=.false.                 !No actual input read yet, reset success to false
+
+    read(io,'(a)',iostat=stat) str  !read var_name key to advance one line 
+
+    !find out how many entries there are
+    Nentry=0; Nnonzero=0; Ncycle=0
+    do 
+        !Read Line to String
+        read(io,'(a)',iostat=stat) str
+        if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+
+        if (is_comment(str)) then
+            Ncycle = Ncycle + 1
+            cycle
         endif
-        if(Nnonzero<1)then
-            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
-#ifndef CPP_SCRIPT            
-            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
-#endif
-            return
+
+        !Check readable -> then increment count 
+        read(str,*,iostat=stat) attype,dist,val
+        if (stat /= 0) exit
+        Nentry=Nentry+1
+        if(val/=0.0d0) Nnonzero=Nnonzero+1
+    enddo
+
+    !Information about number of entries found to output (with crashing sanity check unless CPP_SCRIPT)
+    call infoH_N_found(Nentry,Nnonzero,var_name)
+
+    !No input entries found -> return
+    if (Nnonzero < 1 .or. Nentry < 1) return
+
+    !allocate correct size of entries and move IO to beginning of data
+    allocate(Hpair_tmp(Nnonzero))
+
+    !Set IO-unit back to first line
+    do i=1,Nentry+Ncycle+1
+        backspace(io)
+    enddo
+
+    !read in data
+    ii=1
+    do i=1,Nentry+Ncycle
+        read(io,'(a)',iostat=stat) str              !Read full line
+        if (is_comment(str)) cycle                  !Cycle comment lines
+        read(str,*,iostat=stat) attype,dist,val     !Decode info from line
+        if(val==0.0d0) cycle                        !Cycle zero-value lines
+
+        !Order atom types (attype(1)<= attype(2))
+        if(attype(2)<attype(1))then
+            j        =attype(2)
+            attype(2)=attype(1)
+            attype(1)=j
         endif
-        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
-        !allocate correct size of entries and move IO to beginning of data
-        allocate(Hpair_tmp(Nnonzero))
-        do i=1,Npair+1
-            backspace(io)
-        enddo
-        !read in data
-        ii=1
-        do i=1,Npair
-            read(io,*,iostat=stat) attype,dist,val
-            if(val==0.0d0) cycle
-            if(attype(2)<attype(1))then
-                j        =attype(2)
-                attype(2)=attype(1)
-                attype(1)=j
+
+        !save input and log
+        Hpair_tmp(ii)%attype=attype
+        Hpair_tmp(ii)%dist=dist
+        Hpair_tmp(ii)%val=val
+        write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+        write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
+        write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
+        write(output_unit,'(A,E16.8/)') '  energy    :', Hpair_tmp(ii)%val
+        ii=ii+1
+    enddo 
+
+    !combines single entries into arrays with same atom types
+    Call reduce_Hr_pair(Hpair_tmp,Hpairs) 
+    !check if any entry appears more than once
+    do i=1,size(Hpairs)
+        do j=2,size(Hpairs(i)%dist)
+            if(any(Hpairs(i)%dist(j)==Hpairs(i)%dist(:j-1)))then
+                write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
+                write(output_unit,*) "       at atom indices  :",Hpairs(i)%attype
+                write(output_unit,*) "       with the distance:",Hpairs(i)%dist(j)
+                ERROR STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
             endif
-            Hpair_tmp(ii)%attype=attype
-            Hpair_tmp(ii)%dist=dist
-            Hpair_tmp(ii)%val=val
-            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
-            write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
-            write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
-            write(output_unit,'(A,E16.8/)') '  energy    :', Hpair_tmp(ii)%val
-            ii=ii+1
-        enddo 
-
-        !combines single entries into arrays with same atom types
-        Call reduce_Hr_pair(Hpair_tmp,Hpairs) 
-        !check if any entry appears more than once
-        do i=1,size(Hpairs)
-            do j=2,size(Hpairs(i)%dist)
-                if(any(Hpairs(i)%dist(j)==Hpairs(i)%dist(:j-1)))then
-                    write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
-                    write(output_unit,*) "       at atom indices  :",Hpairs(i)%attype
-                    write(output_unit,*) "       with the distance:",Hpairs(i)%dist(j)
-                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
-                endif
-            enddo
         enddo
+    enddo
 
-        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
-        if(any(Hpairs%attype(1)/=Hpairs%attype(2)))then
-            Call move_alloc(Hpairs,Hpairs_tmp)
-            allocate(Hpairs(size(Hpairs_tmp)+count(Hpairs_tmp%attype(1)/=Hpairs_tmp%attype(2))))
-            ii=0
-            do i=1,size(Hpairs_tmp)
+    !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are dublicated with [2 1]
+    if(any(Hpairs%attype(1)/=Hpairs%attype(2)))then
+        Call move_alloc(Hpairs,Hpairs_tmp)
+        allocate(Hpairs(size(Hpairs_tmp)+count(Hpairs_tmp%attype(1)/=Hpairs_tmp%attype(2))))
+        ii=0
+        do i=1,size(Hpairs_tmp)
+            ii=ii+1
+            Hpairs(ii)=Hpairs_tmp(i)
+            if(Hpairs_tmp(i)%attype(1)/=Hpairs_tmp(i)%attype(2))then
                 ii=ii+1
                 Hpairs(ii)=Hpairs_tmp(i)
-                if(Hpairs_tmp(i)%attype(1)/=Hpairs_tmp(i)%attype(2))then
-                    ii=ii+1
-                    Hpairs(ii)=Hpairs_tmp(i)
-                    Hpairs(ii)%attype=[Hpairs_tmp(i)%attype(2),Hpairs_tmp(i)%attype(1)]
-                endif
-            enddo
-            deallocate(Hpairs_tmp)
-        endif
-
-        success=.true.
+                Hpairs(ii)%attype=[Hpairs_tmp(i)%attype(2),Hpairs_tmp(i)%attype(1)]
+            endif
+        enddo
+        deallocate(Hpairs_tmp)
     endif
 
-    Call check_further_entry(io,fname,var_name)
+    success=.true.  !Input-Information read in successfully
+
+    Call check_further_entry(io,fname,var_name)     !Crash, if keyword var_name appears another time
 end subroutine 
 
 subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
     use m_input_H_types, only: reduce_Hr_tensor_pair,Hr_pair_tensor,Hr_pair_single_tensor
-    !always uses the same variable name, hence kept as parameter
 
-    integer, intent(in)                            :: io
-    character(len=*), intent(in)                   :: fname,var_name
-    type(Hr_pair_tensor), intent(out), allocatable :: Hpairs_tensor(:)
-    logical,intent(out)                            :: success
+    integer, intent(in)                             :: io               !IO-lun of input-file
+    character(len=*), intent(in)                    :: fname            !Name of input-file
+    character(len=*), intent(in)                    :: var_name         !Keyword of input
+    type(Hr_pair_tensor), intent(out), allocatable  :: Hpairs_tensor(:) !Decoded input information
+    logical, intent(out)                            :: success          !Input of keyword read in and Hpairs if filled
+
     ! internal variable
     type(Hr_pair_single_tensor),allocatable        :: Hpair_tmp(:)
     type(Hr_pair_tensor), allocatable              :: Hpairs_tensor_tmp(:)
     integer :: attype(2),dist
     real(8) :: val(9),bound(3)
 
-    integer :: Npair,Nnonzero
-    integer :: nread,i,ii,j
+    integer :: Nentry               !Number of found valid input entries
+    integer :: Nnonzero             !Number of found valid, non-zero input entries
+    integer :: Ncycle               !Number of times the read-in was cycled
+    integer :: i,ii,j
     integer :: stat
     character(len=100) :: str
 
-    nread=0
-    val=0.0d0
-    bound=0.0d0
+    !Check if var_name keyword is set and set IO-unit to that line 
     Call set_pos_entry(io,fname,var_name,success)
-    read(io,'(a)',iostat=stat) str
-    if(success)then
-        !find out how many entries there are
-        success=.false.
-        Npair=0; Nnonzero=0
-        nread=nread+1
-        do
-            read(io,'(a)',iostat=stat) str
-            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
-            read(str,*,iostat=stat) attype,dist,val
-            if (stat /= 0) exit
-            Npair=Npair+1
-            do i=1,9
-               if(val(i)/=0.0d0) then
-                   Nnonzero=Nnonzero+1
-                   exit
-               endif
-            enddo
-        enddo
-        if(Npair<1)then
-            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
-#ifndef CPP_SCRIPT
-            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
-#endif
-            return
+
+    if (.not. success ) return      !Directly return, if keyword is not found
+    success=.false.                 !No actual input read yet, reset success to false
+
+    read(io,'(a)',iostat=stat) str  !read var_name key to advance one line 
+
+    !find out how many entries there are
+    Nentry=0; Nnonzero=0; Ncycle=0
+    do
+        !Read Line to String
+        read(io,'(a)',iostat=stat) str
+        if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+
+        if (is_comment(str)) then
+            Ncycle = Ncycle + 1
+            cycle
         endif
-        if(Nnonzero<1)then
-            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
-#ifndef CPP_SCRIPT
-            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
-#endif
-            return
+
+        !Check readable -> then increment count 
+        read(str,*,iostat=stat) attype,dist,val
+        if (stat /= 0) exit
+        Nentry=Nentry+1
+        if(any(val/=0.0d0)) Nnonzero=Nnonzero+1
+    enddo
+
+    !Information about number of entries found to output (with crashing sanity check unless CPP_SCRIPT)
+    call infoH_N_found(Nentry,Nnonzero,var_name)
+
+    !No input entries found -> return
+    if (Nnonzero < 1 .or. Nentry < 1) return
+
+    !allocate correct size of entries and move IO to beginning of data
+    allocate(Hpair_tmp(Nnonzero))
+
+    !Set IO-unit back to first line
+    do i=1,Nentry+Ncycle+1
+        backspace(io)
+    enddo
+
+    !read in data
+    ii=1
+    do i=1,Nentry+Ncycle
+        read(io,'(a)',iostat=stat) str                  !Read full line
+        if (is_comment(str)) cycle                      !Cycle comment lines
+        read(str,*,iostat=stat) attype,dist,val,bound   !Decode info from line
+        if(any(val/=0.0d0)) cycle                       !Cycle zero-value lines
+
+        !Order atom types (attype(1)<= attype(2))
+        if(attype(2)<attype(1))then
+            j        =attype(2)
+            attype(2)=attype(1)
+            attype(1)=j
         endif
-        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
-        !allocate correct size of entries and move IO to beginning of data
-        allocate(Hpair_tmp(Nnonzero))
-        do i=1,Npair+1
-            backspace(io)
-        enddo
-        !read in data
-        ii=1
-        do i=1,Npair
-            val=0.0d0
-            read(io,*,iostat=stat) attype,dist,val,bound
-            if(all(val==0.0d0)) cycle
-            if(attype(2)<attype(1))then
-                j        =attype(2)
-                attype(2)=attype(1)
-                attype(1)=j
+
+        !save input and log
+        Hpair_tmp(ii)%attype=attype
+        Hpair_tmp(ii)%dist=dist
+        Hpair_tmp(ii)%val=val
+        Hpair_tmp(ii)%bound=bound
+        write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+        write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
+        write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
+        write(output_unit,'(A,9E16.8)') '  energy    :', Hpair_tmp(ii)%val
+        write(output_unit,'(A,3E16.8/)') ' along the bound :', Hpair_tmp(ii)%bound
+        ii=ii+1
+    enddo
+
+    !combines single entries into arrays with same atom types
+    Call reduce_Hr_tensor_pair(Hpair_tmp,Hpairs_tensor)
+
+    !check if any entry appears more than once
+    do i=1,size(Hpairs_tensor)
+        do j=2,size(Hpairs_tensor(i)%dist)
+            if(any(Hpairs_tensor(i)%dist(j)==Hpairs_tensor(i)%dist(:j-1)))then
+                write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
+                write(output_unit,*) "       at atom indices  :",Hpairs_tensor(i)%attype
+                write(output_unit,*) "       with the distance:",Hpairs_tensor(i)%dist(j)
+                ERROR STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
             endif
-            Hpair_tmp(ii)%attype=attype
-            Hpair_tmp(ii)%dist=dist
-            Hpair_tmp(ii)%val=val
-            Hpair_tmp(ii)%bound=bound
-            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
-            write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
-            write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
-            write(output_unit,'(A,9E16.8)') '  energy    :', Hpair_tmp(ii)%val
-            write(output_unit,'(A,3E16.8/)') ' along the bound :', Hpair_tmp(ii)%bound
+        enddo
+    enddo
+
+    !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are duplicated with [2 1]
+    if(any(Hpairs_tensor%attype(1)/=Hpairs_tensor%attype(2)))then
+        Call move_alloc(Hpairs_tensor,Hpairs_tensor_tmp)
+        allocate(Hpairs_tensor(size(Hpairs_tensor_tmp)+count(Hpairs_tensor_tmp%attype(1)/=Hpairs_tensor_tmp%attype(2))))
+        ii=0
+        do i=1,size(Hpairs_tensor_tmp)
             ii=ii+1
-        enddo
-
-        !combines single entries into arrays with same atom types
-        Call reduce_Hr_tensor_pair(Hpair_tmp,Hpairs_tensor)
-
-        !check if any entry appears more than once
-
-        do i=1,size(Hpairs_tensor)
-            do j=2,size(Hpairs_tensor(i)%dist)
-                if(any(Hpairs_tensor(i)%dist(j)==Hpairs_tensor(i)%dist(:j-1)))then
-                    write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
-                    write(output_unit,*) "       at atom indices  :",Hpairs_tensor(i)%attype
-                    write(output_unit,*) "       with the distance:",Hpairs_tensor(i)%dist(j)
-                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
-                endif
-            enddo
-        enddo
-
-        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are duplicated with [2 1]
-        if(any(Hpairs_tensor%attype(1)/=Hpairs_tensor%attype(2)))then
-            Call move_alloc(Hpairs_tensor,Hpairs_tensor_tmp)
-            allocate(Hpairs_tensor(size(Hpairs_tensor_tmp)+count(Hpairs_tensor_tmp%attype(1)/=Hpairs_tensor_tmp%attype(2))))
-            ii=0
-            do i=1,size(Hpairs_tensor_tmp)
+            Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
+            if(Hpairs_tensor_tmp(i)%attype(1)/=Hpairs_tensor_tmp(i)%attype(2))then
                 ii=ii+1
                 Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
-                if(Hpairs_tensor_tmp(i)%attype(1)/=Hpairs_tensor_tmp(i)%attype(2))then
-                    ii=ii+1
-                    Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
-                    Hpairs_tensor(ii)%attype=[Hpairs_tensor_tmp(i)%attype(2),Hpairs_tensor_tmp(i)%attype(1)]
-                endif
-            enddo
-            deallocate(Hpairs_tensor_tmp)
-        endif
-
-        success=.true.
+                Hpairs_tensor(ii)%attype=[Hpairs_tensor_tmp(i)%attype(2),Hpairs_tensor_tmp(i)%attype(1)]
+            endif
+        enddo
+        deallocate(Hpairs_tensor_tmp)
     endif
 
-    Call check_further_entry(io,fname,var_name)
+    success=.true.  !Input-Information read in successfully
 
+    Call check_further_entry(io,fname,var_name)     !Crash, if keyword var_name appears another time
 end subroutine
+
+
+subroutine infoH_N_found(Nentry,Nnonzero,var_name)
+    !Inform about number of entries of a Hamiltonian found.
+    !Helper routine to reduce code duplication
+    !Crashes Program, if no input is specified (unless CPP_SCRIPT preprocessor flag is defined).
+    integer,intent(in)      :: Nentry       !number found entires of var_name
+    integer,intent(in)      :: Nnonzero     !number non-zero entires of var_name
+    character(*),intent(in) :: var_name     !input Name of Hamiltonian
+
+    if(Nentry<1)then
+        write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+        ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+    endif
+    if(Nnonzero<1)then
+        write(error_unit,'(/2A/A/)') "Found no nonzero entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT            
+        ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+    endif
+    write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+end subroutine
+
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Get cell based on atomtype

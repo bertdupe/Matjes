@@ -5,6 +5,21 @@ public
 
 contains
 
+function is_comment(line)
+    !Function which checks if a line starts with a comment
+    character(*),intent(in) :: line             !Line, that is checked if it is a comment
+    logical                 :: is_comment
+
+    character(len=100)  :: test_comment, dummy  !temporary chars for reading
+    integer             :: stat
+
+    !Array that contains all chars which indicate a line as a comment
+    character(len=1),parameter  ::  comment_chars(1) = ["#"]    
+
+    read(line,*,iostat=stat) test_comment, dummy
+    is_comment=any(test_comment(1:1) .eq. comment_chars)
+end function
+
 subroutine set_pos_entry(io,fname,var_name,success_out)
     !sets the io-unit (io) to the line starting with var_name
     !If success_out is supplied, it return whether such a line is found
