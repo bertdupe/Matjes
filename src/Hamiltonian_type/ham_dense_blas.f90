@@ -28,7 +28,7 @@ subroutine mult_r(this,lat,res,work,alpha,beta)
     ! internal
     real(8),pointer ,contiguous         :: modes(:)
     real(8)                    :: alp, bet
-    integer                    :: work_size(N_work)
+    integer                    :: work_size(N_work),i
 
     if(present(alpha))then
         alp=alpha
