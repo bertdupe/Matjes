@@ -245,7 +245,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
         call my_symmetries%read_sym('symmetries.out')
 
         !set shape-dependent quantities of fft_H and get Kdb,N_rep
-        Call H_fft%init_shape(3*lat%nmag,period,lat%dim_lat,Kbd,N_rep)
+        Call H_fft%init_shape("M",3*lat%nmag,period,lat%dim_lat,Kbd,N_rep)
         Nk_tot=product(N_rep)
 
         !set local Hamiltonian

@@ -192,10 +192,11 @@ subroutine init_op(this,dim_mode,K_n,desc_in)
 #endif
 end subroutine
 
-subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
+subroutine init_shape(this,abbrev,dim_mode,periodic,dim_lat,Kbd,N_rep)
     !initializes the arrays with whose the work will be done, sets the shapes, and returns shape data necessary for construction of the operator tensor
 !$  use omp_lib    
     class(fft_H_fftw),intent(inout)  :: this
+    character(1),intent(in)     :: abbrev       !Abbreviation for order parameter (M,E,U,...) according to order_parameter_abbrev 
     integer,intent(in)          :: dim_mode
     logical,intent(in)          :: periodic(3)  !T: periodic boundary, F: open boundary
     integer,intent(in)          :: dim_lat(3)
@@ -213,7 +214,7 @@ subroutine init_shape(this,dim_mode,periodic,dim_lat,Kbd,N_rep)
         ERROR STOP
     endif
 
-    Call this%fft_H%init_shape(dim_mode,periodic,dim_lat,Kbd,N_rep)
+    Call this%fft_H%init_shape(abbrev,dim_mode,periodic,dim_lat,Kbd,N_rep)
 #ifdef CPP_FFTW3_THREAD
 !$  Call fftw_plan_with_nthreads(omp_get_max_threads())
 #endif
@@ -233,7 +234,11 @@ subroutine set_M(this,lat)
     class(fft_H_fftw),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
 
-    Call this%M_internal(this%M_n,lat%M%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
+    real(8),pointer,contiguous  :: M(:)
+    
+    Call lat%set_order_point(this%order,M)
+
+    Call this%M_internal(this%M_n,M,lat%dim_lat,this%N_rep,size(this%M_n,1))
 end subroutine
 
 subroutine get_H(this,lat,Hout)
