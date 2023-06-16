@@ -121,7 +121,10 @@ do i=1,nattype  ! loop over the number of atom type
    call my_motif%ind_attype(i,ind)
    n_at_under_type=size(ind)
 
-   if ((norm(pos).lt.this%tol_sym).and.(n_at_under_type.eq.1)) cycle    !the atom is at the origin so the symmetries are the symmetries of the lattice
+   if ((norm(pos).lt.this%tol_sym).and.(n_at_under_type.eq.1)) then
+           mask_index=1       ! update the mask
+       cycle    !the atom is at the origin so the symmetries are the symmetries of the lattice
+   endif
 
    do ii=1,n_at_under_type  ! loop over all the atoms of the same nature
 

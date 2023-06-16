@@ -71,7 +71,7 @@ subroutine get_Forces_tensor(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     class(pt_grp),allocatable :: my_symmetries
     character(len=30) :: name_sym
     logical         :: found_sym
-    integer         :: k,shell
+    integer         :: k,shell,i_op
 
     ! conversion factor Ha/Bohr2 to eV/nm2
     ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
@@ -140,11 +140,16 @@ subroutine get_Forces_tensor(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                     do k=1,my_symmetries%n_sym
                        call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
-                       if (found_sym) exit
+                       if (found_sym) then
+                          i_op=k
+                          exit
+                         else
+                          if (k.eq.my_symmetries%n_sym) STOP 'symmetry operation not found in Exchange_Heisenberg_general'
+                       endif
                     enddo
 
-                    symop=my_symmetries%rotmat(k)%mat
-                    name_sym=my_symmetries%rotmat(k)%name
+                    symop=my_symmetries%rotmat(i_op)%mat
+                    name_sym=my_symmetries%rotmat(i_op)%name
 
                     call rotate_force(F,F_init,symop)
 
