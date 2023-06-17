@@ -257,9 +257,10 @@ subroutine init_internal(this,periodic)
     endif
 end subroutine
 
-subroutine get_E_distrib(this,lat,Htmp,E)
+subroutine get_E_distrib(this,lat,order,Htmp,E)
     class(fft_H),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
+    integer,intent(in)            ::  order     !index of considered order parameter
     real(8),intent(inout)         ::  Htmp(:,:)
     real(8),intent(out)           ::  E(:)
 
@@ -267,13 +268,19 @@ subroutine get_E_distrib(this,lat,Htmp,E)
     !(this should be cleaned up)
     real(8),pointer,contiguous    ::  M(:)
     real(8),pointer,contiguous    ::  M_v(:,:)
-    
-    Call lat%set_order_point(this%order,M)
-    M_v(1:size(Htmp,1),1:size(Htmp,2)) => M
+    integer(2)                    ::  shp(2)    !Shape, so that Htmps 2nd dimension indexes all sites 
 
-    Call this%get_H(lat,Htmp)
-    Htmp=Htmp*M_v
-    E=sum(reshape(Htmp,[3,lat%Nmag*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
+    if(order == this%order) then     
+        Call lat%set_order_point(this%order,M)
+        M_v(1:size(Htmp,1),1:size(Htmp,2)) => M
+
+        Call this%get_H(lat,Htmp)
+        Htmp=Htmp*M_v
+        shp=[dim_modes_inner(order),lat%site_per_cell(order)*lat%Ncell]
+        E=sum(reshape(Htmp,shp),1)*2.0d0 !not sure about *2.0d0
+    else
+        E=0.0d0
+    endif
 end subroutine
 
 subroutine get_E(this,lat,Htmp,E)

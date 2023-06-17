@@ -354,11 +354,11 @@ subroutine energy_distrib(this,lat,order,Edist)
         Call reduce_sum(mult,this%com_outer)
         Call gatherv(Edist,mult,this%com_outer)
     endif
-    if(order==1)then
-        do iH=1,this%NHF_local
-            Call this%H_fft(iH)%get_E_distrib(lat,this%H_fft_tmparr,Edist(:,this%NH_total+iH))
-        enddo
-    endif
+
+    !FFT Hamiltonian Part
+    do iH=1,this%NHF_local
+        Call this%H_fft(iH)%get_E_distrib(lat,order,this%H_fft_tmparr,Edist(:,this%NH_total+iH))
+    enddo
 
 end subroutine
 
