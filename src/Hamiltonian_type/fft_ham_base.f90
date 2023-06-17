@@ -4,7 +4,7 @@ module m_fft_H_base
 
 !only the extensions of this type should be allocated
 
-use m_type_lattice,only: lattice
+use m_type_lattice,only: lattice, dim_modes_inner 
 use m_H_type, only: len_desc
 use m_fft_H_internal, only: int_set_M, int_get_H
 use, intrinsic :: iso_c_binding, only: C_int, C_DOUBLE
