@@ -98,7 +98,7 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                 connect_bnd=1 !initialization for lower bound
                 connect_bnd(2)=neigh%ishell(i_atpair)
 
-                !set local Hamiltonian in basis of magnetic orderparameter
+                !set local Hamiltonian in basis of phonon orderparameter
                 atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_atpair))
                 atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_atpair))
                 offset_ph=(atind_ph-1)*3
@@ -152,6 +152,9 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                 do k=1,lat%Ncell
                    all_pairs(:,k)=k
                 enddo
+                !set local Hamiltonian in basis of phonon orderparameter
+                atind_ph(1)=lat%cell%ind_ph(all_pairs(1,i_atpair))
+                atind_ph(2)=lat%cell%ind_ph(all_pairs(2,i_atpair))
 
                 Htmp=0.0d0
 
