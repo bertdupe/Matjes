@@ -108,6 +108,7 @@ subroutine get_dipolar_ph_fft(dip,io,lat)
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         !set some initial parameters locally for convencience
         Nph=lat%nph
+        call dip%set_mode_id(5,"U")
         period=lat%periodic.or.lat%dim_lat==1
         alat=transpose(lat%areal)
 

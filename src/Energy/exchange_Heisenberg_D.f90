@@ -188,6 +188,7 @@ subroutine get_exchange_D_fft(H_fft,io,lat)
         !set some initial parameters locally for convencience
         write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         Nmag=lat%nmag
+        call H_fft%set_mode_id(1,"M")
         period=lat%periodic.or.lat%dim_lat==1
 
         !set shape-dependent quantities of fft_H and get Kdb,N_rep

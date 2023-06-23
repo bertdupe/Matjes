@@ -283,7 +283,9 @@ subroutine init_H_mv(this,lat,Harr,H_fft)
     if(present(H_fft))then
         if(allocated(H_fft))then
             Call move_alloc(H_fft,this%H_fft)
-            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
+! Bertrand made a change here
+! check the note in init_H_cp - this part may not work
+            allocate(this%H_fft_tmparr(3*max(lat%nmag,lat%nph),lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
             this%NHF_total=size(this%H_fft)
             this%NHF_local=this%NHF_total
         endif
@@ -318,7 +320,10 @@ subroutine init_H_cp(this,lat,Harr,H_fft)
             do i=1,size(H_fft)
                 Call H_fft(i)%copy(this%H_fft(i))
             enddo
-            allocate(this%H_fft_tmparr(3*lat%nmag,lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
+! Bertrand made a change here
+! this part may not work when nph is different from nmag and are both different from 0
+! this is a temporary array but it is used on all phonon and magnetic Hamiltonian which might be a problem
+            allocate(this%H_fft_tmparr(3*max(lat%nmag,lat%nph),lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
             this%NHF_total=size(this%H_fft)
             this%NHF_local=this%NHF_total
         endif
@@ -394,7 +399,7 @@ function energy(this,lat)result(E)
     real(8)                         :: E
 
     real(8)     ::  tmp_E(this%N_total)
-    
+
     Call this%energy_resolved(lat,tmp_E)
     E=sum(tmp_E)
 end function

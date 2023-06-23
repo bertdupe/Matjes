@@ -107,6 +107,7 @@ subroutine get_dipolar_fft(dip,io,lat)
         write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         !set some initial parameters locally for convencience
         Nmag=lat%nmag
+        call dip%set_mode_id(1,"M")
         period=lat%periodic.or.lat%dim_lat==1
         alat=transpose(lat%areal)
 
