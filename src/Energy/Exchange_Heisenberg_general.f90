@@ -232,6 +232,7 @@ subroutine get_exchange_ExchG_fft(H_fft,io,lat)
         write(output_unit,'(/2A)') "Start setting fft-Hamiltonian: ", ham_desc
         !set some initial parameters locally for convencience
         Nmag=lat%nmag
+        call H_fft%set_mode_id(1,"M")
         period=lat%periodic.or.lat%dim_lat==1
 
         !convert the periodic boundary conditions into reals for the chirality check

@@ -38,7 +38,7 @@ contains
 
 
     !internal procedures
-    procedure           :: set_M                !set internal magnetization in normal-space from lattice
+    procedure           :: set_M                !set internal mode (magnetization or polarization) in normal-space from lattice
 end type
 contains 
 
@@ -233,12 +233,17 @@ subroutine set_M(this,lat)
     !set this%M_n from lat%M%modes according to this%M_internal
     class(fft_H_fftw),intent(inout)    ::  this
     type(lattice),intent(in)      ::  lat
+    integer        :: mode_id
 
-    real(8),pointer,contiguous  :: M(:)
-    
-    Call lat%set_order_point(this%order,M)
-
-    Call this%M_internal(this%M_n,M,lat%dim_lat,this%N_rep,size(this%M_n,1))
+    call this%get_mode_id(mode_id)
+    select case (mode_id)
+       case (1)
+         Call this%M_internal(this%M_n,lat%M%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
+       case (5)
+         Call this%M_internal(this%M_n,lat%U%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
+       case default
+         stop 'node coded in set_M'
+    end select
 end subroutine
 
 subroutine get_H(this,lat,Hout)
@@ -254,7 +259,9 @@ subroutine get_H(this,lat,Hout)
 
     this%H_F=cmplx(0.0d0,0.0d0,8)
     do j=1,size(this%M_F,2)
-        do i=1,lat%Nmag*3
+! Bertrand made a change here
+!        do i=1,lat%Nmag*3
+        do i=1,lat%Nph*3
             this%H_F(i,j)=sum(this%K_F(:,i,j)*this%M_F(:,j))
         enddo
     enddo
@@ -280,12 +287,16 @@ subroutine get_H_single(this,lat,site,Hout)
 
     this%H_F=cmplx(0.0d0,0.0d0,8)
     do j=1,size(this%M_F,2)
-        do i=1,lat%Nmag*3
+! Bertrand made another change here
+!        do i=1,lat%Nmag*3
+        do i=1,lat%nph*3
             this%H_F(i,j)=sum(this%K_F(:,i,j)*this%M_F(:,j))
         enddo
     enddo
     Call fftw_execute_dft_c2r(this%plan_H_I, this%H_F, this%H_n)
-    Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
+!    Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
+! change from Bertrand here
+    Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nph)
 #else
     ERROR STOP "fft_H_fftw%get_H_single requires CPP_FFTW3"
 #endif

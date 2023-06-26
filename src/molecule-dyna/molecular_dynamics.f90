@@ -383,9 +383,9 @@ class(ranbase), allocatable :: thermal_noise
        	 if (io_simu%io_Energy_Distrib)then
                 	!if(comm%Np>1) Call mag_lattice%bcast_val(comm)
                	 if(io_simu%io_Energy_detail)then
-                    		Call write_energy_field(tag,H_res,my_lattice,1,comm%ismas) !1 for magnetic field,there is no other choice afaik?
+                    		Call write_energy_field(tag,H_res,my_lattice,5,comm%ismas) !1 for magnetic field,there is no other choice afaik?
                 	else
-                    		Call write_energy_field(tag,H    ,my_lattice,1,comm%ismas) !1 for magnetic field, 
+                    		Call write_energy_field(tag,H    ,my_lattice,5,comm%ismas) !1 for magnetic field, 
                 	endif
             	endif
 	endif

@@ -20,8 +20,8 @@ type,extends(fft_H) ::  fft_H_cufft
     type(c_ptr)     :: plan_bwd=c_null_ptr   !cufftHandle which contains the handle
 
     !arrays on device
-    type(c_ptr)     :: M=  c_null_ptr   !magnetization in normal-space
-    type(c_ptr)     :: M_F=c_null_ptr   !magnetization in fourier-space
+    type(c_ptr)     :: M=  c_null_ptr   !mode in normal-space
+    type(c_ptr)     :: M_F=c_null_ptr   !mode in fourier-space
     type(c_ptr)     :: K_F=c_null_ptr   !demagnetization tensor in fourier-space
     type(c_ptr)     :: H=  c_null_ptr   !effective field fourier-space
     type(c_ptr)     :: H_F=c_null_ptr   !effective field normal-space
@@ -245,10 +245,18 @@ subroutine set_M(this,lat)
     
 
     integer(C_int)  ::  length
+    integer         :: mode_id
 
     length=int(size(this%m_n),C_int)
-    Call lat%set_order_point(this%order,M)
-    Call this%M_internal(this%M_n,M,lat%dim_lat,this%N_rep,size(this%M_n,1))
+    call this%get_mode_id(mode_id)
+    select case (mode_id)
+       case (1)
+         Call this%M_internal(this%M_n,lat%M%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
+       case (5)
+         Call this%M_internal(this%M_n,lat%U%modes,lat%dim_lat,this%N_rep,size(this%M_n,1))
+       case default
+         stop 'node coded in set_M'
+    end select
     Call cuda_fft_set_real(length,this%M_n,this%m)
 #else
     ERROR STOP "fft_H_cufft%set_M requires CPP_CUDA"
@@ -292,7 +300,15 @@ subroutine get_H_single(this,lat,site,Hout)
     Call cuda_fft_calc_H(this%dim_mode,this%N_rep,this%m,this%m_f,this%k_f,this%h,this%h_f,this%plan_fwd,this%plan_bwd)
 
     Call cuda_fft_get_real(length,this%h,this%H_n)
-    Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
+    call this%get_mode_id(mode_id)
+    select case (mode_id)
+       case (1)
+         Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,this%N_rep,lat%nmag)
+       case (5)
+         Call H_internal_single(this%H_n,Hout,site,lat%dim_lat,This%N_rep,lat%nph)
+       case default
+         stop 'node coded in get_H_single'
+    end select
 #else
     ERROR STOP "fft_H_cufft%get_H_single requires CPP_CUDA"
 #endif

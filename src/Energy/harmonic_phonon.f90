@@ -132,7 +132,7 @@ subroutine get_Forces_F(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
 
                     Htmp=Htmp*io%c_ph
 
-!write(*,*)'harmonic phonon l135 Htmp',Htmp
+write(*,*)'harmonic phonon l135 Htmp',Htmp
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type

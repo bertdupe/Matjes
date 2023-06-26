@@ -68,7 +68,7 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     class(pt_grp),allocatable :: my_symmetries
     character(len=30) :: name_sym
     logical         :: found_sym
-    integer         :: k,shell
+    integer         :: k
 
     ! conversion factor Ha/Bohr2 to eV/nm2
     ! 1 Ha/Bohr = 51.42208619083232 eV/Angstrom
@@ -136,7 +136,7 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                N_dist=size(io%pair_tensor(i_atpair)%dist)
                Call neigh%get(io%pair_tensor(i_atpair)%attype,io%pair_tensor(i_atpair)%dist,lat)
             endif
-            connect_bnd=1 !initialization for lower bound
+            connect_bnd=1
             i_pair=0
 
             do i_dist=1,N_dist
@@ -148,53 +148,62 @@ subroutine get_ASR_Ph(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                    bound_input=io%pair_tensor(i_atpair)%bound(:,i_dist)/norm(io%pair_tensor(i_atpair)%bound(:,i_dist))
                 endif
 
-                allocate( all_pairs(2,lat%Ncell))
-                do k=1,lat%Ncell
-                   all_pairs(:,k)=k
-                enddo
-                !set local Hamiltonian in basis of phonon orderparameter
-                atind_ph(1)=lat%cell%ind_ph(all_pairs(1,i_atpair))
-                atind_ph(2)=lat%cell%ind_ph(all_pairs(2,i_atpair))
+                  do i_shell=1,neigh%Nshell(i_dist)
+                    !loop over all different connections with the same distance
+                    i_pair=i_pair+1
+                    connect_bnd(2)=neigh%ishell(i_pair)
 
-                Htmp=0.0d0
+                    !set local Hamiltonian in basis of magnetic orderparameter
+                    atind_ph(1)=lat%cell%ind_ph(neigh%at_pair(1,i_pair))
+                    atind_ph(2)=lat%cell%ind_ph(neigh%at_pair(2,i_pair))
+                    vec_neigh=neigh%diff_vec(:,i_pair)
+                    norm_vec_neigh=norm(vec_neigh)
 
-                if (allocated(io%pair)) then
-                   Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F
-                   Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F
-                   Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F
-                endif
+                    allocate( all_pairs(2,size(neigh%pairs(:,connect_bnd(1):connect_bnd(2)))) )
+                    all_pairs(1,:)=reshape(neigh%pairs(:,connect_bnd(1):connect_bnd(2)), (/size(neigh%pairs(:,connect_bnd(1):connect_bnd(2)))/) )
+                    all_pairs(2,:)=all_pairs(1,:)
 
-                if (allocated(io%pair_tensor)) then
+                    Htmp=0.0d0
 
-                   vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
-                   do k=1,my_symmetries%n_sym
-                      call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
-                      if (found_sym) exit
-                   enddo
+                    if (allocated(io%pair)) then
+                       Htmp(atind_ph(1)*3-2,atind_ph(1)*3-2)=io%c_ASR*F*abs(vec_neigh(1))/norm_vec_neigh
+                       Htmp(atind_ph(1)*3-1,atind_ph(1)*3-1)=io%c_ASR*F*abs(vec_neigh(2))/norm_vec_neigh
+                       Htmp(atind_ph(1)*3  ,atind_ph(1)*3  )=io%c_ASR*F*abs(vec_neigh(3))/norm_vec_neigh
+                    endif
 
-                   symop=my_symmetries%rotmat(k)%mat
-                   name_sym=my_symmetries%rotmat(k)%name
+                    if (allocated(io%pair_tensor)) then
 
-                   call rotate_force(F_rot,F_tens,symop)
+                       vec_tmp=neigh%diff_vec(:,i_pair)/norm(neigh%diff_vec(:,i_pair))
+                       do k=1,my_symmetries%n_sym
+                          call check_rotate_matrix(my_symmetries%rotmat(k)%mat,bound_input,vec_tmp,found_sym,my_symmetries%tol_sym)
+                          if (found_sym) exit
+                       enddo
 
-                   Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=io%c_ASR*F_rot
-                endif
+                       symop=my_symmetries%rotmat(k)%mat
+                       name_sym=my_symmetries%rotmat(k)%name
 
-                if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Ham_shell_pos(:,:,1)+Htmp
+                       call rotate_force(F_rot,F_tens,symop)
+
+                       Htmp(atind_ph(1)*3-2:atind_ph(1)*3,atind_ph(1)*3-2:atind_ph(1)*3)=io%c_ASR*F_rot
+                    endif
+
+                    Htmp=Htmp/2.0d0
+
+                    if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Ham_shell_pos(:,:,1)+Htmp
+
+                    Call get_coo(Htmp,val_tmp,ind_tmp)
 
 
-                Call get_coo(Htmp,val_tmp,ind_tmp)
-                !fill Hamiltonian type
+                    !fill Hamiltonian type
+                    Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,1)
+                    deallocate(val_tmp,ind_tmp)
+                    Call Ham%add(Ham_tmp)
+                    Call Ham_tmp%destroy()
 
-                Call Ham_tmp%init_connect(all_pairs,val_tmp,ind_tmp,"UU",lat,1)
-                deallocate(val_tmp,ind_tmp)
-                Call Ham%add(Ham_tmp)
+                    connect_bnd(1)=connect_bnd(2)+1
+                    deallocate( all_pairs )
 
-                Call Ham_tmp%destroy()
-
-                connect_bnd(1)=connect_bnd(2)+1
-                deallocate( all_pairs )
-
+              enddo
             enddo
           enddo
         endif

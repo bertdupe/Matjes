@@ -19,13 +19,15 @@ type            ::  fft_H
     integer(C_int),public   :: dim_mode=0   !dimension of considered operator field
     logical,public          :: periodic(3)=.true.   !consider as periodic or open boundary condition along each direction (T:period, F:open)
                                             ! (dim_lat(i)=1->period(i)=T, since the calculation in the periodic case is easier, but choice of supercell_vec still does not consider periodicity)
-    character(len=len_desc)     :: desc=""  !description of the Hamiltonian term, only used for user information and should be set manually 
+    character(len=len_desc)     :: desc=""  ! description of the Hamiltonian term, only used for user information and should be set manually
+    integer                     :: mode_id=0  ! goes from 1 to 6 depending on the order parameter
+    character(len=1)            :: mode_name="" ! abbreviation of the name of the order parameter
 
 
     real(C_DOUBLE),allocatable,public  ::  M_n(:,:)    !magnetization in normal-space, set by M_internal
     real(C_DOUBLE),allocatable,public  ::  H_n(:,:)    !effective field normal-space, extract by H_internal
 
-    procedure(int_set_M), pointer,nopass,public    ::  M_internal => null()    !function to set internal magnetization depending on periodic/open boundaries
+    procedure(int_set_M), pointer,nopass,public    ::  M_internal => null()    !function to set internal mode (magnetization or polarization) depending on periodic/open boundaries
     procedure(int_get_H), pointer,nopass,public    ::  H_internal => null()    !function to get effective field depending on periodic/open boundaries
 
 
@@ -52,12 +54,29 @@ contains
     procedure,public    :: bcast=>bcast_fft !mv this to new instance
 
     !internal procedures
-    procedure           :: set_M                !set internal magnetization in normal-space from lattice
+    procedure           :: set_M                !set internal mode (magnetization or polarization) in normal-space from lattice
     procedure           :: init_internal        !initialize internal procedures
     procedure           :: same_space           !check if 2 fft_H act on same space
+    procedure,public    :: set_mode_id,get_mode_id          !it sets on which order parameter the Hamiltonian acts
 
 end type
 contains 
+
+subroutine set_mode_id(this,mode_id,mode_name)
+    class(fft_H),intent(inout)          :: this
+    integer,intent(in)                  :: mode_id
+    character(len=*),intent(in)         :: mode_name
+
+    this%mode_id=mode_id
+    this%mode_name=mode_name
+end subroutine
+
+subroutine get_mode_id(this,res)
+    class(fft_H), intent(in)  :: this
+    integer,intent(out)       :: res
+
+    res=this%mode_id
+end subroutine
 
 subroutine get_desc(this,desc)
     class(fft_H),intent(in)             :: this
@@ -103,6 +122,7 @@ subroutine bcast_fft(this,comm)
     Call bcast(this%periodic,comm)
     Call bcast(this%dim_mode,comm)
     Call bcast(this%desc,comm)
+    call bcast(this%mode_id,comm)
 
     if(comm%ismas) shp=shape(this%M_n)
     Call bcast(shp,comm)
@@ -130,6 +150,7 @@ subroutine mv(this,H_out)
     H_out%periodic=this%periodic
     H_out%dim_mode=this%dim_mode
     H_out%desc=this%desc
+    H_out%mode_id=this%mode_id
 
     if(allocated(this%M_N)) call move_alloc(this%M_n,H_out%M_n)
     if(allocated(this%H_N)) call move_alloc(this%H_n,H_out%H_n)
@@ -152,6 +173,7 @@ subroutine copy(this,H_out)
     H_out%periodic=this%periodic
     H_out%dim_mode=this%dim_mode
     H_out%desc=this%desc
+    H_out%mode_id=this%mode_id
 
     allocate(H_out%M_n,mold=this%M_n)
     allocate(H_out%H_n,mold=this%H_n)
@@ -171,6 +193,7 @@ subroutine destroy(this)
     this%periodic=.true.
     this%dim_mode=0
     this%desc=""
+    this%mode_id=0
 
     if(allocated(this%M_N)) deallocate(this%M_N)
     if(allocated(this%H_N)) deallocate(this%H_N)
@@ -262,18 +285,21 @@ subroutine get_E_distrib(this,lat,Htmp,E)
     type(lattice),intent(in)      ::  lat
     real(8),intent(inout)         ::  Htmp(:,:)
     real(8),intent(out)           ::  E(:)
-
-    !ugly implementation so that this works with all order parameters
-    !(this should be cleaned up)
-    real(8),pointer,contiguous    ::  M(:)
-    real(8),pointer,contiguous    ::  M_v(:,:)
-    
-    Call lat%set_order_point(this%order,M)
-    M_v(1:size(Htmp,1),1:size(Htmp,2)) => M
+    integer                       :: mode_id
 
     Call this%get_H(lat,Htmp)
-    Htmp=Htmp*M_v
-    E=sum(reshape(Htmp,[3,lat%Nmag*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
+    call this%get_mode_id(mode_id)
+
+    select case (mode_id)
+       case (1)  ! M case
+         Htmp=Htmp*lat%M%modes_v
+         E=sum(reshape(Htmp,[3,lat%Nmag*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
+       case (5)  ! U case
+         Htmp=Htmp*lat%U%modes_v
+         E=sum(reshape(Htmp,[3,lat%Nph*lat%Ncell]),1)*2.0d0 !not sure about *2.0d0
+       case default
+         stop 'not coded in get_E_distrib'
+    end select
 end subroutine
 
 subroutine get_E(this,lat,Htmp,E)
@@ -282,16 +308,20 @@ subroutine get_E(this,lat,Htmp,E)
     real(8),intent(inout)         ::  Htmp(:,:)
     real(8),intent(out)           ::  E
 
-    !ugly implementation so that this works with all order parameters
-    !(this should be cleaned up)
-    real(8),pointer,contiguous    ::  M(:)
-    real(8),pointer,contiguous    ::  M_v(:,:)
-    
-    Call lat%set_order_point(this%order,M)
-    M_v(1:size(Htmp,1),1:size(Htmp,2)) => M
+
+    integer                       :: mode_id
 
     Call this%get_H(lat,Htmp)
-    Htmp=Htmp*M_v
+    call this%get_mode_id(mode_id)
+
+    select case (mode_id)
+       case (1)  ! M case
+         Htmp=Htmp*lat%M%modes_v
+       case (5)  ! U case
+         Htmp=Htmp*lat%U%modes_v
+       case default
+         stop 'not coded in get_E'
+    end select
     E=sum(Htmp)
 end subroutine
 
@@ -304,6 +334,7 @@ subroutine get_E_single(this,lat,site,E)
     real(8),intent(out)         :: E
 
     real(8)                     :: Htmp(3)
+    integer                     :: mode_id
 
     !ugly implementation so that this works with all order parameters
     !(this should be cleaned up)
@@ -314,7 +345,15 @@ subroutine get_E_single(this,lat,site,E)
     M_3(1:3,1:size(M)/3) => M
 
     Call this%get_H_single(lat,site,Htmp)
-    Htmp=Htmp*M_3(:,site)
+    call this%get_mode_id(mode_id)
+    select case (mode_id)
+       case (1)  ! M case
+         Htmp=Htmp*lat%M%modes_3(:,site)
+       case (5)  ! U case
+         Htmp=Htmp*lat%U%modes_3(:,site)
+       case default
+         stop 'not coded in get_E_single'
+    end select
     E=sum(Htmp)*2.0d0
 end subroutine
 
