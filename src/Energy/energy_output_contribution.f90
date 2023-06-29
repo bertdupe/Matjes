@@ -38,6 +38,7 @@ subroutine Eout_contrib_write(H,step,time,lat,io)
     N_H=H%size_H()
     allocate(E(N_H))
     Call H%energy_resolved(lat,E)
+    write(*,*) 'in eout_contrib_write, E=',E(:), ' Etot=',sum(E)
     write(io,'(I6,2E16.8)',advance='no') step,time,sum(E) 
     do i=1,N_H
         write(io,'(E16.8)',advance='no') E(i) 

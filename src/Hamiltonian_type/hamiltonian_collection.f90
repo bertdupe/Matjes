@@ -320,14 +320,10 @@ subroutine init_H_cp(this,lat,Harr,H_fft)
             do i=1,size(H_fft)
                 Call H_fft(i)%copy(this%H_fft(i))
             enddo
-<<<<<<< HEAD
-            Call allocate_H_fft_tmparr(this%H_fft_tmparr,H_fft,lat)
-=======
 ! Bertrand made a change here
 ! this part may not work when nph is different from nmag and are both different from 0
 ! this is a temporary array but it is used on all phonon and magnetic Hamiltonian which might be a problem
             allocate(this%H_fft_tmparr(3*max(lat%nmag,lat%nph),lat%ncell))   !has to be adjusted as well, probably work on same arrays anyways... 
->>>>>>> e068ad9ec4dc08d3aef6f57eda6e7a3c4dc3cd8f
             this%NHF_total=size(this%H_fft)
             this%NHF_local=this%NHF_total
         endif

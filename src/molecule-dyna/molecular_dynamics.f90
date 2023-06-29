@@ -373,9 +373,9 @@ class(ranbase), allocatable :: thermal_noise
             
         	if(io_simu%io_energy_cont)then
 			if(io_simu%io_energy_detail)then
-		                Call Eout_contrib_write(H_res,j,real_time,my_lattice,io_Eout_contrib)
+		                Call Eout_contrib_write(H_res,j,real_time,lat_1,io_Eout_contrib)
 		       else
-		                Call Eout_contrib_write(H,j,real_time,my_lattice,io_Eout_contrib)
+		                Call Eout_contrib_write(H,j,real_time,lat_1,io_Eout_contrib)
 		       endif
                
        	 endif
@@ -383,9 +383,9 @@ class(ranbase), allocatable :: thermal_noise
        	 if (io_simu%io_Energy_Distrib)then
                 	!if(comm%Np>1) Call mag_lattice%bcast_val(comm)
                	 if(io_simu%io_Energy_detail)then
-                    		Call write_energy_field(tag,H_res,my_lattice,5,comm%ismas) !1 for magnetic field,there is no other choice afaik?
+                    		Call write_energy_field(tag,H_res,lat_1,5,comm%ismas) !5 for phonons
                 	else
-                    		Call write_energy_field(tag,H    ,my_lattice,5,comm%ismas) !1 for magnetic field, 
+                    		Call write_energy_field(tag,H    ,lat_1,5,comm%ismas) !5 for phonons 
                 	endif
             	endif
 	endif
