@@ -34,9 +34,7 @@ type lattice
      integer        :: dim_modes(number_different_order_parameters)=0 !saves the dimension of the set order_parameters
      integer        :: site_per_cell(number_different_order_parameters)=0 !number of sites of order parameter per unit-cell (like nmag, nph)
 
-     integer                :: n_system !no clue what this does
-     integer, allocatable   :: world(:)
-     logical                :: periodic(3) !lattice periodic in direction
+     logical         :: periodic(3) !lattice periodic in direction
      logical,private :: order_set(number_different_order_parameters)=.false. !logical variable which saves which orderparameters has been set
 
      !convenience parameters 
@@ -74,8 +72,7 @@ contains
     !get correct order parameter (or combination thereof)
     procedure :: set_order_point
     procedure :: set_order_point_inner
-!    procedure :: get_pos_mag => lattice_get_position_mag
-!    procedure :: get_pos_center
+    procedure :: set_motif_initconf !extract the inital order parmeter within the unit cell
     procedure :: pos_diff_ind => lattice_position_difference
     procedure :: pos_ind => lattice_position
     procedure :: dist_2vec  !distance between 2 vectors
@@ -245,8 +242,8 @@ subroutine init_order(this,cell,extpar_io)
         STOP 'Please tell Bertrand if you do not think this should crash'
     endif
     this%dim_modes(1)=this%nmag*3
-    if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) this%dim_modes(2)=3
-    if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) this%dim_modes(3)=3
+    if(norm2(extpar_io%E)>0.0d0.or.extpar_io%enable_E) this%dim_modes(2)=3*(this%nph+this%nmag)
+    if(norm2(extpar_io%H)>0.0d0.or.extpar_io%enable_H) this%dim_modes(3)=3*(this%nph+this%nmag)
     if(norm2(extpar_io%T)>0.0d0.or.extpar_io%enable_T) this%dim_modes(4)=1
     this%dim_modes(5)=this%nph*3
     if(extpar_io%enable_w)then
@@ -257,8 +254,8 @@ subroutine init_order(this,cell,extpar_io)
     !if(extpar_io%enable_u) dim_modes(5)=size(cell%atomic)*3
     this%order_set=this%dim_modes>0
     if(this%order_set(1)) this%site_per_cell(1)=this%nmag
-    if(this%order_set(2)) this%site_per_cell(2)=1
-    if(this%order_set(3)) this%site_per_cell(3)=1
+    if(this%order_set(2)) this%site_per_cell(2)=this%nmag+this%nph
+    if(this%order_set(3)) this%site_per_cell(3)=this%nmag+this%nph
     if(this%order_set(4)) this%site_per_cell(4)=1
     if(this%order_set(5)) this%site_per_cell(5)=this%nph
     if(this%order_set(6)) this%site_per_cell(6)=this%norb
@@ -517,6 +514,34 @@ subroutine set_order_point_inner(this,order,point)
     end select
 end subroutine
 
+subroutine set_motif_initconf(this,order,configuration)
+    class(lattice),intent(in)            ::  this
+    integer,intent(in)                   ::  order
+    real(8),allocatable,intent(out)      ::  configuration(:)
+
+    select case(order)
+    case(1)    ! magnetic part
+        call this%cell%get_mag_magmom(configuration)
+    case(2)    ! case electric field
+        allocate(configuration(1),source=1.0d0)
+!        point=>this%E%all_modes
+    case(3)   ! case electric field
+        allocate(configuration(1),source=1.0d0)
+!        point=>this%B%all_modes
+    case(4)   ! case magnetic field
+         allocate(configuration(1),source=1.0d0)
+!        point=>this%T%all_modes
+    case(5) ! phonon part
+        call this%cell%get_Z_phonon(configuration)
+    case(6)  ! case wave function
+        allocate(configuration(1),source=1.0d0)
+!        point=>this%w%all_modes
+    case default
+        write(error_unit,*) 'order:',order
+        STOP 'failed to associate pointer in set_motif_initconf'
+    end select
+end subroutine
+
 function get_order_dim(this,order,ignore) result(dim_mode)
     class(lattice),intent(in)   :: this
     integer,intent(in)          :: order
@@ -555,12 +580,10 @@ subroutine copy_lattice(this,copy)
     copy%a_sc_inv=this%a_sc_inv
     copy%dim_lat=this%dim_lat
     copy%ncell=this%ncell
-    copy%n_system=this%n_system
     copy%dim_modes=this%dim_modes
     copy%nmag=this%nmag
     copy%nph=this%nph
     copy%periodic=this%periodic
-    if(allocated(this%world)) allocate(copy%world,source=this%world)
     if(allocated(this%sc_vec_period)) allocate(copy%sc_vec_period,source=this%sc_vec_period)
     copy%order_set=this%order_set
     copy%site_per_cell=this%site_per_cell
@@ -660,21 +683,15 @@ use mpi_basic
     Call MPI_Bcast(this%a_sc         , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%a_sc_inv     , 9                                , MPI_REAL8  , comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%dim_modes    , size(this%dim_modes)             , MPI_INTEGER, comm%mas, comm%com,ierr)
-    Call MPI_Bcast(this%n_system     , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%nmag         , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%nph          , 1                                , MPI_INTEGER, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%periodic     , 3                                , MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%order_set    , size(this%order_set)             , MPI_LOGICAL, comm%mas, comm%com,ierr)
     Call MPI_Bcast(this%site_per_cell, number_different_order_parameters, MPI_INTEGER, comm%mas, comm%com,ierr)
 
-    if(comm%ismas) N=size(this%world)
+    if(comm%ismas) N=size(this%sc_vec_period,2)
     Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    if(.not.comm%ismas) allocate(this%world(N))
-    Call MPI_Bcast(this%world, N, MPI_INTEGER, comm%mas, comm%com,ierr)
-
-    if(comm%ismas) N=size(this%world)
-    Call MPI_Bcast(N, 1, MPI_INTEGER, comm%mas, comm%com,ierr)
-    if(.not.comm%ismas) allocate(this%sc_vec_period(3,N/3))
+    if(.not.comm%ismas) allocate(this%sc_vec_period(3,N))
     Call MPI_Bcast(this%sc_vec_period, N, MPI_REAL8, comm%mas, comm%com,ierr)
 
     if(this%order_set(1)) Call this%M%bcast(comm)

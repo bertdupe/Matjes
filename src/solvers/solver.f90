@@ -94,25 +94,27 @@ enddo
 end function 
 
 
-function euler(m,Dmag_int,dt)result(Mout)
+function euler(m,Dmag_int,DTmag_int,dt)result(Mout)
     !do the LLG step from data provided in large contiguous arrays (with shape (3,Nsite*Nmag))
     use m_constants, only : hbar
-    real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:)
+    real(8),intent(in),contiguous   ::  M(:,:),Dmag_int(:,:),DTmag_int(:,:)
     real(8),intent(in)              ::  dt
-    real(8)                         ::  Mout(size(M,1),size(M,2))
+    real(8),allocatable             ::  Mout(:,:)
     !internal
     real(8) :: m_norm(size(M,2))
     real(8) :: int_norm(size(M,2))
     real(8) :: euler_tmp(size(M,1),size(M,2))
     integer :: i
 
+    allocate(Mout(size(M,1),size(M,2)),source=0.0d0)
     !ADD DT_mode if necessary
-    if(size(M,1)/=3.or.size(Dmag_int,1)/=3.or.size(Mout,1)/=3) ERROR STOP "euler INPUT NEEDS TO BE 3-vector"
+    if(size(M,1)/=3.or.size(Dmag_int,1)/=3.or.size(DTmag_int,1)/=3.or.size(Mout,1)/=3) ERROR STOP "euler INPUT NEEDS TO BE 3-vector"
     m_norm=norm2(m,dim=1)
-    euler_tmp=M+Dmag_int*dt/hbar
+    euler_tmp=M+Dmag_int*dt/hbar+DTmag_int*dt/hbar
     int_norm=norm2(euler_tmp,dim=1)
     mout=M
     forall(i=1:size(int_norm), int_norm(i)>1.0d-8 ) mout(:,i)=euler_tmp(:,i)*m_norm(i)/int_norm(i)
+
 end function
 
 

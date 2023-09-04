@@ -14,8 +14,9 @@ interface get_cols
 end interface get_cols
 
 interface dump_spinse
- module procedure dump_config_spinse
  module procedure dump_config_spinse_spin
+ module procedure dump_config_spinse_3D
+ module procedure dump_config_spinse_1D
 end interface dump_spinse
 
 interface dump_config
@@ -55,6 +56,7 @@ interface get_parameter
  module procedure get_atomtype
  module procedure get_cell
  module procedure get_H_pair
+ module procedure get_H_pair_tensor
  module procedure get_H_triple
 end interface get_parameter
 
@@ -111,20 +113,24 @@ implicit none
 integer, intent(in) :: io
 real(kind=8), intent(in) :: spin(:,:)
 ! internale variables
-Integer :: i,shape_spin(2)
+Integer :: i,shape_spin(2),j,counter
 real(kind=8) :: widthc,Delta,Bc,Gc,Rc,theta,phi
 
 !     Constants used for the color definition
 widthc=5.0d0
 Delta =pi*2.0d0/3.0d0
 shape_spin=shape(spin)
+counter=0
 
 do i=1,shape_spin(2)
+  do j=1,shape_spin(1),3
 
-   call get_colors(Rc,Gc,Bc,theta,phi,spin(:,i))
+   counter=counter+1
 
-   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(i),',',Rc,',',Bc,',',Gc,')'
+   call get_colors(Rc,Gc,Bc,theta,phi,spin(j:j+2,i))
 
+   write(io,'(6(a,f16.8),a)') 'Spin(',theta,',',phi,',',real(counter),',',Rc,',',Bc,',',Gc,')'
+  enddo
 enddo
 
 end subroutine dump_config_spinse_spin
@@ -132,7 +138,7 @@ end subroutine dump_config_spinse_spin
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that reads and write the local spinse files
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine dump_config_spinse(io,lat,position)
+subroutine dump_config_spinse_3D(io,lat,position)
 !    use m_derived_types
     use m_derived_types, only: lattice
     use m_constants, only : pi
@@ -161,7 +167,35 @@ subroutine dump_config_spinse(io,lat,position)
        enddo
     enddo
 
-end subroutine dump_config_spinse
+end subroutine dump_config_spinse_3D
+
+subroutine dump_config_spinse_1D(io,spin,position)
+!    use m_derived_types
+    use m_constants, only : pi
+    implicit none
+    integer, intent(in) :: io
+    real(8), intent(in) :: spin(:,:)
+    real(kind=8), intent(in)  :: position(:)
+    ! internale variables
+    Integer :: i,N,j
+    real(kind=8) :: Rc,Gc,Bc,theta,phi
+
+    N=size(spin,2)
+
+    do i=1,N
+
+        j=(i-1)*3
+
+!       call get_colors(Rc,Gc,Bc,theta,phi,lat%M%modes((i_m-1)*3+1:i_m*3,i))
+       call get_colors(Rc,Gc,Bc,theta,phi,spin(:,i))
+
+       write(io,'(8(a,f16.8),a)') 'Spin(', &
+         & theta,',',phi,',',position(j+1),',',position(j+2),',',position(j+3),',', &
+         & Rc,',',Bc,',',Gc,')'
+
+    enddo
+
+end subroutine dump_config_spinse_1D
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! routine that dumps a 5D matrix of real numbers
@@ -248,7 +282,7 @@ character(len=100) :: rw_format
 
 N(1:3)=lat%dim_lat
 
-write(rw_format,'( "(", I4, "E24.16,2x)" )') lat%M%dim_mode
+write(rw_format,'( "(", I4, "E24.16,2x)" )') lat%M%dim_mode ! have all the modes of the unit cell on one line
 
 do i_z=1,N(3)
   do i_y=1,N(2)
@@ -275,7 +309,9 @@ type(order_par), intent(in) :: order
 !#Integer :: i_x,i_y,i_z,i_m,j_lat,N(4)
 character(len=100) :: rw_format
 
-write(rw_format,'( "(", I4, "f14.8,2x)" )') order%dim_mode
+write(rw_format,'( "(", I4, "f14.8,2x)" )') order%dim_mode ! this is to have the all the order parameter of a unit cell on a line
+!write(rw_format,'( "(", I4, "f14.8,2x)" )') 3   ! one order parameter per line.
+
 write(io,rw_format) order%all_modes
 
 end subroutine
@@ -421,7 +457,6 @@ do i=1,N
    integer_number=convert(i)
    var_name_local=convert(var_name,integer_number)
    length_string=len_trim(var_name_local)
-   write(*,*) var_name_local
    call get_parameter(io,fname,var_name_local(1:length_string),stride,coeff((i-1)*stride+1:i*stride))
 enddo
 
@@ -564,7 +599,8 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
     integer :: nread,i,ii,j
     integer :: stat
     character(len=100) :: str
-    
+    character(len=100) :: comment_char, dummy
+
     nread=0
     Call set_pos_entry(io,fname,var_name,success)
     read(io,'(a)',iostat=stat) str
@@ -576,6 +612,8 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
         do 
             read(io,'(a)',iostat=stat) str
             if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) comment_char, dummy
+            if (comment_char(1:1) .eq. '#') cycle
             read(str,*,iostat=stat) attype,dist,val
             if (stat /= 0) exit
             Npair=Npair+1
@@ -657,6 +695,131 @@ subroutine get_H_pair(io,fname,var_name,Hpairs,success)
 
     Call check_further_entry(io,fname,var_name)
 end subroutine 
+
+subroutine get_H_pair_tensor(io,fname,var_name,Hpairs_tensor,success)
+    use m_input_H_types, only: reduce_Hr_tensor_pair,Hr_pair_tensor,Hr_pair_single_tensor
+    !always uses the same variable name, hence kept as parameter
+
+    integer, intent(in)                            :: io
+    character(len=*), intent(in)                   :: fname,var_name
+    type(Hr_pair_tensor), intent(out), allocatable :: Hpairs_tensor(:)
+    logical,intent(out)                            :: success
+    ! internal variable
+    type(Hr_pair_single_tensor),allocatable        :: Hpair_tmp(:)
+    type(Hr_pair_tensor), allocatable              :: Hpairs_tensor_tmp(:)
+    integer :: attype(2),dist
+    real(8) :: val(9),bound(3)
+
+    integer :: Npair,Nnonzero
+    integer :: nread,i,ii,j
+    integer :: stat
+    character(len=100) :: str
+
+    nread=0
+    val=0.0d0
+    bound=0.0d0
+    Call set_pos_entry(io,fname,var_name,success)
+    read(io,'(a)',iostat=stat) str
+    if(success)then
+        !find out how many entries there are
+        success=.false.
+        Npair=0; Nnonzero=0
+        nread=nread+1
+        do
+            read(io,'(a)',iostat=stat) str
+            if (stat /= 0) STOP "UNEXPECTED END OF INPUT FILE"
+            read(str,*,iostat=stat) attype,dist,val
+            if (stat /= 0) exit
+            Npair=Npair+1
+            do i=1,9
+               if(val(i)/=0.0d0) then
+                   Nnonzero=Nnonzero+1
+                   exit
+               endif
+            enddo
+        enddo
+        if(Npair<1)then
+            write(error_unit,'(/2A/A/)') "Found no entries for ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        if(Nnonzero<1)then
+            write(error_unit,'(/2A/A/)') "WARNING, Found no nonzero entries for: ",var_name,' although the keyword is specified'
+#ifndef CPP_SCRIPT
+            ERROR STOP "INPUT PROBABLY WRONG (disable with CPP_SCRIPT preprocessor flag)"
+#endif
+            return
+        endif
+        write(output_unit,'(/A,I6,2A)') "Found ",Nnonzero," nonzero entries for Hamiltonian ",var_name
+        !allocate correct size of entries and move IO to beginning of data
+        allocate(Hpair_tmp(Nnonzero))
+        do i=1,Npair+1
+            backspace(io)
+        enddo
+        !read in data
+        ii=1
+        do i=1,Npair
+            val=0.0d0
+            read(io,*,iostat=stat) attype,dist,val,bound
+            if(all(val==0.0d0)) cycle
+            if(attype(2)<attype(1))then
+                j        =attype(2)
+                attype(2)=attype(1)
+                attype(1)=j
+            endif
+            Hpair_tmp(ii)%attype=attype
+            Hpair_tmp(ii)%dist=dist
+            Hpair_tmp(ii)%val=val
+            Hpair_tmp(ii)%bound=bound
+            write(output_unit,'(2A,I6,A)') var_name,' entry no.',ii,':'
+            write(output_unit,'(A,2I6)')    '  atom types:', Hpair_tmp(ii)%attype
+            write(output_unit,'(A,2I6)')    '  distance  :', Hpair_tmp(ii)%dist
+            write(output_unit,'(A,9E16.8)') '  energy    :', Hpair_tmp(ii)%val
+            write(output_unit,'(A,3E16.8/)') ' along the bound :', Hpair_tmp(ii)%bound
+            ii=ii+1
+        enddo
+
+        !combines single entries into arrays with same atom types
+        Call reduce_Hr_tensor_pair(Hpair_tmp,Hpairs_tensor)
+
+        !check if any entry appears more than once
+
+        do i=1,size(Hpairs_tensor)
+            do j=2,size(Hpairs_tensor(i)%dist)
+                if(any(Hpairs_tensor(i)%dist(j)==Hpairs_tensor(i)%dist(:j-1)))then
+                    write(output_unit,*) "ERROR, found the same distance twice for Hamiltonian ",var_name
+                    write(output_unit,*) "       at atom indices  :",Hpairs_tensor(i)%attype
+                    write(output_unit,*) "       with the distance:",Hpairs_tensor(i)%dist(j)
+                    STOP "THIS IS MOST PROBABLY AN INPUT MISTAKE"
+                endif
+            enddo
+        enddo
+
+        !symmetrize different type Hamiltonians  (i.e. all attype=[1 2] interactions are duplicated with [2 1]
+        if(any(Hpairs_tensor%attype(1)/=Hpairs_tensor%attype(2)))then
+            Call move_alloc(Hpairs_tensor,Hpairs_tensor_tmp)
+            allocate(Hpairs_tensor(size(Hpairs_tensor_tmp)+count(Hpairs_tensor_tmp%attype(1)/=Hpairs_tensor_tmp%attype(2))))
+            ii=0
+            do i=1,size(Hpairs_tensor_tmp)
+                ii=ii+1
+                Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
+                if(Hpairs_tensor_tmp(i)%attype(1)/=Hpairs_tensor_tmp(i)%attype(2))then
+                    ii=ii+1
+                    Hpairs_tensor(ii)=Hpairs_tensor_tmp(i)
+                    Hpairs_tensor(ii)%attype=[Hpairs_tensor_tmp(i)%attype(2),Hpairs_tensor_tmp(i)%attype(1)]
+                endif
+            enddo
+            deallocate(Hpairs_tensor_tmp)
+        endif
+
+        success=.true.
+    endif
+
+    Call check_further_entry(io,fname,var_name)
+
+end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Get cell based on atomtype
@@ -979,7 +1142,7 @@ enddo
 
 check=check_read(nread,vname,fname)
 
-if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', string
+if (check.eq.0) write(output_unit,'(4a)') 'default value for variable ', trim(adjustl(vname)), ' is ', trim(adjustl(string))
 
 end subroutine get_character
 
@@ -1288,7 +1451,6 @@ if (check.eq.0) write(6,*) 'default value for variable ', vname, ' is ', vec
 
 end subroutine get_1D_vec_cmplx
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! get a 2D REAL vector parameter (check the string and so on)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1402,17 +1564,17 @@ end function get_NB_lines
 ! get the number of columns in a ASCII file
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-function get_NB_columns(fname) result(N)
+function get_NB_columns(fname) result(ncol)
 implicit none
 character(len=*), intent(in) :: fname
-integer :: N
+integer :: ncol
 ! internal
-integer :: ncol,io,i
+integer :: npoint,io,i,nspace,fin
 character(len=400) :: str
 logical :: test
+real(8),allocatable :: dumy(:)
 
 ncol=0
-N=0
 inquire(FILE=fname,EXIST=test)
 if (.not.test) then
   write(6,'(a,2x,a,2x,a)') 'file',fname,'not found'
@@ -1426,13 +1588,30 @@ rewind(io)
 read (io,'(a)') str
 str= trim(adjustl(str))
 
-close(io)
-ncol=0
-do i=1,len(str)
-if (str(i:i) == '.') ncol=ncol+1
-enddo
+  npoint=0
+  do i=1,len(str)
+    if (str(i:i) == '.') npoint=npoint+1
+  enddo
 
-N=ncol
+  nspace=0
+  do i=1,len(str)
+    if (str(i:i) == ' ') nspace=nspace+1
+  enddo
+
+  ncol=npoint
+  if (mod(nspace,npoint-1).eq.0) ncol=npoint
+
+allocate(dumy(ncol),source=0.0d0)
+
+rewind(io)
+do
+  read (io,*,iostat=fin) dumy
+  if (fin .gt. 0) STOP 'ERROR in reading file in get_NB_columns'
+  if (fin .lt. 0) exit
+enddo
+close(io)
+
+write(output_unit,'(/a,I4,a/)') 'the file has ',ncol,' columns'
 
 end function get_NB_columns
 

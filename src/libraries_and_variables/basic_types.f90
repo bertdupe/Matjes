@@ -46,6 +46,14 @@ type atom
     procedure :: set_attype => atom_set_attype
 end type atom
 
+type torque
+    !type which contains all essential information about different torques that can be applied on the magnetization
+    real(8), dimension(3)                 :: current_dir=0.0d0         ! current direction
+    real(8), dimension(3)                 :: polarization=0.0d0        ! current polarization
+    real(8)                               :: FL_damp=0.0d0             ! field-like and damping-like amplitude of the torques
+    real(8)                               :: DL_damp=0.0d0
+    logical                               :: is_set=.false.            ! is set or not
+end type torque
 
 !!!!!!!!!!!!!!!!!!!!!!!!!
 !
@@ -57,7 +65,8 @@ end type atom
 type symop
  real(kind=8) :: mat(3,3)
  character(len=10) :: name
-end type symop
+ real(kind=8) :: translation(3)=0.0d0
+end type
 
 !! type vector and vector pointers
 !type vec

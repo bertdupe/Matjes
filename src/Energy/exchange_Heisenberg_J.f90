@@ -16,7 +16,8 @@ subroutine read_J_input(io_param,fname,io)
     type(io_H_J),intent(out)        :: io
 
     Call get_parameter(io_param,fname,'magnetic_J',io%pair,io%is_set) 
-    Call get_parameter(io_param,fname,'magnetic_J_fft',io%fft) 
+    Call get_parameter(io_param,fname,'magnetic_J_fft',io%fft)
+    Call get_parameter(io_param,fname,'c_H_J',io%c_H_J)
 end subroutine
 
 subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
@@ -31,7 +32,7 @@ subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     type(io_H_J),intent(in)                        :: io
     type(lattice),intent(in)                       :: lat
     real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
-    class(t_H),optional,allocatable,intent(inout)  :: Ham_shell_pos(:)
+    real(8),optional,allocatable,intent(inout)     :: Ham_shell_pos(:,:,:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
@@ -69,7 +70,8 @@ subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                 enddo
              enddo
           enddo
-          allocate(Ham_shell_pos(i_pair),mold=Ham_tmp)
+          allocate(Ham_shell_pos(lat%M%dim_mode,lat%M%dim_mode,i_pair))
+          Ham_shell_pos=0.0d0
           allocate(neighbor_pos_list(3,i_pair))
         endif
 
@@ -104,7 +106,7 @@ subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     Htmp(offset_mag(1)+2,offset_mag(2)+2)=J
                     Htmp(offset_mag(1)+3,offset_mag(2)+3)=J
                     connect_bnd(2)=neigh%ishell(i_pair)
-                    Htmp=-Htmp !flip sign corresponding to previous implementation
+                    Htmp=io%c_H_J*Htmp !flip sign corresponding to previous implementation
                     Call get_coo(Htmp,val_tmp,ind_tmp)
 
                     !fill Hamiltonian type
@@ -112,7 +114,7 @@ subroutine get_exchange_J(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
                     deallocate(val_tmp,ind_tmp)
                     Call Ham%add(Ham_tmp)
                     if (present(Ham_shell_pos)) then
-                       call Ham_tmp%mv(Ham_shell_pos(i_pair))
+                       Ham_shell_pos(:,:,i_pair)=Htmp
                     else
                        Call Ham_tmp%destroy()
                     endif
@@ -189,7 +191,7 @@ subroutine get_exchange_J_fft(H_fft,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                J=-io%pair(i_atpair)%val(i_dist) !negative sign for compatibility with previous implementatoins
+                J=io%c_H_J*io%pair(i_atpair)%val(i_dist) !negative sign for compatibility with previous implementatoins
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_pair=i_pair+1

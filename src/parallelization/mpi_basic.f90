@@ -17,6 +17,7 @@ contains
     procedure   :: set_from_distv   !constructor for the basic mpi_type from the more specific mpi_distv type
     procedure   :: get_loop_bnd
     procedure   :: barrier
+    procedure   :: copy_base
 end type
 
 type,extends(mpi_type)  :: mpi_distv
@@ -109,11 +110,34 @@ subroutine set(this,com_in)
     if(ierr/=0) STOP "MPI_COMM_size failed"
     this%mas=0
     this%ismas=this%id==this%mas
+
 end subroutine
 #else
 subroutine set(this) !no mpi
     class(mpi_type),intent(out)     :: this
     
+    continue
+    !without mpi just use default values
+
+end subroutine
+#endif
+
+#ifdef CPP_MPI
+subroutine copy_base(this,com_in)
+    class(mpi_type),intent(out)     :: this
+    type(mpi_type) ,intent(in)      :: com_in
+
+    this%com=com_in%com
+    this%id=com_in%id
+    this%Np=com_in%Np
+    this%ismas=com_in%ismas
+    this%mas=com_in%mas
+
+end subroutine
+#else
+subroutine copy_base(this) !no mpi
+    class(mpi_type),intent(out)     :: this
+
     continue
     !without mpi just use default values
 
@@ -138,6 +162,9 @@ subroutine set_MPI_type(blocks,bnd_real,bnd_cmplx,bnd_int,val_out)
     N_entry=size(blocks)
     test_type=MPI_REAL  !example kind=4 for comparison
     types=test_type
+!    if(all(bnd_real >0)) types(bnd_real (1):bnd_real (2))=MPI_DOUBLE_PRECISION
+!    if(all(bnd_cmplx>0)) types(bnd_cmplx(1):bnd_cmplx(2))=MPI_DOUBLE_COMPLEX
+!    if(all(bnd_int  >0)) types(bnd_int  (1):bnd_int  (2))=MPI_INT
     if(all(bnd_real >0)) types(bnd_real (1):bnd_real (2))=MPI_DOUBLE_PRECISION
     if(all(bnd_cmplx>0)) types(bnd_cmplx(1):bnd_cmplx(2))=MPI_DOUBLE_COMPLEX
     if(all(bnd_int  >0)) types(bnd_int  (1):bnd_int  (2))=MPI_INT

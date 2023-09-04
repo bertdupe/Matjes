@@ -14,7 +14,6 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     
     use m_symmetry_operators
     use m_anisotropy_heisenberg,only: get_anisotropy_H
-    !use m_exchange_heisenberg,only: get_exchange_H,exchange
     use m_zeeman,only: get_zeeman_H
     use m_exchange_heisenberg_J, only: get_exchange_J
     use m_exchange_heisenberg_D, only: get_exchange_D
@@ -26,6 +25,13 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use m_Mag_Biq, only: get_Mag_Biq
     use m_4spin, only: get_4spin
     use m_dipolar_magnetic, only: get_dipolar
+    use m_exchange_heisenberg_general, only : get_exchange_ExchG
+    use m_spincurrent, only : get_coupling_SC
+    use m_phonon_rank4, only : get_PH4
+    use m_Ph_Biq, only : get_Ph_Biq
+    use m_general_force_tensor, only : get_Forces_tensor
+    use m_dipolar_phonon, only : get_dipolar_ph
+    use m_3spin, only : get_3spin
     class(t_H),allocatable,intent(out)  :: Ham_res(:)
     class(t_H),allocatable,intent(out)  :: Ham_comb(:)
     logical,intent(in)                  :: keep_res ! keeps the Ham_res terms allocated
@@ -33,7 +39,7 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     type(lattice), intent(in)           :: lat
 
     integer :: i_H,N_ham
-    logical :: use_Ham(12)
+    logical :: use_Ham(19)
 
 
     use_ham(1)=H_io%J%is_set.and..not.H_io%J%fft
@@ -48,6 +54,13 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
     use_ham(10)=H_io%M_biq%is_set
     use_ham(11)=H_io%sp4%is_set
     use_ham(12)=H_io%dip%is_set.and..not.H_io%dip%fft
+    use_ham(13)=H_io%Exchten%is_set.and..not.H_io%Exchten%fft
+    use_ham(14)=H_io%SC%is_set
+    use_ham(15)=H_io%PH4%is_set
+    use_ham(16)=H_io%U_biq%is_set
+    use_ham(17)=H_io%U_foten%is_set
+    use_ham(18)=H_io%dip_ph%is_set.and..not.H_io%dip_ph%fft
+    use_ham(19)=H_io%sp3%is_set
 
     N_ham=count(use_ham)
     Call get_Htype_N(Ham_res,N_ham)
@@ -112,7 +125,41 @@ subroutine set_Hamiltonians(Ham_res,Ham_comb,keep_res,H_io,lat)
         Call get_dipolar(Ham_res(i_H),H_io%dip,lat)
         if(Ham_res(i_H)%is_set()) i_H=i_H+1
     endif
-
+    !plugin the general exchange tensor
+    if(use_ham(13))then
+        Call get_exchange_ExchG(Ham_res(i_H),H_io%Exchten,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin the spin current DMI
+    if(use_ham(14))then
+        Call get_coupling_SC(Ham_res(i_H),H_io%SC,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin rank 4 phonon
+    if(use_ham(15))then
+        Call get_PH4(Ham_res(i_H),H_io%PH4,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin rank 4 phonon
+    if(use_ham(16))then
+        Call get_Ph_Biq(Ham_res(i_H),H_io%U_biq,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin general force tensor
+    if(use_ham(17))then
+        Call get_Forces_tensor(Ham_res(i_H),H_io%U_foten,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin dipolar phonon
+    if(use_ham(18))then
+        Call get_dipolar_ph(Ham_res(i_H),H_io%dip_ph,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
+    !plugin 3 spin interaction
+    if(use_ham(19))then
+        Call get_3spin(Ham_res(i_H),H_io%sp3,lat)
+        if(Ham_res(i_H)%is_set()) i_H=i_H+1
+    endif
     write(output_unit,'(//A,I3,A)') "The following ",N_ham," Hamiltonians in real-space have been set:"
     do i_H=1,N_ham
         write(output_unit,'(3XA)') trim(Ham_res(i_H)%desc)

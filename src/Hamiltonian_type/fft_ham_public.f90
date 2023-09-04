@@ -1,19 +1,14 @@
 module m_fft_H_public
-use m_fft_H_base,  only: fft_H
-use m_fft_H_fftw,  only: fft_H_fftw
+use m_fft_H_base,     only: fft_H
+use m_fft_H_fftw,     only: fft_H_fftw
+use m_fft_H_fftwmpi,  only: fft_H_fftwmpi
 #ifdef CPP_CUDA
 use m_fft_H_cufft, only: fft_H_cufft
 #endif
 implicit none
+
+integer,private ::  mode=-1 !stores which implementation is used (1:FFTW3, 2: cuFFT, 1:FFTWMPI 0: none, -1: not initialized)
 public
-
-integer,private ::  mode=-1 !stores which implementation is used (1:FFTW3, 2: cuFFT, 0: none, -1: not initialized)
-
-interface  get_fft_H
-    module procedure get_fft_H_single
-    module procedure get_fft_H_N
-end interface
-private :: get_fft_H_single, get_fft_H_N
 
 contains
 
@@ -31,6 +26,8 @@ contains
         mode=2
 #elif defined CPP_FFTW3
         mode=1
+#elif defined CPP_FFTWMPI
+        mode=3
 #else
         mode=0
 #endif
@@ -49,6 +46,8 @@ contains
             write(*,'(/A/)') "Using Hamiltonian_fft implementation: FFTW3"
         case(2)
             write(*,'(/A/)') "Using Hamiltonian_fft implementation: Cuda"
+        case(3)
+            write(*,'(/A/)') "Using Hamiltonian_fft implementation: FFTWMPI"
         case(0)
             write(*,'(/A/)') "No implementation for Hamiltonian_fft mode available"
             !no implementation is fine as long as it is not actually allocated
@@ -73,6 +72,12 @@ contains
 #else
             ERROR STOP "CANNOT USE fft_H_fftw FOURIER IMPLEMENTATION WITHOUT FFTW (CPP_FFTW3)"
 #endif
+        case(3)
+#ifdef CPP_FFTWMPI
+            allocate(fft_H_fftwmpi::H_out)
+#else
+            ERROR STOP "CANNOT USE fft_H_fftwmpi FOURIER IMPLEMENTATION WITHOUT FFTWMPI (CPP_FFTWMPI)"
+#endif
         case(0)
             ERROR STOP "Cannot allocate Fourier Hamiltonian type, requires either CPP_FFTW3 or CPP_CUDA"
         case(-1)
@@ -83,7 +88,7 @@ contains
     end subroutine
     
     subroutine get_fft_H_N(H_out,N)
-        class(fft_H),intent(out),allocatable    :: H_out (:)
+        class(fft_H),intent(out),allocatable    :: H_out(:)
         integer,intent(in)                      :: N
 
         select case(mode)
@@ -98,6 +103,12 @@ contains
             allocate(fft_H_cufft::H_out(N))
 #else
             ERROR STOP "CANNOT USE fft_H_fftw FOURIER IMPLEMENTATION WITHOUT FFTW (CPP_FFTW3)"
+#endif
+        case(3)
+#ifdef CPP_FFTWMPI
+            allocate(fft_H_fftwmpi::H_out(N))
+#else
+            ERROR STOP "CANNOT USE fft_H_fftwmpi FOURIER IMPLEMENTATION WITHOUT FFTWMPI (CPP_FFTWMPI)"
 #endif
         case(0)
             ERROR STOP "Cannot allocate Fourier Hamiltonian type, requires either CPP_FFTW3 or CPP_CUDA"

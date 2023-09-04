@@ -21,6 +21,7 @@ subroutine read_anisotropy_input(io_unit,fname,io)
 
     !read parameters for anisotropy in cartesian coordinates assuming 4 entries, where 1:3 is unit vector direction and 4 is magnitude
     Call read_int_realarr(io_unit,fname,'magnetic_anisotropy',4,io%attype,io%val,success)
+    Call get_parameter(io_unit,fname,'c_H_ani',io%c_H_ani)
 
     !read parameters for anisotropy in cartesian coordinates using 3-real format where is magnitude is given by the norm of the entry with the sign of the first nonzero entry
     if(.not.success)then
@@ -89,7 +90,6 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals,success)
         if (len_trim(str)==0) cycle
         if (str(1:1) == '#' ) cycle
         if (len_trim(str)/=length_string) cycle
-
         !We start to read the input
         if ( str(1:length_string) == var_name(1:length_string)) then
             Nentry=0; Nnonzero=0
@@ -145,7 +145,7 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals,success)
     if(present(success)) success=.true.
 end subroutine
 
-subroutine get_anisotropy_H(Ham,io,lat)
+subroutine get_anisotropy_H(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get anisotropy in t_H Hamiltonian format
     use m_H_public, only: t_H
     use m_setH_util,only: get_coo
@@ -154,6 +154,8 @@ subroutine get_anisotropy_H(Ham,io,lat)
     class(t_H),intent(inout)    :: Ham
     type(io_H_aniso),intent(in) :: io
     type(lattice),intent(in)    :: lat
+    real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
+    real(8),optional,allocatable,intent(inout)     :: Ham_shell_pos(:,:,:)
     !local 
     integer :: i
     real(8),allocatable :: Htmp(:,:)
@@ -166,7 +168,22 @@ subroutine get_anisotropy_H(Ham,io,lat)
         !set local Hamiltonian 
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode),source=0.d0)
         !add anisotropy input in cartesian input coordinates to unit-cell Hamiltonian
-        Call get_Haniso_unitcell(io,lat,Htmp)            
+
+        if (present(Ham_shell_pos)) then
+          write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+          allocate(Ham_shell_pos(lat%M%dim_mode,lat%M%dim_mode,1))
+          Ham_shell_pos=0.0d0
+          allocate(neighbor_pos_list(3,1))
+          neighbor_pos_list=0.0d0
+        endif
+
+        Call get_Haniso_unitcell(io,lat,Htmp)
+
+        Htmp=Htmp*io%c_H_ani
+
+        if (present(Ham_shell_pos)) Ham_shell_pos(:,:,1)=Htmp
+        if (present(neighbor_pos_list)) neighbor_pos_list(:,1)=0.0d0
+
         !get local Hamiltonian in coo format
         Call get_coo(Htmp,val_tmp,ind_tmp)
         !Anisotropy only has simple onsite terms
@@ -217,7 +234,8 @@ subroutine get_anisotropy_fft(H_fft,io,lat)
 
         !set local Hamiltonian 
         allocate(Karr(3*Nmag,3*Nmag,Nk_tot),source=0.0d0)
-        Call get_Haniso_unitcell(io,lat,Karr(:,:,1))            
+        Call get_Haniso_unitcell(io,lat,Karr(:,:,1))
+        Karr(:,:,1)=Karr(:,:,1)*io%c_H_ani
         Call H_fft%init_op(3*Nmag,Karr,ham_desc)
     endif
 end subroutine

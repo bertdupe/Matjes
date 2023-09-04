@@ -51,6 +51,7 @@ contains
     procedure           :: set_M                !set internal magnetization in normal-space from lattice
     procedure           :: init_internal        !initialize internal procedures
     procedure           :: same_space           !check if 2 fft_H act on same space
+
 end type
 contains 
 

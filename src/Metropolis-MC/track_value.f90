@@ -7,6 +7,7 @@ use, intrinsic :: iso_fortran_env, only : error_unit
 implicit none
 private
 public track_val
+
 type track_val
     !values to track the changes during MC-step
     real(8) :: magnetization(3)=0.0d0       !total magnetization

@@ -1,4 +1,5 @@
 module m_io_files_utils
+use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 
 private
@@ -15,15 +16,37 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!
 
 ! function that open a file and return the unit for reading
-integer function open_file_write(fname)
+integer function open_file_write(fname,stats,accesss)
 implicit none
 character(len=*), intent(in) :: fname
+character(len=*), intent(in), optional :: stats,accesss
 ! internal variables
 logical :: i_file
 integer :: io,error
+character(len=30) :: stat_int,access_int
 
+stat_int='unknown'
+access_int='direct'
 io=-1
-i_file=inquire_file(fname)
+
+if (present(stats)) then
+  stat_int=trim(stats)
+  select case (trim(stats))
+    case('unknown')
+      i_file=inquire_file(fname)
+    case('old')
+      i_file=.true.
+    case('new')
+      i_file=.true.
+    case default
+      i_file=inquire_file(fname)
+  end select
+else
+  stat_int='unknown'
+  i_file=inquire_file(fname)
+endif
+
+if (present(accesss)) access_int=trim(accesss)
 
 if (i_file) then
 ! find unit of the file that is alread
@@ -32,9 +55,9 @@ endif
 
 if (io.lt.0) io=inquire_file_unit(io)
 
-open(io,file=fname,form='formatted',status='unknown',action='write',iostat=error)
+open(io,file=fname,form='formatted',status=stat_int,action='write',iostat=error,access=access_int)
 
-if (error.ne.0) write(6,'(3a,/)') 'The file ', fname,' could not be opened for writting'
+if (error.ne.0) write(output_unit,'(3a,/)') 'The file ', fname,' could not be opened for writting'
 rewind(io)
 
 open_file_write=io
@@ -66,7 +89,7 @@ if (io.lt.0) io=inquire_file_unit(io)
 
 open (io,file=fname,form='formatted',status='old',action='read',iostat=error)
 
-if (error.ne.0) write(6,'(3a,/)') 'The file ', fname,' could ne be opened for reading'
+if (error.ne.0) write(output_unit,'(3a,/)') 'The file ', fname,' could ne be opened for reading'
 rewind(io)
 
 open_file_read=io
@@ -83,7 +106,7 @@ integer :: error
 
 close(io,iostat=error)
 
-if (error.ne.0) write(6,'(/,3a,/)') 'The file ', filename, ' could not be closed'
+if (error.ne.0) write(output_unit,'(/,3a,/)') 'The file ', filename, ' could not be closed'
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!
@@ -101,7 +124,7 @@ inquire_file=.false.
 inquire(file=filename,exist=inquire_file)
 
 if (.not.inquire_file) then
-  write(6,'(/,3a)') 'file ', filename, ' has not been found'
+  write(output_unit,'(/,3a)') 'file ', filename, ' has not been found'
 endif
 
 end function inquire_file

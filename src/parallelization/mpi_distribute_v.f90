@@ -1,8 +1,8 @@
 module mpi_distrib_v
 use mpi_basic
-!use m_mc_exp_val, only: exp_val,measure_scatterv
-!use m_mc_exp_val, only: measure_gatherv
-!use m_mc_therm_val, only: thermo_gatherv
+use m_parallelization_io
+use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
+
 implicit none
 
 interface gatherv
@@ -18,7 +18,6 @@ end interface gatherv
 
 contains 
 
-!NOT FINISHED
 subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     class(mpi_type),intent(in)      :: com_in
     integer                         :: N !number of entries that have to be distributed
@@ -29,37 +28,70 @@ subroutine get_two_level_comm(com_in,N,com_outer,com_inner)
     integer     :: div,color
     integer     :: mpi_comm_tmp !temporary MPI_comm
     integer     :: ierr,i
+    logical     :: user_def=.false.
 
-    if(N>=com_in%NP)then
-        Call com_outer%init(com_in)
-        com_outer%cnt=N/com_in%NP
-        com_outer%cnt(1:modulo(N,com_in%NP))=com_outer%cnt(1:modulo(N,com_in%NP))+1
-        com_outer%displ=0
-        do i=2,com_in%NP
-            com_outer%displ(i)=sum(com_outer%cnt(1:i-1))
-        enddo
-        Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
-        Call com_inner%set(mpi_comm_tmp)
-    else
-        div=(com_in%Np-1)/N+1
-        color=com_in%id/div
+    call rw_param_paral(com_outer,com_inner,user_def,com_in)
+
+    ! in case there is nothing to parallelize
+    if ((.not.user_def).and.(N.eq.0)) return
+
+    if (user_def) then
+        ! user-defined parallelization
+        if (com_outer%Np*com_inner%Np.gt.com_in%Np) Stop 'wrong number of processors required'
+
+        div=(com_in%Np-1)/com_outer%Np+1        ! group de procs base on the value of div
+        color=com_in%id/div                     ! give the good color to each group
         Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
         Call com_inner%set(mpi_comm_tmp)
         color=1
-        if(com_inner%ismas) color=0
-        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+        if(com_inner%ismas) color=0             ! give all the masters the color 0
+        Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)    ! create a temporary communicator of the masters
         Call com_outer%set(mpi_comm_tmp)
         allocate(com_outer%cnt(com_outer%Np),source=0)
         allocate(com_outer%displ(com_outer%Np),source=0)
         com_outer%cnt=[(1,i=1,com_outer%Np)]
         com_outer%displ=[(i-1,i=1,com_outer%Np)]
+    else
+
+        ! automatic parallelization
+        ! if the number of entries are greater than the number of processors
+        if(N.ge.com_in%NP)then
+            ! two level parallelization between inner and outer
+            Call com_outer%init(com_in)
+            com_outer%cnt=N/com_in%NP
+            com_outer%cnt(1:modulo(N,com_in%NP))=com_outer%cnt(1:modulo(N,com_in%NP))+1
+            com_outer%displ=0
+            do i=2,com_in%NP
+               com_outer%displ(i)=sum(com_outer%cnt(1:i-1))
+            enddo
+            Call MPI_COMM_SPLIT(com_in%com,com_in%id,com_in%id,mpi_comm_tmp,ierr)    !put everybody into own inner communicator to skip inner parallelization
+            Call com_inner%set(mpi_comm_tmp)
+        else
+            ! non-uniform distribution of the entries on all the procs
+            div=(com_in%Np-1)/N+1
+            color=com_in%id/div
+            Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+            Call com_inner%set(mpi_comm_tmp)
+            color=1
+            if(com_inner%ismas) color=0
+            Call MPI_COMM_SPLIT(com_in%com,color,com_in%id,mpi_comm_tmp,ierr)
+            Call com_outer%set(mpi_comm_tmp)
+            allocate(com_outer%cnt(com_outer%Np),source=0)
+            allocate(com_outer%displ(com_outer%Np),source=0)
+            com_outer%cnt=[(1,i=1,com_outer%Np)]
+            com_outer%displ=[(i-1,i=1,com_outer%Np)]
+        endif
     endif
+
+    write(output_unit,'(/a,I4)') 'Number of entries to parallelize ',N
+    if (com_inner%ismas) write(output_unit,'(a,I4)') 'number of processor on the inner communicator ',com_inner%Np
+    write(output_unit,'(a,I4)') 'MPI ranks ', com_inner%Id
+
 #else
     com_inner=com_in
     Call com_outer%init(com_in)
     com_outer%cnt=N
 #endif
-
 
 end subroutine
 

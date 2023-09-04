@@ -4,4 +4,5 @@ src/dynamics/forces.f90
 src/dynamics/measure_temp.f90
 src/dynamics/spindynamics.f90
 src/dynamics/topocharge_sd.f90
+src/dynamics/torque_measurements.f90
 )

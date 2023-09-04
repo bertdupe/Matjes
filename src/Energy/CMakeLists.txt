@@ -2,7 +2,8 @@ set(main_f90 ${main_f90}
 src/Energy/anisotropy_heisenberg.f90
 src/Energy/coupling_ME_J.f90
 src/Energy/coupling_ME_D.f90
-src/Energy/dipolar.f90
+src/Energy/dipolar_magnetic.f90
+src/Energy/dipolar_phonon.f90
 src/Energy/demag-tensor.f90
 src/Energy/energy_distrib.f90
 src/Energy/energy_output_contribution.f90
@@ -19,4 +20,10 @@ src/Energy/ASR_phonon.f90
 src/Energy/mag_biquadratic.f90
 src/Energy/forces_from_file.f90
 src/Energy/4spin.f90
+src/Energy/3spin.f90
+src/Energy/Exchange_Heisenberg_general.f90
+src/Energy/energy_Spincurrent.f90
+src/Energy/phonon_biquadratic.f90
+src/Energy/phonon_rank4.f90
+src/Energy/general_force_tensor.f90
 )

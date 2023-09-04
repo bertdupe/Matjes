@@ -58,9 +58,29 @@ if(USE_FFTW)
     target_link_libraries(Matjes "${FFTW_linker}")
 endif()
 
+if(USE_FFTWMPI)
+	target_include_directories(Matjes PUBLIC ${FFTWMPI_include_path})
+	target_link_directories(Matjes PUBLIC ${FFTWMPI_library_path})
+	target_link_libraries(Matjes "${FFTWMPI_linker}")
+endif()
+
 if(USE_netCDF)
     target_include_directories(Matjes PUBLIC ${netCDF_include_path})
     target_link_directories(Matjes PUBLIC ${netCDF_library_path})
     target_link_libraries(Matjes "${netCDF_linker}")
+
+endif()
+
+if(USE_GSL)
+    target_include_directories(Matjes PUBLIC ${GSL_include_path})
+    target_link_directories(Matjes PUBLIC ${GSL_library_path})
+    target_link_libraries(Matjes "${GSL_linker}")
+
+endif()
+
+if(USE_SPGLIB)
+	target_include_directories(Matjes PUBLIC ${SPGLIB_include_path})
+	target_link_directories(Matjes PUBLIC ${SPGLIB_library_path})
+	target_link_libraries(Matjes "${SPGLIB_linker}")
 
 endif()
