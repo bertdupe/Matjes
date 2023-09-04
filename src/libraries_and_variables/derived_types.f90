@@ -9,6 +9,8 @@ type io_parameter
      logical :: io_spstmL=.false.
 ! plot the spin structure (or the order parameter structure)
      logical :: io_Xstruct=.false.
+! plot the spin structure (or the order parameter structure) with the positions in the file
+     logical :: io_Xstruct_pos=.false.
 ! plot the effective neighbouring field
      logical :: io_Beff=.false.
 ! plot the stochastic field

@@ -1,6 +1,6 @@
 module m_precision
 
-real(kind=8), parameter :: EPS=1.0d-50
+real(kind=8), private :: EPS=1.0d-50
 !
 ! Arbitrary precision routine.
 ! It will put the component array of vector to 0 if they are smaller than erpsilon
@@ -15,10 +15,26 @@ interface truncate
 end interface
 
 private
-public :: truncate
+public :: truncate,set_EPS
 
 contains
 
+
+subroutine set_EPS()
+use m_io_utils
+use m_io_files_utils
+implicit none
+
+integer :: io_input
+
+io_input=open_file_read('input')
+
+! io variables
+call get_parameter(io_input,'input','truncate_EPS',EPS)
+
+call close_file('input',io_input)
+
+end subroutine
 
 subroutine truncate_lattice(lat,used)
 use m_derived_types, only : lattice,number_different_order_parameters

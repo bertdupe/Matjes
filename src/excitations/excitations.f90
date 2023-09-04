@@ -39,8 +39,9 @@ subroutine read_all_excitations(fname,excitations)
 
     type(excitation_io),allocatable     :: io_exc(:)
 
-    integer             :: i,j,ii, Nexc, io
+    integer             :: i,j,ii, Nexc, io, nline, ncol
     logical             :: has_exc
+    character(len=100)  :: posfile_name
 
     write(output_unit,'(//A)') "Start excitation setup routine."
     Nexc=-1
@@ -149,9 +150,12 @@ subroutine read_all_excitations(fname,excitations)
     write(output_unit,'(A/)') "All found excitations are printed."
 
     !terrible position-get
-    i=get_lines('positions.dat')
+    posfile_name='positions_magnetic.dat'
+    nline=get_lines(posfile_name)
+    ncol=get_cols(posfile_name)
+    i=nline*ncol/3
     allocate(excitations%position(3,i),source=0.0d0)
-    call get_position(excitations%position,'positions.dat')
+    call get_position(excitations%position,posfile_name)
 
     write(output_unit,'(A//)') "Finished reading excitations"
 

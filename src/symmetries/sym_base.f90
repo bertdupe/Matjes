@@ -9,6 +9,7 @@ public :: pt_grp
 
 ! type symmetry operation
 type,extends(symop), abstract :: pt_grp
+   ! in symop, there are rotation, translation and a name
    type(symop),allocatable :: rotmat(:)
    integer                 :: n_sym=0
    real(8)                 :: tol_sym=1.0d-6
@@ -74,7 +75,7 @@ abstract interface
         use m_derived_types, only : t_cell
         use m_type_lattice , only : lattice
         import pt_grp
-        class(pt_grp),intent(in)          :: this
+        class(pt_grp),intent(inout)       :: this
         type(lattice), intent(in)         :: my_lattice
         integer      , intent(inout)      :: number_sym
         integer,intent(inout),allocatable :: sym_index(:)

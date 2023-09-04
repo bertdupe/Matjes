@@ -23,6 +23,7 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     use m_hamiltonian_collection, only: hamiltonian
     use m_diagonalization_Hk
     use m_grp_sym
+    use m_precision, only : set_EPS
     
     ! this subroutine is used only to setup the simulation box
     ! it reads first the parameters of the simulation i.e. inp file
@@ -47,6 +48,9 @@ subroutine setup_simu(io_simu,my_lattice,ext_param,Ham_res,Ham_comb,H_res,H_comb
     ! Hamiltonian input parameters
     type(io_h)          :: H_io
     
+    ! call for a truncation to set the 0
+    call set_EPS()
+
     !initialisation of dummy
     time=0.0d0
     call user_info(output_unit,time,'entering the setup routine',.True.)
@@ -146,7 +150,14 @@ subroutine print_positions(lat,time)
     !print position of all magnetic atoms
     if(lat%nmag>0)then
         Call lat%cell%ind_mag_all(ind)
-        Call print_pos_ind (lat, ind, 'positions.dat')
+        Call print_pos_ind (lat, ind, 'positions_magnetic.dat')
+        deallocate(ind)
+    endif
+
+    !print position of all phonons
+    if(lat%nph>0)then
+        Call lat%cell%ind_Z_all(ind)
+        Call print_pos_ind (lat, ind, 'positions_phonons.dat')
         deallocate(ind)
     endif
     call user_info(output_unit,time,'Finished printing atomic positions',.false.)

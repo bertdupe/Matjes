@@ -34,7 +34,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_topo_commons, only: get_charge, neighbor_Q
     use m_update_time, only: update_time,init_update_time
     use m_constants, only : pi,k_b,hbar
-    use m_energyfield, only : write_energy_field 
+    use m_energyfield, only : write_energy_field,extract_energy_field
     use m_createspinfile, only: CreateSpinFile
     use m_user_info, only: user_info
     use m_excitations
@@ -52,6 +52,10 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     use m_random_public
     use m_measure_temp
     use m_correlation_public
+    use m_proba_commun
+    use m_proba_base
+    use m_fit
+    use m_lattice_position
 !$  use omp_lib
     
     ! input
@@ -68,7 +72,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     type(lattice)                         :: lat_1,lat_2
     
     !intermediate values for dynamics
-    real(8),allocatable,target     :: Dmag(:,:,:),Dmag_int(:,:),Dmag_T(:,:)
+    real(8),allocatable,target     :: Dmag(:,:,:),Dmag_int(:,:),Dmag_T(:,:),Dmag_T_zero(:,:)
     real(8),allocatable,target     :: Beff(:)
     real(8),pointer,contiguous     :: Beff_v(:,:)
     real(8),pointer,contiguous     :: Beff_3(:,:)
@@ -81,6 +85,11 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     ! correlation
     class(corre_base),allocatable   :: correlations
 
+    ! energy distribution
+    real(8), allocatable :: E_dist_i(:,:),E_dist_f(:,:)
+
+    ! probability distribution
+    type(proba_data) :: probability_distrib
     ! dummys
     real(8) :: q_plus,q_moins,vortex(3),Mdy(3),Edy,Eold,dt
     real(8) :: Einitial
@@ -99,6 +108,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     integer :: io_Eout_contrib
     integer :: dim_mode !dim_mode of the iterated order parameter
     type(excitation_combined)   :: excitations
+    real(8),allocatable :: pos(:)
 
     real(8)     ::  time_init, time_final
 
@@ -160,6 +170,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         Dmag_3(1:3,1:N_cell*(dim_mode/3),1:N_loop)=>Dmag
         Dmag_int_3(1:3,1:N_cell*(dim_mode/3))=>Dmag_int
         Dmag_T_3(1:3,1:N_cell*(dim_mode/3))=>Dmag_T
+        allocate(Dmag_T_zero(3,N_cell*(dim_mode/3)),source=0.0d0)
 
         Beff_v(1:dim_mode,1:N_cell)=>Beff
         Beff_3(1:3,1:N_cell*(dim_mode/3))=>Beff
@@ -185,11 +196,15 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         timestep_int=io_dyn%timestep
 
         Call mag_lattice%copy_val_to(lat_1) !necessary due to loop structure
+
+        !!! check if one needs the probability routine
+        call select_sampling(probability_distrib)
+
     endif ! endif if comm%ismas
 
-!   write(*,*) 'calculate energy',comm%id
     Edy=H%energy(mag_lattice)
-!    write(*,*) 'toto'
+
+    if (probability_distrib%is_set) Call extract_energy_field(H_res,mag_lattice,1,E_dist_i)
 
     if(comm%ismas)then
         write(output_unit,'(a,2x,E20.12E3)') 'Initial Total Energy (eV/f.u.)',Edy/real(N_cell,8)
@@ -230,6 +245,14 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
             call get_correlation_type(correlations)
             call correlations%init_base((/100/))
         endif
+
+        !!!! take care of the probability distribution
+        if (probability_distrib%is_set) call alloc_P_distrib(size(E_dist_i,1),probability_distrib%Energy,probability_distrib%Pdistrib)
+
+        !! check is something must be fitted
+
+        call get_pos_mag(mag_lattice,pos)
+        call execute_fit(pos,mag_lattice)
     endif
     
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -238,17 +261,19 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         if(comm%ismas)then
-            call truncate(lat_1,used)
+
             Edy=0.0d0
             dt=timestep_int/real(N_loop)
 
-            call random_numbers%set(sigma=sqrt(io_dyn%damping*kT*dt*hbar))
-            call random_numbers%get_list(kt)
-            call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3)
+            if (kt*io_dyn%damping.gt.1.0d-10) then
+                call random_numbers%set(sigma=sqrt(io_dyn%damping*kT*hbar/dt))  !sqrt(io_dyn%damping*kT*dt*hbar)
+                call random_numbers%get_list(kt)
+                call get_temperature_field(random_numbers%is_set,kt,io_dyn%damping,lat_1%M%modes_3,Dmag_T_3,rand_num_3)
+            endif
 
         endif
 
-        if(comm%Np>1) Call random_numbers%bcast_val(comm)
+!!!!        if(comm%Np>1) Call random_numbers%bcast_val(comm)
 
        !
        ! loop over the integration order
@@ -259,7 +284,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
 !           write(*,*) 'toto',comm%id
             if(comm%ismas)then
                 dt=get_dt_mode(dt,i_loop)
-                
+
                 ! loop that get all the fields
                 if (l_excitation) then
                     Call update_exc(real_time+dt,mag_lattice,excitations)
@@ -267,21 +292,26 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 endif
             endif
 !            write(*,*) 'toto',comm%id
-
             !get effective field on magnetic lattice
             if(comm%Np>1) Call lat_1%bcast_val(comm)
 !            write(*,*) 'toto',comm%id
             Call H%get_eff_field(lat_1,Beff,1)
+!            call truncate(Beff)
 !       stop 'Bertrand'
             if(comm%ismas)then
                 !do integration
                 Call get_propagator_field(Beff_3,io_dyn%damping,lat_1%M%modes_3,Dmag_3(:,:,i_loop),io_dyn%SOT)
                 Call get_Dmode_int(Dmag,i_loop,N_loop,Dmag_int)
-                lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3,Dmag_T_3,dt)
+                if (i_loop.eq.N_loop) then
+                   lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3,Dmag_T_3,dt)
+                else
+                   lat_2%M%modes_3=get_integrator_field(lat_1%M%modes_3,Dmag_int_3,Dmag_T_zero,dt)
+                endif
                 !copy magnetic texture to 1
                 Call lat_2%M%copy_val(lat_1%M)
             endif
         enddo
+
         !!!!!!!!!!!!!!! copy the final configuration in my_lattice
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if(comm%ismas)then
@@ -293,6 +323,16 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
         Edy=H%energy(mag_lattice)/real(N_cell,8)
        
         if(comm%ismas)then
+
+            !!!!!!!!!!!!!!!!!!
+            ! control the time step to adapt to the temperature
+            !!!!!!!!!!!!!!!!!!
+            if (probability_distrib%is_set) then
+                Call extract_energy_field(H_res,mag_lattice,1,E_dist_f)
+                call probability_distrib%sampling_type(E_dist_f-E_dist_i,kT)
+            endif
+
+
             if (mod(j-1,io_dyn%Efreq).eq.0) then
                 !get values to plot (Mavg,topo)
                 Mdy=sum(mag_lattice%M%modes_3,2)/real(N_cell,8)  !sums over all magnetic atoms in unit cell ( not sure if this is wanted)
@@ -312,7 +352,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 q_moins=dumy(2)/pi/4.0d0
                 vortex =dumy(3:5)/3.0d0/sqrt(3.0d0)
 
-                if (kt.gt.1.0d-8) call get_temp_measure(mag_lattice%M%modes_3,Beff_3,T_measured)
+                if (kt*io_dyn%damping*kt.gt.1.0d-10) call get_temp_measure(mag_lattice%M%modes_3,Beff_3,T_measured)
 
                 !write data files
                 Write(7,'(I12,17(E20.12E3,2x),E20.12E3)') j,real_time,Edy, &
@@ -329,6 +369,7 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                     endif
 
                 endif
+
             endif
             
             ! security in case of energy increase in SD and check for convergence
@@ -359,15 +400,18 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                 if (io_simu%io_Beff) call print_Beff(tag,Beff_v)
 
                 if (io_simu%io_tracker)then
-                    ERROR STOP "plot_tracking is not implemented with the new lattce and Hamiltonian"
+                    ERROR STOP "plot_tracking is not implemented with the new lattice and Hamiltonian"
                     !call plot_tracking(j/io_simu%io_frequency,lat_1,Hams)
                 endif
 
                 if(gra_log) then
+
+                    if (io_simu%io_Xstruct_pos) call CreateSpinFile(mag_lattice,tag)
                     call CreateSpinFile(tag,mag_lattice%M)
                     Call write_config(tag,mag_lattice) 
                     write(6,'(a,3x,I10)') 'wrote Spin configuration and povray file number',tag
                     write(6,'(a,3x,f14.6,3x,a,3x,I10)') 'real time in ps',real_time/1000.0d0,'iteration',j
+
                 endif
                 if(gra_topo) Call get_charge_map(tag,mag_lattice,Q_neigh)
        
@@ -378,6 +422,9 @@ subroutine spindynamics_run(mag_lattice,io_dyn,io_simu,ext_param,H,H_res,comm)
                     & ERROR STOP "PLOT FFT HAS TO BE REIMPLEMENTED"
 
                 if (random_numbers%print) call random_numbers%print_base(tag)
+
+                ! print the density distribution of the states
+                if (probability_distrib%io_Pdist) call probability_distrib%plot_type(tag)
 
 
             endif

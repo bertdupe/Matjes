@@ -28,8 +28,8 @@ subroutine invert_real(in,c,n)
 !===========================================================
 implicit none
 integer, intent(in) :: n
-real(kind=8), intent(in) :: in(:,:)
-real(kind=8), intent(out) :: c(:,:)
+real(8), intent(in) :: in(:,:)
+real(8), intent(out) :: c(:,:)
 ! internal
 real(kind=8) :: L(n,n), U(n,n), b(n), d(n), x(n), a(n,n)
 real(kind=8) :: coeff

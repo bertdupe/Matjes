@@ -7,4 +7,6 @@ src/symmetries/sym_base.f90
 src/symmetries/sym_symlib.f90
 src/symmetries/sym_utils.f90
 src/symmetries/sym_dense_smart.f90
+src/symmetries/sym_spglib.f90
+src/symmetries/spglib_f08.f90
 )

@@ -77,3 +77,10 @@ if(USE_GSL)
     target_link_libraries(Matjes "${GSL_linker}")
 
 endif()
+
+if(USE_SPGLIB)
+	target_include_directories(Matjes PUBLIC ${SPGLIB_include_path})
+	target_link_directories(Matjes PUBLIC ${SPGLIB_library_path})
+	target_link_libraries(Matjes "${SPGLIB_linker}")
+
+endif()

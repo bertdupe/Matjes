@@ -58,6 +58,7 @@ subroutine read_option(this)
 !    call get_parameter(io_in,'input','vsl_method',this%method)
 !    call get_parameter(io_in,'input','vsl_brng',this%brng)
     call get_parameter(io_in,'input','print_rnd',this%print)
+    call get_parameter(io_in,'input','read_rnd',this%io_read)
     call get_parameter(io_in,'input','rnd_noise',this%is_set)
     call get_parameter(io_in,'input','mean',this%mean)
     call get_parameter(io_in,'input','sigma',this%sigma)
@@ -100,7 +101,11 @@ subroutine get_list(this,kt)
     if (kt.gt.1.0d-8) this%is_set=.true.
     if (.not.this%is_set) return
 
-    call this%rnd_distrib()
+    if (this%io_read) then
+       call this%read_base()
+    else
+       call this%rnd_distrib()
+    endif
 
 end subroutine
 

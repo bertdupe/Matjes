@@ -98,10 +98,14 @@ subroutine get_list(this,kt)
 
     if (.not.this%is_set) return
 
-    do i=1,this%N
-       res=this%rnd_distrib(this)
-       this%x(i)=res
-    enddo
+    if (this%io_read) then
+       call this%read_base()
+    else
+       do i=1,this%N
+          res=this%rnd_distrib(this)
+          this%x(i)=res
+       enddo
+    endif
 
 end subroutine
 

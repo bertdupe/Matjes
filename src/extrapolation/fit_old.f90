@@ -1,4 +1,4 @@
-       module m_fit
+       module m_fit_old
        interface fit
         module procedure fit_1d
         module procedure fit_2d
@@ -135,14 +135,8 @@
        if (Nx.ne.Ny) stop 'problem in the data for the ND fit'
        if (N.ge.Ny) stop 'more variables that data point'
 
-       avey=0.0d0
-       avex=0.0d0
-       do i=1,Nx
-        avex=avex+X(i)
-        avey=avey+Y(i)
-       enddo
-       avex=avex/dble(Nx)
-       avey=avey/dble(Ny)
+       avex=sum(X)/dble(Nx)
+       avey=sum(Y)/dble(Ny)
 
        MAT=0.0d0
        B=0.0d0
@@ -232,4 +226,4 @@
 
        end function a_1d
 
-       end module m_fit
+       end module m_fit_old

@@ -1,6 +1,7 @@
 module m_lattice_position
 !module which contains several routines to get or print position information for the lattice type
-use m_type_lattice, only: lattice
+use m_type_lattice, only : lattice
+use m_convert
 private
 public get_pos_mag, get_pos_center, get_pos_ph, get_pos_at_Id
 public print_pos_ind
@@ -12,11 +13,16 @@ subroutine print_pos_ind(lat,ind,fname)
     type(lattice),intent(in)    :: lat
     integer,intent(in)          :: ind(:)
     character(len=*),intent(in) :: fname
-    integer             ::  io
+    integer             ::  io,N_int
     real(8),allocatable ::  pos(:)
+    character(len=30)  :: format_out
+
     open(newunit=io,file=fname)
     Call get_pos_ind(lat,ind,pos)
-    write(io,'(3E16.8)') pos
+    N_int=size(pos)/lat%Ncell/3
+    format_out=convert('(',3*N_int,'E16.8,x)')   ! to use of you want to have all positions of the sites one fu on a line
+!    format_out=convert('(',3,'E16.8,x)')
+    write(io,format_out) pos
     close(io)
     deallocate(pos)
 end subroutine
@@ -109,7 +115,7 @@ subroutine get_pos_ind(this,ind,pos_out)
     integer, allocatable            :: ind_at_mag(:)
     integer     :: shape_unfold(4)
     integer     :: Nind,Nat
-    integer     :: i,i1,i2,i3
+    integer     :: i,i1,i2,i3,j
 
     if(allocated(pos_out)) deallocate(pos_out)
     Nind=size(ind)

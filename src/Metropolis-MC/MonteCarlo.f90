@@ -46,6 +46,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     use m_fluct, only: fluct_parameters,init_fluct_parameter, print_fluct_spatial, eval_fluct_spatial
     use m_mc_therm_val
     use m_work_ham_single, only: work_ham_single
+    use m_createspinfile
 
     type(lattice), intent(inout)            :: lat
     type(MC_input), intent(in)              :: io_MC        !input parameters for MonteCarlo calculation
@@ -95,9 +96,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     size_collect=NT_local
     if(com_all%isMas) size_collect=NT_global
     allocate(measure(size_collect))
-    if(com_inner%ismas)then
-        allocate(thermo(size_collect))
-    endif
+    if(com_inner%ismas) allocate(thermo(size_collect))
 
     !initialize necessary things on the master thread (temperatures,Q_neighbors)
     if(com_all%ismas)then
@@ -121,12 +120,13 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
     if(com_inner%ismas)  Call measure_scatterv(measure,com_outer)
 
     !intialize tracking variables (total energy, magnetization sum)
-    Call state_prop%init(lat,H,io_MC) 
+    Call state_prop%init(lat,H,io_MC)
 
     Call H%get_single_work(1,work)  !allocate work arrays for single energy evaluation (1 for magnetism)
     if(io_MC%do_fluct_spatial) allocate(fluct_spatial(fluct_val%get_nneigh(),lat%Ncell),source=cmplx(0.0d0,0.0d0,8))
 
     Do i_kT=1,NT_local
+
         Call measure_bcast(measure(i_kt),com_inner)
         lat%T%all_modes=measure(i_kt)%kt !set local temperature field
 
@@ -148,6 +148,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
         if(com_inner%ismas)then
             Call therm_set(thermo(i_kt),measure(i_kt),io_MC%Cor_log,N_spin)
             if(io_simu%io_Xstruct) Call write_config('MC',measure(i_kt)%kt/k_b,lat,filen_kt_acc)
+            if (io_simu%io_Xstruct_pos) call CreateSpinFile(lat,measure(i_kt)%kt/k_b)
             Write(io_status,'(I6,a,I6,a,f8.4,a,/)')  i_kT, ' nd step out of ', NT_local,' local steps. T=', measure(i_kt)%kt/k_B,' Kelvin'
 #ifdef CPP_DEBUG
             write(*,*) 'energy internal:', state_prop%E_total,' energy total:', H%energy(lat)
@@ -155,6 +156,7 @@ subroutine montecarlo_run(lat,io_MC,io_simu,ext_param,H,com_all)
         endif
 
         if(io_MC%do_fluct_spatial) call print_fluct_spatial(measure(i_kt)%N_add,measure(i_kt)%kT/k_B,fluct_spatial,com_inner) !write spatial distribution of fluctuations
+
     end do !over i_kT
 
     if(com_inner%ismas)then

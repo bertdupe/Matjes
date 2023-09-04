@@ -91,12 +91,12 @@ end subroutine get_latt_sym
 !
 subroutine get_pt_sym(this,my_lattice,number_sym,sym_index,my_motif,sym_translation)
 use m_vector, only : norm
-class(pt_grp_dense), intent(in)   :: this
-type(lattice), intent(in)         :: my_lattice
-integer      , intent(inout)      :: number_sym
-integer,intent(inout),allocatable :: sym_index(:)
-type(t_cell) , intent(in)         :: my_motif
-real(8),intent(inout),allocatable :: sym_translation(:,:)
+class(pt_grp_dense), intent(inout) :: this
+type(lattice), intent(in)          :: my_lattice
+integer      , intent(inout)       :: number_sym
+integer,intent(inout),allocatable  :: sym_index(:)
+type(t_cell) , intent(in)          :: my_motif
+real(8),intent(inout),allocatable  :: sym_translation(:,:)
 !internal
 integer :: natom,i,j,i_sim,k,nattype,size_pos,ii,n_at_under_type,j_atom
 integer,allocatable ::  new_index(:),mask_index(:),ind(:)

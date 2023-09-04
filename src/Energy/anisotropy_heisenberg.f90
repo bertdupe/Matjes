@@ -90,7 +90,6 @@ subroutine read_int_realarr(io_unit,fname,var_name,Nreal,ints,reals,success)
         if (len_trim(str)==0) cycle
         if (str(1:1) == '#' ) cycle
         if (len_trim(str)/=length_string) cycle
-
         !We start to read the input
         if ( str(1:length_string) == var_name(1:length_string)) then
             Nentry=0; Nnonzero=0
