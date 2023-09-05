@@ -55,7 +55,8 @@ endif
 
 if (io.lt.0) io=inquire_file_unit(io)
 
-open(io,file=fname,form='formatted',status=stat_int,action='write',iostat=error,access=access_int)
+!open(io,file=fname,form='formatted',status=stat_int,action='write',iostat=error,access=access_int)
+open(io,file=fname,form='formatted',status=stat_int,action='write',iostat=error)
 
 if (error.ne.0) write(output_unit,'(3a,/)') 'The file ', fname,' could not be opened for writting'
 rewind(io)
@@ -106,7 +107,11 @@ integer :: error
 
 close(io,iostat=error)
 
-if (error.ne.0) write(output_unit,'(/,3a,/)') 'The file ', filename, ' could not be closed'
+if (error.ne.0) then
+     write(output_unit,'(/,3a,/)') 'The file ', filename, ' could not be closed'
+   else
+     write(output_unit,'(/,3a,/)') 'The file ', filename, ' is closed'
+endif
 end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!
