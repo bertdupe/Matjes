@@ -1,5 +1,5 @@
 module spglib_f08
-
+#ifdef CPP_SPGLIB
   use iso_c_binding, only:  c_char, c_int, c_double, c_ptr, c_null_char, c_f_pointer, c_associated
 
   implicit none
@@ -710,5 +710,5 @@ contains
 
   end function spg_get_dataset
 
-
+#endif
 end module spglib_f08
