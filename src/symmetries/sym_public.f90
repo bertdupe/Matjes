@@ -31,8 +31,12 @@ subroutine set_sym_type(my_pt_grp)
        write(output_unit,'(//A/)') "Using the internal symmetry routines; method Melanie (smart method)"
 
      case(3)
+#ifdef CPP_SPGLIB
        allocate(sym_spglib::my_pt_grp)
        write(output_unit,'(//A/)') "Using the spglib symmetry libraries"
+#else
+       write(output_unit,'(//A/)') "spglib symmetry libraries will not be used"
+#endif
 
      case(4)
   !     allocate(sym_spglib::my_pt_grp)
