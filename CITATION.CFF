@@ -1,6 +1,17 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
+  - family-names: Buhl
+    given-names: Patrick M.
+    orcid: https://orcid.org/0000-0002-8683-6495
+  - family-names: Desplat
+    given-names: Louise
+    orcid: https://orcid.org/0000-0002-8968-1046
+  - family-names: Boettcher
+    given-names: Marie
+  - family-names: Meyer
+    given-names: Sebastian
+    orcid: https://orcid.org/0000-0002-1791-9449
   - family-names: Dupe
     given-names: Bertrand
     orcid: https://orcid.org/0000-0001-7025-4426
@@ -8,5 +19,5 @@ title: "Matjes"
 version: 1.1.0
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.1234
-date-released: 2021-08-11
+    value: 10.5281/zenodo.12685461
+date-released: 2024-07-08
