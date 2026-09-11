@@ -17,6 +17,7 @@ contains
     procedure   :: copy_deriv
     procedure   :: set_deriv => set_deriv_single
     procedure   :: finish_setup
+    procedure   :: mv
 end type
 
 contains
@@ -54,6 +55,20 @@ subroutine set_deriv_single(Ham)
     do i=1,number_different_order_parameters
         Call set_deriv(Ham%deriv(i),i,Ham%op_l,Ham%op_r)      
     enddo
+end subroutine
+
+subroutine mv(this,H_out)
+    class(t_H),intent(inout)  :: this
+    class(t_H),intent(inout)  :: H_out
+
+    integer ::  i
+
+    do i=1,number_different_order_parameters
+        Call this%deriv(i)%mv(H_out%deriv(i))
+        Call this%eval_single(i)%mv(H_out%eval_single(i))
+    enddo
+
+    call this%mv_base(H_out)
 end subroutine
 
 end module

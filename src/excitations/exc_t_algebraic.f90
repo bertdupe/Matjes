@@ -54,16 +54,17 @@ end subroutine
 function shape_algebraic(this,time) result(val)
     class (excitation_t),intent(in) :: this
     real(8),intent(in)                  :: time
-    real(8)                             :: val(this%dim_mode)
+    real(8)                             :: val(this%dim_mode+1)
 
     associate( I0     => this%real_var(1                :  this%dim_mode  ),&
                t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
                k      => this%real_var(2+this%dim_mode  :  this%dim_mode+2))
-    val=algebraic(time,&
-                  this%dim_mode,&
-                  this%t_start,&
-                  this%t_end,&
-                  I0,t0(1),k(1))
+    val(1:this%dim_mode)=algebraic(time,&
+                                   this%dim_mode,&
+                                   this%t_start,&
+                                   this%t_end,&
+                                   I0,t0(1),k(1))
+    val(this%dim_mode+1)=0.0d0
     end associate
 end function
 

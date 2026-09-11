@@ -19,7 +19,7 @@ contains
 ! and phi being the polar angle
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine init_sky_lin(io,fname,lat,ordname,dim_mode,state)
+subroutine init_sky_lin(io,fname,lat,ordname,dim_mode,state,init_conf)
     use m_io_utils, only: get_parameter
     use m_util_init, only: get_pos_vec
     use m_constants, only : pi
@@ -29,11 +29,12 @@ subroutine init_sky_lin(io,fname,lat,ordname,dim_mode,state)
     character(*),intent(in)         :: ordname  !name of the order parameter
     integer,intent(in)              :: dim_mode !dimension of the order parameter in each cell
     real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
+    real(8), intent(in)             :: init_conf(:)
 
     real(8),allocatable,target :: pos(:)
     real(8),pointer :: pos_3(:,:),state_3(:,:)
     real(8)     ::  f_r,qphi
-    integer     :: i
+    integer     :: i,j,size_unit_cell
 
     real(8)     ::  slope,center(3)
     integer     ::  q
@@ -42,6 +43,7 @@ subroutine init_sky_lin(io,fname,lat,ordname,dim_mode,state)
     center=0.0d0
     q=1
     slope=10.0
+    size_unit_cell=size(init_conf)
     !older input without ordername? (legacy?)
     call get_parameter(io,fname,'skylin_pos',3,center)
     call get_parameter(io,fname,'skylin_slope',slope)
@@ -65,6 +67,8 @@ subroutine init_sky_lin(io,fname,lat,ordname,dim_mode,state)
         state_3(1,i)= sin(f_r)*cos(qphi)
         state_3(2,i)= sin(f_r)*sin(qphi)
         state_3(3,i)= cos(f_r)
+        j=mod(i-1,size_unit_cell)+1
+        state_3(:,i)=state_3(:,i)*init_conf(j)/abs(init_conf(j))
     enddo
 
     nullify(pos_3,state_3)

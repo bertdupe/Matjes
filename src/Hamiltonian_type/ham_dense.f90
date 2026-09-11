@@ -52,8 +52,10 @@ subroutine mult_r(this,lat,res,work,alpha,beta)
     else
         res=matmul(this%H,modes)
     endif
+
     nullify(modes)
     work%offset=work%offset-work_size
+
 end subroutine 
 
 subroutine mult_l(this,lat,res,work,alpha,beta)

@@ -9,12 +9,16 @@ type io_parameter
      logical :: io_spstmL=.false.
 ! plot the spin structure (or the order parameter structure)
      logical :: io_Xstruct=.false.
+! plot the spin structure (or the order parameter structure) with the positions in the file
+     logical :: io_Xstruct_pos=.false.
 ! plot the effective neighbouring field
      logical :: io_Beff=.false.
 ! plot the stochastic field
      logical :: io_Tfield=.false.
 ! plot the fourrier tranform of the spin structure (or the order parameter structure)
      logical :: io_fft_Xstruct=.false.
+! plot the Fourier transform of the Hamiltonian
+     logical :: io_fft_Ham=.false.
 ! plot the topological charge density distribution
      logical :: io_topo=.false.
 ! plot the emergent magnetic field
@@ -41,6 +45,8 @@ type io_parameter
      integer :: io_frequency=100
 ! calculate topological charged
     logical :: calc_topo=.true.
+! calculate correlations
+    logical :: calc_correlations=.true.
 contains
     procedure :: bcast => io_parameter_bcast
 end type io_parameter

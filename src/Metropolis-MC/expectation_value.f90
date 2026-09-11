@@ -101,6 +101,7 @@ subroutine measure_gatherv(this,com)
     integer                         :: ierr
 
     Call set_custom_type()
+
     Call MPI_Gatherv(this(1),com%cnt(com%id+1),MPI_custom_type,this(1),com%cnt,com%displ,MPI_custom_type,com%mas,com%com,ierr)
 #else
     continue
@@ -130,18 +131,18 @@ subroutine measure_reduce(this,com)
     integer         :: nsize(3)
 
     if(com%NP/=1)then   !only necessary is there is something to reduce
-        nsize(1)=sum(blocks(bnd_real (1)+1:bnd_real (2)))    !+1 to ignore kt
-        nsize(2)=sum(blocks(bnd_cmplx(1)  :bnd_cmplx(2)))
-        nsize(3)=sum(blocks(bnd_int  (1)  :bnd_int  (2)))
-        if(com%ismas)then
-            Call MPI_Reduce(MPI_IN_PLACE,this%E     ,nsize(1),MPI_DOUBLE_PRECISION,MPI_SUM,com%mas,com%com,ierr)
-            Call MPI_Reduce(MPI_IN_PLACE,this%MipMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
-            Call MPI_Reduce(MPI_IN_PLACE,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
-        else
-            Call MPI_Reduce(this%E      ,this%E     ,nsize(1),MPI_DOUBLE_PRECISION,MPI_SUM,com%mas,com%com,ierr)
-            Call MPI_Reduce(this%MipMim ,this%MipMip,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
-            Call MPI_Reduce(this%N_add  ,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
-        endif
+!        nsize(1)=sum(blocks(bnd_real (1)+1:bnd_real (2)))    !+1 to ignore kt
+!        nsize(2)=sum(blocks(bnd_cmplx(1)  :bnd_cmplx(2)))
+!        nsize(3)=sum(blocks(bnd_int  (1)  :bnd_int  (2)))
+!        if(com%ismas)then
+!            Call MPI_Reduce(MPI_IN_PLACE,this%E     ,nsize(1),MPI_DOUBLE_PRECISION,MPI_SUM,com%mas,com%com,ierr)
+!            Call MPI_Reduce(MPI_IN_PLACE,this%MipMim,nsize(2),MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%mas,com%com,ierr)
+!            Call MPI_Reduce(MPI_IN_PLACE,this%N_add ,nsize(3),MPI_Int             ,MPI_SUM,com%mas,com%com,ierr)
+!        else
+            Call MPI_allreduce(this%E      ,this%E     ,1,MPI_DOUBLE_PRECISION,MPI_SUM,com%com,ierr)
+            Call MPI_allreduce(this%MipMim ,this%MipMip,1,MPI_DOUBLE_COMPLEX  ,MPI_SUM,com%com,ierr)
+            Call MPI_allreduce(this%N_add  ,this%N_add ,1,MPI_Int             ,MPI_SUM,com%com,ierr)
+!        endif
     endif
 #else
     continue

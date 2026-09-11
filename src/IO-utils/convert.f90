@@ -3,11 +3,13 @@ module m_convert
 interface convert
  module procedure convert_int_to_string
  module procedure string_plus_string_to_string
+ module procedure string_plus_2string_to_string
  module procedure string_plus_int_to_string
  module procedure string_plus_int_plus_string_to_string
  module procedure string_plus_real_plus_string_to_string
  module procedure fourstring_plus_int_to_string
  module procedure threestring_plus_int_to_string
+ module procedure string_plus_string_real_string_to_string
 end interface convert
 
 private
@@ -45,6 +47,30 @@ endif
 
 write(form,'(a,I4,a)') '(',l_tot,'a)'
 write(string_plus_string_to_string,form) str1(1:l1),str2(1:l2)
+
+end function
+
+! merge 2 strings of different length into a string
+function string_plus_2string_to_string(str1,str2,str3)
+implicit none
+character(len=*), intent(in) :: str1,str2,str3
+character(len=len_trim(str1)+len_trim(str2)+len_trim(str3)) :: string_plus_2string_to_string
+! internal
+integer :: l1,l2,l3,l_tot
+character(len=30) :: form
+
+l1=len_trim(str1)
+l2=len_trim(str2)
+l3=len_trim(str3)
+l_tot=l1+l2+l3
+
+if (l_tot.gt.120) then
+   write(6,'(a)') 'error in the string_plus_string_to_string subroutine'
+   stop
+endif
+
+write(form,'(a,I4,a)') '(',l_tot,'a)'
+write(string_plus_2string_to_string,form) str1(1:l1),str2(1:l2),str3(1:l3)
 
 end function
 
@@ -98,6 +124,36 @@ endif
 
 write(form,'(a,I4,a)') '(',l_tot,'a)'
 write(string_plus_int_plus_string_to_string,form) str1(1:l1),str3(1:l3),str2(1:l2)
+
+end function
+
+! merge a string and a real into a string
+function string_plus_string_real_string_to_string(str1,str2,str3,x,str4)
+implicit none
+character(len=*), intent(in) :: str1,str2,str3,str4
+real(kind=8), intent(in) :: x
+character(len=50) :: string_plus_string_real_string_to_string
+! internal
+integer :: l1,l2,l_tot,l3,l4,l5
+character(len=50) :: str5
+character(len=50) :: form
+
+
+l1=len_trim(str1)
+str5=real_to_str(x)
+l3=len_trim(str3)
+l2=len_trim(str2)
+l4=len_trim(str4)
+l5=len_trim(str5)
+l_tot=l1+l2+l3+l4+l5
+
+if (l_tot.gt.50) then
+   write(6,'(a)') 'error in the string_plus_string_real_string_to_string subroutine'
+   stop
+endif
+
+write(form,'(a,I6,a)') '(',l_tot,'a)'
+write(string_plus_string_real_string_to_string,form) str1(1:l1),str2(1:l2),str3(1:l3),str5(1:l5),str4(1:l4)
 
 end function
 

@@ -47,16 +47,17 @@ end subroutine
 function shape_gauss(this,time) result(val)
     class (excitation_t),intent(in)     :: this
     real(8),intent(in)                  :: time
-    real(8)                             :: val(this%dim_mode)
+    real(8)                             :: val(this%dim_mode+1)
 
     associate( I0     => this%real_var(1                :  this%dim_mode  ),&
                t0     => this%real_var(1+this%dim_mode  :  this%dim_mode+1),&
                tau    => this%real_var(1+this%dim_mode+1:  this%dim_mode+2)) 
-    val=gauss(time,&
-                  this%dim_mode,&
-                  this%t_start,&
-                  this%t_end,&
-                  I0,t0(1),tau(1))
+    val(1:this%dim_mode)=gauss(time,&
+                               this%dim_mode,&
+                               this%t_start,&
+                               this%t_end,&
+                               I0,t0(1),tau(1))
+    val(this%dim_mode+1)=0.0d0
     end associate
 end function
 

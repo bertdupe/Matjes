@@ -31,6 +31,7 @@ subroutine check_excitation_io(io,fname,found)
     Call set_pos_entry(io,fname,var_name,found)
     if(.not.found) write(output_unit,'(/A/)') "No excitations provided in input"
 end subroutine
+
 subroutine read_excitation_io(io,fname,excitations)
     integer,intent(in)                              :: io
     character(len=*),intent(in)                     :: fname

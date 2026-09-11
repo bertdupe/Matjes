@@ -26,7 +26,7 @@ contains
 SUBROUTINE Relaxation(lat,io_MC,N_spin,state_prop,kt,H,Q_neigh,work,l_print)
     !Relaxes the magnetic state for a given temperature by calling the MC_step io_MC%N_relaxation*io_MC%T_relax*N_spin times.
     !Intermediate relaxation information can be obtained with io_MC%print_relax  at io_MC%n_sizerelax states.
-    use m_Corre
+    use m_correlation_int
     use m_io_files_utils
     use m_convert
     use m_MCstep
@@ -89,6 +89,7 @@ subroutine set_relax(this,lat,state_prop,Q_neigh,Nstep)
         dumy=get_charge(lat,Q_neigh)
     endif
     this%q=dumy(1:2)
+
     this%rate=state_prop%rate
     this%cone=state_prop%cone
     if(present(Nstep)) this%Nstep = Nstep

@@ -48,7 +48,7 @@ write(6,'(a)') ''
 write(6,'(a)') 'initialization of the tracking procedure'
 write(6,'(a)') ''
 
-N_world=size(my_lattice%world)
+N_world=count(my_lattice%periodic)
 dim_lat=my_lattice%dim_lat
 N_cell=product(dim_lat)
 real_vec=transpose(my_lattice%areal)

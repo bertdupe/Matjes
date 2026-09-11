@@ -4,6 +4,7 @@ use m_Hk, only: Hk_inp_t
 use m_H_tb_public
 use m_work_ham_single, only: work_ham, N_work
 use m_tb_k_base, only: H_k_base
+implicit none
 
 private
 public H_k_dense
@@ -15,7 +16,9 @@ contains
     procedure           :: init
     procedure           :: set_k
 end type
+
 contains
+
 subroutine init(this,Hk_inp,io)
     class(H_k_dense),intent(inout)      :: this
     type(Hk_inp_t),intent(inout)        :: Hk_inp

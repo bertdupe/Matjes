@@ -1,4 +1,5 @@
 module m_init_random
+use m_random_public
 implicit none
 private
 public :: init_random
@@ -14,20 +15,20 @@ subroutine init_random(dim_mode,state)
     real(8),pointer,intent(inout)   :: state(:)
 
     real(8),pointer :: state_3(:,:)
-    integer         :: i
+    integer         :: i,N_rnd
+
+   ! random number
+    class(ranbase),allocatable,target   :: random_numbers
 
     if(mod(dim_mode,3)/=0) STOP "only works for 3-vector like properties"
-#ifdef CPP_MRG
-    STOP "cannot use init_random with CPP_MRG, needs to be implemented"
-#else
-    CALL RANDOM_NUMBER(state)
-#endif
-    
+
+    call get_ran_type(random_numbers)
+    call random_numbers%init_base(size(state))
+    call random_numbers%get_extract_list(state)
+
     state_3(1:3,1:size(state)/3)=>state
     Call normalize(state_3,1.0d-50)
-    !do i=1,size(state_3,2)
-    !    state_3(:,i)=(get_rand_classic(3,1.0d0)-0.5d0)*2.0d0
-    !enddo
+
     nullify(state_3)
 end subroutine 
 end module 

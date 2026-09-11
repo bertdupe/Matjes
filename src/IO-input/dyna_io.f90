@@ -1,5 +1,6 @@
 module m_dyna_io
 use mpi_basic
+use m_basic_types, only : torque
 private
 public dyna_input
 
@@ -8,6 +9,7 @@ type dyna_input
     real(8) :: damping=1.0d0        !damping term magnitude (unitless)
     integer :: duration=1000        !number of full time-step iterated during simulation
     integer :: Efreq=100            !number of iterations after which state parameters are printed out (EM.dat)
+    type(torque) :: SOT,STT
 contains
     procedure   :: read_file =>read_dyna
     procedure   :: bcast
@@ -55,6 +57,11 @@ subroutine read_dyna(this,fname_in,comm)
         call get_parameter(io,fname,'Efreq',    this%Efreq)
         call get_parameter(io,fname,'duration', this%duration)
         call get_parameter(io,fname,'damping',  this%damping)
+        ! SOT
+        call get_parameter(io,fname,'SOT_current_dir',  this%SOT%current_dir)
+        call get_parameter(io,fname,'SOT_polarization',  this%SOT%polarization)
+        call get_parameter(io,fname,'SOT_FL_damp',  this%SOT%FL_damp)
+        call get_parameter(io,fname,'SOT_DL_damp',  this%SOT%DL_damp)
         close(io)
     endif
 

@@ -2,7 +2,7 @@ module m_4spin
 use, intrinsic :: iso_fortran_env, only : output_unit
 use m_input_H_types, only: io_H_sp4
 use m_derived_types, only: lattice
-use m_neighbor_pair, only: pair_dat_t, get_pair_dat
+use m_neighbor_pair, only: pair_dat_t, get_pair_dat_M
 
 !use m_io_utils, only: get_parameter,get_coeff,number_nonzero_coeff,max_ind_variable
 implicit none
@@ -114,19 +114,39 @@ subroutine get_4spin(Ham,io,lat)
         write(output_unit,'(/2A)') "Start setting Hamiltonian: ", ham_desc
         Call get_Htype(Ham_tmp)
         N4spin=size(io%val)
-        Call get_pair_dat(lat,io%at_type,[1,2],pair_dat)    !get all pairs of same atom type for nearest and next-nearest neighbor
-        N_con=sum(pair_dat%Npair)
+        Call get_pair_dat_M(lat,io%at_type,[1,2],pair_dat)    !get all pairs of same atom type for nearest and next-nearest neighbor
+        N_con=sum(pair_dat%Npair)    ! number of neighbors to consider for the plaquettes
         dim_mode=[3*N_con,3*N_con]
         do i_4spin=1,N4spin
             K=io%val(i_4spin)
             Call get_4spin_dat(lat,pair_dat(i_4spin),con_unfold,N_entry,connect_neigh)
             connect_neigh=connect_neigh+sum(pair_dat(:i_4spin-1)%Npair) !adjust to mode considering other 4-spin interactions
             Nplaq_base=size(N_entry)
-            do iplaq_base=1,Nplaq_base
+            do iplaq_base=1,Nplaq_base    ! total number of plaquettes
                 if(N_entry(iplaq_base)==0) cycle
                 bnd=[sum(N_entry(:iplaq_base-1))+1,sum(N_entry(:iplaq_base))]
+
+
+! order of the neighbors
+!
+!           1          2
+!           +          +
+!
+!
+!
+!           +          +
+!           4          3
+
                 allocate(connect(2,N_entry(iplaq_base)),source=0)
                 neigh=(connect_neigh(:,iplaq_base)-1)*3 !+1->x +2->y +3->z
+
+!           1          2
+!           +----------+
+!
+!
+!
+!           +----------+
+!           4          3
                  !12 34 connection
                  connect(:,:)=con_unfold(1:2,bnd(1):bnd(2))
                  val_tmp=-K
@@ -135,6 +155,14 @@ subroutine get_4spin(Ham,io,lat)
                  Call Ham%add(Ham_tmp)
                  Call Ham_tmp%destroy()
  
+!           1          2
+!           +          +
+!           |          |
+!           |          |
+!           |          |
+!           +          +
+!           4          3
+
                  !14 23 connection
                  connect(:,:)=con_unfold(3:4,bnd(1):bnd(2))
                  val_tmp=-K
@@ -143,6 +171,13 @@ subroutine get_4spin(Ham,io,lat)
                  Call Ham%add(Ham_tmp)
                  Call Ham_tmp%destroy()
 
+!           1          2
+!           + \      / +
+!              \  /
+!               / \
+!             /    \
+!           +       \ +
+!           4          3
                  !13 24 connection
                  connect(:,:)=con_unfold(5:6,bnd(1):bnd(2))
                  val_tmp=K
@@ -193,6 +228,7 @@ subroutine get_4spin(Ham,io,lat)
         Call mode_set_rankN_sparse(Ham%mode_r,"MM",lat,mat,1)
         !END SET STATES
         Ham%desc=ham_desc
+
     endif
 end subroutine
 
@@ -233,11 +269,13 @@ subroutine set_mode_pair(Ncell,Ncon,lat,at_mag,pos_offset,col)
 
     ind3_unfold=spread(ind3_lat,2,Ncon)
     ind3_unfold=ind3_unfold+spread(pos_offset,3,Ncell)
+
     Call lat%fold_3_arr(Ncell*Ncon,ind3_unfold)
     Call lat%index_3_1_arr(Ncell*Ncon,ind3_unfold,ind1_unfold)  !get 1d lattice sites
     ind1_unfold=(ind1_unfold-1)*lat%nmag+spread(at_mag,2,Ncell) !get 1d magnetic atom entry
     ind1_unfold=ind1_unfold-1
     ind1_unfold=ind1_unfold*3
+
     do i2=1,Ncell
         do i1=1,Ncon
             col(1,i1,i2)=ind1_unfold(i1,i2)+1
@@ -245,5 +283,6 @@ subroutine set_mode_pair(Ncell,Ncon,lat,at_mag,pos_offset,col)
             col(3,i1,i2)=ind1_unfold(i1,i2)+3
         enddo
     enddo
+
 end subroutine
 end module 

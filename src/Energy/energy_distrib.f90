@@ -5,7 +5,7 @@ use m_convert, only: convert
 use m_io_files_utils, only: open_file_write,close_file
 use,intrinsic :: iso_c_binding, only: c_bool
 private
-public :: write_energy_field
+public :: write_energy_field,extract_energy_field
 
 contains
 
@@ -38,6 +38,20 @@ subroutine write_energy_field(tag,H,lat,order,ismas)
         write(io,rw_format) transpose(energies)
         call close_file(fname,io)
     endif
+end subroutine
+
+
+
+subroutine extract_energy_field(H,lat,order,energies)
+    !extract the cell-resolved energy terms of Hams
+    type(hamiltonian),intent(inout)     :: H
+    type(lattice), intent(inout)        :: lat
+    integer,intent(in)                  :: order
+    real(8),intent(out),allocatable     :: energies(:,:)
+    !internal
+
+    Call H%energy_distrib(lat,order,energies)
+
 end subroutine
 
 end module

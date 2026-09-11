@@ -90,25 +90,43 @@ if(NOT DEFINED USE_MKL OR (DEFINED USE_MKL AND USE_MKL))
     if(USE_MKL AND (NOT DEFINED USE_FFTW OR USE_FFTW))
         try_compile(FOUND_FFTW "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw.f90"
             CMAKE_FLAGS
-                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}"
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}/fftw"
                       "-DLINK_DIRECTORIES=${MKL_library_path}"
             LINK_LIBRARIES "${MKL_linker}"
             OUTPUT_VARIABLE FFTW_test_output
             )
         if(FOUND_FFTW)
-            message(" Success testing FFTW with mkl.\n Disable other search for fftw3 library implementation.\n Compiling with CPP_FFTW3")
+		message(" Success testing FFTW with mkl.\n Disable other search for fftw3 library implementation.\n Compiling with CPP_FFTW3")
+	    set(FFTW_include_path "${MKL_include_path}/fftw")
+            set(FFTW_library_path "${MKL_library_path}")
             add_compile_definitions(CPP_FFTW3)
             set(USE_FFTW FALSE)
         endif()
 
         try_compile(FFTW_threaded "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_thread.f90"
             CMAKE_FLAGS
-                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}"
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}/fftw"
                       "-DLINK_DIRECTORIES=${MKL_library_path}"
             LINK_LIBRARIES "${MKL_linker}"
             )
+	
+	    try_compile(FOUND_FFTWMPI "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_mpi.f90"
+            CMAKE_FLAGS
+                      "-DINCLUDE_DIRECTORIES=${MKL_include_path}/fftw"
+                      "-DLINK_DIRECTORIES=${MKL_library_path}"
+            LINK_LIBRARIES "${MKL_linker}"
+            )
+	if(FOUND_FFTWMPI)
+	          message(" Success testing FFTW_MPI with mkl.\n Disable other search for fftw3 library implementation.\n Compiling with CPP_FFTWMPI")
+	    set(FFTWMPI_include_path "${MKL_include_path}/fftw")
+	    set(FFTWMPI_library_path "${MKL_library_path}")
+	    add_compile_definitions(CPP_FFTWMPI)
+            set(USE_FFTWMPI FALSE)
+        endif()
+
         if(FFTW_threaded AND FOUND_FFTW)
             message(" Success testing FFTW with threading .\n Compiling with CPP_FFTW3_THREAD")
+	    set(FFTW_include_path "${MKL_include_path}/fftw")
             add_compile_definitions(CPP_FFTW3_THREAD)
         elseif(NOT FFTW_threaded AND FOUND_FFTW)
             message(" Failure to compile FFTW with threading, but normal fftw should work")
@@ -119,7 +137,7 @@ else()
     message("Found USE_MKL = FALSE, skipping MKL (sparse) test.")
 endif()
 
-#check for FFTW3
+#check for FFTW3 not in MKL
 message("\n\n Searching for FFTW3")
 if(NOT DEFINED USE_FFTW OR (DEFINED USE_FFTW AND USE_FFTW))
 
@@ -166,12 +184,16 @@ if(NOT DEFINED USE_FFTW OR (DEFINED USE_FFTW AND USE_FFTW))
     endif()
 
     try_compile(FFTW_threaded "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_thread.f90"
-        LINK_LIBRARIES "${FFTW_linker}"
+	CMAKE_FLAGS
+	         "-DINCLUDE_DIRECTORIES=${FFTW_include_path}"
+		 "-DLINK_DIRECTORIES=${FFTW_library_path}"
+        LINK_LIBRARIES "${FFTW_linker} -lfftw3_threads -lm"
         OUTPUT_VARIABLE FFTW_test_output
         )
     if(FFTW_threaded AND USE_FFTW)
         message(" Success testing FFTW with threading .\n Compiling with CPP_FFTW3_THREAD")
         add_compile_definitions(CPP_FFTW3_THREAD)
+	set(FFTW_linker "${FFTW_linker} -lfftw3_threads -lm")
     elseif(NOT FFTW_threaded AND USE_FFTW)
         message(" Failure to compile FFTW with threading, but normal fftw should work")
     endif()
@@ -180,6 +202,60 @@ elseif(FOUND_FFTW)
 else(NOT FOUND_FFTW AND NOT USE_FFTW)
     message("Skipping FFTW as USE_FFTW=FALSE.")
 endif()
+
+
+#check for FFTW3_MPI
+message("\n\n Searching for FFTW3_MPI")
+if(NOT DEFINED USE_FFTWMPI OR (DEFINED USE_FFTWMPI AND USE_FFTWMPI))
+
+    if(DEFINED FFTWMPI_library_path)
+            message(" Using manually set FFTW_MPI library path: ${FFTWMPI_library_path}")
+    else()
+        set(FFTWMPI_library_path "/usr/lib")
+             message(" Using default FFTW library path: ${FFTWMPI_library_path}")
+    endif()
+
+    if(DEFINED FFTWMPI_include_path)
+            message(" Using manually set FFTW_MPI include path: ${FFTWMPI_include_path}")
+    else()
+        set(FFTWMPI_include_path "/usr/include")
+            message(" Using default FFTW include path: ${FFTWMPI_include_path}")
+    endif()
+
+    if(DEFINED FFTWMPI_linker)
+        message(" Using manually set FFTW_MPI linker: ${FFTWMPI_linker}")
+    else()
+        set(FFTWMPI_linker "-lfftw3_mpi -lm")
+        message(" Using default FFTW_MPI linker: ${FFTWMPI_linker}")
+    endif()
+
+    try_compile(FOUND_FFTWMPI "${CMAKE_BINARY_DIR}/temp" "${CMAKE_SOURCE_DIR}/cmake/tests/fftw_mpi.f90"
+       CMAKE_FLAGS
+       "-DINCLUDE_DIRECTORIES=${FFTWMPI_include_path}"
+       "-DLINK_DIRECTORIES=${FFTWMPI_library_path}"
+       LINK_LIBRARIES "${FFTWMPI_linker}"
+        OUTPUT_VARIABLE FFTW_test_output
+        )
+    if(FOUND_FFTWMPI)
+        message(" Success testing FFTW_MPI.\n Compiling with CPP_FFTWMPI")
+        add_compile_definitions(CPP_FFTWMPI)
+        set(USE_FFTWMPI TRUE)
+    elseif(USE_FFTWMPI AND NOT FOUND_FFTWMPI)
+        message("Error information testing FFTW_MPI:")
+        message("${FFTW_test_output}")
+        message("\n")
+        message( FATAL_ERROR "Unsuccessfull FFTW_MPI test.\n USE_FFTW_MPI has been set to TRUE, thus aborting.")
+    else()
+        message("Unsuccessfull FFTW_MPI test.\n Compiling without FFTWMPI.")
+        set(USE_FFTWMPI FALSE)
+    endif()
+
+elseif(FOUND_FFTWMPI)
+    message("FFTW_MPI implementation already found, skipping search of explicit FFTW_MPI implementation.")
+else(NOT FOUND_FFTWMPI AND NOT USE_FFTWMPI)
+    message("Skipping FFTW_MPI as USE_FFTWMPI=FALSE.")
+endif()
+
 
 
 
@@ -266,3 +342,60 @@ else()
     message("Skipping netCDF as USE_netCDF=FALSE.")
 endif()
 
+#check for gsl library
+message("\n\n Search for GSL")
+if(USE_GSL)
+    message("using external GSL library\n\n" )
+    add_compile_definitions(CPP_GSL)
+    if(DEFINED GSL_library_path)
+	message(" Using manually set GSL library path: ${GSL_library_path}")
+    else()
+	set(GSL_library_path "/usr/local/lib")
+	message(" Using default GSL library path: ${GSL_library_path}")
+    endif()
+
+    if(DEFINED GSL_include_path)
+        message(" Using manually set GSL include path: ${GSL_include_path}")
+    else()
+	set(GSL_include_path "/usr/local/include")
+	message(" Using default GSL include path: ${GSL_include_path}")
+    endif()
+
+    if(DEFINED GSL_linker)
+        message(" Using manually set GSL linker command: ${GSL_linker}")
+    else()
+        set(GSL_linker "-lgsl -lgslcblas")
+        message(" Using default GSL linker command: ${GSL_linker}")
+    endif()
+else()
+    message( "Skipping GSL-part of compilation\n\n" )
+endif()
+
+#check for SPGLIB library
+message("\n\n Search for GSL")
+if(USE_SPGLIB)
+	message("using external SPGLIB library\n\n" )
+	add_compile_definitions(CPP_SPGLIB)
+	if(DEFINED SPGLIB_library_path)
+		message(" Using manually set SPGLIB library path: ${SPGLIB_library_path}")
+    else()
+	    set(SPGLIB_library_path "/usr/local/lib")
+	    message(" Using default SPGLIB library path: ${SPGLIB_library_path}")
+    endif()
+
+    if(DEFINED SPGLIB_include_path)
+	    message(" Using manually set SPGLIB include path: ${SPGLIB_include_path}")
+    else()
+	    set(SPGLIB_include_path "/usr/local/include")
+	    message(" Using default SPGLIB include path: ${SPGLIB_include_path}")
+    endif()
+
+    if(DEFINED SPGLIB_linker)
+	    message(" Using manually set SPGLIB linker command: ${SPGLIB_linker}")
+    else()
+	    set(SPGLIB_linker "-lsymspg")
+	    message(" Using default SPGLIB linker command: ${SPGLIB_linker}")
+    endif()
+else()
+	message( "Skipping SPGLIB-part of compilation\n\n" )
+endif()

@@ -130,7 +130,7 @@ subroutine calculate_diffusion_paratemp_track(v,relaxation_steps,i_optTset)
 end subroutine
 
 subroutine calculate_diffusion_serial(kT_all,kt_updated,nup,ndown,Nsuccess,n_swapT,isize,i_optTset)
-       use m_fit
+       use m_fit_old
        use m_constants, only : k_B
        implicit none
        integer, intent(in) :: n_swapT,isize

@@ -38,17 +38,22 @@ end subroutine
 
 subroutine get_pos_vec(lat,dim_mode,ordname,pos)
     use m_derived_types,only: lattice 
-    use m_lattice_position, only: get_pos_mag, get_pos_center
+    use m_lattice_position, only: get_pos_mag, get_pos_center, get_pos_ph
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
     integer,intent(in)              :: dim_mode
     character(*),intent(in)         :: ordname  !name of the order parameter
     real(8),allocatable,intent(out) :: pos(:)
-    integer     :: nmag
+    integer     :: nmag,nph
     
     nmag=lat%nmag
-    if(dim_mode==nmag*3)then
+    nph=lat%nph
+
+    if((nmag.ne.0).and.(ordname.eq.'magnetic'))then
         !choose position of magnetic atoms for initialization
         Call get_pos_mag(lat,pos)
+    elseif((nph.ne.0).and.(ordname.eq.'phonon'))then
+        !choose position of phonon atoms for initialization
+        Call get_pos_ph(lat,pos)
     elseif(dim_mode==3)then
         !use center of cell as position
         Call get_pos_center(lat,pos)
@@ -58,7 +63,7 @@ subroutine get_pos_vec(lat,dim_mode,ordname,pos)
     endif
 end subroutine
 
-subroutine get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chirality,pos,state,lat)
+subroutine get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chirality,pos,state,lat,init_conf)
     !subroutine to add a single skyrmion a lattice given by (pos,state,lat)
     use m_constants, only : pi
     use m_derived_types, only: lattice
@@ -69,10 +74,11 @@ subroutine get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chirality,pos,state
     real(8),intent(in)          :: pos(:,:)   !position of all entries(3,(Nmag)*Ncell)
     real(8),intent(inout)       :: state(:,:) !states corresponding to the positions (3,(Nmag)*Ncell)
     type(lattice), intent(in)   :: lat      !entire lattice containing geometric information
+    real(8),intent(in)          :: init_conf(:)
     ! Internal variables
     real(8)     :: theta,psi
     real(8)     :: diff(3)
-    integer     :: i
+    integer     :: i,size_unit_cell,j
     real(8)     :: dist
     ! Parameter to create a skyrmion woth theta profile according the paper
     ! of Kubetzka PRB 67, 020401(R) (2003)
@@ -99,6 +105,7 @@ subroutine get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chirality,pos,state
     DThetaInflex =  -(1.0d0/COSH(Inflexparam-1.0d0) + 1.0d0/COSH(Inflexparam+1.0d0))
     widt = 2.d0*R0/(Inflexparam-ThetaInflex/DThetaInflex)
     cen = 0.5d0*widt
+    size_unit_cell=size(init_conf)
 
     do i=1,size(pos,2)
         diff=pos(:,i)-pos_sky
@@ -118,6 +125,9 @@ subroutine get_skyrmion(pos_sky,R0,coeffx,coeffy,starx,stary,chirality,pos,state
         state(1,i) = chirality * Sin(Theta) * Cos( starx*Psi + coeffx*pi)
         state(2,i) = chirality * Sin(Theta) * Sin( stary*Psi + coeffy*pi)
         state(3,i) = Cos(Theta)
+        j=mod(i-1,size_unit_cell)+1
+        state(:,i)=state(:,i)*init_conf(j)/abs(init_conf(j))
+
     enddo
 end subroutine 
 

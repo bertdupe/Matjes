@@ -236,60 +236,7 @@ subroutine set_from_Hcoo(this,H_coo)
     if(stat /= 0) STOP "error destroying H"
    
     Call this%set_auxiliaries()
-end subroutine 
-
-!subroutine eval_single(this,E,i_m,order,lat,work)
-!    USE, INTRINSIC :: ISO_C_BINDING , ONLY : C_INT, C_DOUBLE
-!    ! input
-!    class(t_H_mkl_csr), intent(in)      :: this
-!    type(lattice), intent(in)           :: lat
-!    integer, intent(in)                 :: i_m
-!    integer, intent(in)                 :: order
-!    ! output
-!    real(8), intent(out)                :: E
-!    !temporary data
-!    type(work_ham_single),intent(inout) ::  work    !data type containing the temporary data for this calculation to prevent constant allocations/deallocations
-!    !temporary data slices
-!    integer,pointer,contiguous          :: ind(:)       !indices of all left mode entries which contain the order paramtere order of the site corresponding to i_m
-!    real(8),pointer,contiguous          :: vec(:)       !values corresponding to ind
-!    integer,pointer,contiguous          :: ind_out(:)   !indices of the result array multipling the vector (ind/vec) to the matrix
-!    real(8),pointer,contiguous          :: vec_out(:)   !values corresponding to ind_out
-!    real(8),pointer,contiguous          :: vec_mult(:)     !values of discontiguous mode array on right side (indices of ind_out)
-!
-!    !some local indices/ loop variables
-!    integer ::  i,j, i_row
-!    integer :: ii
-!#define _dim_ this%dim_l_single(order)
-!
-!    !associate temporary arrays
-!    ind     (1:_dim_             )=>work%int_arr (1                       :_dim_                   )
-!    ind_out (1:_dim_*this%row_max)=>work%int_arr (1+_dim_                 :_dim_*(1+  this%row_max))
-!    vec     (1:_dim_             )=>work%real_arr(1                       :_dim_                   )
-!    vec_out (1:_dim_*this%row_max)=>work%real_arr(1+_dim_                 :_dim_*(1+  this%row_max))
-!    vec_mult(1:_dim_*this%row_max)=>work%real_arr(1+_dim_*(1+this%row_max):_dim_*(1+2*this%row_max))
-!
-!    !get left mode corresponding to site i_m of order order
-!    Call this%mode_l%get_mode_single(lat,1,i_m,_dim_,ind,vec)    !get this to work with different orders (1 is not order here but component of left mode)
-!
-!    !Calculate left mode,matrix product only for the necessary discontiguous mode-indices
-!    ii=0
-!    do i=1,_dim_
-!        i_row=ind(i)
-!        do j=this%H_outer(i_row),this%H_outer(i_row+1)-1
-!            ii=ii+1
-!            vec_out(ii)=this%H_val(j)*vec(i)
-!            ind_out(ii)=this%H_inner(j)
-!        enddo
-!    enddo
-!    
-!    !get right mode for indices of the vec/mat product 
-!    Call this%mode_r%get_mode_disc(lat,ii,ind_out(:ii),vec_mult(:ii))
-!
-!    !Get the energy
-!    E=DOT_PRODUCT(vec_out(:ii),vec_mult(:ii))
-!    nullify(ind,ind_out,vec,vec_out,vec_mult)
-!#undef _dim_
-!end subroutine 
+end subroutine
 
 subroutine mult_r_disc(this,lat,N,ind_out,vec,ind_sum,ind_Mult,mat_mult,vec_mult)
     !Calculates the entries of the left vector * matrix product for the indices ind_out of the result vector

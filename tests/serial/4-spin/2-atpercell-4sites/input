@@ -1,0 +1,46 @@
+simulation magnet-dynamics 
+
+M_4spin
+1 -1.00d-3 #atom type 1, amplitude in eV
+
+magnetic_J
+1 1 1 1d-7     #between atoms 1 and 1, shell 1, amplitude in eV
+
+
+atomtypes 2
+Fe  2.7 0.0 0.0 F #mu_s in mu_B, z*, m, phonons T/F
+Ir  0.0 0.0 0.0 F
+atoms 3
+Fe 0.0  0.0   0.0 #element, x y z in lattice vectors
+Fe 0.5 0.5 0.0
+Ir 0.5 0.5 -0.7
+
+
+#writting deleting
+Energy_Distrib .F.
+gra_fft .F.
+gra_log .T.
+gra_Beff .F.
+gra_freq 1
+min_Efreq 1
+gra_topo .F.
+calc_topo F
+print_Econt T
+energy_detail T
+
+# parameters of the lattice
+Periodic_log .T. .T. .F.
+Nsize 2 1 1 
+alat 1.0 1.0 1.0
+lattice
+1.0 0.0 0.0
+0.0 1.732050807568877 0.0
+0.0 0.0 1.0
+
+
+
+#input for the dynamic
+integration 2  (1: simple integration 2:Heun  3: SIB ) 
+timestep 0.0000001 (fs)
+duration 1 (in units of dt)
+damping 0.0

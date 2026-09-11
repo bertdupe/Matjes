@@ -1,5 +1,6 @@
 module m_cell
 use m_basic_types, only: atom
+use, intrinsic  ::  ISO_FORTRAN_ENV, only: error_unit, output_unit
 implicit none
 private
 public :: t_cell
@@ -18,10 +19,72 @@ type t_cell
     procedure :: get_Z_phonon
     procedure :: ind_M_all
     procedure :: get_M_phonon
+    procedure :: index_all_magnetic
+    procedure :: type_all_magnetic
+    procedure :: pos_all_magnetic
     procedure :: bcast
     procedure :: copy
 end type
 contains
+
+subroutine pos_all_magnetic(this,pos)
+    !subroutine to return the position of all the magnetic atoms in the cell
+    class(t_cell),intent(in)            :: this
+    real(8),allocatable,intent(inout)   :: pos(:)
+
+    integer ::  i,nmag,j
+    real(8) :: min_mag=1.0d-8
+
+
+    if(all(this%atomic(:)%moment.lt.min_mag))then
+        write(output_unit,'(a)') 'Failed to get atomic indices of magnetic atoms'
+        STOP "MISTAKE SETTING UP HAMILTONIAN OR CELL?"
+    endif
+    if(allocated(pos)) deallocate(pos)
+    nmag=count(this%atomic(:)%moment.gt.min_mag)
+    allocate(pos(3*nmag),source=0.0d0)
+    j=1
+    do i=1,size(this%atomic)
+       if(this%atomic(i)%moment.gt.min_mag) then
+       pos(j:j+2)=this%atomic(i)%position
+       j=j+3
+       endif
+    enddo
+end subroutine
+
+subroutine type_all_magnetic(this,ind)
+    !subroutine to return the types of all the magnetic atoms in the cell
+    class(t_cell),intent(in)            :: this
+    integer,allocatable,intent(inout)   :: ind(:)
+
+    integer ::  i
+    real(8) :: min_mag=1.0d-8
+
+
+    if(all(this%atomic(:)%moment.lt.min_mag))then
+        write(output_unit,'(a)') 'Failed to get atomic indices of magnetic atoms'
+        STOP "MISTAKE SETTING UP HAMILTONIAN OR CELL?"
+    endif
+    if(allocated(ind)) deallocate(ind)
+    ind=pack([(this%atomic(i)%type_id,i=1,size(this%atomic))],this%atomic(:)%moment.gt.min_mag)
+end subroutine
+
+subroutine index_all_magnetic(this,ind)
+    !subroutine to return the indices of the magnetic atoms in the cell
+    class(t_cell),intent(in)            :: this
+    integer,allocatable,intent(inout)   :: ind(:)
+
+    integer ::  i
+    real(8) :: min_mag=1.0d-8
+
+
+    if(all(this%atomic(:)%moment.lt.min_mag))then
+        write(output_unit,'(a)') 'Failed to get atomic indices of magnetic atoms'
+        STOP "MISTAKE SETTING UP HAMILTONIAN OR CELL?"
+    endif
+    if(allocated(ind)) deallocate(ind)
+    ind=pack([(i,i=1,size(this%atomic))],this%atomic(:)%moment.gt.min_mag)
+end subroutine
 
 subroutine ind_attype(this,id,ind)
     !subroutine to return the indices of the atoms in the cell which have the same type_id as the id-input
@@ -33,7 +96,7 @@ subroutine ind_attype(this,id,ind)
 
     
     if(id<1.or.id>maxval(this%atomic(:)%type_id))then
-        write(*,*) 'Failed to get atomic indices of atom type',id
+        write(output_unit,'(a,I10)') 'Failed to get atomic indices of atom type',id
         STOP "MISTAKE SETTING UP HAMILTONIAN OR CELL?"
     endif
     if(allocated(ind)) deallocate(ind)
@@ -185,6 +248,7 @@ subroutine ind_M_all(this,ind_Nat)
     integer     ::  i
 
     ind_Nat=pack([(i,i=1,size(this%atomic))],this%atomic(:)%mass/=0.0d0)
+
 end subroutine
 
 end module

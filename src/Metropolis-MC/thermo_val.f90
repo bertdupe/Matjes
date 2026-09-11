@@ -119,6 +119,8 @@ subroutine thermo_print(this,io_unit_in)
     integer     ::  io_unit,i
     real(8) ::  Q
 
+    io_unit=100
+
     if(present(io_unit_in))then
         io_unit=io_unit_in
     else

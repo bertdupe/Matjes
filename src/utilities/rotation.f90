@@ -64,11 +64,11 @@ end subroutine
 function rotation_axis_1D(m_in,f_in)
 use m_vector, only : norm_cross,norm,cross
 implicit none
-real(kind=8), intent(in) :: m_in(:),f_in(:)
+real(8), intent(in) :: m_in(:),f_in(:)
 ! internal varible
-real(kind=8), parameter :: fact=10000000d0
-real(kind=8), dimension(3) :: rotation_axis_1D
-real(kind=8) :: x(3),tmp,y(3),a,b,c,eps=epsilon(a)
+real(8), parameter :: fact=10000000d0
+real(8), dimension(3) :: rotation_axis_1D
+real(8) :: x(3),tmp,y(3),a,b,c,eps=epsilon(a)
 
 
 tmp = norm(f_in)

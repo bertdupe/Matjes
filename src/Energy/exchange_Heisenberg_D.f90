@@ -15,11 +15,12 @@ subroutine read_D_input(io_param,fname,io)
     type(io_H_D),intent(out)        :: io
 
     Call get_parameter(io_param,fname,'magnetic_D',io%trip,io%is_set) 
-    Call get_parameter(io_param,fname,'magnetic_D_fft',io%fft) 
+    Call get_parameter(io_param,fname,'magnetic_D_fft',io%fft)
+    Call get_parameter(io_param,fname,'c_H_D',io%c_H_D)
 end subroutine
 
 
-subroutine get_exchange_D(Ham,io,lat)
+subroutine get_exchange_D(Ham,io,lat,Ham_shell_pos,neighbor_pos_list)
     !get coupling in t_H Hamiltonian format
     use m_H_public
     use m_derived_types
@@ -27,9 +28,11 @@ subroutine get_exchange_D(Ham,io,lat)
     use m_neighbor_type, only: neighbors
     use m_mode_public
 
-    class(t_H),intent(inout)    :: Ham
-    type(io_H_D),intent(in)     :: io
-    type(lattice),intent(in)    :: lat
+    class(t_H),intent(inout)                       :: Ham
+    type(io_H_D),intent(in)                        :: io
+    type(lattice),intent(in)                       :: lat
+    real(8),optional,allocatable,intent(inout)     :: neighbor_pos_list(:,:)
+    real(8),optional,allocatable,intent(inout)     :: Ham_shell_pos(:,:,:)
 
     !local Hamiltonian
     real(8),allocatable  :: Htmp(:,:)   !local Hamiltonian in (dimmode(1),dimmode(2))-basis
@@ -55,6 +58,24 @@ subroutine get_exchange_D(Ham,io,lat)
         Call get_Htype(Ham_tmp)
         N_attrip=size(io%trip)
         allocate(Htmp(lat%M%dim_mode,lat%M%dim_mode))!local Hamiltonian modified for each shell/neighbor
+
+        if (present(Ham_shell_pos)) then
+          write(output_unit,'(/2A)') "Preparing the Fourier Transform of Hamiltonian: ", ham_desc
+          i_trip=0
+          do i_attrip=1,N_attrip
+             Call neigh%get(io%trip(i_attrip)%attype,io%trip(i_attrip)%dist,lat)
+             N_dist=size(io%trip(i_attrip)%dist)
+             do i_dist=1,N_dist
+                do i_shell=1,neigh%Nshell(i_dist)
+                   i_trip=i_trip+1
+                enddo
+             enddo
+          enddo
+          allocate(Ham_shell_pos(lat%M%dim_mode,lat%M%dim_mode,i_trip))
+          Ham_shell_pos=0.0d0
+          allocate(neighbor_pos_list(3,i_trip))
+        endif
+
         do i_attrip=1,N_attrip
             !loop over different connected atom types
             Call neigh%get(io%trip(i_attrip)%attype(1:2),io%trip(i_attrip)%dist,lat)
@@ -66,7 +87,7 @@ subroutine get_exchange_D(Ham,io,lat)
             connect_bnd=1 !initialization for lower bound
             do i_dist=1,N_dist
                 !loop over distances (nearest, next nearest,... neighbor)
-                Hmag=-io%trip(i_attrip)%val(i_dist)  !flip sign corresponding to previous implementation
+                Hmag=io%trip(i_attrip)%val(i_dist)
                 do i_shell=1,neigh%Nshell(i_dist)
                     !loop over all different connections with the same distance
                     i_trip=i_trip+1
@@ -80,6 +101,8 @@ subroutine get_exchange_D(Ham,io,lat)
                         offset_mag=(atind_mag-1)*3
                         Htmp=0.0d0
 
+                        if (present(neighbor_pos_list)) neighbor_pos_list(:,i_trip)=neigh%diff_vec(:,i_trip)
+
                         Htmp(offset_mag(1)+1,offset_mag(2)+2)= DMI(3) * Hmag
                         Htmp(offset_mag(1)+3,offset_mag(2)+1)= DMI(2) * Hmag
                         Htmp(offset_mag(1)+2,offset_mag(2)+3)= DMI(1) * Hmag
@@ -88,13 +111,20 @@ subroutine get_exchange_D(Ham,io,lat)
                         Htmp(offset_mag(1)+1,offset_mag(2)+3)=-DMI(2) * Hmag
                         Htmp(offset_mag(1)+3,offset_mag(2)+2)=-DMI(1) * Hmag
 
+                        Htmp=io%c_H_D*Htmp
+
                         Call get_coo(Htmp,val_tmp,ind_tmp)
 
                         !fill Hamiltonian type
                         Call Ham_tmp%init_connect(neigh%pairs(:,connect_bnd(1):connect_bnd(2)),val_tmp,ind_tmp,"MM",lat,2)
                         deallocate(val_tmp,ind_tmp)
                         Call Ham%add(Ham_tmp)
-                        Call Ham_tmp%destroy()
+
+                        if (present(Ham_shell_pos)) then
+                           Ham_shell_pos(:,:,i_trip)=Htmp
+                        else
+                           Call Ham_tmp%destroy()
+                        endif
                     endif
                     connect_bnd(1)=connect_bnd(2)+1
                 enddo 
@@ -259,7 +289,8 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
 
     !get real-space positions of magnetic atoms and center(obeying supercell-symmetry)
     ind4_mag(1:3,1)=lat%index_1_3(pair_mag(1)) 
-    ind4_mag(1:3,2)=lat%index_1_3(pair_mag(2)) 
+    ind4_mag(1:3,2)=lat%index_1_3(pair_mag(2))
+
     ind4_mag(4,:)=atom_mag
     Call lat%pos_ind(ind4_mag(:,1),pos_mag(:,1))
     Call lat%pos_ind(ind4_mag(:,2),pos_mag(:,2))
@@ -277,6 +308,7 @@ subroutine get_DMI(atom_mag,pair_mag,atom_get_type,lat,DMI_sum)
     do i=1,size(id_nonM)
         atpos_nonM(:,i)=lat%cell%atomic(id_nonM(i))%position
     enddo
+
     !get all considered non-magnetic atoms with minimal distance from pos_center_uc
     Call get_neigh_distances(reshape(pos_center_uc,[3,1]),atpos_nonM,[1],lat,pairs,Nshell,distance)
 

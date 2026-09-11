@@ -18,6 +18,8 @@ implicit none
        module procedure CreateSpinFile_usernamed_spin
        module procedure CreateSpinFile_orderpar_name
        module procedure CreateSpinFile_sig_orderpar
+       module procedure CreateSpinFile_orderpar_pos_name
+       module procedure CreateSpinFile_orderpar_pos_name_int
   end interface
 
 private
@@ -37,7 +39,7 @@ subroutine CreateSpinFile_sig_orderpar(signature,ordpar)
     integer,intent(in)          :: signature
     character(len=50) :: fname
 
-    fname=convert('Spinse_',signature,'.dat')
+    fname=convert('Povspin_',signature,'.dat')
     Call CreateSpinFile_usernamed_spin(ordpar%modes_v,fname)   
 end subroutine
 
@@ -111,7 +113,7 @@ real(kind=8) :: r(3,3)
 
 
 N(2:4)=my_lattice%dim_lat
-Natom_motif=my_lattice%nmag
+Natom_motif=(my_lattice%nmag+my_lattice%nph)
 N(1)=3*Natom_motif
 r=my_lattice%areal
 
@@ -144,7 +146,7 @@ integer :: N(4),Natom_motif,io
 real(kind=8) :: r(3,3)
 
 N(2:4)=my_lattice%dim_lat
-Natom_motif=my_lattice%nmag
+Natom_motif=(my_lattice%nmag+my_lattice%nph)
 N(1)=3*Natom_motif
 r=my_lattice%areal
 
@@ -173,6 +175,45 @@ deallocate(position)
 
 END subroutine CreateSpinFile_end
 ! ===============================================================
+
+
+
+!
+! put the position into a povray file otherwise it is really annoying
+!
+subroutine CreateSpinFile_orderpar_pos_name_int(my_lattice,signature)
+    use m_type_lattice, only : lattice
+    implicit none
+    type(lattice), intent(in)   :: my_lattice
+    integer,intent(in)          :: signature
+
+    call CreateSpinFile_orderpar_pos_name(my_lattice,real(signature,8))
+
+end subroutine
+
+subroutine CreateSpinFile_orderpar_pos_name(my_lattice,signature)
+    use m_type_lattice, only : lattice
+    use m_lattice_position
+    implicit none
+    type(lattice), intent(in)   :: my_lattice
+    real(8),intent(in)          :: signature
+
+    character(len=50) :: fname
+    real(8),allocatable ::  pos(:)
+    integer :: io
+
+    Call get_pos_mag(my_lattice,pos)
+
+    fname=convert('Povspin_pos_',signature,'.dat')
+    io=open_file_write(fname)
+    Call dump_spinse(io,my_lattice%M%modes_3,pos)
+    call close_file(fname,io)
+
+    deallocate(pos)
+
+end subroutine
+
+
 
 ! ===============================================================
       subroutine CreateSpinFile_simple_4d(name_in,spin,shape_spin)

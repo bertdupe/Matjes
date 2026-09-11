@@ -14,6 +14,7 @@ src/Hamiltonian_type/ham_mkl_csr.f90
 src/Hamiltonian_type/ham_mkl_csr_mem.f90
 src/Hamiltonian_type/hamiltonian_collection.f90
 src/Hamiltonian_type/fft_ham_fftw.f90
+src/Hamiltonian_type/fft_ham_fftwmpi.f90
 src/Hamiltonian_type/fft_ham_cufft.f90
 src/Hamiltonian_type/fft_ham_base.f90
 src/Hamiltonian_type/fft_ham_public.f90

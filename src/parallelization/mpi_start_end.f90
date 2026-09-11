@@ -9,13 +9,21 @@ subroutine init_MPI(mpi_world)
 #ifdef CPP_MPI
     integer         :: provided
     integer         :: ierr
+    logical         :: compiled_W_omp=.false.
 
-!    Call MPI_init(ierr)
-    Call MPI_INIT_THREAD(MPI_THREAD_FUNNELED, provided, ierr)
+!$ compiled_W_omp=.true.
+
+    if (.not.compiled_W_omp) then
+       Call MPI_init(ierr)
+    else
+       Call MPI_INIT_THREAD(MPI_THREAD_FUNNELED, provided, ierr)
+       if(provided/=MPI_THREAD_FUNNELED) STOP "failed to initialize MPI with MPI_THREAD_FUNNELED"
+    endif
+
     if(ierr/=0) STOP "FAILED initialize MPI"
-    if(provided/=MPI_THREAD_FUNNELED) STOP "failed to initialize MPI with MPI_THREAD_FUNNELED"
     Call mpi_world%set(MPI_COMM_WORLD)
 #endif
+
 end subroutine
 
 

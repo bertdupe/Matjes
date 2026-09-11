@@ -36,6 +36,7 @@ interface reduce_sum
     module procedure reduce_sum_real1
     module procedure reduce_sum_real2
     module procedure reduce_sum_complex_arr
+    module procedure reduce_sum_complex_arr2
 end interface 
 
 interface reduce_lor
@@ -115,7 +116,7 @@ end subroutine
 
 subroutine reduce_sum_complex_arr(arr,com)
     use mpi_basic
-    complex(8),intent(inout)       :: arr(..)
+    complex(8),intent(inout)       :: arr(:)
     class(mpi_type),intent(in)     :: com
 #ifdef CPP_MPI    
     integer                        :: ierr
@@ -130,6 +131,22 @@ subroutine reduce_sum_complex_arr(arr,com)
 #endif
 end subroutine
 
+subroutine reduce_sum_complex_arr2(arr,com)
+    use mpi_basic
+    complex(8),intent(inout)       :: arr(:,:)
+    class(mpi_type),intent(in)     :: com
+#ifdef CPP_MPI
+    integer                        :: ierr
+
+    if(com%ismas)then
+        Call MPI_Reduce(MPI_IN_PLACE, arr, size(arr), MPI_DOUBLE_COMPLEX, MPI_SUM, com%mas, com%com, ierr)
+    else
+        Call MPI_Reduce(arr,          arr, size(arr), MPI_DOUBLE_COMPLEX, MPI_SUM, com%mas, com%com, ierr)
+    endif
+#else
+    continue
+#endif
+end subroutine
 
 
 subroutine reduce_lor_val(val,com)

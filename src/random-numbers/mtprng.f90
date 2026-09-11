@@ -141,7 +141,7 @@ contains
     subroutine mtprng_init_by_array(init_key, state)
     
         ! arguments
-        integer(INT32), dimension(:), intent(in) :: init_key
+        integer(INT32),dimension(:),intent(in) :: init_key
         type(mtprng_state), intent(out) :: state
         
         ! working storage
@@ -153,10 +153,10 @@ contains
         call mtprng_init(19650218_INT32,state)
         
         i = 1
-        j = 0
+        j = 1
         key_length = size(init_key)
         
-        do k = max(N,key_length), 0, -1
+        do k = max(N,key_length), 1, -1
             state%mt(i) = ieor(state%mt(i),(ieor(state%mt(i-1),ishft(state%mt(i-1),-30_INT64) * 1664525_INT64))) + init_key(j) + j
             
             i = i + 1
@@ -167,10 +167,10 @@ contains
                 i = 1
             end if
             
-            if (j >= key_length) j = 0
+            if (j >= key_length) j = 1
         end do
         
-        do k = N-1, 0, -1
+        do k = N, 1, -1
             state%mt(i) = ieor(state%mt(i),(ieor(state%mt(i-1),ishft(state%mt(i-1),-30_INT64) * 1566083941_INT64))) - i
             
             i = i + 1

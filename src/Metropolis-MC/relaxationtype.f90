@@ -66,6 +66,6 @@ module m_relaxtyp
         dotprod=DOT_PRODUCT(lat%M%modes_in(:,iomp),S_int)
         overrelax=lat%M%modes_in(:,iomp)*(1.0d0+dotprod)-S_int
         norm_local=norm2(overrelax)
-        overrelax=overrelax/norm_local
+        overrelax=-overrelax/norm_local
     end function overrelax
 end module

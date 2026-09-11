@@ -22,6 +22,7 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
     logical :: exists
     integer :: i
     real(8),pointer,contiguous ::  state(:)
+    real(8),allocatable        ::  ini_conf(:)
 
     if(present(fname_in))then
         fname=fname_in
@@ -38,18 +39,20 @@ subroutine init_config_lattice(lat,initialized,extpar_io,fname_in)
     do i=1,number_different_order_parameters
         if(initialized(i).or.lat%dim_modes(i)<1) cycle    !don't try to intialize, if already initialized before or not used
         Call lat%set_order_point(i,state)
+        Call lat%set_motif_initconf(i,ini_conf)
         if(exists)then
-            Call init_config_order(io,fname,lat,trim(order_parameter_name(i)),lat%dim_modes(i),state,extpar_io,initialized(i))
+            Call init_config_order(io,fname,lat,trim(order_parameter_name(i)),lat%dim_modes(i),state,extpar_io,initialized(i),ini_conf)
         else
             call init_default(trim(order_parameter_name(i)),lat%dim_modes(i),state,extpar_io)
             initialized(i)=.true.
         endif
         nullify(state)
+        deallocate(ini_conf)
     enddo
     if(exists) call close_file(fname,io)
 end subroutine
 
-subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
+subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init,ini_conf)
     use m_init_2Q
     use m_init_DW
     use m_init_heavyside
@@ -58,6 +61,8 @@ subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
     use m_init_Sklattice
     use m_init_spiral
     use m_init_random
+    use m_init_hopfion
+    use m_init_bobber
     integer,intent(in)              :: io       !init-file io-unit
     character(*),intent(in)         :: fname    !init-file name 
     type(lattice), intent(in)       :: lat      !entire lattice containing geometric information
@@ -66,6 +71,7 @@ subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
     real(8),pointer,intent(inout)   :: state(:) !pointer the the order parameter
     type(extpar_input),intent(in)   :: extpar_io
     logical,intent(out)             :: init     !returns if initialization has occured
+    real(8),intent(in)              :: ini_conf(:)
 
     character(30)                   :: configuration
 
@@ -75,21 +81,27 @@ subroutine init_config_order(io,fname,lat,ordname,dim_mode,state,extpar_io,init)
     init=.true.
     select case (adjustl(configuration))
         case('spiral')
-            call init_spiral(io,fname,lat,ordname,dim_mode,state)
+            call init_spiral(io,fname,lat,ordname,dim_mode,state,ini_conf)
         case('2Q')
-            call init_2Q(io,fname,lat,ordname,dim_mode,state)
+            call init_2Q(io,fname,lat,ordname,dim_mode,state,ini_conf)
         case('domainwall')
-            call init_DW(io,fname,lat,ordname,dim_mode,state)
+            call init_DW(io,fname,lat,ordname,dim_mode,state,ini_conf)
         case('heavyside')
             call init_heavyside(lat,dim_mode,state)
         case('skyrmion')
-            call init_spiral(io,fname,lat,ordname,dim_mode,state)
-            call init_Sk(io,fname,lat,ordname,dim_mode,state)
+            call init_spiral(io,fname,lat,ordname,dim_mode,state,ini_conf)
+            call init_Sk(io,fname,lat,ordname,dim_mode,state,ini_conf)
         case('skyrmion_lin')
-            Call init_Sky_lin(io,fname,lat,ordname,dim_mode,state)
+            Call init_Sky_lin(io,fname,lat,ordname,dim_mode,state,ini_conf)
         case('skyrmionla')
-            call init_spiral(io,fname,lat,ordname,dim_mode,state)
-            call init_Sk_lattice(io,fname,lat,ordname,dim_mode,state)
+            call init_spiral(io,fname,lat,ordname,dim_mode,state,ini_conf)
+            call init_Sk_lattice(io,fname,lat,ordname,dim_mode,state,ini_conf)
+        case('hopfion')
+            call init_spiral(io,fname,lat,ordname,dim_mode,state,ini_conf)
+            call init_hopfion(io,fname,lat,ordname,dim_mode,state,ini_conf)
+        case('bobber')
+            call init_spiral(io,fname,lat,ordname,dim_mode,state,ini_conf)
+            call init_bobber(io,fname,lat,ordname,dim_mode,state,ini_conf)
         case('random')
             write(6,'(3a)') 'random configuration for ',ordname,' was chosen'
             call init_random(dim_mode,state)

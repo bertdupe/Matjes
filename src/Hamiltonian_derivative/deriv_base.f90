@@ -8,6 +8,8 @@ public t_deriv
 
 type    :: t_deriv
     integer :: order=0
+    real(8) :: l_factor=1.0d0       ! factor that multiplies the output vector field when the single routines are called
+    real(8) :: r_factor=1.0d0
     procedure(int_deriv_get),pointer        :: l=>uninitialized
     procedure(int_deriv_get),pointer        :: r=>uninitialized
     procedure(int_deriv_get_single),pointer :: l_single=>uninitialized_single
@@ -16,6 +18,7 @@ contains
     procedure :: copy
     procedure :: get => get_deriv
     procedure :: get_single => get_deriv_single
+    procedure :: mv
 end type
 
 abstract interface
@@ -49,6 +52,16 @@ subroutine copy(this,deriv_out)
     deriv_out%r_single=>this%r_single
 end subroutine
 
+subroutine mv(this,deriv_out)
+    class(t_deriv),intent(in)       :: this
+    class(t_deriv),intent(inout)    :: deriv_out
+
+    deriv_out%l=>this%l
+    deriv_out%r=>this%r
+    deriv_out%l_single=>this%l_single
+    deriv_out%r_single=>this%r_single
+end subroutine
+
 subroutine get_deriv(this,H,lat,vec,work)
     class(t_deriv),intent(in)       :: this             !derive type with set procedure and order to derive with respect to
     class(t_H_base),intent(in)      :: H                !Hamiltonian that is derivated
@@ -71,8 +84,10 @@ subroutine get_deriv_single(this,H,lat,site,work,vec,tmp)
 
     Call this%l_single(H,lat,site,work,tmp)
     vec=vec+tmp
+
     Call this%r_single(H,lat,site,work,tmp)
     vec=vec+tmp
+
 end subroutine
 
 subroutine uninitialized(this,H,lat,vec,work)

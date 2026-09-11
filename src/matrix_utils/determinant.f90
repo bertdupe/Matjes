@@ -1,4 +1,8 @@
 module m_determinant
+implicit none
+
+private
+public :: determinant
 
 interface determinant
   module procedure :: det_real,det_complex
@@ -7,9 +11,6 @@ end interface determinant
 interface TSGT
   module procedure :: TSRGT,TSCGT
 end interface TSGT
-
-private
-public :: determinant
 
 contains
 

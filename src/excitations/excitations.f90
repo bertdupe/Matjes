@@ -9,17 +9,6 @@ use m_exc_t
 use,intrinsic :: iso_fortran_env, only : output_unit, error_unit
 implicit none
 
-! variable that contains the the excitations form (sweep of EM field...)
-type excitations
-    real(8)           :: start_value(maxval(dim_modes_inner))
-    real(8)           :: end_value(maxval(dim_modes_inner))
-    integer           :: size_value
-    real(kind=8)      :: t_start,t_end
-! name of the order parameter to change
-    character(len=30) :: name
-    integer           :: op !order parameter as ordered by m_type_lattice
-end type excitations
-
 type excitation
     integer     :: op=0
     integer     :: int_shape_t=0
@@ -50,10 +39,12 @@ subroutine read_all_excitations(fname,excitations)
 
     type(excitation_io),allocatable     :: io_exc(:)
 
-    integer             :: i,j,ii, Nexc, io
+    integer             :: i,j,ii, Nexc, io, nline, ncol
     logical             :: has_exc
+    character(len=100)  :: posfile_name
 
     write(output_unit,'(//A)') "Start excitation setup routine."
+    Nexc=-1
 
     open(newunit=io,file=fname)
     Call check_excitation_io(io,fname,has_exc)
@@ -61,9 +52,10 @@ subroutine read_all_excitations(fname,excitations)
         close(io)
         return
     endif
+
     !get different excitation shape_r
     Call read_excitation_shape_r(io,fname,excitations%shape_r)
-    
+
     !get different excitation shape_t
     Call read_excitation_shape_t(io,fname,excitations%shape_t)
 
@@ -71,7 +63,7 @@ subroutine read_all_excitations(fname,excitations)
     Call read_excitation_io(io,fname,io_exc)
 
     close(io)
-    Nexc=0
+
     if(allocated(io_exc)) Nexc=size(io_exc) 
     if(Nexc==0)then
         !no excitations inserted
@@ -135,9 +127,7 @@ subroutine read_all_excitations(fname,excitations)
     enddo
     write(output_unit,'(A)') "Finished combining excitation entries."
 
-    do i=1,size(excitations%exc)
-        excitations%op_used(excitations%exc%op)=.true.
-    enddo
+    excitations%op_used(excitations%exc%op)=.true.
 
     write(output_unit,'(/A)') "Start printing found excitations."
     do i=1,number_different_order_parameters
@@ -160,23 +150,28 @@ subroutine read_all_excitations(fname,excitations)
     write(output_unit,'(A/)') "All found excitations are printed."
 
     !terrible position-get
-    i=get_lines('positions.dat')
+    posfile_name='positions_magnetic.dat'
+    nline=get_lines(posfile_name)
+    ncol=get_cols(posfile_name)
+    i=nline*ncol/3
     allocate(excitations%position(3,i),source=0.0d0)
-    call get_position(excitations%position,'positions.dat')
+    call get_position(excitations%position,posfile_name)
 
     write(output_unit,'(A//)') "Finished reading excitations"
 
 end subroutine 
 
 subroutine update_exc(time,lat,dat)
-    !routine which updated all order-parameters for which an exciatation in dat is specified
+    !routine which updated all order-parameters for which an excitation in dat is specified
     real(8), intent(in)                     :: time
     type(lattice), intent(inout)            :: lat
     type(excitation_combined),intent(in)    :: dat
     ! internal
     real(8),pointer,contiguous :: opvec(:,:)        !pointer to locally considered mode
     real(8) :: r(3)                                 !local position
-    real(8) :: shape_t(maxval(dim_modes_inner))     !prefactor defined by the time (constant in space)
+    real(8) :: shape_t(maxval(dim_modes_inner)+1)   !prefactor defined by the time (constant in space)
+    real(8) :: shape_r(2)                           !prefactor for spatial dependence
+    real(8),allocatable ::offset_int(:,:),offset(:)
     !help indices
     integer :: op       !index for considered operator as in lattice
     integer :: dim_mode !dimension of considered mode
@@ -190,13 +185,16 @@ subroutine update_exc(time,lat,dat)
             opvec=0.0d0
         endif
     enddo
- 
+
     do j=1,size(dat%exc)
         !set help parameters
         i_r=dat%exc(j)%int_shape_r
         i_t=dat%exc(j)%int_shape_t
         op=dat%exc(j)%op
         dim_mode=dim_modes_inner(op)
+        allocate(offset_int(dim_mode,size(dat%position,2)),source=0.0d0)
+        allocate(offset(dim_mode),source=0.0d0)
+        if (allocated(dat%shape_r(i_r)%offset)) offset_int=dat%shape_r(i_r)%offset
         
         !get time-shape 
         shape_t(1:dim_mode)=dat%shape_t(i_t)%get_shape(time)
@@ -206,9 +204,14 @@ subroutine update_exc(time,lat,dat)
         Call lat%set_order_point_inner(op,opvec)
         do i=1,size(dat%position,2)
             r=dat%position(:,i)
-            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) * dat%shape_r(i_r)%shape_r(r)
+            shape_r(:) = dat%shape_r(i_r)%shape_r(r)
+            offset     = offset_int(:,i)
+            opvec(:,i)=opvec(:,i)+ shape_t(1:dim_mode) *( shape_r(1) * cos(shape_t(dim_mode+1)+shape_r(2)) + offset(:))
         enddo
+
+        deallocate(offset_int,offset)
     enddo
     nullify(opvec)
 end subroutine
+
 end module m_excitations

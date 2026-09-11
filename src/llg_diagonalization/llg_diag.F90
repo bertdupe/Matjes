@@ -29,7 +29,7 @@ subroutine build_transmat(lat,io_simu,H)
 	integer                     	:: N_cell,N_dim,N_mag
 	integer							:: i,j,io
 	real(8)							:: gp, hp, damping , gyro,mu_s  	
-	logical 						:: print_tr,save_tr,save_tr_submat
+	logical 						:: print_tr,save_tr,save_tr_submat,save_sph_coord, save_M0
 	    
 	! initialize
     N_cell=lat%Ncell
@@ -49,7 +49,9 @@ subroutine build_transmat(lat,io_simu,H)
    	print_tr=.false.
    	save_tr=.true.
    	save_tr_submat=.true.
-   	   	
+   	save_sph_coord=.true. 
+   	save_M0=.true.   	  
+   	   	  
    	write(6,'(/,a,/)') 'Starting computation of the transition matrix of LLG. Warning: only for energy extrema.'
    	write(*,*) 'damping=', damping, ' gamma/mu_s= ',gyro,'1/(eV.fs)'
     write(*,*) 'gp=', gp, ' 1/(eV.fs), hp= ', hp, '1/(eV.fs)' 
@@ -124,6 +126,21 @@ subroutine build_transmat(lat,io_simu,H)
 	   	close(4)
 	end if
 	
+	if(save_tr_submat) then
+		open (1,file='M0_thetaphi.dat')
+		rewind 1
+		write(1,*) M0(:,:)
+		close(1)
+	end if
+	
+	if(save_M0) then
+		open (1,file='M0.dat')
+		rewind 1
+		write(1,*) M0(:,:)
+		close(1)
+		write(*,*) "M0=",M0(:,:)
+	end if
+
     
 	write(6,'(/a,2x,E20.12E3/)') 'Done.'
 	
@@ -173,10 +190,12 @@ use m_derived_types, only : io_parameter,lattice
     dtheta=0.001d0
     epsi=1.0d-10 !tolerance on accuracy
     
+    !control output
     print_hess=.false. 
     save_hess=.true. 
-    save_hess_submat=.true. 
-    
+    save_hess_submat=.false. 
+
+        
     E0=H%energy(lat)
     write(6,'(/a,2x,E20.12E3/)') 'Initial total energy density (eV/fu)',E0/real(N_cell,8)
     if(any(abs(sin(M0(1,:))).lt.1.0d-8)) stop 'This routine cannot be used if a spin lies at a pole.' !that's a problem
